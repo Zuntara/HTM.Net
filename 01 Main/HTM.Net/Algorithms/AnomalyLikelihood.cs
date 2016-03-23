@@ -176,7 +176,7 @@ namespace HTM.Net.Algorithms
 
             // Estimate the distribution of anomaly scores based on aggregated records
             Statistic distribution;
-            if (records.averagedRecords.Count <= skipRecords)
+            if (records.AveragedRecords.Count <= skipRecords)
             {
                 distribution = NullDistribution();
             }
@@ -204,8 +204,8 @@ namespace HTM.Net.Algorithms
 
             // Estimate likelihoods based on this distribution
             int i = 0;
-            double[] likelihoods = new double[records.averagedRecords.Count];
-            foreach (Sample sample in records.averagedRecords)
+            double[] likelihoods = new double[records.AveragedRecords.Count];
+            foreach (Sample sample in records.AveragedRecords)
             {
                 likelihoods[i++] = NormalProbability(sample.score, distribution);
             }
@@ -217,7 +217,7 @@ namespace HTM.Net.Algorithms
 
             Parameters anomalyParameters = Parameters.Empty();
             anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_DIST, distribution);
-            anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MVG_AVG, new MovingAverage(records.historicalValues, records.total, averagingWindow));
+            anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MVG_AVG, new MovingAverage(records.HistoricalValues, records.Total, averagingWindow));
             anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE, len > 0 ? Arrays.CopyOfRange(likelihoods, len - Math.Min(averagingWindow, len), len) : new double[0]);
 
             AnomalyParams @params = new AnomalyParams(anomalyParameters);

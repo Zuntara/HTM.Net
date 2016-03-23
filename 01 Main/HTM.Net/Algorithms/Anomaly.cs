@@ -1,106 +1,86 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
 {
-    /**
-     * This module analyzes and estimates the distribution of averaged anomaly scores
-     * from a CLA model. Given a new anomaly score `s`, estimates `P(score >= s)`.
-     *
-     * The number `P(score >= s)` represents the likelihood of the current state of
-     * predictability. For example, a likelihood of 0.01 or 1% means we see this much
-     * predictability about one out of every 100 records. The number is not as unusual
-     * as it seems. For records that arrive every minute, this means once every hour
-     * and 40 minutes. A likelihood of 0.0001 or 0.01% means we see it once out of
-     * 10,000 records, or about once every 7 days.
-     *
-     * USAGE
-     * -----
-     *
-     * The {@code Anomaly} base class follows the factory pattern and can construct an
-     * appropriately configured anomaly calculator by invoking the following:
-     * 
-     * <pre>
-     * Map<String, Object> params = new HashMap<>();
-     * params.put(KEY_MODE, Mode.LIKELIHOOD);            // May be Mode.PURE or Mode.WEIGHTED
-     * params.put(KEY_USE_MOVING_AVG, true);             // Instructs the Anomaly class to compute moving average
-     * params.put(KEY_WINDOW_SIZE, 10);                  // #of inputs over which to compute the moving average
-     * params.put(KEY_IS_WEIGHTED, true);                // Use a weighted moving average or not
-     * 
-     * // Instantiate the Anomaly computer
-     * Anomaly anomalyComputer = Anomaly.create(params); // Returns the appropriate Anomaly
-     *                                                   // implementation.
-     * int[] actual = array of input columns at time t
-     * int[] predicted = array of predicted columns for t+1
-     * double anomaly = an.compute(
-     *     actual, 
-     *     predicted, 
-     *     0 (inputValue = OPTIONAL, needed for likelihood calcs), 
-     *     timestamp);
-     *     
-     * double anomalyProbability = anomalyComputer.anomalyProbability(
-     *     inputValue, anomaly, timestamp);
-     * </pre>
-     *
-     * Raw functions
-     * -------------
-     * 
-     * There are two lower level functions, estimateAnomalyLikelihoods and
-     * updateAnomalyLikelihoods. The details of these are described by the method docs.
-     * 
-     * For more information please see: {@link AnomalyTest} and {@link AnomalyLikelihoodTest}
-     * 
-     * @author Numenta
-     * @author David Ray
-     * @see AnomalyTest
-     * @see AnomalyLikelihoodTest
-     */
+    /// <summary>
+    /// This module analyzes and estimates the distribution of averaged anomaly scores
+    /// from a CLA model. Given a new anomaly score `s`, estimates `P(score >= s)`.
+    /// 
+    /// The number `P(score >= s)` represents the likelihood of the current state of
+    /// predictability. For example, a likelihood of 0.01 or 1% means we see this much
+    /// predictability about one out of every 100 records. The number is not as unusual
+    /// as it seems. For records that arrive every minute, this means once every hour
+    /// and 40 minutes. A likelihood of 0.0001 or 0.01% means we see it once out of
+    /// 10,000 records, or about once every 7 days.
+    /// 
+    /// USAGE
+    /// -----
+    /// 
+    /// The <see cref="Anomaly"/> base class follows the factory pattern and can construct an
+    /// appropriately configured anomaly calculator by invoking the following:
+    /// 
+    /// <pre>
+    /// Map<string, object> params = new Map<string, object>();
+    /// params.Add(KEY_MODE, Mode.LIKELIHOOD);            // May be Mode.PURE or Mode.WEIGHTED
+    /// params.Add(KEY_USE_MOVING_AVG, true);             // Instructs the Anomaly class to compute moving average
+    /// params.Add(KEY_WINDOW_SIZE, 10);                  // #of inputs over which to compute the moving average
+    /// params.Add(KEY_IS_WEIGHTED, true);                // Use a weighted moving average or not
+    /// 
+    /// // Instantiate the Anomaly computer
+    /// Anomaly anomalyComputer = Anomaly.Create(params); // Returns the appropriate Anomaly
+    ///                                                   // implementation.
+    /// int[] actual = array of input columns at time t
+    /// int[] predicted = array of predicted columns for t+1
+    /// double anomaly = an.Compute(
+    ///     actual, 
+    ///     predicted, 
+    ///     0 (inputValue = OPTIONAL, needed for likelihood calcs), 
+    ///     timestamp);
+    ///     
+    /// double anomalyProbability = anomalyComputer.AnomalyProbability(
+    ///     inputValue, anomaly, timestamp);
+    /// </pre>
+    /// 
+    /// Raw functions
+    /// -------------
+    /// 
+    /// There are two lower level functions, estimateAnomalyLikelihoods and
+    /// updateAnomalyLikelihoods. The details of these are described by the method docs.
+    /// 
+    /// For more information please see: <see cref="AnomalyTest"/> and <see cref="AnomalyLikelihoodTest"/>
+    /// </summary>
     public class Anomaly
     {
         private readonly Func<Anomaly, int[], int[], double, long, double> _computeFunc;
-        /** Modes to use for factory creation method */
+        /// <summary>
+        /// Modes to use for factory creation method
+        /// </summary>
         public enum Mode { PURE, LIKELIHOOD, WEIGHTED };
 
         // Instantiation keys
         public const int VALUE_NONE = -1;
-        //public const string KEY_MODE = "mode";
-        //public const string KEY_LEARNING_PERIOD = "claLearningPeriod";
-        //public const string KEY_ESTIMATION_SAMPLES = "estimationSamples";
-        //public const string KEY_USE_MOVING_AVG = "useMovingAverage";
-        //public const string KEY_WINDOW_SIZE = "windowSize";
-        //public const string KEY_IS_WEIGHTED = "isWeighted";
-        //// Configs   
-        //public const string KEY_DIST = "distribution";
-        //public const string KEY_MVG_AVG = "movingAverage";
-        //public const string KEY_HIST_LIKE = "historicalLikelihoods";
-        //public const string KEY_HIST_VALUES = "historicalValues";
-        //public const string KEY_TOTAL = "total";
-
-        //// Computational argument keys
-        //public const string KEY_MEAN = "mean";
-        //public const string KEY_STDEV = "stdev";
-        //public const string KEY_VARIANCE = "variance";
 
         protected MovingAverage movingAverage;
 
         protected bool useMovingAverage;
 
-        /**
-         * Constructs a new {@code Anomaly}
-         */
+        /// <summary>
+        /// Constructs a new <see cref="Anomaly"/>
+        /// </summary>
         protected Anomaly()
             : this(false, -1)
         {
 
         }
 
-        /**
-         * Constructs a new {@code Anomaly}
-         * 
-         * @param useMovingAverage  indicates whether to apply and store a moving average
-         * @param windowSize        size of window to average over
-         */
+        /// <summary>
+        /// Constructs a new <see cref="Anomaly"/>
+        /// </summary>
+        /// <param name="useMovingAverage">indicates whether to apply and store a moving average</param>
+        /// <param name="windowSize">size of window to average over</param>
         protected Anomaly(bool useMovingAverage, int windowSize)
         {
             this.useMovingAverage = useMovingAverage;
@@ -114,18 +94,16 @@ namespace HTM.Net.Algorithms
             }
         }
 
-        private Anomaly(bool useMovingAverage, int windowSize, Func<Anomaly, int[], int[],double,long,double> computeFunc)
+        private Anomaly(bool useMovingAverage, int windowSize, Func<Anomaly, int[], int[], double, long, double> computeFunc)
             : this(useMovingAverage, windowSize)
         {
             _computeFunc = computeFunc;
         }
 
-        /**
-         * Convenience method to create a simplistic Anomaly computer in 
-         * {@link Mode#PURE}
-         *  
-         * @return
-         */
+        /// <summary>
+        /// Convenience method to create a simplistic Anomaly computer in <see cref="Mode.PURE"/>
+        /// </summary>
+        /// <returns></returns>
         public static Anomaly Create()
         {
             Parameters @params = Parameters.Empty();
@@ -134,16 +112,13 @@ namespace HTM.Net.Algorithms
             return Create(@params);
         }
 
-        /**
-         * Returns an {@code Anomaly} configured to execute the type
-         * of calculation specified by the {@link Mode}, and whether or
-         * not to apply a moving average.
-         * 
-         * Must have one of "MODE" = {@link Mode#LIKELIHOOD}, {@link Mode#PURE}, {@link Mode#WEIGHTED}
-         * 
-         * @param   p       Parameters 
-         * @return
-         */
+        /// <summary>
+        /// Returns an <see cref="Anomaly"/> configured to execute the type of calculation specified by the <see cref="Mode"/>, 
+        /// and whether or not to apply a moving average.
+        /// 
+        /// Must have one of "Mode" = <see cref="Mode.LIKELIHOOD"/>, <see cref="Mode.PURE"/>, <see cref="Mode.WEIGHTED"/>
+        /// </summary>
+        /// <param name="params">Parameters</param>
         public static Anomaly Create(Parameters @params)
         {
             bool useMovingAvg = (bool)@params.GetParameterByKey(Parameters.KEY.ANOMALY_KEY_USE_MOVING_AVG, false);
@@ -162,17 +137,17 @@ namespace HTM.Net.Algorithms
             switch (mode)
             {
                 case Mode.PURE:
-                {
-                    return new Anomaly(useMovingAvg, windowSize, (anomaly, activeColumns, predictedColumns, inputValue, timestamp) =>
                     {
-                        double retVal = ComputeRawAnomalyScore(activeColumns, predictedColumns);
-                        if (anomaly.useMovingAverage)
+                        return new Anomaly(useMovingAvg, windowSize, (anomaly, activeColumns, predictedColumns, inputValue, timestamp) =>
                         {
-                            retVal = anomaly.movingAverage.Next(retVal);
-                        }
-                        return retVal;
-                    });
-                }
+                            double retVal = ComputeRawAnomalyScore(activeColumns, predictedColumns);
+                            if (anomaly.useMovingAverage)
+                            {
+                                retVal = anomaly.movingAverage.Next(retVal);
+                            }
+                            return retVal;
+                        });
+                    }
                 case Mode.LIKELIHOOD:
                 case Mode.WEIGHTED:
                     {
@@ -186,14 +161,12 @@ namespace HTM.Net.Algorithms
             }
         }
 
-        /**
-         * The raw anomaly score is the fraction of active columns not predicted.
-         * 
-         * @param   activeColumns           an array of active column indices
-         * @param   prevPredictedColumns    array of column indices predicted in the 
-         *                                  previous step
-         * @return  anomaly score 0..1 
-         */
+        /// <summary>
+        /// The raw anomaly score is the fraction of active columns not predicted.
+        /// </summary>
+        /// <param name="activeColumns">an array of active column indices</param>
+        /// <param name="prevPredictedColumns">array of column indices predicted in the previous step</param>
+        /// <returns>anomaly score 0..1 </returns>
         public static double ComputeRawAnomalyScore(int[] activeColumns, int[] prevPredictedColumns)
         {
             double score = 0;
@@ -217,20 +190,14 @@ namespace HTM.Net.Algorithms
             return score;
         }
 
-        /**
-         * Compute the anomaly score as the percent of active columns not predicted.
-         * 
-         * @param activeColumns         array of active column indices
-         * @param predictedColumns      array of columns indices predicted in this step
-         *                              (used for anomaly in step T+1)
-         * @param inputValue            (optional) value of current input to encoders 
-         *                              (eg "cat" for category encoder)
-         *                              (used in anomaly-likelihood)
-         * @param timestamp             timestamp: (optional) date timestamp when the sample occurred
-         *                              (used in anomaly-likelihood)
-         * @return
-         */
-
+        /// <summary>
+        /// Compute the anomaly score as the percent of active columns not predicted.
+        /// </summary>
+        /// <param name="activeColumns">array of active column indices</param>
+        /// <param name="predictedColumns">array of columns indices predicted in this step (used for anomaly in step T+1)</param>
+        /// <param name="inputValue">(optional) value of current input to encoders (eg "cat" for category encoder) (used in anomaly-likelihood)</param>
+        /// <param name="timestamp">(optional) date timestamp when the sample occurred (used in anomaly-likelihood)</param>
+        /// <returns></returns>
         public virtual double Compute(int[] activeColumns, int[] predictedColumns, double inputValue, long timestamp)
         {
             if (_computeFunc != null)
@@ -240,84 +207,62 @@ namespace HTM.Net.Algorithms
             throw new InvalidOperationException("Implement Compute in derived class.");
         }
 
+        #region Inner Class Definitions   
 
-        //////////////////////////////////////////////////////////////////////////////////////
-        //                            Inner Class Definitions                               //
-        //////////////////////////////////////////////////////////////////////////////////////
-        /**
-         * Container to hold interim {@link AnomalyLikelihood} calculations.
-         * 
-         * @author David Ray
-         * @see AnomalyLikelihood
-         * @see MovingAverage
-         */
+        /// <summary>
+        /// Container to hold interim <see cref="AnomalyLikelihood"/> calculations.
+        /// </summary>
         public class AveragedAnomalyRecordList
         {
-            internal readonly List<Sample> averagedRecords;
-            internal readonly List<double> historicalValues;
-            internal readonly double total;
+            internal readonly List<Sample> AveragedRecords;
+            internal readonly List<double> HistoricalValues;
+            internal readonly double Total;
 
-            /**
-             * Constructs a new {@code AveragedAnomalyRecordList}
-             * 
-             * @param averagedRecords       List of samples which are { timestamp, average, value } at a data point
-             * @param historicalValues      List of values of a given window size (moving average grouping)
-             * @param total                 Sum of all values in the series
-             */
+            /// <summary>
+            /// Constructs a new <see cref="AveragedAnomalyRecordList"/>
+            /// </summary>
+            /// <param name="averagedRecords">List of samples which are { timestamp, average, value } at a data point</param>
+            /// <param name="historicalValues">List of values of a given window size (moving average grouping)</param>
+            /// <param name="total">Sum of all values in the series</param>
             public AveragedAnomalyRecordList(List<Sample> averagedRecords, List<double> historicalValues, double total)
             {
-                this.averagedRecords = averagedRecords;
-                this.historicalValues = historicalValues;
-                this.total = total;
+                AveragedRecords = averagedRecords;
+                HistoricalValues = historicalValues;
+                Total = total;
             }
 
-            /**
-             * Returns a list of the averages in the contained averaged record list.
-             * @return
-             */
+            /// <summary>
+            /// Returns a list of the averages in the contained averaged record list.
+            /// </summary>
             public List<double> GetMetrics()
             {
-                List<double> retVal = new List<double>();
-                foreach (Sample s in averagedRecords)
-                {
-                    retVal.Add(s.score);
-                }
-
-                return retVal;
+                return AveragedRecords.Select(s => s.score).ToList();
             }
 
-            /**
-             * Returns a list of the sample values in the contained averaged record list.
-             * @return
-             */
+            /// <summary>
+            /// Returns a list of the sample values in the contained averaged record list.
+            /// </summary>
             public List<double> GetSamples()
             {
-                List<double> retVal = new List<double>();
-                foreach (Sample s in averagedRecords)
-                {
-                    retVal.Add(s.value);
-                }
-
-                return retVal;
+                return AveragedRecords.Select(s => s.value).ToList();
             }
 
-            /**
-             * Returns the size of the count of averaged records (i.e. {@link Sample}s)
-             * @return
-             */
+            /// <summary>
+            /// Returns the size of the count of averaged records (i.e. <see cref="Sample"/>s)
+            /// </summary>
             public int Count
             {
-                get { return averagedRecords.Count; } //let fail if null
+                get { return AveragedRecords.Count; } // let fail if null
             }
 
             public override int GetHashCode()
             {
                 const int prime = 31;
                 int result = 1;
-                result = prime * result + ((averagedRecords == null) ? 0 : averagedRecords.GetHashCode());
-                result = prime * result + ((historicalValues == null) ? 0 : historicalValues.GetHashCode());
+                result = prime * result + (AveragedRecords?.GetHashCode() ?? 0);
+                result = prime * result + (HistoricalValues?.GetHashCode() ?? 0);
                 long temp;
-                temp = BitConverter.DoubleToInt64Bits(total);
+                temp = BitConverter.DoubleToInt64Bits(Total);
                 result = prime * result + (int)(temp ^ (int)((uint)temp >> 32));
                 return result;
             }
@@ -331,25 +276,26 @@ namespace HTM.Net.Algorithms
                 if (GetType() != obj.GetType())
                     return false;
                 AveragedAnomalyRecordList other = (AveragedAnomalyRecordList)obj;
-                if (averagedRecords == null)
+                if (AveragedRecords == null)
                 {
-                    if (other.averagedRecords != null)
+                    if (other.AveragedRecords != null)
                         return false;
                 }
-                else if (!averagedRecords.Equals(other.averagedRecords))
+                else if (!AveragedRecords.Equals(other.AveragedRecords))
                     return false;
-                if (historicalValues == null)
+                if (HistoricalValues == null)
                 {
-                    if (other.historicalValues != null)
+                    if (other.HistoricalValues != null)
                         return false;
                 }
-                else if (!historicalValues.Equals(other.historicalValues))
+                else if (!HistoricalValues.Equals(other.HistoricalValues))
                     return false;
-                if (BitConverter.DoubleToInt64Bits(total) != BitConverter.DoubleToInt64Bits(other.total))
+                if (BitConverter.DoubleToInt64Bits(Total) != BitConverter.DoubleToInt64Bits(other.Total))
                     return false;
                 return true;
             }
         }
 
+        #endregion
     }
 }
