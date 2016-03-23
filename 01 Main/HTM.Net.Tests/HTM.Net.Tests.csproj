@@ -16,14 +16,10 @@
     <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
     <IsCodedUITest>False</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -157,48 +153,48 @@
     <None Include="PytonEmbrace\Files\HsWorker.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Resources\1_100.csv">
+    <Content Include="Resources\1_100.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
     <Content Include="Resources\BBCBreaking.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\days-of-week.csv">
+    <Content Include="Resources\days-of-week.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\foxeat.csv">
+    </Content>
+    <Content Include="Resources\foxeat.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
     <Content Include="Resources\logback-test.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\rec-center-15m.csv">
+    <Content Include="Resources\rec-center-15m.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-4learn.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-4learn.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-4period-cat.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-4period-cat.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-4period.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-4period.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-4seqReset.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-4seqReset.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-small-noheaderflags.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-small-noheaderflags.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-small.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-small.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\rec-center-hourly-4reset.csv">
+    </Content>
+    <Content Include="Resources\rec-center-hourly-4reset.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
