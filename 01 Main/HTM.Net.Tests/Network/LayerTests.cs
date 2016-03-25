@@ -18,17 +18,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Tests.Network
 {
-    /**
- * Tests the "heart and soul" of the Network API
- * 
- * @author DavidRay
- *
- */
+    /// <summary>
+    /// Tests the "heart and soul" of the Network API
+    /// </summary>
     [TestClass]
     public class LayerTest
     {
-
-        /** Total used for spatial pooler priming tests */
+        /// <summary>
+        /// Total used for spatial pooler priming tests
+        /// </summary>
         private int TOTAL = 0;
 
         [TestInitialize]
@@ -1826,6 +1824,51 @@ namespace HTM.Net.Tests.Network
             //Assert.AreEqual("Close called on Layer r1:2 which is already closed.", filterMessage);
             // Make sure not to slow the entire test phase down by removing the filter
             //lc.resetTurboFilterList();
+        }
+
+        [TestMethod, DeploymentItem("Resources\\rec-center-hourly-small.csv")]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void IsClosedAddSensorTest()
+        {
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+
+            ILayer l = Net.Network.Network.CreateLayer("l", p);
+            l.Close();
+
+            Sensor<FileInfo> sensor = Sensor<FileInfo>.Create(
+                    FileSensor.Create,
+                    SensorParams.Create(SensorParams.Keys.Path, "", ResourceLocator.Path("rec-center-hourly-small.csv")));
+            l.Add(sensor);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void IsClosedAddMultiEncoderTest()
+        {
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+
+            ILayer l = Net.Network.Network.CreateLayer("l", p);
+            l.Close();
+
+            l.Add((MultiEncoder)MultiEncoder.GetBuilder().Name("").Build());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void IsClosedAddSpatialPoolerTest()
+        {
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+
+            ILayer l = Net.Network.Network.CreateLayer("l", p);
+            l.Close();
+
+            l.Add(new SpatialPooler());
         }
 
         /**

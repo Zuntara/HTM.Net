@@ -24,7 +24,7 @@ namespace HTM.Net.Network
         private int _recordNum = -1;
         protected string Name;
         protected bool IsLearn = true;
-        protected bool IsClosed;
+        protected bool _isClosed;
         protected IInference CurrentInference;
         protected Network ParentNetwork;
         protected Region ParentRegion;
@@ -169,6 +169,15 @@ namespace HTM.Net.Network
         public abstract ILayer Close();
 
         /// <summary>
+        /// Returns a flag indicating whether this <see cref="ILayer"/> has had
+        /// its <see cref="Close()"/> method called, or not.
+        /// </summary>
+        public virtual bool IsClosed()
+        {
+            return _isClosed;
+        }
+
+        /// <summary>
         /// Initializes the algorithm content mask used for detection of repeated algorithms 
         /// among <see cref="BaseLayer"/>s in a <see cref="Region"/>
         /// See <see cref="GetMask()"/> for more information.
@@ -295,7 +304,7 @@ namespace HTM.Net.Network
         /// <returns>this Layer instance (in fluent-style)</returns>
         public ILayer AlterParameter(Parameters.KEY key, object value)
         {
-            if (IsClosed)
+            if (IsClosed())
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }

@@ -1063,5 +1063,42 @@ namespace HTM.Net.Tests.Network
             int width = layer1.CalculateInputWidth();
             Assert.AreEqual(2048, width);
         }
+
+        [TestMethod]
+        public void CloseTest()
+        {
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            
+            Region region1 = Net.Network.Network.CreateRegion("region1");
+            ILayer layer1 = Net.Network.Network.CreateLayer("layer1", p);
+            region1.Add(layer1);
+            
+            Region region2 = Net.Network.Network.CreateRegion("region2");
+            ILayer layer2 = Net.Network.Network.CreateLayer("layer2", p);
+            region2.Add(layer2);
+            
+            Net.Network.Network network = Net.Network.Network.Create("test network", p);
+            
+                    // Calling close on an empty Network should not throw any Exceptions
+            network.Close();
+            
+                    // Calling close on a Network with a single unclosed Region
+            network.Add(region1);
+            network.Close();
+            
+            Assert.IsTrue(region1.IsClosed(),"Region 1 did not close, after closing Network");
+            Assert.IsTrue(layer1.IsClosed(), "Layer 1 did not close, after closing Network");
+            
+                    // Calling close on a Network with two regions, one of which is closed
+            network.Add(region2);
+            network.Close();
+            
+            Assert.IsTrue(region1.IsClosed(), "Region 1 did not close, after closing Network with 2 Regions");
+            Assert.IsTrue(layer1.IsClosed(),"Layer 1 did not close, after closing Network with 2 Regions");
+            Assert.IsTrue(region2.IsClosed(), "Region 2 did not close, after closing Network with 2 Regions");
+            Assert.IsTrue(layer2.IsClosed(), "Layer 2 did not close, after closing Network with 2 Regions");
+        }
     }
 }

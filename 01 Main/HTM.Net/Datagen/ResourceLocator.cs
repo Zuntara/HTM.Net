@@ -44,7 +44,16 @@ namespace HTM.Net.Datagen
             //}
             //return new FileInfo(url.getPath()).getPath();
         }
-
+        public static string Path(string name)
+        {
+            return name;
+            //Uri url =  typeof(ResourceLocator).GetResource(s);
+            //if (url == null)
+            //{
+            //    url = typeof(ResourceLocator).getClassLoader().getResource(s);
+            //}
+            //return new FileInfo(url.getPath()).getPath();
+        }
         public static string Locate(string s)
         {
             return null;

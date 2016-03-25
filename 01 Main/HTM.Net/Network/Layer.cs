@@ -240,7 +240,7 @@ namespace HTM.Net.Network
         /// <returns></returns>
         public override ILayer Close()
         {
-            if (IsClosed)
+            if (IsClosed())
             {
                 Logger.Warn("Close called on Layer " + GetName() + " which is already closed.");
                 return this;
@@ -355,7 +355,7 @@ namespace HTM.Net.Network
 
             FeedForwardActiveColumns = new int[Connections.GetNumColumns()];
 
-            IsClosed = true;
+            _isClosed = true;
 
             Logger.Debug("Layer " + Name + " content initialize mask = " + AlgoContentMask); // Integer.toBinaryString(algo_content_mask)
 
@@ -462,7 +462,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Using(Connections c)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -487,7 +487,7 @@ namespace HTM.Net.Network
          */
         public Layer<T> Using(Parameters p)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -506,7 +506,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Add(ISensor sensor)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -527,7 +527,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Add(MultiEncoder encoder)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -544,7 +544,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Add(SpatialPooler sp)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -565,7 +565,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Add(TemporalMemory tm)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -587,7 +587,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Add(Anomaly anomalyComputer)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -614,7 +614,7 @@ namespace HTM.Net.Network
          */
         public override ILayer Add(Func<ManualInput, ManualInput> func)
         {
-            if (IsClosed)
+            if (_isClosed)
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
@@ -646,7 +646,7 @@ namespace HTM.Net.Network
          */
         public override void Compute<TInput>(TInput t)
         {
-            if (!IsClosed)
+            if (!_isClosed)
             {
                 Close();
             }
@@ -710,7 +710,7 @@ namespace HTM.Net.Network
         {
             // Save boilerplate setup steps by automatically closing when start is
             // called.
-            if (!IsClosed)
+            if (!_isClosed)
             {
                 Close();
             }

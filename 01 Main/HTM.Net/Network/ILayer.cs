@@ -31,6 +31,13 @@ namespace HTM.Net.Network
         void Halt();
         IObservable<IInference> Observe();
         ILayer Close();
+
+        /// <summary>
+        /// Returns a flag indicating whether this <see cref="ILayer"/> has had
+        /// its <see cref="Close()"/> method called, or not.
+        /// </summary>
+        bool IsClosed();
+
         Connections GetConnections();
         ILayer Using(Connections connections);
         bool SetIsLearn();

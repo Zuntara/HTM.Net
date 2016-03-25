@@ -205,7 +205,7 @@ namespace HTM.Net.Network
             CheckName(name);
             return new PALayer<T>(name, null, p);
         }
-        
+
         /**
          * Returns the String identifier for this {@code Network}
          * @return
@@ -240,6 +240,16 @@ namespace HTM.Net.Network
 
             // Record thread start
             _isThreadRunning = tail.Start();
+        }
+
+        /// <summary>
+        /// Closes all <see cref="Region"/> objects in this <see cref="Network"/>
+        /// </summary>
+        /// <returns></returns>
+        public Network Close()
+        {
+            regions.ForEach(r => r.Close());
+            return this;
         }
 
         /**
@@ -399,7 +409,7 @@ namespace HTM.Net.Network
          * @param input One of (int[], String[], {@link ManualInput}, or Map&lt;String, Object&gt;)
          */
         public void Compute<T>(T input)
-            //where T: IInference
+        //where T: IInference
         {
             if (_tail == null && regions.Count == 1)
             {
@@ -423,7 +433,7 @@ namespace HTM.Net.Network
          * @param input One of (int[], String[], {@link ManualInput}, or Map&lt;String, Object&gt;)
          */
         public IInference ComputeImmediate<T>(T input)
-            //where T : IInference
+        //where T : IInference
         {
             if (_isThreadRunning)
             {
