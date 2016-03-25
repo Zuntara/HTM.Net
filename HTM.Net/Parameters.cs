@@ -815,7 +815,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the number of {@link Column}.
+         * Sets the number of <see cref="Column"/>.
          *
          * @param columnDimensions
          */
@@ -825,7 +825,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the number of {@link Cell}s per {@link Column}
+         * Sets the number of <see cref="Cell"/>s per <see cref="Column"/>
          *
          * @param cellsPerColumn
          */

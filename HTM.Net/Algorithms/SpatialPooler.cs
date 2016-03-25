@@ -544,7 +544,7 @@ namespace HTM.Net.Algorithms
          *                          "dense", i.e. it contains an entry for each input bit, even
          *                          if the permanence value is 0.
          * @param column		    The column in the permanence, potential and connectivity matrices
-         * @param maskPotential		The indexes of inputs in the specified {@link Column}'s pool.
+         * @param maskPotential		The indexes of inputs in the specified <see cref="Column"/>'s pool.
          * @param raisePerm         a boolean value indicating whether the permanence values
          */
         public void UpdatePermanencesForColumn(Connections c, double[] perm, Column column, int[] maskPotential, bool raisePerm)

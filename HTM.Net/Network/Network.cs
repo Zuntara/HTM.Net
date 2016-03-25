@@ -167,9 +167,9 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Creates and returns a child {@link Region} of this {@code Network}
+         * Creates and returns a child <see cref="Region"/> of this {@code Network}
          * 
-         * @param   name    The String identifier for the specified {@link Region}
+         * @param   name    The String identifier for the specified <see cref="Region"/>
          * @return
          */
         public static Region CreateRegion(string name)
@@ -253,7 +253,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns a flag indicating that the {@code Network} has an {@link Observable}
+         * Returns a flag indicating that the {@code Network} has an <see cref="IObservable{T}"/>
          * running on a thread.
          * 
          * @return  a flag indicating if threaded.
@@ -311,7 +311,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns the current {@link Mode} with which this {@link Network} is 
+         * Returns the current {@link Mode} with which this <see cref="Network"/> is 
          * currently configured.
          * 
          * @return
@@ -323,7 +323,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Finds any {@link Region} containing a {@link Layer} which contains a {@link TemporalMemory} 
+         * Finds any <see cref="Region"/> containing a {@link Layer} which contains a {@link TemporalMemory} 
          * and resets them.
          */
         public void Reset()
@@ -335,7 +335,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Resets the recordNum in all {@link Region}s.
+         * Resets the recordNum in all <see cref="Region"/>s.
          */
         public void ResetRecordNum()
         {
@@ -346,7 +346,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns an {@link Observable} capable of emitting {@link Inference}s
+         * Returns an <see cref="IObservable{T}"/> capable of emitting <see cref="IInference"/>s
          * which contain the results of this {@code Network}'s processing chain.
          * @return
          */
@@ -374,7 +374,7 @@ namespace HTM.Net.Network
 
         /**
          * Returns the bottom-most (first in execution order from
-         * bottom to top) {@link Region} in this {@code Network}
+         * bottom to top) <see cref="Region"/> in this {@code Network}
          * 
          * @return
          */
@@ -389,8 +389,8 @@ namespace HTM.Net.Network
 
         /**
          * Returns a {@link Iterator} capable of walking the tree of regions
-         * from the root {@link Region} down through all the child Regions. In turn,
-         * a {@link Region} may be queried for a {@link Iterator} which will return
+         * from the root <see cref="Region"/> down through all the child Regions. In turn,
+         * a <see cref="Region"/> may be queried for a {@link Iterator} which will return
          * an iterator capable of traversing the Region's contained {@link Layer}s.
          * 
          * @return
@@ -401,15 +401,14 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Used to manually input data into a {@link Network}, the other way 
+         * Used to manually input data into a <see cref="Network"/>, the other way 
          * being the call to {@link Network#start()} for a Network that contains a
          * Region that contains a {@link Layer} which in turn contains a {@link Sensor} <em>-OR-</em>
          * subscribing a receiving Region to this Region's output Observable.
          * 
-         * @param input One of (int[], String[], {@link ManualInput}, or Map&lt;String, Object&gt;)
+         * @param input One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)
          */
         public void Compute<T>(T input)
-        //where T: IInference
         {
             if (_tail == null && regions.Count == 1)
             {
@@ -425,12 +424,12 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Used to manually input data into a {@link Network} in a synchronous way, the other way 
+         * Used to manually input data into a <see cref="Network"/> in a synchronous way, the other way 
          * being the call to {@link Network#start()} for a Network that contains a
          * Region that contains a {@link Layer} which in turn contains a {@link Sensor} <em>-OR-</em>
          * subscribing a receiving Region to this Region's output Observable.
          * 
-         * @param input One of (int[], String[], {@link ManualInput}, or Map&lt;String, Object&gt;)
+         * @param input One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)
          */
         public IInference ComputeImmediate<T>(T input)
         //where T : IInference
@@ -514,7 +513,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Adds a {@link Region} to this {@code Network}
+         * Adds a <see cref="Region"/> to this {@code Network}
          * @param region
          * @return
          */
@@ -526,7 +525,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns a {@link List} view of the contained {@link Region}s.
+         * Returns a {@link List} view of the contained <see cref="Region"/>s.
          * @return
          */
         public List<Region> GetRegions()
@@ -535,7 +534,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Sets a reference to the {@link Region} which contains the {@link Sensor}
+         * Sets a reference to the <see cref="Region"/> which contains the {@link Sensor}
          * (if any).
          * 
          * @param r
@@ -546,7 +545,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns a reference to the {@link Region} which contains the {@link Sensor}
+         * Returns a reference to the <see cref="Region"/> which contains the {@link Sensor}
          * 
          * @return  the Region which contains the Sensor
          */
@@ -556,7 +555,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns the {@link Region} with the specified name
+         * Returns the <see cref="Region"/> with the specified name
          * or null if it doesn't exist within this {@code Network}
          * @param regionName
          * @return

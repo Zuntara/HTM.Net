@@ -26,7 +26,7 @@ namespace HTM.Net
     {
 
         /**
-         * Converts a vector of {@link Cell} indexes to {@link Column} indexes.
+         * Converts a vector of <see cref="Cell"/> indexes to <see cref="Column"/> indexes.
          * 
          * @param cells             the indexes of the cells to convert
          * @param cellsPerColumn    the defined number of cells per column  
@@ -39,7 +39,7 @@ namespace HTM.Net
         }
 
         /**
-         * Converts a vector of {@link Cell} indexes to {@link Column} indexes.
+         * Converts a vector of <see cref="Cell"/> indexes to <see cref="Column"/> indexes.
          * 
          * @param cells             the indexes of the cells to convert
          * @param cellsPerColumn    the defined number of cells per column  
@@ -54,7 +54,7 @@ namespace HTM.Net
         }
 
         /**
-         * Converts a List of {@link Cell}s to {@link Column} indexes.
+         * Converts a List of <see cref="Cell"/>s to <see cref="Column"/> indexes.
          * 
          * @param cells             the list of cells to convert
          * @param cellsPerColumn    the defined number of cells per column  
@@ -69,7 +69,7 @@ namespace HTM.Net
         }
 
         /**
-         * Converts a Set of {@link Cell}s to {@link Column} indexes.
+         * Converts a Set of <see cref="Cell"/>s to <see cref="Column"/> indexes.
          * 
          * @param cells             the list of cells to convert
          * @param cellsPerColumn    the defined number of cells per column  
@@ -83,7 +83,7 @@ namespace HTM.Net
         }
 
         /**
-         * Converts a {@link Collection} of {@link Cell}s to a list
+         * Converts a {@link Collection} of <see cref="Cell"/>s to a list
          * of cell indexes.
          * 
          * @param cells

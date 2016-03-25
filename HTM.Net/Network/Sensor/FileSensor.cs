@@ -10,7 +10,7 @@ namespace HTM.Net.Network.Sensor
  * Default implementation of a {@link Sensor} for inputting data from
  * a file.
  * 
- * All {@link Sensor}s represent the bottom-most level of any given {@link Network}. 
+ * All {@link Sensor}s represent the bottom-most level of any given <see cref="Network"/>. 
  * Sensors are used to connect to a data source and feed data into the Network, therefore
  * there are no nodes beneath them or which precede them within the Network hierarchy, in
  * terms of data flow. In fact, a Sensor will throw an {@link Exception} if an attempt to 

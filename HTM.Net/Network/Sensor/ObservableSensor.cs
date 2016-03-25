@@ -8,7 +8,7 @@ namespace HTM.Net.Network.Sensor
 {
     /**
      * Wraps an {@link rx.Observable} or {@link Publisher} event emitter which can be used to input CSV
-     * strings into a given {@link Layer} of a {@link Region} and {@link Network} by
+     * strings into a given {@link Layer} of a <see cref="Region"/> and <see cref="Network"/> by
      * either manually calling {@link Publisher#onNext(String)} or by connecting an Observable
      * to an existing chain of Observables (operations/transformations) which eventually yield an appropriate CSV
      * String input.

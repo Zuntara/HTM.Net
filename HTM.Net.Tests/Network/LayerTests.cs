@@ -424,28 +424,6 @@ namespace HTM.Net.Tests.Network
 
             l.Start();
 
-            //l.Subscribe(new Observer<Inference>() {
-            //        int idx = 0;
-            //    public void onCompleted() { }
-            //    public void onError(Throwable e) { Console.WriteLine(e); }
-            //    public void onNext(Inference output)
-            //    {
-            //        switch (idx)
-            //        {
-            //            case 0:
-            //                Assert.AreEqual("[0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]", Arrays.toString(output.GetSdr()));
-            //                break;
-            //            case 1:
-            //                Assert.AreEqual("[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]", Arrays.toString(output.GetSdr()));
-            //                break;
-            //            case 2:
-            //                Assert.AreEqual("[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]", Arrays.toString(output.GetSdr()));
-            //                break;
-            //        }
-            //        ++idx;
-            //    }
-            //});
-
             int idx = 0;
             l.Subscribe(Observer.Create<IInference>(
                         // OnNext
@@ -474,7 +452,7 @@ namespace HTM.Net.Tests.Network
                         // OnCompleted
                         () =>
                         {
-
+                            Debug.WriteLine("Called OnComplete");
                         }));
 
             try
@@ -491,7 +469,7 @@ namespace HTM.Net.Tests.Network
                 {
                     manual.OnNext(s);
                 }
-
+                manual.OnComplete();
                 Thread.Sleep(100);
             }
             catch (Exception e)

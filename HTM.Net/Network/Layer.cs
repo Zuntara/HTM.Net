@@ -19,23 +19,23 @@ namespace HTM.Net.Network
     /// <summary>
     /// <p>
     /// Implementation of the biological layer of a region in the neocortex. Here, a
-    /// {@code Layer} contains the physical structure (columns, cells, dendrites etc)
+    /// <see cref="ILayer"/> contains the physical structure (columns, cells, dendrites etc)
     /// shared by a sequence of algorithms which serve to implement the predictive
     /// inferencing present in this, the allegory to its biological equivalent.
     /// </p>
     /// <p>
-    /// <b>COMPOSITION:</b> A Layer is constructed with {@link Parameters} which
+    /// <b>COMPOSITION:</b> A Layer is constructed with <see cref="Parameters"/> which
     /// configure the behavior of most of the key algorithms a Layer may contain. It
     /// is also <em>optionally</em> constructed with each of the algorithms in turn.
-    /// A Layer that includes an {@link Encoder} is always initially configured with
-    /// a {@link MultiEncoder}. The child encoders contained within the MultiEncoder
+    /// A Layer that includes an <see cref="IEncoder"/> is always initially configured with
+    /// a <see cref="MultiEncoder"/>. The child encoders contained within the MultiEncoder
     /// are configured from the Map included with the specified Parameters, keyed by
     /// {@link Parameters.KEY#FIELD_ENCODING_MAP}.
     /// </p>
     /// <p>
     /// A field encoding map consists of one map for each of the fields to be
     /// encoded. Each individual map in the field encoding map contains the typical
-    /// {@link Encoder} parameters, plus a few "meta" parameters needed to describe
+    /// <see cref="IEncoder"/> parameters, plus a few "meta" parameters needed to describe
     /// the field and its data type as follows:
     /// </p>
     /// 
@@ -91,7 +91,7 @@ namespace HTM.Net.Network
     /// // See the test harness for more information
     /// Parameters p = NetworkTestHarness.GetParameters();
     /// 
-    /// // How to merge (union) two {@link Parameters} objects. This one merges
+    /// // How to merge (union) two <see cref="Parameters"/> objects. This one merges
     /// // the Encoder parameters into default parameters.
     /// p = p.union(NetworkTestHarness.GetHotGymTestEncoderParams());
     /// 
@@ -147,7 +147,7 @@ namespace HTM.Net.Network
         private Layer<IInference> _previous;
 
         /// <summary>
-        /// Retains the order of added items - for use with interposed {@link Observable}
+        /// Retains the order of added items - for use with interposed <see cref="IObservable{T}"/>
         /// </summary>
         private readonly List<object> _addedItems = new List<object>();
 
@@ -157,45 +157,38 @@ namespace HTM.Net.Network
         private bool _hasGenericProcess;
 
         /// <summary>
-        /// List of {@link Encoders} used when storing bucket information 
+        /// List of <see cref="Encoders"/> used when storing bucket information 
         /// see <see cref="DoEncoderBucketMapping(IInference, IDictionary{string, object})"/>
         /// </summary>
         private List<EncoderTuple> _encoderTuples;
 
-        /**
-         * Creates a new {@code Layer} using the {@link Network} level
-         * {@link Parameters}
-         * 
-         * @param n
-         *            the parent {@link Network}
-         */
+        /// <summary>
+        /// Creates a new <see cref="ILayer"/> using the <see cref="Network"/> level <see cref="Parameters"/>
+        /// </summary>
+        /// <param name="n">the parent <see cref="Network"/></param>
         public Layer(Network n)
             : this(n, n.GetParameters())
         {
 
         }
 
-        /**
-         * Creates a new {@code Layer} using the specified {@link Parameters}
-         * 
-         * @param n
-         *            the parent {@link Network}
-         * @param p
-         *            the {@link Parameters} to use with this {@code Layer}
-         */
+        /// <summary>
+        /// Creates a new <see cref="ILayer"/> using the specified <see cref="Parameters"/>
+        /// </summary>
+        /// <param name="n">the parent <see cref="Network"/></param>
+        /// <param name="p">the <see cref="Parameters"/> to use with this <see cref="ILayer"/></param>
         public Layer(Network n, Parameters p)
             : this("[Layer " + TimeUtils.CurrentTimeMillis() + "]", n, p)
         {
 
         }
 
-        /**
-         * Creates a new {@code Layer} using the specified {@link Parameters}
-         * 
-         * @param name  the name identifier of this {@code Layer}
-         * @param n     the parent {@link Network}
-         * @param p     the {@link Parameters} to use with this {@code Layer}
-         */
+        /// <summary>
+        /// Creates a new <see cref="ILayer"/> using the specified <see cref="Parameters"/>
+        /// </summary>
+        /// <param name="name">the name identifier of this <see cref="ILayer"/></param>
+        /// <param name="n">the parent <see cref="Network"/></param>
+        /// <param name="p">the <see cref="Parameters"/> to use with this <see cref="ILayer"/></param>
         public Layer(string name, Network n, Parameters p)
             : base(name, n, p)
         {
@@ -204,20 +197,15 @@ namespace HTM.Net.Network
             ObservableDispatch = CreateDispatchMap();
         }
 
-        /**
-         * Creates a new {@code Layer} initialized with the specified algorithmic
-         * components.
-         * 
-         * @param params                    A {@link Parameters} object containing configurations for a
-         *                                  SpatialPooler, TemporalMemory, and Encoder (all or none may be used).
-         * @param e                         (optional) The Network API only uses a {@link MultiEncoder} at
-         *                                  the top level because of its ability to delegate to child encoders.
-         * @param sp                        (optional) {@link SpatialPooler}
-         * @param tm                        (optional) {@link TemporalMemory}
-         * @param autoCreateClassifiers     (optional) Indicates that the {@link Parameters} object
-         *                                  contains the configurations necessary to create the required encoders.
-         * @param a                         (optional) An {@link Anomaly} computer.
-         */
+        /// <summary>
+        /// Creates a new <see cref="ILayer"/> initialized with the specified algorithmic components.
+        /// </summary>
+        /// <param name="params"> A <see cref="Parameters"/> object containing configurations for a SpatialPooler, TemporalMemory, and Encoder (all or none may be used).</param>
+        /// <param name="e">(optional) The Network API only uses a <see cref="MultiEncoder"/> at the top level because of its ability to delegate to child encoders.</param>
+        /// <param name="sp">(optional) <see cref="SpatialPooler"/></param>
+        /// <param name="tm">(optional) <see cref="TemporalMemory"/></param>
+        /// <param name="autoCreateClassifiers">(optional) Indicates that the <see cref="Parameters"/> object contains the configurations necessary to create the required encoders.</param>
+        /// <param name="a">(optional) An <see cref="Anomaly"/> computer.</param>
         public Layer(Parameters @params, MultiEncoder e, SpatialPooler sp, TemporalMemory tm, bool? autoCreateClassifiers, Anomaly a)
             : base(@params, e, sp, tm, autoCreateClassifiers, a)
         {
@@ -362,13 +350,12 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Called from {@link FunctionFactory#createSpatialFunc(SpatialPooler)} and from {@link #close()}
-         * to calculate the size of the input vector given the output source either being a {@link TemporalMemory}
-         * or a {@link SpatialPooler} - from this {@link Region} or a previous {@link Region}.
-         * 
-         * @return  the length of the input vector
-         */
+        /// <summary>
+        /// Called from <see cref="FunctionFactory.CreateSpatialFunc(SpatialPooler)"/> and from <see cref="Close()"/>
+        /// to calculate the size of the input vector given the output source either being a <see cref="TemporalMemory"/>
+        /// or a <see cref="SpatialPooler"/> - from this <see cref="Region"/> or a previous <see cref="Region"/>.
+        /// </summary>
+        /// <returns>the length of the input vector</returns>
         public override int CalculateInputWidth()
         {
             // If no previous Layer, check upstream region for its output layer's output.
@@ -409,25 +396,20 @@ namespace HTM.Net.Network
             }
         }
 
-        
-
-        /**
-         * Given an input field width and Spatial Pooler dimensionality; this method
-         * will return an array of dimension sizes whose number is equal to the
-         * number of column dimensions. The sum of the returned dimensions will be
-         * equal to the flat input field width specified.
-         * 
-         * This method should be called when a disparity in dimensionality between
-         * the input field and the number of column dimensions is detected.
-         * Otherwise if the input field dimensionality is correctly specified, this
-         * method should <b>not</b> be used.
-         * 
-         * @param inputWidth        the flat input width of an {@link Encoder}'s output or the
-         *                          vector used as input to the {@link SpatialPooler}
-         * @param numColumnDims     a number specifying the number of column dimensions that
-         *                          should be returned.
-         * @return
-         */
+        /// <summary>
+        /// Given an input field width and Spatial Pooler dimensionality; this method
+        /// will return an array of dimension sizes whose number is equal to the
+        /// number of column dimensions. The sum of the returned dimensions will be
+        /// equal to the flat input field width specified.
+        /// 
+        /// This method should be called when a disparity in dimensionality between
+        /// the input field and the number of column dimensions is detected.
+        /// Otherwise if the input field dimensionality is correctly specified, this
+        /// method should <b>not</b> be used.
+        /// </summary>
+        /// <param name="inputWidth">the flat input width of an <see cref="IEncoder"/>'s output or the vector used as input to the <see cref="SpatialPooler"/></param>
+        /// <param name="numDims">a number specifying the number of column dimensions that should be returned.</param>
+        /// <returns></returns>
         public int[] InferInputDimensions(int inputWidth, int numDims)
         {
             double flatSize = inputWidth;
@@ -437,7 +419,7 @@ namespace HTM.Net.Network
             int[] retVal = new int[(int)numColDims];
             double log = Math.Log10(flatSize);
             double dimensions = numColDims;
-            double sliceArrangement = Math.Round(Math.Pow(10, (log/dimensions)),8, MidpointRounding.AwayFromZero);//MathContext.DECIMAL32);.doubleValue();
+            double sliceArrangement = Math.Round(Math.Pow(10, (log / dimensions)), 8, MidpointRounding.AwayFromZero);//MathContext.DECIMAL32);.doubleValue();
             double remainder = sliceArrangement % (int)sliceArrangement;
             if (remainder > double.Epsilon)
             {
@@ -453,13 +435,12 @@ namespace HTM.Net.Network
             return retVal;
         }
 
-        /**
-         * Allows the user to define the {@link Connections} object data structure
-         * to use. Or possibly to share connections between two {@code Layer}s
-         * 
-         * @param c     the {@code Connections} object to use.
-         * @return this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Allows the user to define the <see cref="Connections"/> object data structure
+        /// to use. Or possibly to share connections between two <see cref="ILayer"/>s
+        /// </summary>
+        /// <param name="c">the <see cref="Connections"/> object to use.</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Using(Connections c)
         {
             if (_isClosed)
@@ -470,22 +451,21 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Allows the user to specify the {@link Parameters} object used by this
-         * {@code Layer}. If the intent is to share Parameters across multiple
-         * Layers, it must be kept in mind that two Layers containing the same
-         * algorithm may require specification of locally different parameter
-         * settings. In this case, one could use
-         * {@link #alterParameter(KEY, Object)} method to change a local setting
-         * without impacting the same setting in the source parameters object. This
-         * is made possible because the {@link #alterParameter(KEY, Object)} method
-         * first makes a local copy of the {@link Parameters} object, then modifies
-         * the specified parameter.
-         * 
-         * @param p     the {@link Parameters} to use in this {@code Layer}
-         * @return      this {@code Layer}
-         */
-        public Layer<T> Using(Parameters p)
+        /// <summary>
+        /// Allows the user to specify the <see cref="Parameters"/> object used by this
+        /// <see cref="ILayer"/>. If the intent is to share Parameters across multiple
+        /// Layers, it must be kept in mind that two Layers containing the same
+        /// algorithm may require specification of locally different parameter
+        /// settings. In this case, one could use
+        /// <see cref="BaseLayer.AlterParameter(Parameters.KEY,object)"/> method to change a local setting
+        /// without impacting the same setting in the source parameters object. This
+        /// is made possible because the <see cref="BaseLayer.AlterParameter(Parameters.KEY,object)"/> method
+        /// first makes a local copy of the <see cref="Parameters"/> object, then modifies
+        /// the specified parameter.
+        /// </summary>
+        /// <param name="p">the <see cref="Parameters"/> to use in this <see cref="ILayer"/></param>
+        /// <returns>this <see cref="ILayer"/></returns>
+        public override ILayer Using(Parameters p)
         {
             if (_isClosed)
             {
@@ -495,15 +475,14 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds an {@link HTMSensor} to this {@code Layer}. An HTMSensor is a regular
-         * {@link Sensor} (i.e. {@link FileSensor}, {@link URISensor}, or {@link ObservableSensor})
-         * which has had an {@link Encoder} configured and added to it. HTMSensors are
-         * HTM Aware, where as regular Sensors have no knowledge of HTM requirements.
-         * 
-         * @param sensor    the {@link HTMSensor}
-         * @return this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Adds an <see cref="HTMSensor{T}"/> to this <see cref="ILayer"/>. An HTMSensor is a regular
+        /// <see cref="ISensor"/> (i.e. <see cref="FileSensor"/>, <see cref="URISensor"/>, or <see cref="ObservableSensor{T}"/>)
+        /// which has had an <see cref="IEncoder"/> configured and added to it. HTMSensors are
+        /// HTM Aware, where as regular Sensors have no knowledge of HTM requirements.
+        /// </summary>
+        /// <param name="sensor">the <see cref="HTMSensor{T}"/></param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Add(ISensor sensor)
         {
             if (_isClosed)
@@ -519,12 +498,11 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds a {@link MultiEncoder} to this {@code Layer}
-         * 
-         * @param encoder   the added MultiEncoder
-         * @return this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Adds a <see cref="MultiEncoder"/> to this <see cref="ILayer"/>
+        /// </summary>
+        /// <param name="encoder">the added MultiEncoder</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Add(MultiEncoder encoder)
         {
             if (_isClosed)
@@ -536,12 +514,11 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds a {@link SpatialPooler} to this {@code Layer}
-         * 
-         * @param sp    the added SpatialPooler
-         * @return this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Adds a <see cref="SpatialPooler"/> to this <see cref="ILayer"/>
+        /// </summary>
+        /// <param name="sp">the added SpatialPooler</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Add(SpatialPooler sp)
         {
             if (_isClosed)
@@ -557,12 +534,11 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds a {@link TemporalMemory} to this {@code Layer}
-         * 
-         * @param tm    the added TemporalMemory
-         * @return this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Adds a <see cref="TemporalMemory"/> to this <see cref="ILayer"/>
+        /// </summary>
+        /// <param name="tm">the added TemporalMemory</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Add(TemporalMemory tm)
         {
             if (_isClosed)
@@ -579,12 +555,11 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds an {@link Anomaly} computer to this {@code Layer}
-         * 
-         * @param anomalyComputer   the Anomaly instance
-         * @return this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Adds an <see cref="Anomaly"/> computer to this <see cref="ILayer"/>
+        /// </summary>
+        /// <param name="anomalyComputer">the Anomaly instance</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Add(Anomaly anomalyComputer)
         {
             if (_isClosed)
@@ -600,18 +575,17 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds a "generic" processing node into this {@code Layer}'s processing
-         * chain.
-         * 
-         * <em><b>NOTE: When adding a generic node, the order of calls to
-         * the addXXX() methods becomes crucially important. Make sure you 
-         * have added items in a valid order in your "fluent" add call declarations.</b></em>
-         * 
-         * @param func      a {@link Func1} function to be performed at the point of
-         *                  insertion within the {@code Layer}'s declaration.
-         * @return     this Layer instance (in fluent-style)
-         */
+        /// <summary>
+        /// Adds a "generic" processing node into this <see cref="ILayer"/>'s processing
+        /// chain.
+        /// 
+        /// <em><b>NOTE: When adding a generic node, the order of calls to
+        /// the addXXX() methods becomes crucially important. Make sure you 
+        /// have added items in a valid order in your "fluent" add call declarations.</b></em>
+        /// </summary>
+        /// <param name="func">a <see cref="Func{ManualInput, ManualInput}"/> function to be performed at the point 
+        /// of insertion within the <see cref="ILayer"/>'s declaration.</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
         public override ILayer Add(Func<ManualInput, ManualInput> func)
         {
             if (_isClosed)
@@ -629,21 +603,19 @@ namespace HTM.Net.Network
             return this;
         }
 
-        
-
-        /**
-         * Processes a single element, sending the specified input up the configured
-         * chain of algorithms or components within this {@code Layer}; resulting in
-         * any {@link Subscriber}s or {@link Observer}s being notified of results
-         * corresponding to the specified input (unless a {@link SpatialPooler}
-         * "primer delay" has been configured).
-         * 
-         * The first input to the Layer invokes a method to resolve the transformer
-         * at the bottom of the input chain, therefore the "type" (&lt;T&gt;) of the
-         * input cannot be changed once this method is called for the first time.
-         * 
-         * @param t     the input object who's type is generic.
-         */
+        /// <summary>
+        /// Processes a single element, sending the specified input up the configured
+        /// chain of algorithms or components within this <see cref="ILayer"/>; resulting in
+        /// any {@link Subscriber}s or {@link Observer}s being notified of results
+        /// corresponding to the specified input (unless a <see cref="SpatialPooler"/>
+        /// "primer delay" has been configured).
+        /// 
+        /// The first input to the Layer invokes a method to resolve the transformer
+        /// at the bottom of the input chain, therefore the "type" (&lt;T&gt;) of the
+        /// input cannot be changed once this method is called for the first time.
+        /// </summary>
+        /// <typeparam name="TInput"></typeparam>
+        /// <param name="t">the input object who's type is generic.</param>
         public override void Compute<TInput>(TInput t)
         {
             if (!_isClosed)
@@ -663,13 +635,13 @@ namespace HTM.Net.Network
 
         public override object CustomCompute(int recordNum, List<int> patternNZ, Map<string, object> classification)
         {
-            
+
             throw new NotImplementedException();
         }
 
-        /**
-         * Stops the processing of this {@code Layer}'s processing thread.
-         */
+        /// <summary>
+        /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
+        /// </summary>
         public override void Halt()
         {
             // Signal the Observer chain to complete
@@ -684,28 +656,25 @@ namespace HTM.Net.Network
             _isHalted = true;
         }
 
-        /**
-         * Returns a flag indicating whether this layer's processing thread has been
-         * halted or not.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns a flag indicating whether this layer's processing thread has been halted or not.
+        /// </summary>
         public bool IsHalted()
         {
             return _isHalted;
         }
 
-        /**
-         * Completes the dispatch chain of algorithm {@link Observable}s with
-         * specialized {@link Transformer}s for each algorithm contained within this
-         * Layer. This method then starts the output stream processing of its
-         * {@link Sensor} in a separate {@link Thread} (if it exists) - logging this
-         * event.
-         * 
-         * Calling this method sets a flag on the underlying Sensor marking it as
-         * "Terminal" meaning that it cannot be restarted and its output stream
-         * cannot be accessed again.
-         */
+        /// <summary>
+        /// Completes the dispatch chain of algorithm <see cref="IObservable{T}"/>s with
+        /// specialized <see cref="Transformer"/>s for each algorithm contained within this
+        /// Layer. This method then starts the output stream processing of its
+        /// <see cref="ISensor"/> in a separate Thread (if it exists) - logging this
+        /// event.
+        /// 
+        /// Calling this method sets a flag on the underlying Sensor marking it as
+        /// "Terminal" meaning that it cannot be restarted and its output stream
+        /// cannot be accessed again.
+        /// </summary>
         public override void Start()
         {
             // Save boilerplate setup steps by automatically closing when start is
@@ -735,7 +704,7 @@ namespace HTM.Net.Network
             {
                 NotifyError(e);
             }
-            
+
             LayerThread = new Task(() =>
             {
                 Logger.Debug("Layer [" + GetName() + "] started Sensor output stream processing.");
@@ -856,7 +825,7 @@ namespace HTM.Net.Network
 
                 //});
             }, TaskCreationOptions.LongRunning);
-           
+
             //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
             LayerThread.Start();
             //        (LAYER_THREAD = new Thread("Sensor Layer [" + getName() + "] Thread")
@@ -902,124 +871,104 @@ namespace HTM.Net.Network
             Logger.Debug(string.Format("Start called on Layer thread {0}", LayerThread));
         }
 
-        /**
-         * Sets a pointer to the "next" Layer in this {@code Layer}'s
-         * {@link Observable} sequence.
-         * 
-         * @param l
-         */
+        /// <summary>
+        /// Sets a pointer to the "next" Layer in this <see cref="ILayer"/>'s <see cref="IObservable{T}"/> sequence.
+        /// </summary>
+        /// <param name="l"></param>
         public void Next(Layer<IInference> l)
         {
             _next = l;
         }
 
-        /**
-         * Returns the next Layer following this Layer in order of process flow.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the next Layer following this Layer in order of process flow.
+        /// </summary>
         public override ILayer GetNext()
         {
             return _next;
         }
 
-        /**
-         * Sets a pointer to the "previous" Layer in this {@code Layer}'s
-         * {@link Observable} sequence.
-         * 
-         * @param l
-         */
+        /// <summary>
+        /// Sets a pointer to the "previous" Layer in this <see cref="ILayer"/>'s <see cref="IObservable{T}"/> sequence.
+        /// </summary>
+        /// <param name="l"></param>
         public void Previous(Layer<IInference> l)
         {
             _previous = l;
         }
 
-        /**
-         * Returns the previous Layer preceding this Layer in order of process flow.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the previous Layer preceding this Layer in order of process flow.
+        /// </summary>
         public override ILayer GetPrevious()
         {
             return _previous;
         }
 
-        /**
-         * Returns the current predictive {@link Cell}s
-         * 
-         * @return the binary vector representing the current prediction.
-         */
+        /// <summary>
+        /// Returns the current predictive <see cref="Cell"/>s
+        /// </summary>
+        /// <returns>the binary vector representing the current prediction.</returns>
         public HashSet<Cell> GetPredictiveCells()
         {
             return PredictiveCells;
         }
 
-        /**
-         * Returns the previous predictive {@link Cells}
-         * 
-         * @return the binary vector representing the current prediction.
-         */
+        /// <summary>
+        /// Returns the previous predictive <see cref="Cell"/>s
+        /// </summary>
+        /// <returns>the binary vector representing the current prediction.</returns>
         public HashSet<Cell> GetPreviousPredictiveCells()
         {
             return PreviousPredictiveCells;
         }
 
-        /**
-         * Returns the current (dense) array of column indexes which represent
-         * columns which have become activated during the current input sequence
-         * from the SpatialPooler.
-         * 
-         * @return the array of active column indexes
-         */
+        /// <summary>
+        /// Returns the current (dense) array of column indexes which represent
+        /// columns which have become activated during the current input sequence
+        /// from the SpatialPooler.
+        /// </summary>
+        /// <returns>the array of active column indexes</returns>
         public int[] GetFeedForwardActiveColumns()
         {
             return FeedForwardActiveColumns;
         }
 
-        /**
-         * Returns the {@link Cell}s activated in the {@link TemporalMemory} at time
-         * "t"
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the <see cref="Cell"/>s activated in the <see cref="TemporalMemory"/> at time "t"
+        /// </summary>
+        /// <returns></returns>
         public HashSet<Cell> GetActiveCells()
         {
             return ActiveCells;
         }
 
-        /**
-         * Sets the sparse form of the {@link SpatialPooler} column activations and
-         * returns the specified array.
-         * 
-         * @param activesInSparseForm       the sparse column activations
-         * @return
-         */
+        /// <summary>
+        /// Sets the sparse form of the <see cref="SpatialPooler"/> column activations and returns the specified array.
+        /// </summary>
+        /// <param name="activesInSparseForm">the sparse column activations</param>
         private int[] SetFeedForwardSparseActives(int[] activesInSparseForm)
         {
             FeedForwardSparseActives = activesInSparseForm;
             return FeedForwardSparseActives;
         }
 
-        /**
-         * Returns the SpatialPooler column activations in sparse form (indexes of
-         * the on bits).
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the SpatialPooler column activations in sparse form (indexes of the on bits).
+        /// </summary>
         public int[] GetFeedForwardSparseActives()
         {
             return FeedForwardSparseActives;
         }
 
-        /**
-         * Returns the values submitted to this {@code Layer} in an array whose
-         * indexes correspond to the indexes of probabilities returned when calling
-         * {@link #getAllPredictions(String, int)}.
-         * 
-         * @param field     The field name of the required prediction
-         * @param step      The step for the required prediction
-         * @return
-         */
+        /// <summary>
+        /// Returns the values submitted to this <see cref="ILayer"/> in an array whose
+        /// indexes correspond to the indexes of probabilities returned when calling
+        /// <see cref="GetAllPredictions(string,int)"/>.
+        /// </summary>
+        /// <typeparam name="TV"></typeparam>
+        /// <param name="field">The field name of the required prediction</param>
+        /// <param name="step">The step for the required prediction</param>
         public TV[] GetAllValues<TV>(string field, int step)
         {
             if (CurrentInference == null || CurrentInference.GetClassifiers() == null)
@@ -1033,23 +982,21 @@ namespace HTM.Net.Network
                 Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
             }
 
-            return c?.GetActualValues().Select(av => av != null ? (TV) av : default(TV)).ToArray();
+            return c?.GetActualValues().Select(av => av != null ? (TV)av : default(TV)).ToArray();
 
             //return (V[])c.GetActualValues().Cast<V>().ToArray();
         }
 
-        /**
-         * Returns a double[] containing a prediction confidence measure for each
-         * bucket (unique entry as determined by an encoder). In order to relate the
-         * probability to an actual value, call {@link #getAllValues(String, int)}
-         * which returns an array containing the actual values submitted to this
-         * {@code Layer} - the indexes of each probability will match the index of
-         * each actual value entered.
-         * 
-         * @param field     The field name of the required prediction
-         * @param step      The step for the required prediction
-         * @return
-         */
+        /// <summary>
+        /// Returns a double[] containing a prediction confidence measure for each
+        /// bucket (unique entry as determined by an encoder). In order to relate the
+        /// probability to an actual value, call <see cref="GetAllValues(string,int)"/>
+        /// which returns an array containing the actual values submitted to this
+        /// <see cref="ILayer"/> - the indexes of each probability will match the index of
+        /// each actual value entered.
+        /// </summary>
+        /// <param name="field">The field name of the required prediction</param>
+        /// <param name="step">The step for the required prediction</param>
         public double[] GetAllPredictions(string field, int step)
         {
             if (CurrentInference == null || CurrentInference.GetClassifiers() == null)
@@ -1066,14 +1013,12 @@ namespace HTM.Net.Network
             return c?.GetStats(step);
         }
 
-        /**
-         * Returns the value whose probability is calculated to be the highest for
-         * the specified field and step.
-         * 
-         * @param field     The field name of the required prediction
-         * @param step      The step for the required prediction
-         * @return
-         */
+        /// <summary>
+        /// Returns the value whose probability is calculated to be the highest for the specified field and step.
+        /// </summary>
+        /// <typeparam name="TK"></typeparam>
+        /// <param name="field">The field name of the required prediction</param>
+        /// <param name="step">The step for the required prediction</param>
         public TK GetMostProbableValue<TK>(string field, int step)
         {
             if (CurrentInference == null || CurrentInference.GetClassifiers() == null)
@@ -1090,14 +1035,11 @@ namespace HTM.Net.Network
             return (TK)c?.GetMostProbableValue(step);
         }
 
-        /**
-         * Returns the bucket index of the value with the highest calculated
-         * probability for the specified field and step.
-         * 
-         * @param field     The field name of the required prediction
-         * @param step      The step for the required prediction
-         * @return
-         */
+        /// <summary>
+        /// Returns the bucket index of the value with the highest calculated probability for the specified field and step.
+        /// </summary>
+        /// <param name="field">The field name of the required prediction</param>
+        /// <param name="step">The step for the required prediction</param>
         public int GetMostProbableBucketIndex(string field, int step)
         {
             if (CurrentInference == null || CurrentInference.GetClassifiers() == null)
@@ -1130,18 +1072,17 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * We cannot create the {@link Observable} sequence all at once because the
-         * first step is to transform the input type to the type the rest of the
-         * sequence uses (Observable<b>&lt;Inference&gt;</b>). This can only happen
-         * during the actual call to {@link #compute(Object)} which presents the
-         * input type - so we create a map of all types of expected inputs, and then
-         * connect the sequence at execution time; being careful to only incur the
-         * cost of sequence assembly on the first call to {@link #compute(Object)}.
-         * After the first call, we dispose of this map and its contents.
-         * 
-         * @return the map of input types to {@link Transformer}
-         */
+        /// <summary>
+        /// We cannot create the <see cref="IObservable{T}"/> sequence all at once because the
+        /// first step is to transform the input type to the type the rest of the
+        /// sequence uses (<see cref="IObservable{IInference}"/>). This can only happen
+        /// during the actual call to <see cref="Compute{T}(T)"/> which presents the
+        /// input type - so we create a map of all types of expected inputs, and then
+        /// connect the sequence at execution time; being careful to only incur the
+        /// cost of sequence assembly on the first call to <see cref="Compute{T}(T)"/>.
+        /// After the first call, we dispose of this map and its contents.
+        /// </summary>
+        /// <returns>the map of input types to <see cref="Transformer"/></returns>
         protected override Map<Type, IObservable<ManualInput>> CreateDispatchMap()
         {
             Map<Type, IObservable<ManualInput>> obsDispatch = new Map<Type, IObservable<ManualInput>>();
@@ -1193,12 +1134,11 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * If this Layer has a Sensor, map its encoder's buckets
-         * 
-         * @param sequence
-         * @return
-         */
+        /// <summary>
+        /// If this Layer has a Sensor, map its encoder's buckets
+        /// </summary>
+        /// <param name="sequence"></param>
+        /// <returns></returns>
         private IObservable<ManualInput> MapEncoderBuckets(IObservable<ManualInput> sequence)
         {
             if (HasSensor())
@@ -1235,14 +1175,13 @@ namespace HTM.Net.Network
             return sequence;
         }
 
-        /**
-         * Stores a {@link NamedTuple} which contains the input values and bucket
-         * information - keyed to the encoded field name so that a classifier can
-         * retrieve it later on in the processing sequence.
-         * 
-         * @param inference
-         * @param encoderInputMap
-         */
+        /// <summary>
+        /// Stores a <see cref="NamedTuple"/> which contains the input values and bucket
+        /// information - keyed to the encoded field name so that a classifier can
+        /// retrieve it later on in the processing sequence.
+        /// </summary>
+        /// <param name="inference"></param>
+        /// <param name="encoderInputMap"></param>
         private void DoEncoderBucketMapping(IInference inference, IDictionary<string, object> encoderInputMap)
         {
             if (_encoderTuples == null)
@@ -1296,13 +1235,11 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * Connects the {@link Transformer} to the rest of the {@link Observable}
-         * sequence.
-         * 
-         * @param o     the Transformer part of the sequence.
-         * @return the completed {@link Observable} sequence.
-         */
+        /// <summary>
+        /// Connects the <see cref="Transformer"/> to the rest of the <see cref="IObservable{T}"/> sequence.
+        /// </summary>
+        /// <param name="o">the Transformer part of the sequence.</param>
+        /// <returns>the completed <see cref="IObservable{T}"/> sequence.</returns>
         private IObservable<ManualInput> FillInSequence(IObservable<ManualInput> o)
         {
 
@@ -1347,13 +1284,11 @@ namespace HTM.Net.Network
             return o;
         }
 
-        /**
-         * Connects {@link Observable} or {@link Transformer} emissions in the order
-         * they are declared.
-         * 
-         * @param o     first {@link Observable} in sequence.
-         * @return
-         */
+        /// <summary>
+        /// Connects <see cref="IObservable{T}"/> or <see cref="Transformer"/> emissions in the order they are declared.
+        /// </summary>
+        /// <param name="o">first <see cref="IObservable{T}"/> in sequence.</param>
+        /// <returns></returns>
         private IObservable<ManualInput> FillInOrderedSequence(IObservable<ManualInput> o)
         {
             _addedItems.Reverse();
@@ -1397,13 +1332,11 @@ namespace HTM.Net.Network
             return o;
         }
 
-        /**
-         * Creates the {@link NamedTuple} of names to encoders used in the
-         * observable sequence.
-         * 
-         * @param encoder
-         * @return
-         */
+        /// <summary>
+        /// Creates the <see cref="NamedTuple"/> of names to encoders used in the observable sequence.
+        /// </summary>
+        /// <param name="encoder"></param>
+        /// <returns></returns>
         private NamedTuple MakeClassifiers(MultiEncoder encoder)
         {
             string[] names = new string[encoder.GetEncoders(encoder).Count];
@@ -1475,23 +1408,23 @@ namespace HTM.Net.Network
         //////////////////////////////////////////////////////////////
         //        Inner Class Definition Transformer Example        //
         //////////////////////////////////////////////////////////////
-        /**
-         * Factory which returns an {@link Observable} capable of transforming known
-         * input formats to the universal format object passed between all
-         * Observables in the Observable chains making up the processing steps
-         * involving HTM algorithms.
-         * 
-         * The {@link Transformer} implementations are used to transform various
-         * inputs into a {@link ManualInput}, and thus are used at the beginning of
-         * any Observable chain; each succeding Observable in a given chain would
-         * then communicate via passed ManualInputs or {@link Inference}s (which are
-         * the same thing).
-         * 
-         * @author David Ray
-         * @see Layer#completeDispatch(Object)
-         * @see Layer#resolveObservableSequence(Object)
-         * @see Layer#fillInSequence(Observable)
-         */
+
+        /// <summary>
+        /// Factory which returns an <see cref="IObservable{T}"/> capable of transforming known
+        /// input formats to the universal format object passed between all
+        /// Observables in the Observable chains making up the processing steps
+        /// involving HTM algorithms.
+        /// 
+        /// The <see cref="Transformer"/> implementations are used to transform various
+        /// inputs into a <see cref="ManualInput"/>, and thus are used at the beginning of
+        /// any Observable chain; each succeding Observable in a given chain would
+        /// then communicate via passed ManualInputs or <see cref="IInference"/>s (which are
+        /// the same thing).
+        /// 
+        /// <see cref="Layer{T}.CompleteDispatch{V}(V)"/>
+        /// <see cref="Layer{T}.ResolveObservableSequence{V}(V)"/>
+        /// <see cref="Layer{T}.FillInSequence(System.IObservable{HTM.Net.Network.ManualInput})"/>
+        /// </summary>
         internal class FunctionFactory
         {
             internal Layer<T> Layer { get; set; }
@@ -1510,13 +1443,13 @@ namespace HTM.Net.Network
              * WARNING: UNIMPLEMENTED
              * 
              * <p>
-             * Emits an {@link Observable} which is transformed from a String[] of
-             * csv input to one that emits {@link Inference}s.
+             * Emits an <see cref="IObservable{T}"/> which is transformed from a String[] of
+             * csv input to one that emits <see cref="IInference"/>s.
              * </p>
              * <p>
              * This class currently lacks the implementation of csv parsing into
              * distinct Object types - which is necessary to compose a "multi-map"
-             * necessary to input data into the {@link MultiEncoder} necessary to
+             * necessary to input data into the <see cref="MultiEncoder"/> necessary to
              * encode multiple field inputs.
              * </p>
              * <p>
@@ -1577,13 +1510,13 @@ namespace HTM.Net.Network
 
             /**
              * <p>
-             * Emits an {@link Observable} which is transformed from a Map input
-             * type to one that emits {@link Inference}s.
+             * Emits an <see cref="IObservable{T}"/> which is transformed from a Map input
+             * type to one that emits <see cref="IInference"/>s.
              * </p>
              * <p>
-             * This {@link Transformer} is used when the input to a given
+             * This <see cref="Transformer"/> is used when the input to a given
              * {@link Layer} is a map of fields to input Objects. It is typically
-             * used when a Layer is configured with a {@link MultiEncoder} (which is
+             * used when a Layer is configured with a <see cref="MultiEncoder"/> (which is
              * the only encoder type that may be contained within a Layer, because
              * it can be used to hold any combination of encoders required.).
              * </p>
@@ -1639,8 +1572,8 @@ namespace HTM.Net.Network
 
             /**
              * <p>
-             * Emits an {@link Observable} which is transformed from a binary vector
-             * input type to one that emits {@link Inference}s.
+             * Emits an <see cref="IObservable{T}"/> which is transformed from a binary vector
+             * input type to one that emits <see cref="IInference"/>s.
              * </p>
              * <p>
              * This type is used when bypassing an encoder and possibly any other
@@ -1678,7 +1611,7 @@ namespace HTM.Net.Network
             }
 
             /**
-             * Emits an {@link Observable} which copies an Inference input to the
+             * Emits an <see cref="IObservable{T}"/> which copies an Inference input to the
              * output, storing relevant information in this layer's inference object
              * along the way.
              */

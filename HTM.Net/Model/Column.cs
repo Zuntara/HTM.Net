@@ -45,10 +45,10 @@ namespace HTM.Net.Model
         }
 
         /**
-         * Returns the {@link Cell} residing at the specified index.
+         * Returns the <see cref="Cell"/> residing at the specified index.
          * 
-         * @param index     the index of the {@link Cell} to return.
-         * @return          the {@link Cell} residing at the specified index.
+         * @param index     the index of the <see cref="Cell"/> to return.
+         * @return          the <see cref="Cell"/> residing at the specified index.
          */
         public Cell GetCell(int index)
         {
@@ -56,7 +56,7 @@ namespace HTM.Net.Model
         }
 
         /**
-         * Returns a {@link List} view of this {@code Column}'s {@link Cell}s.
+         * Returns a {@link List} view of this {@code Column}'s <see cref="Cell"/>s.
          * @return
          */
         public IList<Cell> GetCells()
@@ -83,7 +83,7 @@ namespace HTM.Net.Model
         }
 
         /**
-         * Returns the {@link Cell} with the least number of {@link DistalDendrite}s.
+         * Returns the <see cref="Cell"/> with the least number of {@link DistalDendrite}s.
          * 
          * @param c         the connections state of the temporal memory
          * @param random

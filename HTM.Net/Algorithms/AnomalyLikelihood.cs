@@ -46,7 +46,7 @@ namespace HTM.Net.Algorithms
  *    {@link AnomalyLikelihoodMetrics} { likelihoods, avgRecordList, estimatorParams } = 
  *       {@link #updateAnomalyLikelihoods(List, NamedTuple)}
  *
- * 3. And again (make sure you use the new estimatorParams (a.k.a {@link NamedTuple}) returned 
+ * 3. And again (make sure you use the new estimatorParams (a.k.a <see cref="NamedTuple"/>) returned 
  *    in the above {@link AnomalyLikelihoodMetrics} call to updateAnomalyLikelihoods!)
  *
  *    {@link AnomalyLikelihoodMetrics} { likelihoods, avgRecordList, estimatorParams } = 
@@ -244,7 +244,7 @@ namespace HTM.Net.Algorithms
          * 
          * @param anomalyScores     a list of records. Each record is a list with a {@link Sample} containing the
                                     following three elements: [timestamp, value, score]
-         * @param params            Associative {@link NamedTuple} returned by the {@link AnomalyLikelihoodMetrics} from
+         * @param params            Associative <see cref="NamedTuple"/> returned by the {@link AnomalyLikelihoodMetrics} from
          *                          {@link #estimateAnomalyLikelihoods(List, int, int)}
          * @return
          */
@@ -565,7 +565,7 @@ namespace HTM.Net.Algorithms
          * Returns a flag indicating whether the specified params are valid.
          * true if so, false if not
          * 
-         * @param params    a {@link NamedTuple} containing { distribution, movingAverage, historicalLikelihoods }
+         * @param params    a <see cref="NamedTuple"/> containing { distribution, movingAverage, historicalLikelihoods }
          * @return
          */
         public bool IsValidEstimatorParams(AnomalyParams @params)

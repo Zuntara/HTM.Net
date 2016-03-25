@@ -12,7 +12,7 @@
      * <p>
      * 
      * @see Sensor
-     * @param <T>   The resource type (i.e. {@link File}, {@link URI}, {@link Observable})
+     * @param <T>   The resource type (i.e. {@link File}, {@link URI}, <see cref="IObservable{T}"/>)
      */
     public interface ISensorFactory<T>
     {

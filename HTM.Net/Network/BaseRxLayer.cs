@@ -31,6 +31,17 @@ namespace HTM.Net.Network
         {
         }
 
+        /// <summary>
+        /// We cannot create the <see cref="IObservable{T}"/> sequence all at once because the
+        /// first step is to transform the input type to the type the rest of the
+        /// sequence uses (<see cref="IObservable{IInference}"/>). This can only happen
+        /// during the actual call to <see cref="Compute{T}(T)"/> which presents the
+        /// input type - so we create a map of all types of expected inputs, and then
+        /// connect the sequence at execution time; being careful to only incur the
+        /// cost of sequence assembly on the first call to <see cref="Compute{T}(T)"/>.
+        /// After the first call, we dispose of this map and its contents.
+        /// </summary>
+        /// <returns>the map of input types to <see cref="Transformer"/></returns>
         protected abstract Map<Type, IObservable<ManualInput>> CreateDispatchMap();
 
         /// <summary>

@@ -29,9 +29,9 @@ namespace HTM.Net.Network
 
         /**
          * Constructs a new {@code PALayer} which resides in the specified
-         * {@link Network}
+         * <see cref="Network"/>
          *
-         * @param n     the parent {@link Network}
+         * @param n     the parent <see cref="Network"/>
          */
         public PALayer(Network n)
                 : base(n)
@@ -41,9 +41,9 @@ namespace HTM.Net.Network
 
         /**
          * Constructs a new {@code PALayer} which resides in the specified
-         * {@link Network} and uses the specified {@link Parameters}
+         * <see cref="Network"/> and uses the specified {@link Parameters}
          *
-         * @param n     the parent {@link Network}
+         * @param n     the parent <see cref="Network"/>
          * @param p     the parameters object from which to obtain settings
          */
         public PALayer(Network n, Parameters p)
@@ -54,11 +54,11 @@ namespace HTM.Net.Network
 
         /**
          * Constructs a new {@code PALayer} which resides in the specified
-         * {@link Network} and uses the specified {@link Parameters}, with
+         * <see cref="Network"/> and uses the specified {@link Parameters}, with
          * the specified name.
          *
          * @param name  the name specified
-         * @param n     the parent {@link Network}
+         * @param n     the parent <see cref="Network"/>
          * @param p     the parameters object from which to obtain settings
          */
         public PALayer(string name, Network n, Parameters p)

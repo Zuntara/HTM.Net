@@ -54,11 +54,11 @@ namespace HTM.Net.Network
         private HashSet<Layer<IInference>> sources;
         private HashSet<Layer<IInference>> sinks;
 
-        /** Stores the overlap of algorithms state for {@link Inference} sharing determination */
+        /** Stores the overlap of algorithms state for <see cref="IInference"/> sharing determination */
         internal LayerMask flagAccumulator = 0;
         /** 
          * Indicates whether algorithms are repeated, if true then no, if false then yes
-         * (for {@link Inference} sharing determination) see {@link Region#connect(Layer, Layer)} 
+         * (for <see cref="IInference"/> sharing determination) see {@link Region#connect(Layer, Layer)} 
          * and {@link Layer#getMask()}
          */
         internal bool layersDistinct = true;
@@ -71,7 +71,7 @@ namespace HTM.Net.Network
          * Constructs a new {@code Region}
          * 
          * @param name          A unique identifier for this Region (uniqueness is enforced)
-         * @param network       The containing {@link Network} 
+         * @param network       The containing <see cref="Network"/> 
          */
         public Region(string name, Network network)
         {
@@ -85,7 +85,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Sets the parent {@link Network} of this {@code Region}
+         * Sets the parent <see cref="Network"/> of this {@code Region}
          * @param network
          */
         public void SetNetwork(Network network)
@@ -169,12 +169,12 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Used to manually input data into a {@link Region}, the other way 
+         * Used to manually input data into a <see cref="Region"/>, the other way 
          * being the call to {@link Region#start()} for a Region that contains
          * a {@link Layer} which in turn contains a {@link Sensor} <em>-OR-</em>
          * subscribing a receiving Region to this Region's output Observable.
          * 
-         * @param input One of (int[], String[], {@link ManualInput}, or Map&lt;String, Object&gt;)
+         * @param input One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)
          */
         public void Compute<T>(T input)
         {
@@ -248,8 +248,8 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns an {@link Observable} which can be used to receive
-         * {@link Inference} emissions from this {@code Region}
+         * Returns an <see cref="IObservable{T}"/> which can be used to receive
+         * <see cref="IInference"/> emissions from this {@code Region}
          * @return
          */
         public IObservable<IInference> Observe()
@@ -425,7 +425,7 @@ namespace HTM.Net.Network
          * representing the sender or "source".
          * 
          * This method also forwards shared constructs up the connection chain
-         * such as any {@link Encoder} which may exist, and the {@link Inference} result
+         * such as any {@link Encoder} which may exist, and the <see cref="IInference"/> result
          * container which is shared among layers.
          * 
          * @param toLayerName       the name of the sink layer
@@ -486,8 +486,8 @@ namespace HTM.Net.Network
         /**
          * Called by {@link #start()}, {@link #observe()} and {@link #connect(Region)}
          * to finalize the internal chain of {@link Layer}s contained by this {@code Region}.
-         * This method assigns the head and tail Layers and composes the {@link Observable}
-         * which offers this Region's emissions to any upstream {@link Region}s.
+         * This method assigns the head and tail Layers and composes the <see cref="IObservable{T}"/>
+         * which offers this Region's emissions to any upstream <see cref="Region"/>s.
          */
         private void CompleteAssembly()
         {
@@ -541,7 +541,7 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Called internally to "connect" two {@link Layer} {@link Observable}s
+         * Called internally to "connect" two {@link Layer} <see cref="IObservable{T}"/>s
          * taking care of other connection details such as passing the inference
          * up the chain and any possible encoder.
          * 

@@ -7,7 +7,7 @@ namespace HTM.Net.Network.Sensor
  * <p>
  * Implementation of named parameter tuples that is tightly
  * keyed to only known keys in order to assist with proper
- * formation and auto creation within a {@link Network}.
+ * formation and auto creation within a <see cref="Network"/>.
  * </p>
  * <p>
  * To retrieve a {@code Keys.Args} from this {@code SensorParams}

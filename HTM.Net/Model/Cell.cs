@@ -7,14 +7,14 @@ namespace HTM.Net.Model
     {
         /** This cell's index */
         private readonly int index;
-        /** The owning {@link Column} */
+        /** The owning <see cref="Column"/> */
         private readonly Column column;
         /** Cache this because Cells are immutable */
         private readonly int hashcode;
 
         /**
         * Constructs a new {@code Cell} object
-        * @param column    the containing {@link Column}
+        * @param column    the containing <see cref="Column"/>
         * @param colSeq    this index of this {@code Cell} within its column
         */
         public Cell(Column column, int colSeq)

@@ -292,7 +292,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns the {@link Cell} specified by the index passed in.
+         * Returns the <see cref="Cell"/> specified by the index passed in.
          * @param index		of the specified cell to return.
          * @return
          */
@@ -320,7 +320,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns an array containing the {@link Cell}s specified
+         * Returns an array containing the <see cref="Cell"/>s specified
          * by the passed in indexes.
          *
          * @param cellIndexes	indexes of the Cells to return
@@ -337,7 +337,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns a {@link LinkedHashSet} containing the {@link Cell}s specified
+         * Returns a {@link LinkedHashSet} containing the <see cref="Cell"/>s specified
          * by the passed in indexes.
          *
          * @param cellIndexes	indexes of the Cells to return
@@ -393,7 +393,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the matrix containing the {@link Column}s
+         * Sets the matrix containing the <see cref="Column"/>s
          * @param mem
          */
         public void SetMemory(SparseObjectMatrix<Column> mem)
@@ -402,7 +402,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns the matrix containing the {@link Column}s
+         * Returns the matrix containing the <see cref="Column"/>s
          * @return
          */
         public SparseObjectMatrix<Column> GetMemory()
@@ -1204,9 +1204,9 @@ namespace HTM.Net
         /////////////////////////////// Temporal Memory //////////////////////////////
 
         /**
-         * Returns the current {@link Set} of active {@link Cell}s
+         * Returns the current {@link Set} of active <see cref="Cell"/>s
          *
-         * @return  the current {@link Set} of active {@link Cell}s
+         * @return  the current {@link Set} of active <see cref="Cell"/>s
          */
         public HashSet<Cell> GetActiveCells()
         {
@@ -1214,7 +1214,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the current {@link Set} of active {@link Cell}s
+         * Sets the current {@link Set} of active <see cref="Cell"/>s
          * @param cells
          */
         public void SetActiveCells(HashSet<Cell> cells)
@@ -1233,7 +1233,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the current {@link Set} of winner {@link Cell}s
+         * Sets the current {@link Set} of winner <see cref="Cell"/>s
          * @param cells
          */
         public void SetWinnerCells(HashSet<Cell> cells)
@@ -1251,7 +1251,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the current {@link Set} of predictive {@link Cell}s
+         * Sets the current {@link Set} of predictive <see cref="Cell"/>s
          * @param cells
          */
         public void SetPredictiveCells(HashSet<Cell> cells)
@@ -1260,7 +1260,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns the Set of matching {@link Cell}s
+         * Returns the Set of matching <see cref="Cell"/>s
          * @return
          */
         public HashSet<Cell> GetMatchingCells()
@@ -1269,7 +1269,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the Set of matching {@link Cell}s
+         * Sets the Set of matching <see cref="Cell"/>s
          * @param cells
          */
         public void SetMatchingCells(HashSet<Cell> cells)
@@ -1351,11 +1351,11 @@ namespace HTM.Net
         }
 
         /**
-         * Returns the mapping of {@link Cell}s to their reverse mapped
+         * Returns the mapping of <see cref="Cell"/>s to their reverse mapped
          * {@link Synapse}s.
          *
-         * @param cell      the {@link Cell} used as a key.
-         * @return          the mapping of {@link Cell}s to their reverse mapped
+         * @param cell      the <see cref="Cell"/> used as a key.
+         * @return          the mapping of <see cref="Cell"/>s to their reverse mapped
          *                  {@link Synapse}s.
          */
         public List<Synapse> GetReceptorSynapses(Cell cell)
@@ -1380,10 +1380,10 @@ namespace HTM.Net
         }
 
         /**
-         * Returns the mapping of {@link Cell}s to their {@link DistalDendrite}s.
+         * Returns the mapping of <see cref="Cell"/>s to their {@link DistalDendrite}s.
          *
-         * @param cell      the {@link Cell} used as a key.
-         * @return          the mapping of {@link Cell}s to their {@link DistalDendrite}s.
+         * @param cell      the <see cref="Cell"/> used as a key.
+         * @return          the mapping of <see cref="Cell"/>s to their {@link DistalDendrite}s.
          */
         public List<DistalDendrite> GetSegments(Cell cell)
         {
@@ -1472,7 +1472,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the number of {@link Column}.
+         * Sets the number of <see cref="Column"/>.
          *
          * @param columnDimensions
          */
@@ -1482,7 +1482,7 @@ namespace HTM.Net
         }
 
         /**
-         * Gets the number of {@link Column}.
+         * Gets the number of <see cref="Column"/>.
          *
          * @return columnDimensions
          */
@@ -1517,7 +1517,7 @@ namespace HTM.Net
         }
 
         /**
-         * Sets the number of {@link Cell}s per {@link Column}
+         * Sets the number of <see cref="Cell"/>s per <see cref="Column"/>
          * @param cellsPerColumn
          */
         public void SetCellsPerColumn(int cellsPerColumn)
@@ -1526,7 +1526,7 @@ namespace HTM.Net
         }
 
         /**
-         * Gets the number of {@link Cell}s per {@link Column}.
+         * Gets the number of <see cref="Cell"/>s per <see cref="Column"/>.
          *
          * @return cellsPerColumn
          */
@@ -1721,7 +1721,7 @@ namespace HTM.Net
         }
 
         /**
-         * Converts a {@link Collection} of {@link Cell}s to a list
+         * Converts a {@link Collection} of <see cref="Cell"/>s to a list
          * of cell indexes.
          *
          * @param cells
@@ -1740,7 +1740,7 @@ namespace HTM.Net
         }
 
         /**
-         * Converts a {@link Collection} of {@link Column}s to a list
+         * Converts a {@link Collection} of <see cref="Column"/>s to a list
          * of column indexes.
          *
          * @param columns
@@ -1758,8 +1758,8 @@ namespace HTM.Net
         }
 
         /**
-         * Returns a list of the {@link Cell}s specified.
-         * @param cells		the indexes of the {@link Cell}s to return
+         * Returns a list of the <see cref="Cell"/>s specified.
+         * @param cells		the indexes of the <see cref="Cell"/>s to return
          * @return	the specified list of cells
          */
         public List<Cell> AsCellObjects(IEnumerable<int> cells)
@@ -1773,8 +1773,8 @@ namespace HTM.Net
         }
 
         /**
-         * Returns a list of the {@link Column}s specified.
-         * @param cols		the indexes of the {@link Column}s to return
+         * Returns a list of the <see cref="Column"/>s specified.
+         * @param cols		the indexes of the <see cref="Column"/>s to return
          * @return		the specified list of columns
          */
         public List<Column> AsColumnObjects(IEnumerable<int> cols)
@@ -1789,7 +1789,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns a {@link Set} view of the {@link Column}s specified by
+         * Returns a {@link Set} view of the <see cref="Column"/>s specified by
          * the indexes passed in.
          *
          * @param indexes		the indexes of the Columns to return
@@ -1806,7 +1806,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns a {@link List} view of the {@link Column}s specified by
+         * Returns a {@link List} view of the <see cref="Column"/>s specified by
          * the indexes passed in.
          *
          * @param indexes		the indexes of the Columns to return

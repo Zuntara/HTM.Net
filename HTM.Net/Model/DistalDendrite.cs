@@ -10,7 +10,7 @@ namespace HTM.Net.Model
 
         /**
      * Constructs a new {@code Segment} object with the specified owner
-     * {@link Cell} and the specified index.
+     * <see cref="Cell"/> and the specified index.
      * 
      * @param cell      the owner
      * @param index     this {@code Segment}'s index.
@@ -23,7 +23,7 @@ namespace HTM.Net.Model
         }
 
         /**
-         * Returns the owner {@link Cell}
+         * Returns the owner <see cref="Cell"/>
          * 
          * @return
          */
@@ -164,14 +164,14 @@ namespace HTM.Net.Model
         }
 
         /**
-         * Returns a {@link Set} of previous winner {@link Cell}s which aren't
+         * Returns a {@link Set} of previous winner <see cref="Cell"/>s which aren't
          * already attached to any {@link Synapse}s owned by this {@code Segment}
          * 
          * @param c                 the connections state of the temporal memory
          * @param numPickCells      the number of possible cells this segment may designate
          * @param prevWinners       the set of previous winner cells
          * @param random            the random number generator
-         * @return a {@link Set} of previous winner {@link Cell}s which aren't
+         * @return a {@link Set} of previous winner <see cref="Cell"/>s which aren't
          *         already attached to any {@link Synapse}s owned by this
          *         {@code Segment}
          */

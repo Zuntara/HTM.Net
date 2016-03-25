@@ -206,7 +206,7 @@ namespace HTM.Net.Network
 
         /**
          * Sets the input object to be used and returns 
-         * this {@link ManualInput}
+         * this <see cref="ManualInput"/>
          * 
          * @param inputValue
          * @return
@@ -265,7 +265,7 @@ namespace HTM.Net.Network
 
         /**
          * Convenience method to provide an isolated copy of 
-         * this {@link Inference}
+         * this <see cref="IInference"/>
          *  
          * @return
          */
@@ -302,7 +302,7 @@ namespace HTM.Net.Network
 
         /**
          * Sets the specified field's last classifier computation and returns
-         * this {@link Inference}
+         * this <see cref="IInference"/>
          * 
          * @param fieldName
          * @param classification

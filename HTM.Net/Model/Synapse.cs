@@ -41,7 +41,7 @@ namespace HTM.Net.Model
          * Constructs a new {@code Synapse}
          * 
          * @param c             the connections state of the temporal memory
-         * @param sourceCell    the {@link Cell} which will activate this {@code Synapse};
+         * @param sourceCell    the <see cref="Cell"/> which will activate this {@code Synapse};
          *                      Null if this Synapse is proximal
          * @param segment       the owning dendritic segment
          * @param pool		    this {@link Pool} of which this synapse is a member

@@ -78,8 +78,8 @@ namespace HTM.Net.Network.Sensor
 
             /**
              * Builds and validates the structure of the expected header then
-             * returns an {@link Observable} that can be used to submit info to the
-             * {@link Network}
+             * returns an <see cref="IObservable{T}"/> that can be used to submit info to the
+             * <see cref="Network"/>
              * @return
              */
             public Publisher Build()
@@ -103,7 +103,7 @@ namespace HTM.Net.Network.Sensor
 
         /**
          * Returns a builder that is capable of returning a configured {@link PublishSubject} 
-         * (publish-able) {@link Observable}
+         * (publish-able) <see cref="IObservable{T}"/>
          * 
          * @return
          */
@@ -115,7 +115,7 @@ namespace HTM.Net.Network.Sensor
         /**
          * Provides the Observer with a new item to observe.
          * <p>
-         * The {@link Observable} may call this method 0 or more times.
+         * The <see cref="IObservable{T}"/> may call this method 0 or more times.
          * <p>
          * The {@code Observable} will not call this method again after it calls either {@link #onComplete} or
          * {@link #onError}.
@@ -128,9 +128,9 @@ namespace HTM.Net.Network.Sensor
         }
 
         /**
-         * Notifies the Observer that the {@link Observable} has finished sending push-based notifications.
+         * Notifies the Observer that the <see cref="IObservable{T}"/> has finished sending push-based notifications.
          * <p>
-         * The {@link Observable} will not call this method if it calls {@link #onError}.
+         * The <see cref="IObservable{T}"/> will not call this method if it calls {@link #onError}.
          */
         public void OnComplete()
         {
@@ -138,9 +138,9 @@ namespace HTM.Net.Network.Sensor
         }
 
         /**
-         * Notifies the Observer that the {@link Observable} has experienced an error condition.
+         * Notifies the Observer that the <see cref="IObservable{T}"/> has experienced an error condition.
          * <p>
-         * If the {@link Observable} calls this method, it will not thereafter call {@link #onNext} or
+         * If the <see cref="IObservable{T}"/> calls this method, it will not thereafter call {@link #onNext} or
          * {@link #onComplete}.
          * 
          * @param e     the exception encountered by the Observable
@@ -170,7 +170,7 @@ namespace HTM.Net.Network.Sensor
         }
 
         /**
-         * Called within package to access this {@link Publisher}'s wrapped {@link Observable}
+         * Called within package to access this {@link Publisher}'s wrapped <see cref="IObservable{T}"/>
          * @return
          */
         public IObservable<string> Observable()

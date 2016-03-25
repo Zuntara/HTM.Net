@@ -123,7 +123,7 @@ namespace HTM.Net
         }
 
         /**
-         * Returns the Set of matching {@link Cell}s from
+         * Returns the Set of matching <see cref="Cell"/>s from
          * {@link TemporalMemory#computePredictiveCells(Connections, ComputeCycle, Map)}
          * @return
          */

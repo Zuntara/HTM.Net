@@ -12,13 +12,13 @@ namespace HTM.Net.Algorithms
          * Uses the specified {@link Connections} object to Build the structural 
          * anatomy needed by this {@code TemporalMemory} to implement its algorithms.
          * 
-         * The connections object holds the {@link Column} and {@link Cell} infrastructure,
+         * The connections object holds the <see cref="Column"/> and <see cref="Cell"/> infrastructure,
          * and is used by both the {@link SpatialPooler} and {@link TemporalMemory}. Either of
          * these can be used separately, and therefore this Connections object may have its
          * Columns and Cells initialized by either the init method of the SpatialPooler or the
          * init method of the TemporalMemory. We check for this so that complete initialization
          * of both Columns and Cells occurs, without either being redundant (initialized more than
-         * once). However, {@link Cell}s only get created when initializing a TemporalMemory, because
+         * once). However, <see cref="Cell"/>s only get created when initializing a TemporalMemory, because
          * they are not used by the SpatialPooler.
          * 
          * @param   c       {@link Connections} object
@@ -81,11 +81,11 @@ namespace HTM.Net.Algorithms
          * This method is stateless and concurrency safe.
          * 
          * @param c                             {@link Connections} object containing state of memory members
-         * @param activeColumns                 active {@link Column}s in t
+         * @param activeColumns                 active <see cref="Column"/>s in t
          * @param prevPredictiveCells           cells predicting in t-1
          * @param prevActiveSegments            active {@link Segment}s in t-1
-         * @param prevActiveCells               active {@link Cell}s in t-1
-         * @param prevWinnerCells               winner {@link Cell}s in t-1
+         * @param prevActiveCells               active <see cref="Cell"/>s in t-1
+         * @param prevWinnerCells               winner <see cref="Cell"/>s in t-1
          * @param prevMatchingSegments          matching {@link Segment}s in t-1
          * @param prevMatchingCells             matching cells in t-1 
          * @param learn                         whether mode is "learning" mode
@@ -126,7 +126,7 @@ namespace HTM.Net.Algorithms
          *     
          * @param cnx                   Connectivity of layer
          * @param c                     ComputeCycle interim values container
-         * @param prevPredictiveCells   predictive {@link Cell}s predictive cells in t-1
+         * @param prevPredictiveCells   predictive <see cref="Cell"/>s predictive cells in t-1
          * @param activeColumns         active columns in t
          */
         public void ActivateCorrectlyPredictiveCells(Connections cnx, ComputeCycle c,
@@ -176,8 +176,8 @@ namespace HTM.Net.Algorithms
          * @param c                             Connections temporal memory state
          * @param activeColumns                 active columns in t
          * @param predictedColumns              predicted columns in t
-         * @param prevActiveCells               active {@link Cell}s in t-1
-         * @param prevWinnerCells               winner {@link Cell}s in t-1
+         * @param prevActiveCells               active <see cref="Cell"/>s in t-1
+         * @param prevWinnerCells               winner <see cref="Cell"/>s in t-1
          */
         public void BurstColumns(ComputeCycle cycle, Connections c, 
             HashSet<Column> activeColumns, HashSet<Column> predictedActiveColumns, HashSet<Cell> prevActiveCells, HashSet<Cell> prevWinnerCells)
@@ -312,7 +312,7 @@ namespace HTM.Net.Algorithms
          * 
          * @param c                 the Connections state of the temporal memory
          * @param cycle             the state during the current compute cycle
-         * @param activeCells       the active {@link Cell}s in t
+         * @param activeCells       the active <see cref="Cell"/>s in t
          */
         public void ComputePredictiveCells(Connections c, ComputeCycle cycle, HashSet<Cell> activeCells)
         {
