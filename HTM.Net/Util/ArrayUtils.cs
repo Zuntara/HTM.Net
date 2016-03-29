@@ -904,7 +904,7 @@ namespace HTM.Net.Util
         public static double[] Subtract(double[] minuend, double[] subtrahend)
         {
             double[] retVal = new double[minuend.Length];
-            for (int i = 0; i < minuend.Length; i++)
+            for (int i = 0; i < Math.Min(minuend.Length, subtrahend.Length); i++)
             {
                 retVal[i] = minuend[i] - subtrahend[i];
             }
@@ -2041,7 +2041,7 @@ namespace HTM.Net.Util
             {
                 for (int col = 0; col < retVal[row].Length; col++)
                 {
-                    if(retVal.Length == amount.Length)
+                    if (retVal.Length == amount.Length)
                         retVal[row][col] = arr[row][col] - amount[row];
                     else
                         retVal[row][col] = arr[row][col] - amount[col];
@@ -3110,23 +3110,23 @@ namespace HTM.Net.Util
             //return DoubleStream.of(in).sorted().mapToInt(i->Arrays.stream(in).boxed().collect(Collectors.toList()).indexOf(i)).skip(start).limit(end).toArray();
         }
 
-        public static T[][] CreateJaggedArray<T>(int dim1, int dim2)
+        public static T[][] CreateJaggedArray<T>(int rows, int cols)
         {
-            T[][] array = new T[dim1][];
-            for (int i = 0; i < dim1; i++)
+            T[][] array = new T[rows][];
+            for (int i = 0; i < rows; i++)
             {
-                array[i] = new T[dim2];
+                array[i] = new T[cols];
             }
             return array;
         }
 
-        public static T[][][] CreateJaggedArray<T>(int dim1, int dim2, int dim3)
+        public static T[][][] CreateJaggedArray<T>(int rows, int cols, int dim3)
         {
-            T[][][] array = new T[dim1][][];
-            for (int i = 0; i < dim1; i++)
+            T[][][] array = new T[rows][][];
+            for (int i = 0; i < rows; i++)
             {
-                array[i] = new T[dim2][];
-                for (int j = 0; j < dim2; j++)
+                array[i] = new T[cols][];
+                for (int j = 0; j < cols; j++)
                 {
                     array[i][j] = new T[dim3];
                 }
@@ -3301,10 +3301,55 @@ namespace HTM.Net.Util
                 retVal[row] = new double[arr[row].Length];
                 for (int col = 0; col < arr[row].Length; col++)
                 {
-                    retVal[row][col] = Math.Pow(arr[row][col], pow); 
+                    retVal[row][col] = Math.Pow(arr[row][col], pow);
                 }
             }
             return retVal;
+        }
+
+        public static IEnumerable<double> Exp(IEnumerable<double> outputActivation)
+        {
+            return outputActivation.Select(Math.Exp);
+        }
+
+        public static double[][] Concatinate(double[][] matrix, double[][] subMatrix, int axis)
+        {
+            if (axis == 0)
+            {
+                // concatinate on rows
+                double[][] newArray = CreateJaggedArray<double>(matrix.Length + subMatrix.Length, matrix[0].Length);
+                int i = 0;
+                foreach (double[] row in matrix)
+                {
+                    newArray[i++] = row;
+                }
+                foreach (double[] row in subMatrix)
+                {
+                    newArray[i++] = row;
+                }
+                return newArray;
+            }
+            else if (axis == 1)
+            {
+                // concatinate on columns
+                double[][] newArray = CreateJaggedArray<double>(matrix.Length, matrix[0].Length + subMatrix[0].Length);
+
+                for(int rowNr = 0; rowNr < matrix.Length; rowNr++)
+                {
+                    int colNr = 0;
+                    for (int c = 0; c < matrix[rowNr].Length; c++)
+                    {
+                        newArray[rowNr][colNr++] = matrix[rowNr][c];
+                    }
+                    for (int c = 0; c < subMatrix[rowNr].Length; c++)
+                    {
+                        newArray[rowNr][colNr++] = subMatrix[rowNr][c];
+                    }
+                }
+
+                return newArray;
+            }
+            throw new NotImplementedException();
         }
     }
 }

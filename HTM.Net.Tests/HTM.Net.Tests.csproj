@@ -88,6 +88,7 @@
     <Compile Include="Algorithms\CLAClassifierTest.cs" />
     <Compile Include="Algorithms\ClassefierResultTest.cs" />
     <Compile Include="Algorithms\KNNClassifierTest.cs" />
+    <Compile Include="Algorithms\SDRClassifierTest.cs" />
     <Compile Include="Algorithms\SpatialPoolerTests.cs" />
     <Compile Include="Algorithms\TemporalMemoryTests.cs" />
     <Compile Include="ConnectionTests.cs" />
