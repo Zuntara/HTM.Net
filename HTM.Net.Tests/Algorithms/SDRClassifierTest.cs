@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Tests.Algorithms
 {
@@ -14,7 +12,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestInitialization()
         {
-            var c = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
+            var c = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
             Assert.IsNotNull(c);
         }
 
@@ -23,7 +21,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             try
             {
-                SDRClassifier classifier = new SDRClassifier(new int[0], alpha: 0.1, actValueAlpha: 0.1);
+                new SDRClassifier(new int[0], alpha: 0.1, actValueAlpha: 0.1);
             }
             catch (ArgumentException ae)
             {
@@ -36,7 +34,7 @@ namespace HTM.Net.Tests.Algorithms
 
             try
             {
-                SDRClassifier classifier = new SDRClassifier(new[] { -1 }, alpha: 0.1, actValueAlpha: 0.1);
+                new SDRClassifier(new[] { -1 }, alpha: 0.1, actValueAlpha: 0.1);
             }
             catch (ArgumentException ae)
             {
@@ -50,7 +48,7 @@ namespace HTM.Net.Tests.Algorithms
             // Invalid alpha
             try
             {
-                SDRClassifier classifier = new SDRClassifier(new[] { 1 }, alpha: -1.0, actValueAlpha: 0.1);
+                new SDRClassifier(new[] { 1 }, alpha: -1.0, actValueAlpha: 0.1);
             }
             catch (ArgumentException ae)
             {
@@ -63,7 +61,7 @@ namespace HTM.Net.Tests.Algorithms
 
             try
             {
-                SDRClassifier classifier = new SDRClassifier(new[] { 1 }, alpha: 0.1, actValueAlpha: -1.0);
+                new SDRClassifier(new[] { 1 }, alpha: 0.1, actValueAlpha: -1.0);
             }
             catch (ArgumentOutOfRangeException ae)
             {
@@ -83,13 +81,13 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 1 }, 1.0);
             // Enough times to perform Inference and learn associations
-            NamedTuple retVal = null;
+            ClassifierResult<double> retVal = null;
             for (int i = 0; i < 10; i++)
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
             }
-            Assert.AreEqual((double)((object[])retVal["actualValues"])[0], 10);
-            Assert.IsTrue(((double[])retVal["1"])[0] > 0.9, "value of 1 must be greater then 0.9 and is " + ((double[])retVal["1"])[0]);
+            Assert.AreEqual(retVal.GetActualValue(0), 10);
+            Assert.IsTrue(retVal.GetStat(1,0) > 0.9, "value of 1 must be greater then 0.9 and is " + retVal.GetStat(1, 0));
         }
 
         /// <summary>
@@ -100,120 +98,122 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 0 }, 1.0);
             // Enough times to perform Inference and learn associations
-            NamedTuple retVal = null;
+            ClassifierResult<double> retVal = null;
             for (int i = 0; i < 10; i++)
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
             }
-            Assert.AreEqual((double)((object[])retVal["actualValues"])[0], 10);
-            Assert.IsTrue(((double[])retVal["0"])[0] > 0.9, "value of 1 must be greater then 0.9 and is " + ((double[])retVal["0"])[0]);
+            Assert.AreEqual(retVal.GetActualValue(0), 10);
+            Assert.IsTrue(retVal.GetStat(0, 0) > 0.9, "value of 1 must be greater then 0.9 and is " + retVal.GetStat(0, 0));
 
         }
 
         [TestMethod]
         public void TestComputeResultTypes()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
-            var result = classifier.Compute(0, new[] { 1, 5, 9 }, new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, true);
+            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
+            var result = classifier.Compute<double>(0, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } }, new[] { 1, 5, 9 }, true, true);
 
-            Assert.IsTrue(result.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            Assert.IsInstanceOfType(result["actualValues"], typeof(object[]));
-            object[] actValues = (object[])result["actualValues"];
-            Assert.AreEqual(1, actValues.Length);
-            Assert.IsInstanceOfType(actValues[0], typeof(double));
-            Assert.IsInstanceOfType(result["1"], typeof(double[]));
-            Assert.AreEqual((double)actValues[0], 34.7, 0.0001);
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
+            Assert.AreEqual(1, result.GetActualValueCount());
+            Assert.AreEqual(34.7, result.GetActualValue(0), 0.01);
         }
 
         [TestMethod]
         public void TestComputeInferOrLearnOnly()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1, 0);
+            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1);
             int recordNum = 0;
             // Learn only
-            NamedTuple retVal = classifier.Compute(recordNum, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, false);
+            var retVal = classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, true, false);
             Assert.IsNull(retVal);
 
             // Infer only
-            NamedTuple retVal1 = classifier.Compute(recordNum, new[] { 1, 5, 9 },
-               new NamedTuple(new[] { "bucketIdx", "actValue" }, 2, 14.2), false, true);
+            var retVal1 = classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 2 }, { "actValue", 14.2 } },
+                new[] { 1, 5, 9 }, false, true);
             recordNum += 1;
-            NamedTuple retVal2 = classifier.Compute(recordNum, new[] { 1, 5, 9 },
-               new NamedTuple(new[] { "bucketIdx", "actValue" }, 3, 20.5), false, true);
+            var retVal2 = classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 3 }, { "actValue", 20.5 } },
+                new[] { 1, 5, 9 }, false, true);
             recordNum += 1;
-            Assert.IsTrue(((double[])retVal1["1"]).SequenceEqual((double[])retVal2["1"]));
+            Assert.IsTrue((retVal1.GetStats(1)).SequenceEqual(retVal2.GetStats(1)));
 
         }
 
         [TestMethod, ExpectedException(typeof(InvalidOperationException))]
         public void TestComputeInferAndLearnFalse()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1, 0);
+            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1);
             int recordNum = 0;
             // Learn only
-            NamedTuple retVal = classifier.Compute(recordNum, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), false, false);
+            var retVal = classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, false, false);
         }
 
         [TestMethod]
         public void TestCompute1()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
-            NamedTuple retVal = classifier.Compute(0, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, true);
-            Assert.IsTrue(retVal.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            object[] actValues = (object[])retVal["actualValues"];
+            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
+            var retVal = classifier.Compute<double>(0, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, true, true);
+
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, retVal.StepSet()));
+            Assert.AreEqual(1, retVal.GetActualValueCount());
+
+            double[] actValues = retVal.GetActualValues();
             Assert.AreEqual(1, actValues.Length);
             Assert.IsInstanceOfType(actValues[0], typeof(double));
-            Assert.AreEqual((double)actValues[0], 34.7, 0.0001);
+            Assert.AreEqual(actValues[0], 34.7, 0.0001);
         }
 
         [TestMethod]
         public void TestCompute2()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
-            NamedTuple retVal = classifier.Compute(0, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, true);
-            retVal = classifier.Compute(1, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, true);
+            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
+            var retVal = classifier.Compute<double>(0, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, true, true);
+            retVal = classifier.Compute<double>(1, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, true, true);
 
-            Assert.IsTrue(retVal.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            object[] actValues = (object[])retVal["actualValues"];
-            Assert.AreEqual((double)actValues[4], 34.7, 0.0001);
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, retVal.StepSet()));
+            Assert.AreEqual(5, retVal.GetActualValueCount());
+
+            double[] actValues = retVal.GetActualValues();
+            Assert.AreEqual(actValues[4], 34.7, 0.0001);
         }
 
         [TestMethod]
         public void TestComputeComplex()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1, 0);
+            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1);
             int recordNum = 0;
-            classifier.Compute(recordNum, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, true);
+            classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, true, true);
             recordNum += 1;
 
-            classifier.Compute(recordNum, new[] { 0, 6, 9, 11 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 5, 41.7), true, true);
+            classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 5 }, { "actValue", 41.7 } },
+                new[] { 0, 6, 9, 11 }, true, true);
             recordNum += 1;
 
-            classifier.Compute(recordNum, new[] { 6, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 5, 44.9), true, true);
+            classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 5 }, { "actValue", 44.9 } },
+                new[] { 6, 9 }, true, true);
             recordNum += 1;
 
-            classifier.Compute(recordNum, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 42.9), true, true);
+            classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 42.9 } },
+                new[] { 1, 5, 9 }, true, true);
             recordNum += 1;
 
-            var result = classifier.Compute(recordNum, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, 34.7), true, true);
+            var result = classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
+                new[] { 1, 5, 9 }, true, true);
             recordNum += 1;
 
-            Assert.IsTrue(result.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            object[] actValues = (object[])result["actualValues"];
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
+            Assert.AreEqual(6, result.GetActualValueCount());
+            double[] actValues = result.GetActualValues();
 
             Assert.AreEqual((double)actValues[4], 35.520000457763672, 0.0001);
             Assert.AreEqual((double)actValues[5], 42.020000457763672, 0.0001);
-            double[] resultDoubles = (double[])result["1"];
+            double[] resultDoubles = (double[])result.GetStats(1);
             Assert.AreEqual(6, resultDoubles.Length);
             Assert.AreEqual(resultDoubles[0], 0.034234, 0.0001);
             Assert.AreEqual(resultDoubles[1], 0.034234, 0.0001);
@@ -226,44 +226,46 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeWithMissingValue()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
-            NamedTuple result = classifier.Compute(0, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, null, null), true, true);
+            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
+            var result = classifier.Compute<double?>(0, new Map<string, object> { { "bucketIdx", null }, { "actValue", null } },
+                new[] { 1, 5, 9 }, true, true);
 
-            Assert.IsTrue(result.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            object[] actValues = (object[])result["actualValues"];
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
+            Assert.AreEqual(1, result.GetActualValueCount());
+            double?[] actValues = result.GetActualValues();
             Assert.AreEqual(1, actValues.Length);
-            Assert.AreEqual((double?)actValues[0], null);
+            Assert.AreEqual(null, actValues[0]);
         }
 
         [TestMethod]
         public void TestComputeCategory()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
-            NamedTuple result = classifier.Compute(0, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, "D"), true, true);
-            result = classifier.Compute(1, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, "D"), true, true);
+            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
+            classifier.Compute<string>(0, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", "D" } },
+                new[] { 1, 5, 9 }, true, true);
+            var result = classifier.Compute<string>(1, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", "D" } },
+                new[] { 1, 5, 9 }, true, true);
 
-            Assert.IsTrue(result.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            object[] actValues = (object[])result["actualValues"];
-            Assert.AreEqual(5, actValues.Length);
-            Assert.AreEqual((string)actValues[4], "D");
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
+            Assert.AreEqual(5, result.GetActualValueCount());
+            double[] actValues = result.GetStats(1);
+            Assert.AreEqual("D", result.GetActualValue(4));
         }
 
         [TestMethod]
         public void TestComputeCategory2()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1, 0);
-            NamedTuple result = classifier.Compute(0, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, "D"), true, true);
-            result = classifier.Compute(1, new[] { 1, 5, 9 },
-                new NamedTuple(new[] { "bucketIdx", "actValue" }, 4, "E"), true, true);
+            var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
+            classifier.Compute<string>(0, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", "D" } },
+               new[] { 1, 5, 9 }, true, true);
+            var result = classifier.Compute<string>(1, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", "E" } },
+                new[] { 1, 5, 9 }, true, true);
 
-            Assert.IsTrue(result.GetKeys().SequenceEqual(new[] { "actualValues", "1" }));
-            object[] actValues = (object[])result["actualValues"];
+            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
+            Assert.AreEqual(5, result.GetActualValueCount());
+            string[] actValues = result.GetActualValues();
             Assert.AreEqual(5, actValues.Length);
-            Assert.AreEqual((string)actValues[4], "D");
+            Assert.AreEqual(actValues[4], "D");
         }
 
         [TestMethod]
@@ -276,13 +278,13 @@ namespace HTM.Net.Tests.Algorithms
             var retVal = _compute(classifier, 2, new[] {3, 5}, 2, 2);
 
             // Since overlap - should be previous with high likelihood
-            object[] actValues = (object[])retVal["actualValues"];
-            Assert.AreEqual((double)actValues[9], 9);
-            double[] resultDoubles = (double[])retVal["1"];
+            double[] actValues = retVal.GetActualValues();
+            Assert.AreEqual(actValues[9], 9);
+            double[] resultDoubles = retVal.GetStats(1);
             Assert.IsTrue(resultDoubles[9]>0.9);
 
             retVal = _compute(classifier, 3, new[] { 3, 5 }, 2, 2);
-            resultDoubles = (double[])retVal["1"];
+            resultDoubles = retVal.GetStats(1);
             // Second example: now new value should be more probable than old
             Assert.IsTrue(resultDoubles[2] > resultDoubles[9]);
 
@@ -293,26 +295,27 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 1,2 });
 
-            NamedTuple retVal = null;
+            ClassifierResult<double> retVal = null;
             for (int i = 0; i < 10; i++)
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
             }
-            
+
             // Since overlap - should be previous with high likelihood
-            object[] actValues = (object[])retVal["actualValues"];
+            double[] actValues = retVal.GetActualValues();
+
             Assert.AreEqual((double)actValues[0], 10);
-            double[] resultDoubles1 = (double[])retVal["1"];
-            double[] resultDoubles2 = (double[])retVal["2"];
+            double[] resultDoubles1 = (double[]) retVal.GetStats(1);
+            double[] resultDoubles2 = (double[]) retVal.GetStats(2);
 
             Assert.AreEqual(resultDoubles1[0], 1);
             Assert.AreEqual(resultDoubles2[0], 1);
         }
 
-        private NamedTuple _compute(SDRClassifier classifier, int recordNum, int[] pattern, int bucket, double value)
+        private ClassifierResult<double> _compute(SDRClassifier classifier, int recordNum, int[] pattern, int bucket, double value)
         {
-            var classification = new NamedTuple(new[] { "bucketIdx", "actValue" }, bucket, value);
-            return classifier.Compute(recordNum, pattern, classification, true, true);
+            var classification = new Map<string, object> {{"bucketIdx", bucket}, {"actValue", value}};
+            return classifier.Compute<double>(recordNum, classification, pattern, true, true);
         }
     }
 }

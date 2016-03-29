@@ -60,12 +60,10 @@ namespace HTM.Net.Algorithms
             return _actualValues;
         }
 
-        /**
-         * Sets the array of actual values being entered.
-         * 
-         * @param values
-         * @param &lt;T&gt;[]	the value array type
-         */
+        /// <summary>
+        /// Sets the array of actual values being entered.
+        /// </summary>
+        /// <param name="values"></param>
         public void SetActualValues(T[] values)
         {
             _actualValues = values;

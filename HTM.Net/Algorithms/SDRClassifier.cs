@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using HTM.Net.Util;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
@@ -82,6 +83,7 @@ namespace HTM.Net.Algorithms
         private Map<int, double[][]> _weightMatrix;
         private List<object> _actualValues;
         private int _version;
+        private string g_debugPrefix = "SDRClassifier";
 
         /// <summary>
         /// Constructor for the SDR classifier.
@@ -155,7 +157,7 @@ namespace HTM.Net.Algorithms
             _version = SDRClassifier.VERSION;
         }
 
-        public NamedTuple Compute(int recordNum, int[] patternNZ, NamedTuple classification,
+        public ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
             bool learn, bool infer)
         {
             if (learn == false && infer == false) throw new InvalidOperationException("learn and infer cannot be both false");
@@ -169,14 +171,14 @@ namespace HTM.Net.Algorithms
             // Update the learn iteration
             _learnIteration = recordNum - _recordNumMinusLearnIteration.GetValueOrDefault();
 
-            /*
-                if self.verbosity >= 1:
-                  print "\n%s: compute" % g_debugPrefix
-                  print "  recordNum:", recordNum
-                  print "  learnIteration:", self._learnIteration
-                  print "  patternNZ (%d):" % len(patternNZ), patternNZ
-                  print "  classificationIn:", classification
-            */
+            if (verbosity >= 1)
+            {
+                Console.WriteLine(String.Format("\n{0}: compute ", g_debugPrefix));
+                Console.WriteLine(" recordNum: " + recordNum);
+                Console.WriteLine(" learnIteration: " + _learnIteration);
+                Console.WriteLine(String.Format(" patternNZ({0}): {1}", patternNZ.Length, Arrays.ToString(patternNZ)));
+                Console.WriteLine(" classificationIn: " + classification);
+            }
 
             // Store pattern in our history
             _patternNZHistory.Append(new Tuple(_learnIteration, patternNZ));
@@ -184,7 +186,7 @@ namespace HTM.Net.Algorithms
             // To allow multi-class classification, we need to be able to run learning
             // without inference being on. So initialize retval outside
             // of the inference block.
-            NamedTuple retVal = null;
+            ClassifierResult<T> retVal = null;
 
             // Update maxInputIdx and augment weight matrix with zero padding
             if (patternNZ.Max() > _maxInputIdx)
@@ -192,20 +194,8 @@ namespace HTM.Net.Algorithms
                 int newMaxInputIdx = patternNZ.Max();
                 foreach (int nSteps in steps)
                 {
-                    // axis 0
-                    //var subMatrix = DenseMatrix.Create(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1, 0);
-
                     var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
                     _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
-                    //if (subMatrix.ColumnCount == _weightMatrix[nSteps].ColumnCount)
-                    //{
-                    //    // Add rows
-                    //    foreach (Vector<double> row in subMatrix.EnumerateRows())
-                    //    {
-                    //        _weightMatrix[nSteps] = _weightMatrix[nSteps].InsertRow(_weightMatrix[nSteps].RowCount, row);
-                    //    }
-                    //}
-                    //_weightMatrix[nSteps].Append(subMatrix);
                 }
                 _maxInputIdx = newMaxInputIdx;
             }
@@ -215,7 +205,7 @@ namespace HTM.Net.Algorithms
             // For each active bit in the activationPattern, get the classification votes
             if (infer)
             {
-                retVal = Infer(patternNZ, classification);
+                retVal = Infer<T>(patternNZ, classification);
             }
 
             if (learn && classification["bucketIdx"] != null)
@@ -229,11 +219,8 @@ namespace HTM.Net.Algorithms
                 {
                     foreach (int nSteps in steps)
                     {
-                        // axis 1
-                       // var subMatrix = DenseMatrix.Create(_maxInputIdx + 1, bucketIdx - _maxBucketIdx, 0);
                         var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
                         _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 1);
-                        //_weightMatrix[nSteps] = _weightMatrix[nSteps].Append(subMatrix);
                     }
                     _maxBucketIdx = bucketIdx;
                 }
@@ -286,12 +273,6 @@ namespace HTM.Net.Algorithms
                     {
                         foreach (int bit in learnPatternNZ)
                         {
-                            //var row = _weightMatrix[nSteps].Row(bit);
-                            //var multipliedRow = ArrayUtils.Multiply(error[nSteps], alpha);
-                            ////row += multipliedRow;
-                            //row = row.Add(DenseVector.OfArray(multipliedRow));
-                            //_weightMatrix[nSteps].SetRow(bit, row);
-
                             var multipliedRow = ArrayUtils.Multiply(error[nSteps], alpha);
                             _weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
                         }
@@ -302,6 +283,20 @@ namespace HTM.Net.Algorithms
             // Verbose print
             if (infer && verbosity >= 1)
             {
+                Console.WriteLine(" inference: combined bucket likelihoods:");
+                Console.WriteLine("   actual bucket values: " + Arrays.ToString((T[])retVal.GetActualValues()));
+
+                foreach (int key in retVal.StepSet())
+                {
+                    if (retVal.GetActualValue(key) == null) continue;
+
+                    Object[] actual = new Object[] { (T)retVal.GetActualValue(key) };
+                    Console.WriteLine(String.Format("  {0} steps: {1}", key, PFormatArray(actual)));
+                    int bestBucketIdx = retVal.GetMostProbableBucketIndex(key);
+                    Console.WriteLine(String.Format("   most likely bucket idx: {0}, value: {1} ", bestBucketIdx,
+                        retVal.GetActualValue(bestBucketIdx)));
+
+                }
                 /*
                   print "  inference: combined bucket likelihoods:"
                   print "    actual bucket values:", retval["actualValues"]
@@ -340,7 +335,7 @@ namespace HTM.Net.Algorithms
         ///            4 : [0.2, 0.4, 0.3, 0.5]
         ///         }
         /// </returns>
-        public NamedTuple Infer(int[] patternNz, NamedTuple classification)
+        public ClassifierResult<T> Infer<T>(int[] patternNz, IDictionary<string, object> classification)
         {
             // Return value dict. For buckets which we don't have an actual value
             // for yet, just plug in any valid actual value. It doesn't matter what
@@ -357,13 +352,16 @@ namespace HTM.Net.Algorithms
             {
                 defaultValue = classification["actValue"];
             }
-            var actValues = _actualValues.Select(x => x ?? defaultValue).ToArray();
-            NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
+            var actValues = _actualValues.Select(x => (T)(x ?? TypeConverter.Convert<T>(defaultValue))).ToArray();
+            ClassifierResult<T> retVal = new ClassifierResult<T>();
+            retVal.SetActualValues(actValues);
+           //NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
 
             foreach (var nSteps in steps)
             {
                 var predictDist = InferSingleStep(patternNz, _weightMatrix[nSteps]);
-                retVal[nSteps.ToString()] = predictDist;
+                retVal.SetStats(nSteps, predictDist);
+                //retVal[nSteps.ToString()] = predictDist;
             }
 
             return retVal;
@@ -409,7 +407,7 @@ namespace HTM.Net.Algorithms
         /// </param>
         /// <returns>dict containing error. 
         /// The key is the number of steps The value is a numpy array of error at the output layer</returns>
-        private IDictionary<int, double[]> _calculateError(NamedTuple classification)
+        private IDictionary<int, double[]> _calculateError(IDictionary<string, object> classification)
         {
             IDictionary<int, double[]> error = new Map<int, double[]>();
 
@@ -429,6 +427,26 @@ namespace HTM.Net.Algorithms
             }
 
             return error;
+        }
+
+        /**
+         * Return a string with pretty-print of an array using the given format
+         * for each element
+         * 
+         * @param arr
+         * @return
+         */
+        private string PFormatArray<T>(T[] arr)
+        {
+            if (arr == null) return "";
+
+            StringBuilder sb = new StringBuilder("[ ");
+            foreach (T t in arr)
+            {
+                sb.Append(string.Format("{0:#.00}s", t));
+            }
+            sb.Append(" ]");
+            return sb.ToString();
         }
     }
 }
