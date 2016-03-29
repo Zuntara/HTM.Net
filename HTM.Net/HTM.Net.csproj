@@ -74,6 +74,7 @@
   <ItemGroup>
     <Compile Include="Algorithms\KNNClassifier.cs" />
     <Compile Include="Algorithms\PASpatialPooler.cs" />
+    <Compile Include="Algorithms\SDRClassifier.cs" />
     <Compile Include="Datagen\KNNDataArray.cs" />
     <Compile Include="Datagen\PatternMachine.cs" />
     <Compile Include="Datagen\PCAKNNData.cs" />

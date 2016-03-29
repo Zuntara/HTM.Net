@@ -1,0 +1,434 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
+using Tuple = HTM.Net.Util.Tuple;
+
+namespace HTM.Net.Algorithms
+{
+    // https://github.com/numenta/nupic/blob/master/src/nupic/algorithms/sdr_classifier.py
+
+    /// <summary>
+    /// Implementation of a SDR classifier.
+    /// 
+    /// The SDR classifier takes the form of a single layer classification network
+    /// that takes SDRs as input and outputs a predicted distribution of classes.
+    /// 
+    /// The SDR Classifier accepts a binary input pattern from the 
+    /// level below(the "activationPattern") and information from the sensor and
+    /// encoders(the "classification") describing the true (target) input.
+    /// 
+    /// The SDR classifier maps input patterns to class labels. There are as many 
+    /// output units as the number of class labels or buckets(in the case of scalar 
+    /// encoders). The output is a probabilistic distribution over all class labels. 
+    /// 
+    /// During inference, the output is calculated by first doing a weighted summation 
+    /// of all the inputs, and then perform a softmax nonlinear function to get
+    /// the predicted distribution of class labels
+    /// 
+    /// During learning, the connection weights between input units and output units
+    /// are adjusted to maximize the likelihood of the model 
+    /// 
+    /// The SDR Classifier is a variation of the previous CLAClassifier which was
+    /// not based on the references below.
+    /// 
+    /// Example Usage: 
+    /// 
+    /// c = SDRClassifier(steps =[1], alpha = 0.1, actValueAlpha = 0.1, verbosity = 0) 
+    /// 
+    /// // learning 
+    /// c.compute(recordNum= 0, patternNZ=[1, 5, 9],
+    ///           classification={ "bucketIdx": 4, "actValue": 34.7}, 
+    ///           learn=True, infer=False) 
+    /// 
+    /// // inference 
+    /// result = c.compute(recordNum=1, patternNZ=[1, 5, 9], 
+    ///                    classification={"bucketIdx": 4, "actValue": 34.7}, 
+    ///                    learn=False, infer=True) 
+    /// 
+    /// // Print the top three predictions for 1 steps out. 
+    /// topPredictions = sorted(zip(result[1],
+    ///                         result["actualValues"]), reverse=True)[:3] 
+    /// for probability, value in topPredictions: 
+    ///   print "Prediction of {} has probability of {}.".format(value,
+    ///                                                          probability*100.0)
+    /// 
+    /// References: 
+    ///   Alex Graves.Supervised Sequence Labeling with Recurrent Neural Networks 
+    ///   PhD Thesis, 2008 
+    /// 
+    ///   J.S.Bridle.Probabilistic interpretation of feedforward classification
+    ///   network outputs, with relationships to statistical pattern recognition. 
+    ///   In F. Fogleman-Soulie and J.Herault, editors, Neurocomputing: Algorithms,
+    ///   Architectures and Applications, pp 227-236, Springer-Verlag, 1990 
+    /// 
+    /// </summary>
+    public class SDRClassifier
+    {
+        private int[] steps;
+        private double alpha;
+        private double actValueAlpha;
+        private int verbosity;
+
+        private int _learnIteration;
+        private int? _recordNumMinusLearnIteration;
+        private static int VERSION = 1;
+        private Deque<Tuple> _patternNZHistory;
+        private Map<int, int> _activeBitHistory;
+        private int _maxInputIdx;
+        private int _maxBucketIdx;
+        private Map<int, double[][]> _weightMatrix;
+        private List<object> _actualValues;
+        private int _version;
+
+        /// <summary>
+        /// Constructor for the SDR classifier.
+        /// </summary>
+        /// <param name="steps">(list) Sequence of the different steps of multi-step predictions to learn</param>
+        /// <param name="alpha">(float) The alpha used to adapt the weight matrix during learning. A larger alpha results in faster adaptation to the data.</param>
+        /// <param name="actValueAlpha">(float) Used to track the actual value within each bucket. A lower actValueAlpha results in longer term memory</param>
+        /// <param name="verbosity">verbosity (int) verbosity level, can be 0, 1, or 2</param>
+        public SDRClassifier(int[] steps = null, double alpha = 0.001, double actValueAlpha = 0.3, int verbosity = 0)
+        {
+            if (steps == null || steps.Length == 0) throw new ArgumentException("Steps cannot be empty");
+            if (steps.Any(s => s < 0)) throw new ArgumentException("steps must be a list of non-negative ints");
+            if (alpha < 0) throw new ArgumentException("alpha (learning rate) must be a positive number");
+            if (actValueAlpha < 0 || actValueAlpha >= 1) throw new ArgumentOutOfRangeException(nameof(actValueAlpha), "actValueAlpha be a number between 0 and 1");
+
+            // Save constructor args
+            this.steps = steps;
+            this.alpha = alpha;
+            this.actValueAlpha = actValueAlpha;
+            this.verbosity = verbosity;
+
+            // Init learn iteration index
+            _learnIteration = 0;
+
+            // This contains the offset between the recordNum (provided by caller) and
+            // learnIteration (internal only, always starts at 0).
+            _recordNumMinusLearnIteration = null;
+
+            // Max // of steps of prediction we need to support
+            int maxSteps = steps.Max() + 1;
+
+            // History of the last _maxSteps activation patterns. We need to keep 
+            // these so that we can associate the current iteration's classification 
+            // with the activationPattern from N steps ago 
+            _patternNZHistory = new Deque<Tuple>(maxSteps);
+
+            // These are the bit histories. Each one is a BitHistory instance, stored in 
+            // this dict, where the key is (bit, nSteps). The 'bit' is the index of the 
+            // bit in the activation pattern and nSteps is the number of steps of 
+            // prediction desired for that bit. 
+            _activeBitHistory = new Map<int, int>();
+
+            // This contains the value of the highest input number we've ever seen 
+            // It is used to pre-allocate fixed size arrays that hold the weights 
+            _maxInputIdx = 0;
+
+            // This contains the value of the highest bucket index we've ever seen 
+            // It is used to pre-allocate fixed size arrays that hold the weights of 
+            // each bucket index during inference 
+            _maxBucketIdx = 0;
+
+            // The connection weight matrix 
+            _weightMatrix = new Map<int, double[][]>();
+
+            foreach (int step in steps)
+            {
+                //_weightMatrix[step] = DenseMatrix.Create(_maxInputIdx + 1, _maxBucketIdx + 1, 0);
+                _weightMatrix[step] = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, _maxBucketIdx + 1);
+            }
+            //for step in this.steps: 
+            //    this._weightMatrix[step] = numpy.zeros(shape = (this._maxInputIdx + 1,
+            //                                     this._maxBucketIdx + 1))
+
+            // This keeps track of the actual value to use for each bucket index. We 
+            // start with 1 bucket, no actual value so that the first infer has something 
+            // to return 
+            _actualValues = new List<object> { null };
+
+            // Set the version to the latest version. 
+            // This is used for serialization/deserialization 
+            _version = SDRClassifier.VERSION;
+        }
+
+        public NamedTuple Compute(int recordNum, int[] patternNZ, NamedTuple classification,
+            bool learn, bool infer)
+        {
+            if (learn == false && infer == false) throw new InvalidOperationException("learn and infer cannot be both false");
+
+            // Save the offset between recordNum and learnIteration if this is the first 
+            //  compute 
+            if (this._recordNumMinusLearnIteration == null)
+            {
+                this._recordNumMinusLearnIteration = recordNum - this._learnIteration;
+            }
+            // Update the learn iteration
+            _learnIteration = recordNum - _recordNumMinusLearnIteration.GetValueOrDefault();
+
+            /*
+                if self.verbosity >= 1:
+                  print "\n%s: compute" % g_debugPrefix
+                  print "  recordNum:", recordNum
+                  print "  learnIteration:", self._learnIteration
+                  print "  patternNZ (%d):" % len(patternNZ), patternNZ
+                  print "  classificationIn:", classification
+            */
+
+            // Store pattern in our history
+            _patternNZHistory.Append(new Tuple(_learnIteration, patternNZ));
+
+            // To allow multi-class classification, we need to be able to run learning
+            // without inference being on. So initialize retval outside
+            // of the inference block.
+            NamedTuple retVal = null;
+
+            // Update maxInputIdx and augment weight matrix with zero padding
+            if (patternNZ.Max() > _maxInputIdx)
+            {
+                int newMaxInputIdx = patternNZ.Max();
+                foreach (int nSteps in steps)
+                {
+                    // axis 0
+                    //var subMatrix = DenseMatrix.Create(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1, 0);
+
+                    var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
+                    _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
+                    //if (subMatrix.ColumnCount == _weightMatrix[nSteps].ColumnCount)
+                    //{
+                    //    // Add rows
+                    //    foreach (Vector<double> row in subMatrix.EnumerateRows())
+                    //    {
+                    //        _weightMatrix[nSteps] = _weightMatrix[nSteps].InsertRow(_weightMatrix[nSteps].RowCount, row);
+                    //    }
+                    //}
+                    //_weightMatrix[nSteps].Append(subMatrix);
+                }
+                _maxInputIdx = newMaxInputIdx;
+            }
+
+            // --------------------------------------------------------------------
+            // Inference:
+            // For each active bit in the activationPattern, get the classification votes
+            if (infer)
+            {
+                retVal = Infer(patternNZ, classification);
+            }
+
+            if (learn && classification["bucketIdx"] != null)
+            {
+                // Get classification info
+                int bucketIdx = (int)classification["bucketIdx"];
+                object actValue = classification["actValue"];
+
+                // Update maxBucketIndex and augment weight matrix with zero padding
+                if (bucketIdx > _maxBucketIdx)
+                {
+                    foreach (int nSteps in steps)
+                    {
+                        // axis 1
+                       // var subMatrix = DenseMatrix.Create(_maxInputIdx + 1, bucketIdx - _maxBucketIdx, 0);
+                        var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
+                        _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 1);
+                        //_weightMatrix[nSteps] = _weightMatrix[nSteps].Append(subMatrix);
+                    }
+                    _maxBucketIdx = bucketIdx;
+                }
+
+                // Update rolling average of actual values if it's a scalar. If it's
+                // not, it must be a category, in which case each bucket only ever
+                // sees one category so we don't need a running average.
+                while (_maxBucketIdx > _actualValues.Count - 1)
+                {
+                    _actualValues.Add(null);
+                }
+                if (_actualValues[bucketIdx] == null)
+                {
+                    _actualValues[bucketIdx] = actValue;
+                }
+                else
+                {
+                    if (actValue is int || actValue is double || actValue is long)
+                    {
+                        if (actValue is int)
+                        {
+                            _actualValues[bucketIdx] = ((1 - actValueAlpha) * (int)_actualValues[bucketIdx] +
+                                                        actValueAlpha * (int)actValue);
+                        }
+                        if (actValue is double)
+                        {
+                            _actualValues[bucketIdx] = ((1.0 - actValueAlpha) * (double)_actualValues[bucketIdx] +
+                                                        actValueAlpha * (double)actValue);
+                        }
+                        if (actValue is long)
+                        {
+                            _actualValues[bucketIdx] = ((1 - actValueAlpha) * (long)_actualValues[bucketIdx] +
+                                                        actValueAlpha * (long)actValue);
+                        }
+                    }
+                    else
+                    {
+                        _actualValues[bucketIdx] = actValue;
+                    }
+                }
+                foreach (var tuple in _patternNZHistory)
+                {
+                    var iteration = (int)tuple.Get(0);
+                    var learnPatternNZ = (int[])tuple.Get(1);
+
+                    var error = _calculateError(classification);
+
+                    int nSteps = _learnIteration - iteration;
+                    if (steps.Contains(nSteps))
+                    {
+                        foreach (int bit in learnPatternNZ)
+                        {
+                            //var row = _weightMatrix[nSteps].Row(bit);
+                            //var multipliedRow = ArrayUtils.Multiply(error[nSteps], alpha);
+                            ////row += multipliedRow;
+                            //row = row.Add(DenseVector.OfArray(multipliedRow));
+                            //_weightMatrix[nSteps].SetRow(bit, row);
+
+                            var multipliedRow = ArrayUtils.Multiply(error[nSteps], alpha);
+                            _weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
+                        }
+                    }
+                }
+            }
+            // ------------------------------------------------------------------------
+            // Verbose print
+            if (infer && verbosity >= 1)
+            {
+                /*
+                  print "  inference: combined bucket likelihoods:"
+                  print "    actual bucket values:", retval["actualValues"]
+                  for (nSteps, votes) in retval.items():
+                    if nSteps == "actualValues":
+                      continue
+                    print "    %d steps: " % (nSteps), _pFormatArray(votes)
+                    bestBucketIdx = votes.argmax()
+                    print ("      most likely bucket idx: "
+                           "%d, value: %s" % (bestBucketIdx,
+                                              retval["actualValues"][bestBucketIdx]))
+                  print
+                */
+            }
+            return retVal;
+        }
+
+        /// <summary>
+        /// Return the inference value from one input sample. The actual learning happens in compute().
+        /// </summary>
+        /// <param name="patternNz">list of the active indices from the output below</param>
+        /// <param name="classification">
+        /// dict of the classification information:
+        /// - bucketIdx: index of the encoder bucket
+        /// - actValue:  actual value going into the encoder
+        /// </param>
+        /// <returns>
+        /// dict containing inference results, one entry for each step in
+        /// self.steps.The key is the number of steps, the value is an
+        /// array containing the relative likelihood for each bucketIdx
+        /// starting from bucketIdx 0.
+        /// 
+        ///        for example:
+        ///          {'actualValues': [0.0, 1.0, 2.0, 3.0]
+        ///            1 : [0.1, 0.3, 0.2, 0.7]
+        ///            4 : [0.2, 0.4, 0.3, 0.5]
+        ///         }
+        /// </returns>
+        public NamedTuple Infer(int[] patternNz, NamedTuple classification)
+        {
+            // Return value dict. For buckets which we don't have an actual value
+            // for yet, just plug in any valid actual value. It doesn't matter what
+            // we use because that bucket won't have non-zero likelihood anyways.
+            // 
+            // NOTE: If doing 0-step prediction, we shouldn't use any knowledge
+            // of the classification input during inference.
+            object defaultValue;
+            if (steps[0] == 0 || classification == null)
+            {
+                defaultValue = 0;
+            }
+            else
+            {
+                defaultValue = classification["actValue"];
+            }
+            var actValues = _actualValues.Select(x => x ?? defaultValue).ToArray();
+            NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
+
+            foreach (var nSteps in steps)
+            {
+                var predictDist = InferSingleStep(patternNz, _weightMatrix[nSteps]);
+                retVal[nSteps.ToString()] = predictDist;
+            }
+
+            return retVal;
+        }
+        /// <summary>
+        /// Perform inference for a single step. Given an SDR input and a weight
+        /// matrix, return a predicted distribution.
+        /// </summary>
+        /// <param name="patternNz">list of the active indices from the output below</param>
+        /// <param name="weightMatrix">array of the weight matrix</param>
+        /// <returns>array of the predicted class label distribution</returns>
+        private double[] InferSingleStep(int[] patternNz, double[][] weightMatrix)
+        {
+            var filtered = weightMatrix.Where((row, index) => patternNz.Contains(index)).ToList();
+            int cols = filtered.Max(f => f.Length);
+
+            double[] summed = new double[cols];
+            for (int i = 0; i < cols; i++)
+            {
+                for (int y = 0; y < filtered.Count; y++)
+                {
+                    summed[i] += filtered[y][i];
+                }
+            }
+            //List<double> summed = patternNz.Select(index => weightMatrix[index].Sum()).ToList();
+            var outputActivation = summed;
+            
+            //var outputActivation = weightMatrix[patternNZ].sum(axis: 0); // axis 0 = cols, axis 1 = rows
+
+            // softmax normalization
+            var expOutputActivation = ArrayUtils.Exp(outputActivation).ToArray();// numpy.exp(outputActivation);
+            var predictDist = ArrayUtils.Divide(expOutputActivation, expOutputActivation.Sum()); //expOutputActivation / expOutputActivation.Sum();
+            return predictDist;
+        }
+
+        /// <summary>
+        /// Calculate error signal
+        /// </summary>
+        /// <param name="classification">
+        /// dict of the classification information:
+        /// - bucketIdx: index of the encoder bucket
+        /// - actValue:  actual value going into the encoder
+        /// </param>
+        /// <returns>dict containing error. 
+        /// The key is the number of steps The value is a numpy array of error at the output layer</returns>
+        private IDictionary<int, double[]> _calculateError(NamedTuple classification)
+        {
+            IDictionary<int, double[]> error = new Map<int, double[]>();
+
+            var targetDist = new double[_maxBucketIdx + 1]; //numpy.zeros(self._maxBucketIdx + 1);
+            targetDist[(int)classification["bucketIdx"]] = 1.0;
+
+            foreach (Tuple tuple in _patternNZHistory)
+            {
+                int iteration = (int)tuple.Get(0);
+                int[] learnPatternNZ = (int[])tuple.Get(1);
+                var nSteps = _learnIteration - iteration;
+                if (steps.Contains(nSteps))
+                {
+                    var predictDist = InferSingleStep(learnPatternNZ, _weightMatrix[nSteps]);
+                    error[nSteps] = ArrayUtils.Subtract(targetDist, predictDist);// targetDist - predictDist;
+                }
+            }
+
+            return error;
+        }
+    }
+}

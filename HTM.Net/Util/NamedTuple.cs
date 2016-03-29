@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace HTM.Net.Util
@@ -13,7 +14,7 @@ namespace HTM.Net.Util
     public class NamedTuple : Tuple
     {
         private readonly Bucket[] _entries;
-        private readonly string[] _keys;
+        private string[] _keys;
         private int _hash;
         private readonly int _thisHashcode;
         private readonly string[] _emptyKeys = new string[0];
@@ -81,6 +82,11 @@ namespace HTM.Net.Util
                 if (key == null) throw new ArgumentNullException("key");
                 int hash = HashIndex(key);
                 Entry e = _entries[hash].Find(key, hash);
+                if (e == null)
+                {
+                    AddEntry(key, null);
+                    e = _entries[hash].Find(key, hash);
+                }
                 e.Value = value;
             }
         }
@@ -156,6 +162,13 @@ namespace HTM.Net.Util
 
             Entry entry = new Entry(this, key, value, hash);
             _entries[hash].Add(entry);
+
+            if (!_keys.Contains(key))
+            {
+                var extraKeys = new List<string>(_keys);
+                extraKeys.Add(key);
+                _keys = extraKeys.ToArray();
+            }
         }
 
         /**
