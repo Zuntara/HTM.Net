@@ -89,6 +89,8 @@
     <Compile Include="Swarming\PermutationHelpers.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />
+    <Compile Include="Vision\BitmapExtentions.cs" />
+    <Compile Include="Vision\DatasetReader.cs" />
     <Compile Include="Vision\ExactMatch.cs" />
     <Compile Include="Vision\VisionTestBench.cs" />
   </ItemGroup>

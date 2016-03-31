@@ -93,7 +93,6 @@ namespace HTM.Net.Network
         void Reset();
         void NotifyComplete();
         ILayer AlterParameter(Parameters.KEY key, object value);
-        object CustomCompute(int recordNum, List<int> patternNZ, Map<string, object> classification);
 
         /// <summary>
         /// Allows the user to specify the <see cref="Parameters"/> object used by this
@@ -161,6 +160,11 @@ namespace HTM.Net.Network
         /// of insertion within the <see cref="ILayer"/>'s declaration.</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
         ILayer Add(Func<ManualInput, ManualInput> func);
+        /// <summary>
+        /// Returns the classifier assigned to this layer
+        /// </summary>
+        /// <returns></returns>
+        IClassifier GetClassifier(MultiEncoder encoder, string name);
     }
 
 

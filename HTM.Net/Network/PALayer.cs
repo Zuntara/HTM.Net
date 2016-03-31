@@ -2,6 +2,7 @@
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Model;
+using HTM.Net.Util;
 
 namespace HTM.Net.Network
 {
@@ -152,7 +153,7 @@ namespace HTM.Net.Network
             {
                 if (verbosity > 0)
                 {
-                    Console.WriteLine(input);
+                    Console.WriteLine(Arrays.ToString(input));
                 }
                 throw new ArgumentException(string.Format("Input size {0} > SP's NumInputs {1}", input.Length, Connections.GetNumInputs()));
             }

@@ -40,7 +40,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestSingleValue0Steps()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 0 }), 0.001, 0.3, 0);
+            classifier = new CLAClassifier(new[] { 0 }, 0.001, 0.3, 0);
 
             // Enough times to perform Inference and learn associations
             ClassifierResult<double> retVal = null;
@@ -60,7 +60,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeResultTypes()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
@@ -74,7 +74,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestCompute1()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
@@ -88,7 +88,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestCompute2()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
@@ -104,7 +104,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeComplex()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             int recordNum = 0;
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 4);
@@ -147,7 +147,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeWithMissingValue()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", null);
             classification.Add("actValue", null);
@@ -161,7 +161,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeCategory()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", "D");
@@ -175,7 +175,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeCategory2()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", "D");
@@ -190,7 +190,7 @@ namespace HTM.Net.Tests.Algorithms
         //[TestMethod]
         public void TestSerialization()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             int recordNum = 0;
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 4);
@@ -276,8 +276,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestMultistepSingleValue()
         {
-            SetUp();
-            classifier.steps = new List<int>(new[] { 1, 2 });
+            classifier = new CLAClassifier(new[] { 1,2 });
 
             // Only should return one actual value bucket.
             ClassifierResult<double> result = null;
@@ -296,7 +295,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestMultistepSimple()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1, 2 }), 0.001, 0.3, 0);
+            classifier = new CLAClassifier(new[] { 1, 2 }, 0.001, 0.3, 0);
 
             ClassifierResult<double> result = null;
             int recordNum = 0;
@@ -329,7 +328,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestMissingRecords()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 1 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 1 }, 0.1, 0.1, 0);
             int recordNum = 0;
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 0);
@@ -420,7 +419,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestMissingRecordInitialization()
         {
-            classifier = new CLAClassifier(new List<int>(new[] { 2 }), 0.1, 0.1, 0);
+            classifier = new CLAClassifier(new[] { 2 }, 0.1, 0.1, 0);
             int recordNum = 0;
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 0);

@@ -1187,12 +1187,13 @@ namespace HTM.Net.Util
          */
         public static int[] Range(int lowerBounds, int upperBounds)
         {
-            //List<int> ints = new List<int>();
-            //for (int i = lowerBounds; i < upperBounds; i++)
-            //{
-            //    ints.Add(i);
-            //}
-            return Enumerable.Range(lowerBounds, upperBounds - lowerBounds).ToArray();
+            int[] ints = new int[upperBounds - lowerBounds];
+            for (int i = lowerBounds, j = 0; i < upperBounds; i++, j++)
+            {
+                ints[j] = i;
+            }
+            //return Enumerable.Range(lowerBounds, upperBounds - lowerBounds).ToArray();
+            return ints.ToArray();
         }
 
         /**
@@ -2112,7 +2113,7 @@ namespace HTM.Net.Util
          */
         public static double[] Sub(double[] arr, double[] amount)
         {
-            for (int i = 0; i < arr.Length; i++)
+            for (int i = 0; i < Math.Min(arr.Length, amount.Length); i++)
             {
                 arr[i] -= amount[i];
             }
@@ -3350,6 +3351,28 @@ namespace HTM.Net.Util
                 return newArray;
             }
             throw new NotImplementedException();
+        }
+
+        public static IEnumerable<double> LinearRange(double start, double stop, double step)
+        {
+            double pVal = start;
+            yield return pVal;
+            while (pVal < stop)
+            {
+                pVal += step;
+                yield return pVal;
+            }
+        }
+
+        public static IEnumerable<int> LinearRange(int start, int stop, int step)
+        {
+            int pVal = start;
+            yield return pVal;
+            while (pVal < stop)
+            {
+                pVal += step;
+                yield return pVal;
+            }
         }
     }
 }

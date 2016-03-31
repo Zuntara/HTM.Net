@@ -75,11 +75,14 @@ namespace HTM.Net.Research.opf
 
     public enum InferenceElement
     {
-        prediction,
-        classification,
-        classConfidences,
-        encodings,
-        anomalyLabel,
-        anomalyScore
+        Prediction,
+        Classification,
+        ClassConfidences,
+        Encodings,
+        AnomalyLabel,
+        AnomalyScore,
+        MultiStepPredictions,
+        MultiStepBestPredictions,
+        MultiStepBucketLikelihoods
     }
 }

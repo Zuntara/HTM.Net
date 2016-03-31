@@ -14,14 +14,14 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(64, p.Size());
+            Assert.AreEqual(65, p.Size());
         }
 
         [TestMethod]
         public void TestGetDayDemoTestEncoderParams()
         {
             Parameters p = NetworkDemoHarness.GetDayDemoTestEncoderParams();
-            Assert.AreEqual(14, p.Size());
+            Assert.AreEqual(15, p.Size());
         }
 
         [TestMethod]
@@ -35,7 +35,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public void TestGetNetworkDemoTestEncoderParams()
         {
             Parameters p = NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
-            Assert.AreEqual(29, p.Size());
+            Assert.AreEqual(30, p.Size());
         }
 
         [TestMethod]
@@ -48,7 +48,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             Assert.IsTrue(!m.ContainsKey("forced"));
 
             Assert.AreEqual(1, m.Count);
-            Assert.AreEqual(11, m.Get("cogmission").Count);
+            Assert.AreEqual(12, m.Get("cogmission").Count);
         }
 
         #endregion

@@ -928,7 +928,7 @@ namespace HTM.Net.Research.Swarming
         public string regionName { get; set; }
         public int clVerbosity { get; set; }
         public double alpha { get; set; }
-        public string steps { get; set; }
+        public int steps { get; set; }
     }
 
 

@@ -43,6 +43,8 @@ namespace HTM.Net.Encoders
 
         List<EncoderResult> TopDownCompute(int[] fieldOutput);
         Tuple Decode(int[] fieldOutput, string parentName);
+
+        List<string> GetScalarNames(string parentFieldName);
     }
 
     public interface IEncoder<T> : IEncoder
@@ -483,7 +485,7 @@ namespace HTM.Net.Encoders
          * @param offset	the offset of the encoded output the specified encoder
          * 					was used to encode.
          */
-        public void AddEncoder(Encoder<T> parent, string name, IEncoder child, int offset)
+        public void AddEncoder(Encoder<T> parent, string fieldName, string name, IEncoder child, int offset)
         {
             if (encoders == null)
             {
@@ -494,7 +496,7 @@ namespace HTM.Net.Encoders
             // Insert a new Tuple for the parent if not yet added.
             if (key == null)
             {
-                encoders.Add(key = new EncoderTuple("", this, 0), new List<EncoderTuple>());
+                encoders.Add(key = new EncoderTuple("", "", this, 0), new List<EncoderTuple>());
             }
 
             List<EncoderTuple> childEncoders = null;
@@ -502,7 +504,9 @@ namespace HTM.Net.Encoders
             {
                 encoders.Add(key, childEncoders = new List<EncoderTuple>());
             }
-            childEncoders.Add(new EncoderTuple(name, child, offset));
+            childEncoders.Add(new EncoderTuple(fieldName, name, child, offset));
+            //if (scalarNames == null) scalarNames = new List<string>();
+            //scalarNames.Add(name);
         }
 
         /**
@@ -712,20 +716,20 @@ namespace HTM.Net.Encoders
         public List<string> GetScalarNames(string parentFieldName)
         {
             List<string> names = new List<string>();
-            if (GetEncoders() != null)
+            if (GetEncoders() != null && GetEncoders().Count > 0)
             {
                 List<EncoderTuple> encoders = GetEncoders(this);
                 //for (Tuple tuple : encoders)
                 foreach (var tuple in encoders)
                 {
-                    List<string> subNames = ((Encoder<T>)tuple.Item2).GetScalarNames(GetName());
+                    List<string> subNames = ((IEncoder)tuple.Item3).GetScalarNames(GetName());
                     List<string> hierarchicalNames = new List<string>();
                     if (parentFieldName != null)
                     {
                         //for (String name : subNames)
                         foreach (string name in subNames)
                         {
-                            hierarchicalNames.Add(string.Format("{0}.{0}", parentFieldName, name));
+                            hierarchicalNames.Add($"{parentFieldName}.{name}");
                         }
                     }
                     names.AddRange(hierarchicalNames);
@@ -734,7 +738,7 @@ namespace HTM.Net.Encoders
             else {
                 if (parentFieldName != null)
                 {
-                    names.Add(parentFieldName);
+                    names.Add(GetName());
                 }
                 else {
                     names.Add((string)GetEncoderTuple(this).Item1);
@@ -1147,15 +1151,15 @@ namespace HTM.Net.Encoders
                 int nextOffset = 0;
                 if (i < len - 1)
                 {
-                    nextOffset = (int)encoders[i + 1].Item3;
+                    nextOffset = (int)encoders[i + 1].Item4;
                 }
                 else {
                     nextOffset = GetW();
                 }
 
-                int[] fieldOutput = ArrayUtils.Sub(encoded, ArrayUtils.Range((int)threeFieldsTuple.Item3, nextOffset));
+                int[] fieldOutput = ArrayUtils.Sub(encoded, ArrayUtils.Range((int)threeFieldsTuple.Item4, nextOffset));
 
-                Tuple result = ((IEncoder)threeFieldsTuple.Item2).Decode(fieldOutput, parentName);
+                Tuple result = ((IEncoder)threeFieldsTuple.Item3).Decode(fieldOutput, parentName);
 
                 foreach (var tuplePair in (Map<string, RangeList>)result.Item1)
                 {
@@ -1288,14 +1292,14 @@ namespace HTM.Net.Encoders
             int len = encoders.Count;
             for (int i = 0; i < len; i++)
             {
-                int offset = (int)encoders[i].Item3;
-                IEncoder encoder = (IEncoder)encoders[i].Item2;
+                int offset = (int)encoders[i].Item4;
+                IEncoder encoder = (IEncoder)encoders[i].Item3;
 
                 int nextOffset;
                 if (i < len - 1)
                 {
                     //Encoders = List<Encoder> : Encoder = EncoderTuple(name, encoder, offset)
-                    nextOffset = (int)encoders[i + 1].Item3;
+                    nextOffset = (int)encoders[i + 1].Item4;
                 }
                 else {
                     nextOffset = GetW();

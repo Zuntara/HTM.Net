@@ -228,7 +228,6 @@ namespace HTM.Net.Network
         /// <typeparam name="TInput"></typeparam>
         /// <param name="t">the input object who's type is generic.</param>
         public abstract void Compute<TInput>(TInput t);
-        public abstract object CustomCompute(int recordNum, List<int> patternNZ, Map<string, object> classification);
 
         public abstract int CalculateInputWidth();
         public Region GetParentRegion()
@@ -406,6 +405,12 @@ namespace HTM.Net.Network
 
             return null;
         }
+
+        /// <summary>
+        /// Returns the classifier(s) for this layer
+        /// </summary>
+        /// <returns></returns>
+        public abstract IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName);
 
         /// <summary>
         /// Returns the count of records historically inputted into this

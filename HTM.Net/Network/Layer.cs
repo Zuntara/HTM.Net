@@ -162,6 +162,8 @@ namespace HTM.Net.Network
         /// </summary>
         private List<EncoderTuple> _encoderTuples;
 
+        private NamedTuple _classifiers;
+
         /// <summary>
         /// Creates a new <see cref="ILayer"/> using the <see cref="Network"/> level <see cref="Parameters"/>
         /// </summary>
@@ -631,12 +633,6 @@ namespace HTM.Net.Network
             }
 
             Publisher.OnNext(t);
-        }
-
-        public override object CustomCompute(int recordNum, List<int> patternNZ, Map<string, object> classification)
-        {
-
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -1339,16 +1335,27 @@ namespace HTM.Net.Network
         /// <returns></returns>
         private NamedTuple MakeClassifiers(MultiEncoder encoder)
         {
+            if(_classifiers!=null) return _classifiers;
+            Type classificationType = (Type) Params.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE);
+
             string[] names = new string[encoder.GetEncoders(encoder).Count];
-            CLAClassifier[] ca = new CLAClassifier[names.Length];
+            IClassifier[] ca = new IClassifier[names.Length];
             int i = 0;
             foreach (EncoderTuple et in encoder.GetEncoders(encoder))
             {
-                names[i] = et.GetName();
-                ca[i] = new CLAClassifier();
+                names[i] = et.GetFieldName();
+                ca[i] = (IClassifier) Activator.CreateInstance(classificationType); //new CLAClassifier();
                 i++;
             }
-            return new NamedTuple(names, (object[])ca);
+            var result = new NamedTuple(names, (object[])ca);
+            _classifiers = result;
+            return result;
+        }
+
+        public override IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName)
+        {
+            if (_classifiers == null) MakeClassifiers(encoder);
+            return _classifiers[predictedFieldName] as IClassifier;
         }
 
         /// <summary>
@@ -1783,7 +1790,7 @@ namespace HTM.Net.Network
                         bucketIdx = inputs.Get("bucketIdx");
                         actValue = inputs.Get("inputValue");
 
-                        CLAClassifier c = (CLAClassifier)t1.GetClassifiers().Get(key);
+                        IClassifier c = (IClassifier)t1.GetClassifiers().Get(key);
                         ClassifierResult<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
 
                         t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);

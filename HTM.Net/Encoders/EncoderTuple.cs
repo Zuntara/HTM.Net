@@ -14,19 +14,26 @@ namespace HTM.Net.Encoders
         /**
          * Constructs a new {@code EncoderTuple}
          * 
-         * @param name		the {@link Encoder}'s name
+         * @param encoderName		the {@link Encoder}'s name
          * @param e			the {@link Encoder}
          * @param offset	the offset within the input (first on bit) that this 
          * 					encoder encodes/decodes. (see  {@link ScalarEncoder#getFirstOnBit(
          * 						org.numenta.nupic.research.Connections, double)})
          */
-        public EncoderTuple(string name, IEncoder e, int offset)
-            : base(name, e, offset)
+        public EncoderTuple(string fieldName, string encoderName, IEncoder e, int offset)
+            : base(fieldName, encoderName, e, offset)
         {
-            if (name == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
-                 " with a null Name");
+            if (encoderName == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
+                 " with a null encoderName");
+            if (fieldName == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
+                 " with a null fieldName");
             if (e == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
                  " with a null Encoder");
+        }
+
+        public string GetFieldName()
+        {
+            return (string) Get(0);
         }
 
         /**
@@ -35,7 +42,7 @@ namespace HTM.Net.Encoders
          */
         public string GetName()
         {
-            return (string)Get(0);
+            return (string)Get(1);
         }
 
         /**
@@ -44,12 +51,12 @@ namespace HTM.Net.Encoders
          */
         public IEncoder GetEncoder()
         {
-            return (IEncoder)Get(1);
+            return (IEncoder)Get(2);
         }
 
         public T GetEncoder<T>()
         {
-            return (T)Get(1);
+            return (T)Get(2);
         }
 
         /**
@@ -59,7 +66,7 @@ namespace HTM.Net.Encoders
          */
         public int GetOffset()
         {
-            return (int)Get(2);
+            return (int)Get(3);
         }
     }
 }

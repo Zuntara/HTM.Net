@@ -14,14 +14,14 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(64, p.Size());
+            Assert.AreEqual(65, p.Size());
         }
 
         [TestMethod]
         public void TestGetDayDemoTestEncoderParams()
         {
             Parameters p = NetworkDemoHarness.GetDayDemoTestEncoderParams();
-            Assert.AreEqual(14, p.Size());
+            Assert.AreEqual(15, p.Size());
         }
 
         [TestMethod]
@@ -42,7 +42,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         public void TestGetNetworkDemoTestEncoderParams()
         {
             Parameters p = NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
-            Assert.AreEqual(29, p.Size());
+            Assert.AreEqual(30, p.Size());
         }
 
         [TestMethod]
@@ -55,17 +55,17 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             Assert.IsTrue(!m.ContainsKey("forced"));
 
             Assert.AreEqual(1, m.Count);
-            Assert.AreEqual(11, m.Get("cogmission").Count);
+            Assert.AreEqual(12, m.Get("cogmission").Count);
         }
 
         #endregion
 
-        [TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void TestCreateBasicNetwork()
         {
-            NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC);
-            Network.Network n = demo.CreateBasicNetwork();
+            NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_CLA);
+            Network.Network n = demo.CreateBasicNetworkCla();
             Assert.AreEqual(1, n.GetRegions().Count);
             Assert.IsNotNull(n.GetRegions().First().Lookup("Layer 2/3"));
             Assert.IsNull(n.GetRegions().First().Lookup("Layer 4"));
@@ -86,7 +86,26 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         //[DeploymentItem("Resources\\rec-center-15m.Csv")]
         public void RunBasicNetwork()
         {
-            NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC);
+            NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_CLA);
+            demo.RunNetwork();
+
+            for (int i = 10; i > 0; i--)
+            {
+                double pct = i / 10.0;
+                Console.WriteLine("Pct: {1}; Accurancy: {0}", demo.GetTotalAccurancy(pct, true), pct);
+            }
+            for (int i = 1; i <= 10; i++)
+            {
+                double pct = i / 10.0;
+                Console.WriteLine("Pct: {1}; Accurancy: {0}", demo.GetTotalAccurancy(pct, false), pct);
+            }
+        }
+
+        //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        public void RunBasicNetworkSdr()
+        {
+            NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_SDR);
             demo.RunNetwork();
 
             for (int i = 10; i > 0; i--)

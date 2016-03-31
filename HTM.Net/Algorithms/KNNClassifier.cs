@@ -1391,6 +1391,8 @@ namespace HTM.Net.Algorithms
         }
 
         #endregion
+
+        
     }
 
     //Utils

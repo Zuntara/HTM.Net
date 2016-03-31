@@ -1,7 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
 
@@ -20,7 +25,7 @@ namespace HTM.Net.Research.Vision
         private List<string> tags;
         private int inputHeight, inputWidth;
         private int columnHeight, columnWidth;
-        private object permanencesImage, connectionsImage;
+        private Bitmap permanencesImage, connectionsImage;
         private Connections _connections;
 
         /// <summary>
@@ -96,7 +101,7 @@ namespace HTM.Net.Research.Vision
             PrintTrainingStats(cyclesCompleted, accuracy);
 
             // keep training until minAccuracy or maxCycles is reached
-            while ((minAccurancy - accuracy) < 1.0 / trainingTags.Count && cyclesCompleted < maxCycles)
+            while ((minAccurancy - accuracy) > 1.0 / trainingTags.Count && cyclesCompleted < maxCycles)
             {
                 // increment cycle number
                 cyclesCompleted += 1;
@@ -142,7 +147,7 @@ namespace HTM.Net.Research.Vision
                     activeArray = SDRs[SDRI].ToArray();
                     // if there are repeat tags give the index of the first occurrence
                     int category = tags.IndexOf(trainingTags[j]);
-                    int inferred_category = (int) classifier.Infer(activeArray.Select(i=>(double)i).ToArray()).Get(0);
+                    int inferred_category = (int)classifier.Infer(activeArray.Select(i => (double)i).ToArray()).Get(0);
                     if (inferred_category == category)
                     {
                         accuracy += 100.0 / trainingTags.Count;
@@ -198,7 +203,7 @@ namespace HTM.Net.Research.Vision
             {
                 activeArray = SDRs[SDRIs[j]].ToArray();
                 category = tags.IndexOf(testingTags[j]);
-                int inferred_category = (int) classifier.Infer(activeArray.Select(i => (double)i).ToArray()).Get(0);
+                int inferred_category = (int)classifier.Infer(activeArray.Select(i => (double)i).ToArray()).Get(0);
                 if (inferred_category == category)
                 {
                     accuracy += 100.0 / testingTags.Count;
@@ -222,6 +227,13 @@ namespace HTM.Net.Research.Vision
             return accuracy;
         }
 
+        /// <summary>
+        /// This routine prints the mean values of the connected and unconnected synapse
+        /// permanences along with the percentage of synapses in each.
+        /// It also returns the percentage of connected synapses so it can be used to determine when training has finished.
+        /// </summary>
+        /// <param name="trainingCyclesCompleted"></param>
+        /// <param name="accuracy"></param>
         private void PrintTrainingStats(int trainingCyclesCompleted, double accuracy)
         {
             // Print header if this is the first training cycle
@@ -247,21 +259,31 @@ namespace HTM.Net.Research.Vision
             double unconnectedMean = 0;
             double[] perms = new double[_connections.GetNumInputs()];
             var numCols = _connections.GetNumColumns();
-            //foreach (int i in ArrayUtils.Range(0, numCols))
-            //{
-            //    perms = _connections.GetPotentialPools().Get(i).GetDensePermanences(_connections);
-            //    int numPerms = perms.Length;
-            //    var connectedPerms = perms.Where(p => p >= _connections.GetConnectedPermanence());
-            //    double numConnected = connectedPerms.Sum();
-            //    pctConnected += 100.0/numCols*numConnected/numPerms;
-            //    double sumConnected = ArrayUtils.Multiply(perms,connectedPerms).Sum();
-            //    connectedMean += sumConnected/(numConnected*numCols);
-            //    var unconnectedPerms = perms.Where(p => p < _connections.GetConnectedPermanence());
-            //    var numUnconnected = unconnectedPerms.Sum();
-            //    pctUnconnected += 100.0/numCols*numUnconnected/numPerms;
-            //    var sumUnconnected = (perms*unconnectedPerms).Sum();
-            //    unconnectedMean += sumUnconnected/(numUnconnected*numCols);
-            //}
+            foreach (int i in ArrayUtils.Range(0, numCols))
+            {
+                perms = _connections.GetPotentialPools().Get(i).GetDensePermanences(_connections);
+                int numPerms = perms.Length;
+                var connectedPerms = perms.Select(p => p >= _connections.GetConnectedPermanence() ? 1 : 0).ToArray();
+                double numConnected = connectedPerms.Sum();
+                pctConnected += 100.0/numCols*numConnected/numPerms;
+                double sumConnected = ArrayUtils.Multiply(perms,connectedPerms).Sum();
+                connectedMean += sumConnected/(numConnected*numCols);
+                var unconnectedPerms = perms.Select(p => p < _connections.GetConnectedPermanence() ? 1 : 0).ToArray();
+                var numUnconnected = unconnectedPerms.Sum();
+                pctUnconnected += 100.0/numCols*numUnconnected/numPerms;
+                var sumUnconnected = ArrayUtils.Multiply(perms, unconnectedPerms).Sum();
+                unconnectedMean += sumUnconnected/(numUnconnected*numCols);
+            }
+
+            Console.WriteLine();
+            Console.Write("{0}", trainingCyclesCompleted.ToString().PadRight(5));
+            Console.Write("{0}", pctConnected.ToString().PadRight(10));
+            Console.Write("{0}", connectedMean.ToString().PadRight(8));
+            Console.Write("{0}", pctUnconnected.ToString().PadRight(10));
+            Console.Write("{0}", unconnectedMean.ToString().PadRight(8));
+            Console.Write("{0}", accuracy.ToString().PadRight(13));
+            Console.WriteLine();
+
             /*
             print "%5s" % trainingCyclesCompleted,
             print "%10s" % ("%.4f" % pctConnected),
@@ -270,6 +292,107 @@ namespace HTM.Net.Research.Vision
             print "%8s" % ("%.3f" % unconnectedMean),
             print "%13s" % ("%.5f" % accuracy)
             */
+        }
+
+        /// <summary>
+        /// This routine prints the MD5 hash of the output SDRs.
+        /// </summary>
+        /// <param name="trainingCyclesCompleted"></param>
+        public void PrintOutputHash(int trainingCyclesCompleted)
+        {
+            if (trainingCyclesCompleted == 0)
+            {
+                Console.WriteLine("\nTraining begins:\n");
+                Console.Write("{0}", "Cycle".PadRight(5));
+                Console.Write("{0}", "Connected MD5".PadRight(34));
+                Console.Write("{0}", "Permanence MD5".PadRight(34));
+                Console.WriteLine();
+            }
+            // Calculate an MD5 checksum for the permanences and connected synapses so
+            // we can see when learning has finished.
+            string permsMD5 = "";
+            string connsMD5 = "";
+
+            List<double[]> perms = new List<double[]>();
+            List<int[]> conns = new List<int[]>();
+            for (int i = 0; i < columnHeight; i++)
+            {
+                double[] perms_col = _connections.GetPotentialPools().Get(i).GetDensePermanences(_connections);
+                perms.Add(perms_col);
+                var connectedPerms = perms_col.Select(p => p >= _connections.GetConnectedPermanence() ? 1 : 0).ToArray();
+                conns.Add(connectedPerms);
+            }
+
+            string sPerms = Arrays.ToString(perms);
+            string sConns = Arrays.ToString(conns);
+            var md5 = MD5.Create();
+            var permsHash = Encoding.Default.GetString(md5.ComputeHash(Encoding.Default.GetBytes(sPerms)));
+            var connsHash = Encoding.Default.GetString(md5.ComputeHash(Encoding.Default.GetBytes(sConns)));
+
+            Console.Write("{0}", trainingCyclesCompleted.ToString().PadRight(5));
+            Console.Write("{0}", connsHash.PadRight(34));
+            Console.Write("{0}", permsHash.PadRight(34));
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// These routines generates images of the permanences and connections of each
+        /// column so they can be viewed and saved.
+        /// </summary>
+        public void CalcPermsAndConns()
+        {
+            int[] size = { inputWidth * columnWidth, inputHeight * columnHeight };
+
+            permanencesImage = new Bitmap(size[0], size[1], PixelFormat.Format24bppRgb);
+            connectionsImage = new Bitmap(size[0], size[1], PixelFormat.Format24bppRgb);
+
+            double[] perms = new double[_connections.GetNumInputs()];
+            foreach (int j in ArrayUtils.Range(0, columnWidth))
+            {
+                foreach (int i in ArrayUtils.Range(0, columnHeight))
+                {
+                    perms = _connections.GetPotentialPools().Get(i * columnWidth + j).GetDensePermanences(_connections);
+                    //  Convert perms to RGB (effective grayscale) values
+                    byte[] allPerms = perms.Select(p => (int)((1.0 - p) * 255))
+                        .Select(c => new byte[] { (byte)c, (byte)c, (byte)c })
+                        .SelectMany(b => b).ToArray();
+
+                    var connectedPerms = perms.Select(p => p >= _connections.GetConnectedPermanence() ? 1 : 0).ToArray();
+                    connectedPerms = connectedPerms.Select(p => (int)(p * 255)).ToArray();
+                    var connectedPermColors = connectedPerms.Select(c => Color.FromArgb(c, c, c)).ToArray();
+
+                    var allPermsReconstruction = ConvertToImage(allPerms, "RGB");
+                    int x = j * inputWidth;
+                    int y = i * inputHeight;
+
+                    using (Graphics g = Graphics.FromImage(permanencesImage))
+                    {
+                        g.DrawImage(allPermsReconstruction, x, y, inputWidth, inputHeight);
+                    }
+                }
+            }
+        }
+
+        public void SavePermsAndConns(string fileName)
+        {
+            if (permanencesImage == null) CalcPermsAndConns();
+
+            permanencesImage.Save(fileName, ImageFormat.Jpeg);
+        }
+
+        private Image ConvertToImage(byte[] perms, string mode)
+        {
+            int size = (int)Math.Pow(perms.Length, 0.5);
+            Bitmap im = new Bitmap(size, size, PixelFormat.Format24bppRgb);
+
+            var data = im.LockBits(new Rectangle(0, 0, size, size), ImageLockMode.WriteOnly,
+                PixelFormat.Format24bppRgb);
+
+            Marshal.Copy(perms, 0, data.Scan0, perms.Length);
+
+            im.UnlockBits(data);
+
+            return im;
         }
     }
 }

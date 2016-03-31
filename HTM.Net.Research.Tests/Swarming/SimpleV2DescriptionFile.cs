@@ -276,6 +276,8 @@ namespace HTM.Net.Research.Tests.Swarming
                         pamLength = 1,
                     },
 
+                    clEnable = true,
+
                     clParams = new ClassifierParamsDescr
                     {
                         regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
@@ -290,7 +292,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                         // This is set after the call to updateConfigFromSubConfig and is
                         // computed from the aggregationInfo and predictAheadTime.
-                        steps = "1",
+                        steps = 1,
                     },
 
                     trainSPNetOnlyIfRequested = false,
@@ -309,7 +311,7 @@ namespace HTM.Net.Research.Tests.Swarming
             {
                 int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
                 Debug.Assert(predictionSteps >= 1);
-                config.modelParams.clParams.steps = predictionSteps.ToString();
+                config.modelParams.clParams.steps = predictionSteps;
             }
 
             // Adjust config by applying ValueGetterBase-derived
@@ -349,7 +351,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 // Metrics: A list of MetricSpecs that instantiate the metrics that are
                 // computed for this experiment
-                metrics = new[] { new MetricSpec(field: "consumption", inferenceElement: InferenceElement.prediction, metric: "rmse") },
+                metrics = new[] { new MetricSpec(field: "consumption", inferenceElement: InferenceElement.Prediction, metric: "rmse") },
 
                 // Logged Metrics: A sequence of regular expressions that specify which of
                 // the metrics from the Inference Specifications section MUST be logged for

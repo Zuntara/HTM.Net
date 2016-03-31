@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -86,7 +87,34 @@ namespace HTM.Net.Util
             sb.Append("[");
             foreach (var item in v)
             {
-                sb.AppendFormat("{0}, ", item);
+                if (item is IEnumerable)
+                {
+                    sb.AppendFormat("{0}, ", ToString(item as IEnumerable));
+                }
+                else
+                {
+                    sb.AppendFormat("{0}, ", item);
+                }
+            }
+            string result = sb.ToString().TrimEnd(',', ' ');
+            result += "]";
+            return result;
+        }
+
+        public static string ToString(IEnumerable v)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            foreach (var item in v)
+            {
+                if (item is IEnumerable)
+                {
+                    sb.AppendFormat("{0}, ", ToString(item as IEnumerable));
+                }
+                else
+                {
+                    sb.AppendFormat("{0}, ", item);
+                }
             }
             string result = sb.ToString().TrimEnd(',', ' ');
             result += "]";

@@ -48,7 +48,11 @@ namespace HTM.Net.Tests.Network.Sensor
             if (periodic != null) inner.Add("periodic", periodic);
             if (clip != null) inner.Add("clip", clip);
             if (forced != null) inner.Add("forced", forced);
-            if (fieldName != null) inner.Add("fieldName", fieldName);
+            if (fieldName != null)
+            {
+                inner.Add("fieldName", fieldName);
+                inner.Add("name", fieldName);
+            }
             if (fieldType != null) inner.Add("fieldType", fieldType);
             if (encoderType != null) inner.Add("encoderType", encoderType);
 

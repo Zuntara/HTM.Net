@@ -501,9 +501,14 @@ namespace HTM.Net.Tests.Network
                 {
                     manual.OnNext(s);
                 }
+
+
                 l.Start();
 
                 Thread.Sleep(1000);
+
+                manual.OnComplete();
+
             }
             catch (Exception e)
             {

@@ -257,24 +257,29 @@ namespace HTM.Net.Tests.Network
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
                         .Add(Sensor<FileInfo>.Create(FileSensor.Create, SensorParams.Create(
-                            SensorParams.Keys.Path, "", ResourceLocator.Path(typeof(Resources), "rec-center-hourly.Csv"))))));
+                            SensorParams.Keys.Path, "", ResourceLocator.Path("rec-center-hourly.Csv"))))));
 
             List<string> lines = new List<string>();
+
+            Stopwatch sw = new Stopwatch();
+            List<TimeSpan> timings = new List<TimeSpan>();
 
             // Listen to network emissions
             network.Observe().Subscribe(output =>
             {
+                timings.Add(sw.Elapsed);
                 //                System.out.Println(Arrays.toString(i.GetSDR()));
                 //                System.out.Println(i.GetRecordNum() + "," + 
                 //                    i.GetClassifierInput().Get("consumption").Get("inputValue") + "," + i.GetAnomalyScore());
                 lines.Add(output.GetRecordNum() + "|" +
                           output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "|" + output.GetAnomalyScore());
+
 
                 if (output.GetRecordNum() == 1000)
                 {
@@ -283,29 +288,11 @@ namespace HTM.Net.Tests.Network
             }, Console.WriteLine, () =>
             {
                 _onCompleteStr = "On completed reached!";
+                sw.Stop();
             });
-            //    network.Observe().Subscribe(new Subscriber<Inference>() {
-            //        @Override public void onCompleted()
-            //    {
-            //        onCompleteStr = "On completed reached!";
-            //    }
-            //    @Override public void onError(Throwable e) { Console.WriteLine(e); }
-            //    @Override public void onNext(Inference i)
-            //    {
-            //        //                System.out.Println(Arrays.toString(i.GetSDR()));
-            //        //                System.out.Println(i.GetRecordNum() + "," + 
-            //        //                    i.GetClassifierInput().Get("consumption").Get("inputValue") + "," + i.GetAnomalyScore());
-            //        lines.Add(i.GetRecordNum() + "," +
-            //            i.GetClassifierInput().Get("consumption").Get("inputValue") + "," + i.GetAnomalyScore());
-
-            //        if (i.GetRecordNum() == 1000)
-            //        {
-            //            network.halt();
-            //        }
-            //    }
-            //});
 
             // Start the network
+            sw.Start();
             network.Start();
 
             // Test network output
@@ -319,7 +306,6 @@ namespace HTM.Net.Tests.Network
                 Console.WriteLine(e);
             }
 
-
             Assert.AreEqual(1001, lines.Count);
             int i = 0;
             foreach (string l in lines)
@@ -330,6 +316,10 @@ namespace HTM.Net.Tests.Network
             }
 
             Assert.AreEqual("On completed reached!", _onCompleteStr);
+
+            Debug.WriteLine("Fastest call: {0}", timings.Min());
+            Debug.WriteLine("Slowest call: {0}", timings.Max());
+            Debug.WriteLine("Average call: {0}", timings.Average(t=>t.TotalSeconds));
         }
 
 

@@ -103,15 +103,15 @@ namespace HTM.Net.Algorithms
             // dc'{-n} = dc{-n} + alpha/(1-alpha)**n where the apostrophe symbol is used
             // to denote that this is the new duty cycle at that iteration. This is
             // equivalent to the duty cycle dc{-n}
-            double denom = Math.Pow((1.0 - classifier.alpha), (iteration - lastTotalUpdate));
+            double denom = Math.Pow((1.0 - classifier.Alpha), (iteration - lastTotalUpdate));
 
             double dcNew = 0;
-            if (denom > 0) dcNew = dc + (classifier.alpha / denom);
+            if (denom > 0) dcNew = dc + (classifier.Alpha / denom);
 
             // This is to prevent errors associated with infinite rescale if too large
             if (denom == 0 || dcNew > DUTY_CYCLE_UPDATE_INTERVAL)
             {
-                double exp = Math.Pow((1.0 - classifier.alpha), (iteration - lastTotalUpdate));
+                double exp = Math.Pow((1.0 - classifier.Alpha), (iteration - lastTotalUpdate));
                 double dcT = 0;
                 for (int i = 0; i < stats.Count; i++)
                 {
@@ -123,14 +123,14 @@ namespace HTM.Net.Algorithms
                 lastTotalUpdate = iteration;
 
                 // Add alpha since now exponent is 0
-                dc = stats[bucketIdx] + classifier.alpha;
+                dc = stats[bucketIdx] + classifier.Alpha;
             }
             else {
                 dc = dcNew;
             }
 
             stats[bucketIdx]= dc;
-            if (classifier.verbosity >= 2)
+            if (classifier.Verbosity >= 2)
             {
                 Console.WriteLine(string.Format("updated DC for{0},  bucket {1} to {2}", id, bucketIdx, dc));
             }
@@ -167,7 +167,7 @@ namespace HTM.Net.Algorithms
                 for (int i = 0; i < temp.Length; i++) votes[i] = temp[i];
             }
 
-            if (classifier.verbosity >= 2)
+            if (classifier.Verbosity >= 2)
             {
                 Console.WriteLine(string.Format("bucket votes for {0}:{1}", id, PFormatArray(votes)));
             }

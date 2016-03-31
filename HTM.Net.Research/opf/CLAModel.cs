@@ -75,6 +75,7 @@ namespace HTM.Net.Research.opf
         private int? _numFields;
         private IEncoder _classifierInputEncoder;
         private double? _ms_prevVal;
+        private Map<int, Deque<object>> _ms_predHistories;
 
         #endregion
 
@@ -255,9 +256,9 @@ namespace HTM.Net.Research.opf
             results.predictedFieldName = this._predictedFieldName;
             results.classifierInput = this._getClassifierInputRecord(inputRecord);
 
-            //// =========================================================================
-            //// output
-            //Debug.Assert(!this.isInferenceEnabled() || results.inferences != null, "unexpected inferences: " + results.inferences);
+            // =========================================================================
+            // output
+            Debug.Assert(!this.isInferenceEnabled() || results.inferences != null, "unexpected inferences: " + results.inferences);
 
 
             //// this.__logger.setLevel(logging.DEBUG)
@@ -466,7 +467,7 @@ namespace HTM.Net.Research.opf
                 }
             }
 
-            inferences[InferenceElement.anomalyScore] = score;
+            inferences[InferenceElement.AnomalyScore] = score;
             return inferences;
         }
 
@@ -602,8 +603,8 @@ namespace HTM.Net.Research.opf
             }
             this._predictedFieldName = predictedFieldName;
 
-            var classifier = this._getClassifierRegion();
-            if (!this._hasCL || classifier == null)
+            var classifierLayer = this._getClassifierRegion();
+            if (!this._hasCL || classifierLayer == null)
             {
                 // No classifier so return an empty dict for inferences.
                 return new Map<InferenceElement, object>();
@@ -623,12 +624,12 @@ namespace HTM.Net.Research.opf
                     throw new InvalidOperationException("This experiment description is missing the 'predictedField' in its config, which is required for multi-step prediction inference.");
                 }
 
-                var encoderList = sensor.GetEncoder().GetEncoders();//.getEncoderList();
+                List<EncoderTuple> encoderList = sensor.GetEncoder().GetEncoders(sensor.GetEncoder());//.getEncoderList();
                 this._numFields = encoderList.Count;
 
                 // This is getting index of predicted field if being fed to CLA.
-                var fieldNames = sensor.GetEncoder().GetScalarNames();
-                if (fieldNames.Contains(predictedFieldName))
+                var fieldNames = encoderList.Select(et=> et.GetFieldName()).ToList();
+                if (fieldNames != null && fieldNames.Contains(predictedFieldName))
                 {
                     this._predictedFieldIdx = fieldNames.IndexOf(predictedFieldName);
                 }
@@ -647,22 +648,23 @@ namespace HTM.Net.Research.opf
                 //}
                 //else
                 //{
-                //    encoderList = new Map<EncoderTuple, List<EncoderTuple>>();
+                encoderList = new List<EncoderTuple>();
                 //}
-                //if (encoderList.Count >= 1)
-                //{
-                //    fieldNames = sensor.getSelf().disabledEncoder.getScalarNames();
-                //    this._classifierInputEncoder = encoderList[fieldNames.index(
-                //                                                    predictedFieldName)];
-                //}
-                //else
-                //{
-                // Legacy multi-step networks don't have a separate encoder for the
-                //  classifier, so use the one that goes into the bottom of the network
-                //encoderList = sensor.getSelf().encoder.getEncoderList();
-                //this._classifierInputEncoder = encoderList[_predictedFieldIdx];
-                throw new NotImplementedException("check line above");
-                //}
+                if (encoderList.Count >= 1)
+                {
+                    //    fieldNames = sensor.getSelf().disabledEncoder.getScalarNames();
+                    //    this._classifierInputEncoder = encoderList[fieldNames.index(
+                    //                                                    predictedFieldName)];
+                }
+                else
+                {
+                    // Legacy multi-step networks don't have a separate encoder for the
+                    //  classifier, so use the one that goes into the bottom of the network
+                    //encoderList = sensor.getSelf().encoder.getEncoderList();
+                    encoderList = sensor.GetEncoder().GetEncoders(sensor.GetEncoder());
+                    this._classifierInputEncoder = encoderList[_predictedFieldIdx.GetValueOrDefault()].GetEncoder();
+                    //throw new NotImplementedException("check line above");
+                }
             }
 
 
@@ -708,7 +710,7 @@ namespace HTM.Net.Research.opf
             // so that it can assign the current classification to possibly
             // multiple patterns from the past and current, and also provide
             // the expected classification for some time step(s) in the future.
-            classifier.AlterParameter(Parameters.KEY.LEARN, needLearning);
+            classifierLayer.AlterParameter(Parameters.KEY.LEARN, needLearning);
             //        classifier.setParameter("inferenceMode", true);
             //        classifier.setParameter("learningMode", needLearning);
             var classificationIn = new Map<string, object> { { "buckedIdx", bucketIdx }, { "actValue", actualValue } };
@@ -726,176 +728,175 @@ namespace HTM.Net.Research.opf
             {
                 recordNum = this.__numRunCalls;
             }
-            var clResults= classifier.CustomCompute(recordNum: recordNum, patternNZ: patternNZ, 
-                classification: classificationIn);
+            IClassifier classifierImpl = classifierLayer.GetClassifier(sensor.GetEncoder(), predictedFieldName);
+            ClassifierResult<double> clResults = classifierImpl.Compute<double>(recordNum: recordNum, patternNonZero: patternNZ.ToArray(),
+                classification: classificationIn, learn: needLearning, infer: true);
 
             //        clResults = classifier.getSelf().customCompute(recordNum = recordNum,
             //                                               patternNZ = patternNZ,
             //                                               classification = classificationIn);
 
-            //        // ---------------------------------------------------------------
-            //        // Get the prediction for every step ahead learned by the classifier
-            //        predictionSteps = classifier.getParameter('steps');
-            //        predictionSteps = [int(x) for x in predictionSteps.split(',')];
+            // ---------------------------------------------------------------
+            // Get the prediction for every step ahead learned by the classifier
+            int[] predictionSteps = classifierImpl.Steps;//.getParameter('steps');
+            //predictionSteps = [int(x) for x in predictionSteps.split(',')];
 
-            //        // We will return the results in this dict. The top level keys
-            //        // are the step number, the values are the relative likelihoods for
-            //        // each classification value in that time step, represented as
-            //        // another dict where the keys are the classification values and
-            //        // the values are the relative likelihoods.
-            //        inferences[InferenceElement.multiStepPredictions] = dict();
-            //        inferences[InferenceElement.multiStepBestPredictions] = dict();
-            //        inferences[InferenceElement.multiStepBucketLikelihoods] = dict();
-
-
-            //        // ======================================================================
-            //        // Plug in the predictions for each requested time step.
-            //        for (steps in predictionSteps)
-            //        {
-            //            // From the clResults, compute the predicted actual value. The
-            //            // CLAClassifier classifies the bucket index and returns a list of
-            //            // relative likelihoods for each bucket. Let's find the max one
-            //            // and then look up the actual value from that bucket index
-            //            likelihoodsVec = clResults[steps];
-            //            bucketValues = clResults['actualValues'];
-
-            //            // Create a dict of value:likelihood pairs. We can't simply use
-            //            //  dict(zip(bucketValues, likelihoodsVec)) because there might be
-            //            //  duplicate bucketValues (this happens early on in the model when
-            //            //  it doesn't have actual values for each bucket so it returns
-            //            //  multiple buckets with the same default actual value).
-            //            likelihoodsDict = dict();
-            //            bestActValue = None;
-            //            bestProb = None;
-            //            for (actValue, prob) in zip(bucketValues, likelihoodsVec)
-            //          {
-            //                if (actValue in likelihoodsDict)
-            //    {
-            //            likelihoodsDict[actValue] += prob;
-            //        }
-            //    else
-            //    {
-            //            likelihoodsDict[actValue] = prob;
-            //        }
-            //        // Keep track of best
-            //        if (bestProb is None or likelihoodsDict[actValue] > bestProb)
-            //    {
-            //            bestProb = likelihoodsDict[actValue];
-            //            bestActValue = actValue;
-            //        }
-            //    }
+            // We will return the results in this dict. The top level keys
+            // are the step number, the values are the relative likelihoods for
+            // each classification value in that time step, represented as
+            // another dict where the keys are the classification values and
+            // the values are the relative likelihoods.
+            inferences[InferenceElement.MultiStepPredictions] = new Map<int, Map<object, double>>();
+            inferences[InferenceElement.MultiStepBestPredictions] = new Map<int, double>();
+            inferences[InferenceElement.MultiStepBucketLikelihoods] = new Map<int, Map<int, double>>();
 
 
-            //    // Remove entries with 0 likelihood or likelihood less than
-            //    // minLikelihoodThreshold, but don't leave an empty dict.
-            //    likelihoodsDict = CLAModel._removeUnlikelyPredictions(
-            //      likelihoodsDict, minLikelihoodThreshold, maxPredictionsPerStep);
+            // ======================================================================
+            // Plug in the predictions for each requested time step.
+            foreach (int steps in predictionSteps)
+            {
+                // From the clResults, compute the predicted actual value. The
+                // CLAClassifier classifies the bucket index and returns a list of
+                // relative likelihoods for each bucket. Let's find the max one
+                // and then look up the actual value from that bucket index
+                double[] likelihoodsVec = clResults.GetStats(steps);//.[steps];
+                double[] bucketValues = clResults.GetActualValues(); //clResults['actualValues'];
 
-            //  // calculate likelihood for each bucket
-            //  bucketLikelihood = {};
-            //  for( k in likelihoodsDict.keys())
-            //  {
-            //    bucketLikelihood[this._classifierInputEncoder.getBucketIndices(k)[0]] = (
-            //                                                            likelihoodsDict[k]);
-            //  }
+                // Create a dict of value:likelihood pairs. We can't simply use
+                //  dict(zip(bucketValues, likelihoodsVec)) because there might be
+                //  duplicate bucketValues (this happens early on in the model when
+                //  it doesn't have actual values for each bucket so it returns
+                //  multiple buckets with the same default actual value).
+                var likelihoodsDict = new Map<object, double>();
+                object bestActValue = null;
+                double? bestProb = null;
+                foreach (var zipped in ArrayUtils.Zip(bucketValues, likelihoodsVec))
+                {
+                    // (actValue, prob)
+                    var actValue = zipped.Item1;
+                    var prob = (double)zipped.Item2;
+                    if (likelihoodsDict.ContainsKey(actValue))
+                    {
+                        likelihoodsDict[actValue] += prob;
+                    }
+                    else
+                    {
+                        likelihoodsDict[actValue] = prob;
+                    }
+                    // Keep track of best
+                    if (bestProb == null || likelihoodsDict[actValue] > bestProb)
+                    {
+                        bestProb = likelihoodsDict[actValue];
+                        bestActValue = actValue;
+                    }
+                }
 
-            //  // ---------------------------------------------------------------------
-            //  // If we have a delta encoder, we have to shift our predicted output value
-            //  //  by the sum of the deltas
-            //  if( isinstance(this._classifierInputEncoder, DeltaEncoder))
-            //  {
-            //    // Get the prediction history for this number of timesteps.
-            //    // The prediction history is a store of the previous best predicted values.
-            //    // This is used to get the final shift from the current absolute value.
-            //    if( not hasattr(self, '_ms_predHistories'))
-            //    {
-            //      this._ms_predHistories = dict();
-            //    }
-            //predHistories = this._ms_predHistories;
-            //    if( not steps in predHistories)
-            //    {
-            //    predHistories[steps] = deque();
-            //}
-            //predHistory = predHistories [steps];
+                // Remove entries with 0 likelihood or likelihood less than
+                // minLikelihoodThreshold, but don't leave an empty dict.
+                likelihoodsDict = (Map<object, double>)CLAModel._removeUnlikelyPredictions(likelihoodsDict, minLikelihoodThreshold, maxPredictionsPerStep);
 
-            //// Find the sum of the deltas for the steps and use this to generate
-            //// an offset from the current absolute value
-            //sumDelta = sum(predHistory);
-            //offsetDict = dict();
-            //    for (k, v) in likelihoodsDict.iteritems()
-            //    {
-            //    if (k is not None)
-            //      {
-            //        // Reconstruct the absolute value based on the current actual value,
-            //        // the best predicted values from the previous iterations,
-            //        // and the current predicted delta
-            //        offsetDict[absoluteValue + float(k) + sumDelta] = v;
-            //    }
-            //}
+                // calculate likelihood for each bucket
+                var bucketLikelihood = new Map<int, double>();
+                foreach (var k in likelihoodsDict.Keys)
+                {
+                    bucketLikelihood[this._classifierInputEncoder.GetBucketIndices((double)k)[0]] = (likelihoodsDict[k]);
+                }
 
-            //// calculate likelihood for each bucket
-            //bucketLikelihoodOffset = { };
-            //    for( k in offsetDict.keys())
-            //    {
-            //    bucketLikelihoodOffset[this._classifierInputEncoder.getBucketIndices(k)[0]] = (
-            //                                                                      offsetDict[k]);
-            //}
+                // ---------------------------------------------------------------------
+                // If we have a delta encoder, we have to shift our predicted output value
+                //  by the sum of the deltas
+                if (this._classifierInputEncoder is DeltaEncoder)
+                {
+                    // Get the prediction history for this number of timesteps.
+                    // The prediction history is a store of the previous best predicted values.
+                    // This is used to get the final shift from the current absolute value.
+                    if (this._ms_predHistories == null)
+                    {
+                        this._ms_predHistories = new Map<int, Deque<object>>();
+                    }
+                    var predHistories = this._ms_predHistories;
+                    if (!predHistories.ContainsKey(steps))
+                    {
+                        predHistories[steps] = new Deque<object>(-1);
+                    }
+                    var predHistory = predHistories[steps];
 
+                    // Find the sum of the deltas for the steps and use this to generate
+                    // an offset from the current absolute value
+                    double sumDelta = predHistory.GetBackingList().Sum(s => (double)s); //sum(predHistory);
+                    var offsetDict = new Map<object, double>();
+                    //for (k, v) in likelihoodsDict.iteritems()
+                    foreach (var kv in likelihoodsDict)
+                    {
+                        var k = kv.Key;
+                        var v = kv.Value;
+                        if (k != null)
+                        {
+                            // Reconstruct the absolute value based on the current actual value,
+                            // the best predicted values from the previous iterations,
+                            // and the current predicted delta
+                            offsetDict[absoluteValue + (double)k + sumDelta] = v;
+                        }
+                    }
 
-            //    // Push the current best delta to the history buffer for reconstructing the final delta
-            //    if( bestActValue is not None)
-            //    {
-            //    predHistory.append(bestActValue);
-            //}
-            //    // If we don't need any more values in the predictionHistory, pop off
-            //    // the earliest one.
-            //    if( len(predHistory) >= steps)
-            //    {
-            //    predHistory.popleft();
-            //}
-
-            //    // Provide the offsetDict as the return value
-            //    if( len(offsetDict)>0)
-            //    {
-            //    inferences[InferenceElement.multiStepPredictions][steps] = offsetDict;
-            //    inferences[InferenceElement.multiStepBucketLikelihoods][steps] = bucketLikelihoodOffset;
-            //}
-            //    else
-            //    {
-            //    inferences[InferenceElement.multiStepPredictions][steps] = likelihoodsDict;
-            //    inferences[InferenceElement.multiStepBucketLikelihoods][steps] = bucketLikelihood;
-            //}
-
-            //    if( bestActValue is None)
-            //    {
-            //    inferences[InferenceElement.multiStepBestPredictions][steps] = None;
-            //}
-            //    else
-            //    {
-            //    inferences[InferenceElement.multiStepBestPredictions][steps] = (
-            //      absoluteValue + sumDelta + bestActValue);
-            //}
-            //}
-
-            //  // ---------------------------------------------------------------------
-            //  // Normal case, no delta encoder. Just plug in all our multi-step predictions
-            //  //  with likelihoods as well as our best prediction
-            //  else
-            //  {
-            //    // The multiStepPredictions element holds the probabilities for each
-            //    //  bucket
-            //    inferences[InferenceElement.multiStepPredictions][steps] = (
-            //                                                  likelihoodsDict);
-            //    inferences[InferenceElement.multiStepBestPredictions][steps] = (
-            //                                                  bestActValue);
-            //    inferences[InferenceElement.multiStepBucketLikelihoods][steps] = (
-            //                                                  bucketLikelihood);
-            //  }
-            //}
+                    // calculate likelihood for each bucket
+                    var bucketLikelihoodOffset = new Map<int, double>();
+                    foreach (var k in offsetDict.Keys)
+                    {
+                        bucketLikelihoodOffset[this._classifierInputEncoder.GetBucketIndices((double)k)[0]] = (
+                                                                                          offsetDict[k]);
+                    }
 
 
-            //return inferences;
-            return null;
+                    // Push the current best delta to the history buffer for reconstructing the final delta
+                    if (bestActValue != null)
+                    {
+                        predHistory.Append(bestActValue);
+                    }
+                    // If we don't need any more values in the predictionHistory, pop off
+                    // the earliest one.
+                    if (predHistory.Size() >= steps)
+                    {
+                        predHistory.TakeFirst();
+                    }
+
+                    // Provide the offsetDict as the return value
+                    if (offsetDict.Count > 0)
+                    {
+                        ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = offsetDict;
+                        ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihoodOffset;
+                    }
+                    else
+                    {
+                        ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
+                        ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
+                    }
+
+                    if (bestActValue != null)
+                    {
+                        ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = null;
+                    }
+                    else
+                    {
+                        ((Map<int, double>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (absoluteValue + sumDelta + (double)bestActValue);
+                    }
+                }
+
+                // ---------------------------------------------------------------------
+                // Normal case, no delta encoder. Just plug in all our multi-step predictions
+                //  with likelihoods as well as our best prediction
+                else
+                {
+                    // The multiStepPredictions element holds the probabilities for each
+                    //  bucket
+                    ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
+                    ((Map<int, double>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (double) (bestActValue ?? 0);
+                    ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
+                }
+            }
+
+            return inferences;
+            //return null;
         }
 
         //private Map<InferenceElement, object> _reconstructionCompute()
@@ -1197,6 +1198,51 @@ namespace HTM.Net.Research.opf
             //});
 
             return new NetworkInfo(n, null);
+        }
+
+        /// <summary>
+        /// Remove entries with 0 likelihood or likelihood less than
+        /// minLikelihoodThreshold, but don't leave an empty dict.
+        /// </summary>
+        /// <returns></returns>
+        public static IDictionary<object, double> _removeUnlikelyPredictions(IDictionary<object, double> likelihoodsDict,
+            double minLikelihoodThreshold, int maxPredictionsPerStep)
+        {
+            var maxVal = new Util.Tuple(null, null);
+            List<object> keysToRemove = new List<object>();
+            foreach (var kvp in likelihoodsDict)
+            {
+                var k = kvp.Key;
+                var v = (double)kvp.Value;
+
+                if (keysToRemove.Contains(k)) continue;
+
+                if (likelihoodsDict.Count <= 1) break;
+                if (maxVal.Get(0) == null || (maxVal.Get(1) is double && v >= (double)maxVal.Get(1)))
+                {
+                    if (maxVal.Get(0) != null && maxVal.Get(1) is double && (double)maxVal.Get(1) < minLikelihoodThreshold)
+                    {
+                        keysToRemove.Add(maxVal.Get(0));
+                    }
+                    maxVal = new Util.Tuple(k, v);
+                }
+                else if (v < minLikelihoodThreshold)
+                {
+                    keysToRemove.Add(k);
+                }
+            }
+
+            foreach (var key in keysToRemove)
+            {
+                likelihoodsDict.Remove(key);
+            }
+            // Limit the number of predictions to include.
+            var retLikelihoodsDict = new Map<object, double>();
+            foreach (var item in likelihoodsDict.OrderByDescending(kvp => kvp.Key.ToString()).Take(maxPredictionsPerStep).Reverse())
+            {
+                retLikelihoodsDict.Add(item.Key, item.Value);
+            }
+            return retLikelihoodsDict;
         }
 
         public override void finishLearning()

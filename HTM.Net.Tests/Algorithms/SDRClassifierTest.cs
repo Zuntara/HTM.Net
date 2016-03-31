@@ -312,6 +312,56 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(resultDoubles2[0], 1);
         }
 
+        /// <summary>
+        /// Test multi-step predictions. We train the 0-step and the 1-step classifiers simultaneously on data stream
+        /// (SDR1, bucketIdx0)
+        /// (SDR2, bucketIdx1)
+        /// (SDR1, bucketIdx0)
+        /// (SDR2, bucketIdx1)
+        /// ...
+        /// 
+        /// We intend the 0-step classifier to learn the associations:
+        ///     SDR1    => bucketIdx 0
+        ///     SDR2    => bucketIdx 1
+        /// 
+        /// and the 1-step classifier to learn the associations
+        ///     SDR1    => bucketIdx 1
+        ///     SDR2    => bucketIdx 0
+        /// </summary>
+        [TestMethod]
+        public void TestMultistepPredictions()
+        {
+            var classifier = new SDRClassifier(new[] { 0, 1 }, 1.0, 0.1, 0);
+
+            int[] sdr1 = new[] {1, 3, 5};
+            int[] sdr2 = new[] {2, 4, 6};
+            int recordNum = 0;
+
+            for (int i = 0; i < 100; i++)
+            {
+                classifier.Compute<double>(recordNum: recordNum, patternNZ: sdr1,
+                    classification: new Map<string, object> {{"bucketIdx", 0}, {"actValue", 0}}, 
+                    learn: true, infer: false);
+                recordNum++;
+
+                classifier.Compute<double>(recordNum: recordNum, patternNZ: sdr2,
+                    classification: new Map<string, object> { { "bucketIdx", 1 }, { "actValue", 1.0 } },
+                    learn: true, infer: false);
+                recordNum++;
+            }
+
+            var result1 = classifier.Compute<double>(recordNum: recordNum, patternNZ: sdr1,
+                    classification: null, learn: false, infer: true);
+
+            var result2 = classifier.Compute<double>(recordNum: recordNum, patternNZ: sdr2,
+                    classification: null, learn: false, infer: true);
+
+            Assert.AreEqual(1.0, result1.GetStats(0)[0], 0.01);
+            Assert.AreEqual(0.0, result1.GetStats(0)[1], 0.01);
+            Assert.AreEqual(0.0, result2.GetStats(0)[0], 0.01);
+            Assert.AreEqual(1.0, result2.GetStats(0)[1], 0.01);
+        }
+
         private ClassifierResult<double> _compute(SDRClassifier classifier, int recordNum, int[] pattern, int bucket, double value)
         {
             var classification = new Map<string, object> {{"bucketIdx", bucket}, {"actValue", value}};

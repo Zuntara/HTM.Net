@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Newtonsoft.Json;
 
@@ -393,6 +394,8 @@ namespace HTM.Net.Util
         {
             return backingList.ToString() + " capacity: " + capacity;
         }
+
+        public ReadOnlyCollection<E> GetBackingList() { return backingList.AsReadOnly();}
 
         #region Implementation of IEnumerator
 

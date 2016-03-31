@@ -86,7 +86,7 @@ namespace HTM.Net.Encoders
                         }
                     }
 
-                     encoder.AddEncoder(fieldName, builder.Build());
+                     encoder.AddEncoder(field, fieldName, builder.Build());
                 }
             }
         }
@@ -94,7 +94,8 @@ namespace HTM.Net.Encoders
         private static void ConfigureCategoryBuilder(MultiEncoder multiEncoder,
             Map<string, object> encoderSettings, IBuilder builder)
         {
-
+            if(encoderSettings.ContainsKey("name"))
+                multiEncoder.SetValue(builder, "name", encoderSettings["name"]);
             multiEncoder.SetValue(builder, "n", encoderSettings["n"]);
             multiEncoder.SetValue(builder, "w", encoderSettings["w"]);
             multiEncoder.SetValue(builder, "forced", encoderSettings.Get("forced", true));

@@ -92,6 +92,7 @@ namespace HTM.Net
             defaultEncoderParams.Add(KEY.ENCODER, "ScalarEncoder");
             defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
             defaultEncoderParams.Add(KEY.AUTO_CLASSIFY, false);
+            defaultEncoderParams.Add(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
 
@@ -283,6 +284,7 @@ namespace HTM.Net
             /// Network Layer indicator for auto classifier generation
             /// </summary>
             public static readonly KEY AUTO_CLASSIFY = new KEY("hasClassifiers", typeof(bool));
+            public static readonly KEY AUTO_CLASSIFY_TYPE = new KEY("defaultClassifierType", typeof(IClassifier));
 
 
             // How many bits to use if encoding the respective date fields.
@@ -524,7 +526,12 @@ namespace HTM.Net
             {
                 if (value != null)
                 {
-                    if (!key.GetFieldType().IsInstanceOfType(value))
+                    if (!(value is Type) && !key.GetFieldType().IsInstanceOfType(value))
+                    {
+                        throw new ArgumentException(string.Format("Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
+                            , key.GetFieldName(), key.GetFieldType()));
+                    }
+                    if ((value is Type) && !key.GetFieldType().IsAssignableFrom((Type)value))
                     {
                         throw new ArgumentException(string.Format("Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));

@@ -3,12 +3,10 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
 {
-    /**
-     * Container for the results of a classification computation by the
-     * {@link CLAClassifier}
-     * 
-     * @param <T>
-     */
+    /// <summary>
+    /// Container for the results of a classification computation by the <see cref="CLAClassifier"/> and <see cref="SDRClassifier"/>
+    /// </summary>
+    /// <typeparam name="T">Type of actual value output</typeparam>
     public class ClassifierResult<T>
     {
         /// <summary>

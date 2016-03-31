@@ -11,149 +11,158 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
-    /**
- * A CLA classifier accepts a binary input from the level below (the
- * "activationPattern") and information from the sensor and encoders (the
- * "classification") describing the input to the system at that time step.
- *
- * When learning, for every bit in activation pattern, it records a history of the
- * classification each time that bit was active. The history is weighted so that
- * more recent activity has a bigger impact than older activity. The alpha
- * parameter controls this weighting.
- *
- * For inference, it takes an ensemble approach. For every active bit in the
- * activationPattern, it looks up the most likely classification(s) from the
- * history stored for that bit and then votes across these to get the resulting
- * classification(s).
- *
- * This classifier can learn and infer a number of simultaneous classifications
- * at once, each representing a shift of a different number of time steps. For
- * example, say you are doing multi-step prediction and want the predictions for
- * 1 and 3 time steps in advance. The CLAClassifier would learn the associations
- * between the activation pattern for time step T and the classifications for
- * time step T+1, as well as the associations between activation pattern T and
- * the classifications for T+3. The 'steps' constructor argument specifies the
- * list of time-steps you want.
- * 
- * @author Numenta
- * @author David Ray
- * @see BitHistory
- */
+    /// <summary>
+    /// A CLA classifier accepts a binary input from the level below (the
+    /// "activationPattern") and information from the sensor and encoders (the
+    /// "classification") describing the input to the system at that time step.
+    /// 
+    /// When learning, for every bit in activation pattern, it records a history of the
+    /// classification each time that bit was active. The history is weighted so that
+    /// more recent activity has a bigger impact than older activity. The alpha
+    /// parameter controls this weighting.
+    /// 
+    /// For inference, it takes an ensemble approach. For every active bit in the
+    /// activationPattern, it looks up the most likely classification(s) from the
+    /// history stored for that bit and then votes across these to get the resulting
+    /// classification(s).
+    /// 
+    /// This classifier can learn and infer a number of simultaneous classifications
+    /// at once, each representing a shift of a different number of time steps. For
+    /// example, say you are doing multi-step prediction and want the predictions for
+    /// 1 and 3 time steps in advance. The CLAClassifier would learn the associations
+    /// between the activation pattern for time step T and the classifications for
+    /// time step T+1, as well as the associations between activation pattern T and
+    /// the classifications for T+3. The 'steps' constructor argument specifies the
+    /// list of time-steps you want.
+    /// </summary>
     //@JsonSerialize(using=CLAClassifierSerializer.class)
     //@JsonDeserialize(using=CLAClassifierDeserializer.class)
-    public class CLAClassifier
+    public class CLAClassifier : IClassifier
     {
-        internal int verbosity = 0;
-        /**
-         * The alpha used to compute running averages of the bucket duty
-         * cycles for each activation pattern bit. A lower alpha results
-         * in longer term memory.
-         */
-        internal double alpha = 0.001;
-        public double actValueAlpha = 0.3;
-        /** 
-         * The bit's learning iteration. This is updated each time store() gets
-         * called on this bit.
-         */
-        public int learnIteration;
-        /**
-         * This contains the offset between the recordNum (provided by caller) and
-         * learnIteration (internal only, always starts at 0).
-         */
-        public int recordNumMinusLearnIteration = -1;
-        /**
-         * This contains the value of the highest bucket index we've ever seen
-         * It is used to pre-allocate fixed size arrays that hold the weights of
-         * each bucket index during inference 
-         */
-        public int maxBucketIdx;
-        /** The sequence different steps of multi-step predictions */
-        internal List<int> steps = new List<int>();
-        /**
-         * History of the last _maxSteps activation patterns. We need to keep
-         * these so that we can associate the current iteration's classification
-         * with the activationPattern from N steps ago
-         */
-        public Deque<Tuple> patternNZHistory;
-        /**
-         * These are the bit histories. Each one is a BitHistory instance, stored in
-         * this dict, where the key is (bit, nSteps). The 'bit' is the index of the
-         * bit in the activation pattern and nSteps is the number of steps of
-         * prediction desired for that bit.
-         */
+        public int Verbosity { get; set; }
+
+        /// <summary>
+        /// The alpha used to compute running averages of the bucket duty
+        /// cycles for each activation pattern bit.A lower alpha results
+        /// in longer term memory.
+        /// </summary>
+        public double Alpha { get; set; } = 0.001;
+
+        private readonly double _actValueAlpha;
+        /// <summary>
+        /// The bit's learning iteration. This is updated each time store() gets called on this bit.
+        /// </summary>
+        private int _learnIteration;
+        /// <summary>
+        /// This contains the offset between the recordNum (provided by caller) and
+        /// learnIteration (internal only, always starts at 0).
+        /// </summary>
+        private int _recordNumMinusLearnIteration = -1;
+        /// <summary>
+        /// This contains the value of the highest bucket index we've ever seen
+        /// It is used to pre-allocate fixed size arrays that hold the weights of
+        /// each bucket index during inference 
+        /// </summary>
+        private int _maxBucketIdx;
+        /// <summary>
+        /// The sequence different steps of multi-step predictions
+        /// </summary>
+        public int[] Steps { get; set; }
+
+        /// <summary>
+        /// History of the last _maxSteps activation patterns. We need to keep
+        /// these so that we can associate the current iteration's classification
+        /// with the activationPattern from N steps ago
+        /// </summary>
+        private readonly Deque<Tuple> _patternNzHistory;
+
+        /// <summary>
+        /// These are the bit histories. Each one is a BitHistory instance, stored in
+        /// this dict, where the key is (bit, nSteps). The 'bit' is the index of the
+        /// bit in the activation pattern and nSteps is the number of steps of
+        /// prediction desired for that bit.
+        /// </summary>
         [JsonIgnore]
-        public Map<Tuple, BitHistory> activeBitHistory = new Map<Tuple, BitHistory>();
-        /**
-         * This keeps track of the actual value to use for each bucket index. We
-         * start with 1 bucket, no actual value so that the first infer has something
-         * to return
-         */
-        public List<object> actualValues;
+        private readonly Map<Tuple, BitHistory> _activeBitHistory = new Map<Tuple, BitHistory>();
+        /// <summary>
+        /// This keeps track of the actual value to use for each bucket index. We
+        /// start with 1 bucket, no actual value so that the first infer has something
+        /// to return
+        /// </summary>
+        private readonly List<object> _actualValues;
 
         private string g_debugPrefix = "CLAClassifier";
 
-        /**
-         * CLAClassifier no-arg constructor with defaults
-         */
+        /// <summary>
+        /// CLAClassifier no-arg constructor with defaults
+        /// </summary>
         public CLAClassifier()
-            : this(new List<int>(new[] { 1 }), 0.001, 0.3, 0)
+            : this(new[] { 1 }, 0.001, 0.3, 0)
         {
 
         }
 
-        /**
-         * Constructor for the CLA classifier
-         * 
-         * @param steps				sequence of the different steps of multi-step predictions to learn
-         * @param alpha				The alpha used to compute running averages of the bucket duty
-                                    cycles for each activation pattern bit. A lower alpha results
-                                    in longer term memory.
-         * @param actValueAlpha
-         * @param verbosity			verbosity level, can be 0, 1, or 2
-         */
-        public CLAClassifier(List<int> steps, double alpha, double actValueAlpha, int verbosity)
+        /// <summary>
+        /// CLAClassifier steps constructor with defaults
+        /// </summary>
+        public CLAClassifier(int[] steps)
+            : this(steps, 0.001, 0.3, 0)
         {
-            actualValues = new List<object>();
-            actualValues.Add(null);
-            this.steps = steps;
-            this.alpha = alpha;
-            this.actValueAlpha = actValueAlpha;
-            this.verbosity = verbosity;
-            patternNZHistory = new Deque<Tuple>(ArrayUtils.Max(steps.ToArray()) + 1);
+
         }
 
-        /**
-         * Process one input sample.
-         * This method is called by outer loop code outside the nupic-engine. We
-         * use this instead of the nupic engine compute() because our inputs and
-         * outputs aren't fixed size vectors of reals.
-         * 
-         * @param recordNum			Record number of this input pattern. Record numbers should
-         *           				normally increase sequentially by 1 each time unless there
-         *           				are missing records in the dataset. Knowing this information
-         *           				insures that we don't get confused by missing records.
-         * @param classification	{@link Map} of the classification information:
-         *                 			bucketIdx: index of the encoder bucket
-         *                 			actValue:  actual value going into the encoder
-         * @param patternNZ			list of the active indices from the output below
-         * @param learn				if true, learn this sample
-         * @param infer				if true, perform inference
-         * 
-         * @return					dict containing inference results, there is one entry for each
-         *           				step in steps, where the key is the number of steps, and
-         *           				the value is an array containing the relative likelihood for
-         *           				each bucketIdx starting from bucketIdx 0.
-         *
-         *           				There is also an entry containing the average actual value to
-         *           				use for each bucket. The key is 'actualValues'.
-         *
-         *           				for example:
-         *             				{	
-         *             					1 :             [0.1, 0.3, 0.2, 0.7],
-         *              				4 :             [0.2, 0.4, 0.3, 0.5],
-         *              				'actualValues': [1.5, 3,5, 5,5, 7.6],
-         *             				}
-         */
+        /// <summary>
+        /// Constructor for the CLA classifier
+        /// </summary>
+        /// <param name="steps">sequence of the different steps of multi-step predictions to learn</param>
+        /// <param name="alpha">The alpha used to compute running averages of the bucket duty
+        /// cycles for each activation pattern bit. A lower alpha results in longer term memory.
+        /// </param>
+        /// <param name="actValueAlpha">Used to track the actual value within each bucket. A lower actValueAlpha results in longer term memory</param>
+        /// <param name="verbosity">verbosity level, can be 0, 1, or 2</param>
+        public CLAClassifier(int[] steps, double alpha, double actValueAlpha, int verbosity)
+        {
+            _actualValues = new List<object>();
+            _actualValues.Add(null);
+            this.Steps = steps;
+            this.Alpha = alpha;
+            this._actValueAlpha = actValueAlpha;
+            this.Verbosity = verbosity;
+            _patternNzHistory = new Deque<Tuple>(ArrayUtils.Max(steps.ToArray()) + 1);
+        }
+
+        /// <summary>
+        /// Process one input sample.
+        /// This method is called by outer loop code outside the nupic-engine. We
+        /// use this instead of the nupic engine compute() because our inputs and
+        /// outputs aren't fixed size vectors of reals.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="recordNum">Record number of this input pattern. Record numbers should
+        /// normally increase sequentially by 1 each time unless there
+        /// are missing records in the dataset. Knowing this information
+        /// insures that we don't get confused by missing records.</param>
+        /// <param name="classification">Map of the classification information:
+        /// bucketIdx: index of the encoder bucket
+        /// actValue:  actual value going into the encoder</param>
+        /// <param name="patternNZ">list of the active indices from the output below</param>
+        /// <param name="learn">if true, learn this sample</param>
+        /// <param name="infer">if true, perform inference</param>
+        /// <returns>dict containing inference results, there is one entry for each
+        /// step in steps, where the key is the number of steps, and
+        /// the value is an array containing the relative likelihood for
+        /// each bucketIdx starting from bucketIdx 0.
+        /// 
+        /// There is also an entry containing the average actual value to
+        /// use for each bucket. The key is 'actualValues'.
+        /// 
+        /// for example:
+        /// {	
+        /// 	1 :             [0.1, 0.3, 0.2, 0.7],
+        /// 	4 :             [0.2, 0.4, 0.3, 0.5],
+        /// 	'actualValues': [1.5, 3,5, 5,5, 7.6],
+        /// }
+        /// </returns>
         public ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
         {
             ClassifierResult<T> retVal = new ClassifierResult<T>();
@@ -161,24 +170,24 @@ namespace HTM.Net.Algorithms
 
             // Save the offset between recordNum and learnIteration if this is the first
             // compute
-            if (recordNumMinusLearnIteration == -1)
+            if (_recordNumMinusLearnIteration == -1)
             {
-                recordNumMinusLearnIteration = recordNum - learnIteration;
+                _recordNumMinusLearnIteration = recordNum - _learnIteration;
             }
 
             // Update the learn iteration
-            learnIteration = recordNum - recordNumMinusLearnIteration;
+            _learnIteration = recordNum - _recordNumMinusLearnIteration;
 
-            if (verbosity >= 1)
+            if (Verbosity >= 1)
             {
                 Console.WriteLine(String.Format("\n{0}: compute ", g_debugPrefix));
                 Console.WriteLine(" recordNum: " + recordNum);
-                Console.WriteLine(" learnIteration: " + learnIteration);
+                Console.WriteLine(" learnIteration: " + _learnIteration);
                 Console.WriteLine(String.Format(" patternNZ({0}): {1}", patternNZ.Length, Arrays.ToString(patternNZ)));
                 Console.WriteLine(" classificationIn: " + classification);
             }
 
-            patternNZHistory.Append(new Tuple(learnIteration, patternNZ));
+            _patternNzHistory.Append(new Tuple(_learnIteration, patternNZ));
 
             //------------------------------------------------------------------------
             // Inference:
@@ -193,7 +202,7 @@ namespace HTM.Net.Algorithms
                 // NOTE: If doing 0-step prediction, we shouldn't use any knowledge
                 //		 of the classification input during inference.
                 object defaultValue = null;
-                if (steps[0] == 0)
+                if (Steps[0] == 0)
                 {
                     defaultValue = 0;
                 }
@@ -201,18 +210,18 @@ namespace HTM.Net.Algorithms
                     defaultValue = classification.GetOrDefault("actValue", null);
                 }
 
-                T[] actValues = new T[this.actualValues.Count];
-                for (int i = 0; i < actualValues.Count; i++)
+                T[] actValues = new T[this._actualValues.Count];
+                for (int i = 0; i < _actualValues.Count; i++)
                 {
                     //if (EqualityComparer<T>.Default.Equals(actualValues[i], default(T)))  //actualValues[i] == default(T))
-                    if (actualValues[i] == null)
+                    if (_actualValues[i] == null)
                     {
                         actValues[i] = defaultValue != null ? TypeConverter.Convert<T>(defaultValue) : default(T);
                         //(T) (defaultValue ?? default(T));
                     }
                     else
                     {
-                        actValues[i] = (T)actualValues[i];
+                        actValues[i] = (T)_actualValues[i];
                     }
                     //actValues[i] = actualValues[i].CompareTo(default(T)) == 0 ? defaultValue : actualValues[i];
                 }
@@ -220,19 +229,19 @@ namespace HTM.Net.Algorithms
                 retVal.SetActualValues(actValues);
 
                 // For each n-step prediction...
-                foreach (int nSteps in steps.ToArray())
+                foreach (int nSteps in Steps.ToArray())
                 {
                     // Accumulate bucket index votes and actValues into these arrays
-                    double[] sumVotes = new double[maxBucketIdx + 1];
-                    double[] bitVotes = new double[maxBucketIdx + 1];
+                    double[] sumVotes = new double[_maxBucketIdx + 1];
+                    double[] bitVotes = new double[_maxBucketIdx + 1];
 
                     foreach (int bit in patternNZ)
                     {
                         Tuple key = new Tuple(bit, nSteps);
-                        BitHistory history = activeBitHistory.GetOrDefault(key, null);
+                        BitHistory history = _activeBitHistory.GetOrDefault(key, null);
                         if (history == null) continue;
 
-                        history.Infer(learnIteration, bitVotes);
+                        history.Infer(_learnIteration, bitVotes);
 
                         sumVotes = ArrayUtils.Add(sumVotes, bitVotes);
                     }
@@ -269,29 +278,29 @@ namespace HTM.Net.Algorithms
                 object actValue = classification["actValue"];
 
                 // Update maxBucketIndex
-                maxBucketIdx = Math.Max(maxBucketIdx, bucketIdx);
+                _maxBucketIdx = Math.Max(_maxBucketIdx, bucketIdx);
 
                 // Update rolling average of actual values if it's a scalar. If it's
                 // not, it must be a category, in which case each bucket only ever
                 // sees one category so we don't need a running average.
-                while (maxBucketIdx > actualValues.Count - 1)
+                while (_maxBucketIdx > _actualValues.Count - 1)
                 {
-                    actualValues.Add(null);
+                    _actualValues.Add(null);
                 }
-                if (actualValues[bucketIdx] == null)
+                if (_actualValues[bucketIdx] == null)
                 {
-                    actualValues[bucketIdx] = TypeConverter.Convert<T>(actValue);
+                    _actualValues[bucketIdx] = TypeConverter.Convert<T>(actValue);
                 }
                 else
                 {
                     if (typeof(double).IsAssignableFrom(actValue.GetType()))
                     {
-                        Double val = ((1.0 - actValueAlpha) * (TypeConverter.Convert<double>(actualValues[bucketIdx])) +
-                            actValueAlpha * (TypeConverter.Convert<double>(actValue)));
-                        actualValues[bucketIdx] = TypeConverter.Convert<T>(val);
+                        Double val = ((1.0 - _actValueAlpha) * (TypeConverter.Convert<double>(_actualValues[bucketIdx])) +
+                            _actValueAlpha * (TypeConverter.Convert<double>(actValue)));
+                        _actualValues[bucketIdx] = TypeConverter.Convert<T>(val);
                     }
                     else {
-                        actualValues[bucketIdx] = TypeConverter.Convert<T>(actValue);
+                        _actualValues[bucketIdx] = TypeConverter.Convert<T>(actValue);
                     }
                 }
 
@@ -300,20 +309,20 @@ namespace HTM.Net.Algorithms
                 int nSteps = -1;
                 int iteration = 0;
                 int[] learnPatternNZ = null;
-                foreach (int n in steps.ToArray())
+                foreach (int n in Steps.ToArray())
                 {
                     nSteps = n;
                     // Do we have the pattern that should be assigned to this classification
                     // in our pattern history? If not, skip it
                     bool found = false;
-                    foreach (Tuple t in patternNZHistory)
+                    foreach (Tuple t in _patternNzHistory)
                     {
                         iteration = TypeConverter.Convert<int>(t.Get(0));
 
                         var tuplePos1 = t.Get(1);
                         if (tuplePos1 is JArray)
                         {
-                            JArray arr = (JArray) tuplePos1;
+                            JArray arr = (JArray)tuplePos1;
                             learnPatternNZ = arr.Values<int>().ToArray();
                         }
                         else
@@ -321,7 +330,7 @@ namespace HTM.Net.Algorithms
                             learnPatternNZ = (int[])t.Get(1);
                         }
 
-                        if (iteration == learnIteration - nSteps)
+                        if (iteration == _learnIteration - nSteps)
                         {
                             found = true;
                             break;
@@ -336,17 +345,17 @@ namespace HTM.Net.Algorithms
                     {
                         // Get the history structure for this bit and step
                         Tuple key = new Tuple(bit, nSteps);
-                        BitHistory history = activeBitHistory.GetOrDefault(key, null);
+                        BitHistory history = _activeBitHistory.GetOrDefault(key, null);
                         if (history == null)
                         {
-                            activeBitHistory.Add(key, history = new BitHistory(this, bit, nSteps));
+                            _activeBitHistory.Add(key, history = new BitHistory(this, bit, nSteps));
                         }
-                        history.Store(learnIteration, bucketIdx);
+                        history.Store(_learnIteration, bucketIdx);
                     }
                 }
             }
 
-            if (infer && verbosity >= 1)
+            if (infer && Verbosity >= 1)
             {
                 Console.WriteLine(" inference: combined bucket likelihoods:");
                 Console.WriteLine("   actual bucket values: " + Arrays.ToString((T[])retVal.GetActualValues()));
@@ -367,13 +376,12 @@ namespace HTM.Net.Algorithms
             return retVal;
         }
 
-        /**
-         * Return a string with pretty-print of an array using the given format
-         * for each element
-         * 
-         * @param arr
-         * @return
-         */
+        /// <summary>
+        /// Return a string with pretty-print of an array using the given format for each element
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arr"></param>
+        /// <returns></returns>
         private string PFormatArray<T>(T[] arr)
         {
             if (arr == null) return "";

@@ -16,49 +16,49 @@ namespace HTM.Net.Research.Tests.Examples.B2B
         [TestMethod]
         public void TestGetParameters()
         {
-            Parameters p = HotGym.NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(64, p.Size());
+            Parameters p = NetworkDemoHarness.GetParameters();
+            Assert.AreEqual(65, p.Size());
         }
 
         [TestMethod]
         public void TestGetDayDemoTestEncoderParams()
         {
-            Parameters p = HotGym.NetworkDemoHarness.GetDayDemoTestEncoderParams();
-            Assert.AreEqual(14, p.Size());
+            Parameters p = NetworkDemoHarness.GetDayDemoTestEncoderParams();
+            Assert.AreEqual(15, p.Size());
         }
 
         [TestMethod]
         public void TestGetDayDemoFieldEncodingMap()
         {
-            Map<String, Map<string, object>> fieldEncodings = HotGym.NetworkDemoHarness.GetDayDemoFieldEncodingMap();
+            Map<String, Map<string, object>> fieldEncodings = NetworkDemoHarness.GetDayDemoFieldEncodingMap();
             Assert.AreEqual(1, fieldEncodings.Count);
         }
 
         [TestMethod]
         public void TestGetHotGymTestEncoderParams()
         {
-            Map<String, Map<String, Object>> fieldEncodings = HotGym.NetworkDemoHarness.GetHotGymFieldEncodingMap();
+            Map<String, Map<String, Object>> fieldEncodings = NetworkDemoHarness.GetHotGymFieldEncodingMap();
             Assert.AreEqual(2, fieldEncodings.Count);
         }
 
         [TestMethod]
         public void TestGetNetworkDemoTestEncoderParams()
         {
-            Parameters p = HotGym.NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
-            Assert.AreEqual(29, p.Size());
+            Parameters p = NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
+            Assert.AreEqual(30, p.Size());
         }
 
         [TestMethod]
         public void TestSetupMap()
         {
-            Map<String, Map<String, Object>> m = HotGym.NetworkDemoHarness.SetupMap(null, 23, 2, 0.0, 0.9, 22.0, 3.0, false, false, null, "cogmission", "ai", "works");
+            Map<String, Map<String, Object>> m = NetworkDemoHarness.SetupMap(null, 23, 2, 0.0, 0.9, 22.0, 3.0, false, false, null, "cogmission", "ai", "works");
             Assert.IsNotNull(m);
 
             // Make sure omission of key doesn't insert null or a default value
             Assert.IsTrue(!m.ContainsKey("forced"));
 
             Assert.AreEqual(1, m.Count);
-            Assert.AreEqual(11, m.Get("cogmission").Count);
+            Assert.AreEqual(12, m.Get("cogmission").Count);
         }
 
         #endregion

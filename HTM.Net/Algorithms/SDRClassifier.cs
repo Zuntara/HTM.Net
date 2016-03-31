@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HTM.Net.Util;
-using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
@@ -66,24 +64,32 @@ namespace HTM.Net.Algorithms
     ///   Architectures and Applications, pp 227-236, Springer-Verlag, 1990 
     /// 
     /// </summary>
-    public class SDRClassifier
+    public class SDRClassifier : IClassifier
     {
-        private int[] steps;
-        private double alpha;
-        private double actValueAlpha;
-        private int verbosity;
+        public int[] Steps { get; set; }
+        public double Alpha { get; set; }
+        private readonly double _actValueAlpha;
+        public int Verbosity { get; set; }
 
         private int _learnIteration;
         private int? _recordNumMinusLearnIteration;
-        private static int VERSION = 1;
-        private Deque<Tuple> _patternNZHistory;
-        private Map<int, int> _activeBitHistory;
+        private static readonly int VERSION = 1;
+        private readonly Deque<Tuple> _patternNZHistory;
+        //private Map<int, int> _activeBitHistory;
         private int _maxInputIdx;
         private int _maxBucketIdx;
-        private Map<int, double[][]> _weightMatrix;
-        private List<object> _actualValues;
-        private int _version;
+        private readonly Map<int, double[][]> _weightMatrix;
+        private readonly List<object> _actualValues;
         private string g_debugPrefix = "SDRClassifier";
+
+        /// <summary>
+        /// SDRClassifier no-arg constructor with defaults
+        /// </summary>
+        public SDRClassifier()
+            : this(new []{1})
+        {
+
+        }
 
         /// <summary>
         /// Constructor for the SDR classifier.
@@ -100,10 +106,10 @@ namespace HTM.Net.Algorithms
             if (actValueAlpha < 0 || actValueAlpha >= 1) throw new ArgumentOutOfRangeException(nameof(actValueAlpha), "actValueAlpha be a number between 0 and 1");
 
             // Save constructor args
-            this.steps = steps;
-            this.alpha = alpha;
-            this.actValueAlpha = actValueAlpha;
-            this.verbosity = verbosity;
+            Steps = steps;
+            Alpha = alpha;
+            _actValueAlpha = actValueAlpha;
+            Verbosity = verbosity;
 
             // Init learn iteration index
             _learnIteration = 0;
@@ -124,7 +130,7 @@ namespace HTM.Net.Algorithms
             // this dict, where the key is (bit, nSteps). The 'bit' is the index of the 
             // bit in the activation pattern and nSteps is the number of steps of 
             // prediction desired for that bit. 
-            _activeBitHistory = new Map<int, int>();
+            //_activeBitHistory = new Map<int, int>();
 
             // This contains the value of the highest input number we've ever seen 
             // It is used to pre-allocate fixed size arrays that hold the weights 
@@ -154,7 +160,6 @@ namespace HTM.Net.Algorithms
 
             // Set the version to the latest version. 
             // This is used for serialization/deserialization 
-            _version = SDRClassifier.VERSION;
         }
 
         public ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
@@ -164,14 +169,14 @@ namespace HTM.Net.Algorithms
 
             // Save the offset between recordNum and learnIteration if this is the first 
             //  compute 
-            if (this._recordNumMinusLearnIteration == null)
+            if (_recordNumMinusLearnIteration == null)
             {
-                this._recordNumMinusLearnIteration = recordNum - this._learnIteration;
+                _recordNumMinusLearnIteration = recordNum - _learnIteration;
             }
             // Update the learn iteration
             _learnIteration = recordNum - _recordNumMinusLearnIteration.GetValueOrDefault();
 
-            if (verbosity >= 1)
+            if (Verbosity >= 1)
             {
                 Console.WriteLine(String.Format("\n{0}: compute ", g_debugPrefix));
                 Console.WriteLine(" recordNum: " + recordNum);
@@ -192,7 +197,7 @@ namespace HTM.Net.Algorithms
             if (patternNZ.Max() > _maxInputIdx)
             {
                 int newMaxInputIdx = patternNZ.Max();
-                foreach (int nSteps in steps)
+                foreach (int nSteps in Steps)
                 {
                     var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
                     _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
@@ -217,7 +222,7 @@ namespace HTM.Net.Algorithms
                 // Update maxBucketIndex and augment weight matrix with zero padding
                 if (bucketIdx > _maxBucketIdx)
                 {
-                    foreach (int nSteps in steps)
+                    foreach (int nSteps in Steps)
                     {
                         var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
                         _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 1);
@@ -242,18 +247,18 @@ namespace HTM.Net.Algorithms
                     {
                         if (actValue is int)
                         {
-                            _actualValues[bucketIdx] = ((1 - actValueAlpha) * (int)_actualValues[bucketIdx] +
-                                                        actValueAlpha * (int)actValue);
+                            _actualValues[bucketIdx] = ((1.0 - _actValueAlpha) * TypeConverter.Convert<double>(_actualValues[bucketIdx]) +
+                                                        _actValueAlpha * (int)actValue);
                         }
                         if (actValue is double)
                         {
-                            _actualValues[bucketIdx] = ((1.0 - actValueAlpha) * (double)_actualValues[bucketIdx] +
-                                                        actValueAlpha * (double)actValue);
+                            _actualValues[bucketIdx] = ((1.0 - _actValueAlpha) * (double)_actualValues[bucketIdx] +
+                                                        _actValueAlpha * (double)actValue);
                         }
                         if (actValue is long)
                         {
-                            _actualValues[bucketIdx] = ((1 - actValueAlpha) * (long)_actualValues[bucketIdx] +
-                                                        actValueAlpha * (long)actValue);
+                            _actualValues[bucketIdx] = ((1.0 - _actValueAlpha) * TypeConverter.Convert<double>(_actualValues[bucketIdx]) +
+                                                        _actValueAlpha * (long)actValue);
                         }
                     }
                     else
@@ -266,14 +271,14 @@ namespace HTM.Net.Algorithms
                     var iteration = (int)tuple.Get(0);
                     var learnPatternNZ = (int[])tuple.Get(1);
 
-                    var error = _calculateError(classification);
+                    var error = CalculateError(classification);
 
                     int nSteps = _learnIteration - iteration;
-                    if (steps.Contains(nSteps))
+                    if (Steps.Contains(nSteps))
                     {
                         foreach (int bit in learnPatternNZ)
                         {
-                            var multipliedRow = ArrayUtils.Multiply(error[nSteps], alpha);
+                            var multipliedRow = ArrayUtils.Multiply(error[nSteps], Alpha);
                             _weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
                         }
                     }
@@ -281,16 +286,16 @@ namespace HTM.Net.Algorithms
             }
             // ------------------------------------------------------------------------
             // Verbose print
-            if (infer && verbosity >= 1)
+            if (infer && Verbosity >= 1)
             {
                 Console.WriteLine(" inference: combined bucket likelihoods:");
-                Console.WriteLine("   actual bucket values: " + Arrays.ToString((T[])retVal.GetActualValues()));
+                Console.WriteLine("   actual bucket values: " + Arrays.ToString(retVal.GetActualValues()));
 
                 foreach (int key in retVal.StepSet())
                 {
                     if (retVal.GetActualValue(key) == null) continue;
 
-                    Object[] actual = new Object[] { (T)retVal.GetActualValue(key) };
+                    Object[] actual = new Object[] { retVal.GetActualValue(key) };
                     Console.WriteLine(String.Format("  {0} steps: {1}", key, PFormatArray(actual)));
                     int bestBucketIdx = retVal.GetMostProbableBucketIndex(key);
                     Console.WriteLine(String.Format("   most likely bucket idx: {0}, value: {1} ", bestBucketIdx,
@@ -344,7 +349,7 @@ namespace HTM.Net.Algorithms
             // NOTE: If doing 0-step prediction, we shouldn't use any knowledge
             // of the classification input during inference.
             object defaultValue;
-            if (steps[0] == 0 || classification == null)
+            if (Steps[0] == 0 || classification == null)
             {
                 defaultValue = 0;
             }
@@ -357,7 +362,7 @@ namespace HTM.Net.Algorithms
             retVal.SetActualValues(actValues);
            //NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
 
-            foreach (var nSteps in steps)
+            foreach (var nSteps in Steps)
             {
                 var predictDist = InferSingleStep(patternNz, _weightMatrix[nSteps]);
                 retVal.SetStats(nSteps, predictDist);
@@ -407,7 +412,7 @@ namespace HTM.Net.Algorithms
         /// </param>
         /// <returns>dict containing error. 
         /// The key is the number of steps The value is a numpy array of error at the output layer</returns>
-        private IDictionary<int, double[]> _calculateError(IDictionary<string, object> classification)
+        private IDictionary<int, double[]> CalculateError(IDictionary<string, object> classification)
         {
             IDictionary<int, double[]> error = new Map<int, double[]>();
 
@@ -419,7 +424,7 @@ namespace HTM.Net.Algorithms
                 int iteration = (int)tuple.Get(0);
                 int[] learnPatternNZ = (int[])tuple.Get(1);
                 var nSteps = _learnIteration - iteration;
-                if (steps.Contains(nSteps))
+                if (Steps.Contains(nSteps))
                 {
                     var predictDist = InferSingleStep(learnPatternNZ, _weightMatrix[nSteps]);
                     error[nSteps] = ArrayUtils.Subtract(targetDist, predictDist);// targetDist - predictDist;

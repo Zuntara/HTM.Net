@@ -8,7 +8,7 @@ namespace HTM.Net.Encoders
 {
     public class MultiEncoder : Encoder<object>
     {
-        protected Map<int,string> indexToCategory = new Map<int, string>();
+        protected Map<int, string> indexToCategory = new Map<int, string>();
 
         protected List<Tuple> categoryList;
 
@@ -104,9 +104,9 @@ namespace HTM.Net.Encoders
             return encodings;
         }
 
-        public void AddEncoder(string name, IEncoder child)
+        public void AddEncoder(string fieldName, string encoderName, IEncoder child)
         {
-            base.AddEncoder(this, name, child, width);
+            base.AddEncoder(this, fieldName, encoderName, child, width);
 
             foreach (Tuple d in child.GetDescription())
             {

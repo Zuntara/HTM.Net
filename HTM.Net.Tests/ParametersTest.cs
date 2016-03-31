@@ -178,14 +178,15 @@ namespace HTM.Net.Tests
         public void TestSize()
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
-            Assert.AreEqual(64, @params.Size());
+            Assert.AreEqual(65, @params.Size());
         }
 
         [TestMethod]
         public void TestKeys()
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
-            Assert.IsTrue(@params.Keys() != null && @params.Keys().Count == 64);
+            Assert.IsNotNull(@params.Keys());
+            Assert.AreEqual(65, @params.Keys().Count);
         }
 
         [TestMethod]

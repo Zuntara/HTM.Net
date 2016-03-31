@@ -1027,11 +1027,11 @@ namespace HTM.Net
             this.potentialPools = pools;
         }
 
-        /**
-         * Returns the {@link FlatMatrix} which holds the mapping
-         * of column indexes to their lists of potential inputs.
-         * @return	the potential pools
-         */
+        /// <summary>
+        /// Returns the <see cref="IFlatMatrix{Pool}"/> which holds the mapping
+        /// of column indexes to their lists of potential inputs.
+        /// </summary>
+        /// <returns>the potential pools</returns>
         public IFlatMatrix<Pool> GetPotentialPools()
         {
             return this.potentialPools;
@@ -1650,13 +1650,10 @@ namespace HTM.Net
             this.connectedPermanence = connectedPermanence;
         }
 
-        /**
-         * If the permanence value for a synapse
-         * is greater than this value, it is said
-         * to be connected.
-         *
-         * @return
-         */
+        /// <summary>
+        /// If the permanence value for a synapse is greater than this value, it is said to be connected.
+        /// </summary>
+        /// <returns></returns>
         public double GetConnectedPermanence()
         {
             return connectedPermanence;

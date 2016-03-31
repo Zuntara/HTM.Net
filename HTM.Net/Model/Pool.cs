@@ -126,13 +126,10 @@ namespace HTM.Net.Model
             return retVal;
         }
 
-        /**
-         * Returns a dense array representing the potential pool permanences
-         * 
-         * Note: Only called from tests for now...
-         * @param c
-         * @return
-         */
+        /// <summary>
+        /// Returns a dense array representing the potential pool permanences
+        /// </summary>
+        /// <param name="c">Connections to use</param>
         public double[] GetDensePermanences(Connections c)
         {
             double[] retVal = new double[c.GetNumInputs()];
