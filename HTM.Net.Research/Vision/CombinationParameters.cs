@@ -10,7 +10,7 @@ namespace HTM.Net.Research.Vision
     /// This class provides methods for searching ranges of parameters to see how
     /// they affect performance.
     /// </summary>
-    public class Parameters
+    public class CombinationParameters
     {
         private List<string> _names;
         private List<List<object>> _allowedValues;
@@ -24,7 +24,7 @@ namespace HTM.Net.Research.Vision
         /// Have to keep track of the names and valid values of each parameter
         /// defined by the user.
         /// </summary>
-        public Parameters()
+        public CombinationParameters()
         {
             // list of parameter names
             _names = new List<string>();
@@ -84,7 +84,7 @@ namespace HTM.Net.Research.Vision
         /// </summary>
         public IEnumerable<object> GetAllValues()
         {
-            return _valueIndexes.Last().Select((i,j) => _allowedValues[i][j]);
+            return _valueIndexes.Last().Select((i,j) => _allowedValues[j][i]);
         }
         /// <summary>
         /// This method adds an item to the results list.
@@ -118,13 +118,14 @@ namespace HTM.Net.Research.Vision
 
             var headerList = GetNames();
             headerList.AddRange(resultNames);
-            string headerString = string.Join(", ", headerList);
+            string headerString = string.Join("\t", headerList);
             Console.WriteLine(headerString);
             int i = 0;
             foreach (var result in _results)
             {
-                var values = _valueIndexes[i].Skip(1).Select((j,k) => _allowedValues[j][k]);
-                string valueString = Arrays.ToString(values);
+                if(_valueIndexes.Count <= i) throw new InvalidOperationException("Did you call NextCombination?");
+                var values = _valueIndexes[i].Select((j,k) => _allowedValues[k][j]);
+                string valueString = string.Join("\t", values);
 
                 int f = 0;
                 foreach (string formatString in formatStrings)
@@ -174,7 +175,7 @@ namespace HTM.Net.Research.Vision
             }
             else
             {
-                var newValueIndexes = _valueIndexes.Last();
+                var newValueIndexes = _valueIndexes.Last().ToList();
                 int i = 0;
                 while (i < _names.Count)
                 {
@@ -202,6 +203,11 @@ namespace HTM.Net.Research.Vision
         {
             int index = random.NextInt(list.Count);
             return list[index];
+        }
+
+        public int GetNumCombinations()
+        {
+            return numCombinations;
         }
     }
 }

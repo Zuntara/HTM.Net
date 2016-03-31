@@ -2698,7 +2698,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\DataSets\OCR\characters\cmr_bold.xml" />
-    <Content Include="Resources\DataSets\OCR\characters\cmr_hex.xml" />
+    <Content Include="Resources\DataSets\OCR\characters\cmr_hex.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\DataSets\OCR\characters\cmr_italic.xml" />
     <Content Include="Resources\DataSets\OCR\characters\cmr_normal.xml" />
     <Content Include="Resources\DataSets\OCR\characters\cmr_normal_and_bold.xml" />

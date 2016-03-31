@@ -85,5 +85,45 @@ namespace HTM.Net.Research.Tests.Vision
 
             tb.SavePermsAndConns("C:\\temp\\permsAndConns.jpg");
         }
+
+        //[TestMethod, DeploymentItem("Resources/DataSets/OCR/characters/cmr_hex.xml")]
+        public void ExecuteParameterSearch()
+        {
+            ParameterSearch search = new ParameterSearch();
+
+            search.Execute(dataSet: "cmr_hex.xml");
+        }
+
+        [TestMethod]
+        public void TestPrintMethodOfCombinationParameters()
+        {
+            CombinationParameters parameters = new CombinationParameters();
+            parameters.Define("synPermConn", new List<object> { 0.5 });
+            parameters.Define("synPermDecFrac", new List<object> { 1.0, 0.5, 0.1 });
+            parameters.Define("synPermIncFrac", new List<object> { 1.0, 0.5, 0.1 });
+
+            // Pick a combination of parameter values
+            parameters.NextCombination();
+
+            // Add results to the list
+            parameters.AppendResults(new List<object> { 67.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 68.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 57.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 47.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 37.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 27.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 17.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+            parameters.AppendResults(new List<object> { 16.8, 3 }); // accurancy , cycles
+            parameters.NextCombination();
+
+            parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
+        }
     }
 }

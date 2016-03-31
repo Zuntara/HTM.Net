@@ -92,6 +92,8 @@
     <Compile Include="Vision\BitmapExtentions.cs" />
     <Compile Include="Vision\DatasetReader.cs" />
     <Compile Include="Vision\ExactMatch.cs" />
+    <Compile Include="Vision\CombinationParameters.cs" />
+    <Compile Include="Vision\ParameterSearch.cs" />
     <Compile Include="Vision\VisionTestBench.cs" />
   </ItemGroup>
   <ItemGroup>
