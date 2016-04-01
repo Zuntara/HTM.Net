@@ -73,6 +73,7 @@ namespace HTM.Net
             defaultSpatialParams.Add(KEY.MAX_BOOST, 10.0);
             defaultSpatialParams.Add(KEY.SP_VERBOSITY, 0);
             defaultSpatialParams.Add(KEY.LEARN, true);
+            defaultSpatialParams.Add(KEY.SP_PARALLELMODE, false);   // default off
             DEFAULTS_SPATIAL = defaultSpatialParams;
             defaultParams.AddAll(DEFAULTS_SPATIAL);
 
@@ -217,6 +218,12 @@ namespace HTM.Net
             public static readonly KEY DUTY_CYCLE_PERIOD = new KEY("dutyCyclePeriod", typeof(int));//TODO add range here?
             public static readonly KEY MAX_BOOST = new KEY("maxBoost", typeof(double)); //TODO add range here?
             public static readonly KEY SP_VERBOSITY = new KEY("spVerbosity", typeof(int), 0, 10);
+            /// <summary>
+            /// If defined this will initialize and run the spatial pooler multithreaded, this will 
+            /// make the network less deterministic because the random generator will return different values on different places,
+            /// even when a seed is used. (can be a problem for unit tests)
+            /// </summary>
+            public static readonly KEY SP_PARALLELMODE = new KEY("spParallelMode", typeof(bool));
 
             ///////////// SpatialPooler / Network Parameter(s) /////////////
             /// <summary>

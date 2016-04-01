@@ -5,6 +5,7 @@ using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra.Double;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Tests.Algorithms
@@ -76,6 +77,44 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(5, mem.GetNumColumns());
         }
 
+        [TestMethod]
+        public void ConfirmSpConstructionParallel()
+        {
+            SetupParameters();
+            Parameters pars = parameters.Copy();
+            pars.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
+            // make a larger map
+            pars.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 32, 32 });//5
+            pars.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 32, 32 });//5
+            sp = new SpatialPooler();
+            mem = new Connections();
+            pars.Apply(mem);
+            sp.Init(mem);
+
+            Assert.IsTrue(mem.IsSpatialInParallelMode());
+
+            Assert.AreEqual(32, mem.GetInputDimensions()[0]);
+            Assert.AreEqual(32, mem.GetColumnDimensions()[0]);
+            Assert.AreEqual(3, mem.GetPotentialRadius());
+            Assert.AreEqual(0.5, mem.GetPotentialPct(), 0);
+            Assert.AreEqual(false, mem.GetGlobalInhibition());
+            Assert.AreEqual(-1.0, mem.GetLocalAreaDensity(), 0);
+            Assert.AreEqual(3, mem.GetNumActiveColumnsPerInhArea(), 0);
+            Assert.AreEqual(1, mem.GetStimulusThreshold(), 1);
+            Assert.AreEqual(0.01, mem.GetSynPermInactiveDec(), 0);
+            Assert.AreEqual(0.1, mem.GetSynPermActiveInc(), 0);
+            Assert.AreEqual(0.1, mem.GetSynPermConnected(), 0);
+            Assert.AreEqual(0.1, mem.GetMinPctOverlapDutyCycles(), 0);
+            Assert.AreEqual(0.1, mem.GetMinPctActiveDutyCycles(), 0);
+            Assert.AreEqual(10, mem.GetDutyCyclePeriod(), 0);
+            Assert.AreEqual(10.0, mem.GetMaxBoost(), 0);
+            Assert.AreEqual(42, mem.GetSeed());
+            Assert.AreEqual(0, mem.GetSpVerbosity());
+
+            Assert.AreEqual(1024, mem.GetNumInputs());
+            Assert.AreEqual(1024, mem.GetNumColumns());
+        }
+
         /**
          * Checks that feeding in the same input vector leads to polarized
          * permanence values: either zeros or ones, but no fractions
@@ -129,10 +168,10 @@ namespace HTM.Net.Tests.Algorithms
 
             for (int i = 0; i < mem.GetNumColumns(); i++)
             {
-                Console.WriteLine("Slice " + Arrays.ToString(((SparseByteArray)mem.GetConnectedCounts().GetSlice(i)).AsDense()));
+                Console.WriteLine("Slice " + Arrays.ToString(mem.GetConnectedCounts().Row(i).ToArray()));
                 Console.WriteLine("DensePerm" + Arrays.ToString(mem.GetPotentialPools().Get(i).GetDensePermanences(mem)));
                 Console.WriteLine("Input" + Arrays.ToString(inputVector));
-                Assert.IsTrue(Arrays.AreEqual(inputVector.Select(d=>(byte)d).ToArray(), (((SparseByteArray)mem.GetConnectedCounts().GetSlice(i)).AsDense())));
+                Assert.IsTrue(Arrays.AreEqual(inputVector, ((mem.GetConnectedCounts().Row(i).Select(d => (int)d)))));
             }
         }
 
@@ -189,8 +228,8 @@ namespace HTM.Net.Tests.Algorithms
             {
                 //     		System.out.Println(Arrays.ToString((int[])mem.GetConnectedCounts().GetSlice(i)));
                 //     		System.out.Println(Arrays.ToString(mem.GetPotentialPools().GetObject(i).GetDensePermanences(mem)));
-                byte[] permanences = ArrayUtils.ToByteArray(mem.GetPotentialPools().Get(i).GetDensePermanences(mem));
-                byte[] potential = ((SparseByteArray)mem.GetConnectedCounts().GetSlice(i)).AsDense().ToArray();
+                int[] permanences = ArrayUtils.ToIntArray(mem.GetPotentialPools().Get(i).GetDensePermanences(mem));
+                int[] potential = mem.GetConnectedCounts().Row(i).Select(d => (int)d).ToArray();
                 Assert.IsTrue(Arrays.AreEqual(permanences, potential));
             }
         }
@@ -1732,7 +1771,7 @@ namespace HTM.Net.Tests.Algorithms
             //    	syns.Set(3, new int[] { 1, 0, 1, 0, 0 });
             //    	syns.Set(4, new int[] { 0, 0, 0, 0, 0 });
 
-            mem.SetConnectedCounts(new int[] { 1, 3, 2, 2, 0 });
+            //mem.SetConnectedCounts(new int[] { 1, 3, 2, 2, 0 });
 
             double[][] truePermanences = new double[][]
             {
@@ -1823,18 +1862,20 @@ namespace HTM.Net.Tests.Algorithms
             InitSp();
 
             int[] dimensions = new int[] { 5, 10 };
-            int[][] connectedSynapses = new int[][] {
-          new int[]  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-          new int[]  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-          new int[]  {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-          new int[]  {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-          new int[]  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}};
-            AbstractSparseBinaryMatrix sm = new SparseBinaryMatrix(dimensions);
-            for (int i = 0; i < sm.GetDimensions()[0]; i++)
+            int[][] connectedSynapses = new int[][]
             {
-                for (int j = 0; j < sm.GetDimensions()[1]; j++)
+                new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new int[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new int[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new int[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new int[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+            };
+            SparseMatrix sm = new SparseMatrix(5, 10);
+            for (int i = 0; i < sm.RowCount; i++)
+            {
+                for (int j = 0; j < sm.ColumnCount; j++)
                 {
-                    sm.Set(connectedSynapses[i][j], i, j);
+                    sm.At(i, j, connectedSynapses[i][j]);
                 }
             }
 
@@ -1844,7 +1885,7 @@ namespace HTM.Net.Tests.Algorithms
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    Assert.AreEqual(connectedSynapses[i][j], sm.GetIntValue(i, j));
+                    Assert.AreEqual(connectedSynapses[i][j], (int)sm.At(i, j));
                 }
             }
 
@@ -1859,18 +1900,20 @@ namespace HTM.Net.Tests.Algorithms
             /////////////////
 
             dimensions = new int[] { 5, 10 };
-            connectedSynapses = new int[][] {
-          new int[]  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-          new int[]  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-          new int[]  {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-          new int[]  {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-          new int[]  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}};
-            sm = new SparseBinaryMatrix(dimensions);
-            for (int i = 0; i < sm.GetDimensions()[0]; i++)
+            connectedSynapses = new int[][]
             {
-                for (int j = 0; j < sm.GetDimensions()[1]; j++)
+                new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new int[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new int[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new int[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new int[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+            };
+            sm = new SparseMatrix(5, 10);
+            for (int i = 0; i < sm.RowCount; i++)
+            {
+                for (int j = 0; j < sm.ColumnCount; j++)
                 {
-                    sm.Set(connectedSynapses[i][j], i, j);
+                    sm.At(i, j, connectedSynapses[i][j]);
                 }
             }
 
@@ -1880,7 +1923,7 @@ namespace HTM.Net.Tests.Algorithms
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    Assert.AreEqual(connectedSynapses[i][j], sm.GetIntValue(i, j));
+                    Assert.AreEqual(connectedSynapses[i][j], (int)sm.At(i, j));
                 }
             }
 
@@ -1904,12 +1947,12 @@ namespace HTM.Net.Tests.Algorithms
           new int[]  {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
           new int[]  {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
           new int[]  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}};
-            sm = new SparseBinaryMatrix(dimensions);
-            for (int i = 0; i < sm.GetDimensions()[0]; i++)
+            sm = new SparseMatrix(5, 10);
+            for (int i = 0; i < sm.RowCount; i++)
             {
-                for (int j = 0; j < sm.GetDimensions()[1]; j++)
+                for (int j = 0; j < sm.ColumnCount; j++)
                 {
-                    sm.Set(connectedSynapses[i][j], i, j);
+                    sm.At(i, j,connectedSynapses[i][j]);
                 }
             }
 
@@ -1919,7 +1962,7 @@ namespace HTM.Net.Tests.Algorithms
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    Assert.AreEqual(connectedSynapses[i][j], sm.GetIntValue(i, j));
+                    Assert.AreEqual(connectedSynapses[i][j], (int)sm.At(i, j));
                 }
             }
 
@@ -1942,12 +1985,12 @@ namespace HTM.Net.Tests.Algorithms
           new int[]  {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
           new int[]  {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
           new int[]  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}};
-            sm = new SparseBinaryMatrix(dimensions);
-            for (int i = 0; i < sm.GetDimensions()[0]; i++)
+            sm = new SparseMatrix(5, 10);
+            for (int i = 0; i < sm.RowCount; i++)
             {
-                for (int j = 0; j < sm.GetDimensions()[1]; j++)
+                for (int j = 0; j < sm.ColumnCount; j++)
                 {
-                    sm.Set(connectedSynapses[i][j], i, j);
+                    sm.At(i, j,connectedSynapses[i][j]);
                 }
             }
 
@@ -1957,7 +2000,7 @@ namespace HTM.Net.Tests.Algorithms
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    Assert.AreEqual(connectedSynapses[i][j], sm.GetIntValue(i, j));
+                    Assert.AreEqual(connectedSynapses[i][j], (int)sm.At(i, j));
                 }
             }
 
@@ -1978,12 +2021,12 @@ namespace HTM.Net.Tests.Algorithms
           new int[]  {0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
           new int[]  {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
           new int[]  {0, 0, 0, 0, 1, 0, 0, 0, 0, 1}};
-            sm = new SparseBinaryMatrix(dimensions);
-            for (int i = 0; i < sm.GetDimensions()[0]; i++)
+            sm = new SparseMatrix(5, 10);
+            for (int i = 0; i < sm.RowCount; i++)
             {
-                for (int j = 0; j < sm.GetDimensions()[1]; j++)
+                for (int j = 0; j < sm.ColumnCount; j++)
                 {
-                    sm.Set(connectedSynapses[i][j], i, j);
+                    sm.At(i, j,connectedSynapses[i][j]);
                 }
             }
 
@@ -1993,7 +2036,7 @@ namespace HTM.Net.Tests.Algorithms
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    Assert.AreEqual(connectedSynapses[i][j], sm.GetIntValue(i, j));
+                    Assert.AreEqual(connectedSynapses[i][j], (int)sm.At(i, j));
                 }
             }
 

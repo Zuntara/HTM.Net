@@ -14,7 +14,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(65, p.Size());
+            Assert.AreEqual(66, p.Size());
         }
 
         [TestMethod]

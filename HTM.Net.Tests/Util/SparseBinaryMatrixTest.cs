@@ -1,6 +1,8 @@
 ﻿using System;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Tests.Util
@@ -380,12 +382,12 @@ namespace HTM.Net.Tests.Util
         [TestMethod]
         public void TestCalculateOverlap()
         {
-            DoTestCalculateOverlap(new SparseBinaryMatrix(this.dimensions));
+            DoTestCalculateOverlap(new SparseMatrix(this.dimensions[0], dimensions[1]));
             //doTestCalculateOverlap(new LowMemorySparseBinaryMatrix(this.dimensions));
             //doTestCalculateOverlap(new FastConnectionsMatrix(this.dimensions));
         }
 
-        private void DoTestCalculateOverlap(AbstractSparseBinaryMatrix sm)
+        private void DoTestCalculateOverlap(SparseMatrix sm)
         {
             SetupParameters();
             parameters.SetInputDimensions(new int[] { 10 });
@@ -406,11 +408,11 @@ namespace HTM.Net.Tests.Util
                 new[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
             };
 
-            for (int i = 0; i < sm.GetDimensions()[0]; i++)
+            for (int i = 0; i < sm.RowCount; i++)
             {
-                for (int j = 0; j < sm.GetDimensions()[1]; j++)
+                for (int j = 0; j < sm.ColumnCount; j++)
                 {
-                    sm.Set(connectedSynapses[i][j], i, j);
+                    sm.At(i, j, connectedSynapses[i][j]);
                 }
             }
 
@@ -420,7 +422,7 @@ namespace HTM.Net.Tests.Util
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    Assert.AreEqual(connectedSynapses[i][j], sm.GetIntValue(i, j));
+                    Assert.AreEqual(connectedSynapses[i][j], (int)sm.At(i, j));
                 }
             }
 
@@ -466,6 +468,62 @@ namespace HTM.Net.Tests.Util
             mem = new Connections();
             parameters.Apply(mem);
             sp.Init(mem);
+        }
+    }
+
+    [TestClass]
+    public class SparseMatrixTestLib
+    {
+        [TestMethod]
+        public void TestUtilSparseMatrix_Vecsum()
+        {
+            SparseBinaryMatrix matrix1 = new SparseBinaryMatrix(new[] {1024, 1024});
+            // fill half the matrix
+            for (int i = 0; i < 1024; i++)
+            {
+                for (int j = 0; j < 512; j+=2)
+                {
+                    matrix1.Set(1, i, j);
+                }
+            }
+
+            int[] inputVec = new int[1024]; // all zero
+            int[] results = new int[1024];
+            matrix1.RightVecSumAtNZ(inputVec,results,0);
+
+            inputVec = new int[1024]; // some zero
+            for (int j = 0; j < 512; j+=2)
+            {
+                inputVec[j] = 1;
+            }
+            results = new int[1024];
+            matrix1.RightVecSumAtNZ(inputVec, results,0);
+        }
+
+        [TestMethod]
+        public void TestMathNetSparseMatrix_Vecsum()
+        {
+            Matrix<double> matrix1 = new SparseMatrix(1024, 1024);
+            // fill half the matrix
+            for (int i = 0; i < 1024; i++)
+            {
+                for (int j = 0; j < 512; j += 2)
+                {
+                    matrix1.At(i, j, 1);
+                }
+            }
+
+            SparseVector inputVec = new SparseVector(1024); // all zero
+            Vector<double> results = new SparseVector(1024);
+            matrix1.Multiply(inputVec, results);
+
+            inputVec = new SparseVector(1024); // some zero
+            for (int j = 0; j < 512; j += 2)
+            {
+                inputVec[j] = 1;
+            }
+            results = new SparseVector(1024);
+            matrix1.Multiply(inputVec, results);
         }
     }
 }

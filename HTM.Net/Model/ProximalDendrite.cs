@@ -1,4 +1,9 @@
 using System.Collections.Generic;
+using System.Net.Mail;
+using System.Threading.Tasks;
+using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace HTM.Net.Model
 {
@@ -78,24 +83,34 @@ namespace HTM.Net.Model
         public void SetPermanences(Connections c, double[] perms)
         {
             _pool.ResetConnections();
+            // Lock connections for the matrix, it's not thread safe
             c.GetConnectedCounts().ClearStatistics(index);
             List<Synapse> synapses = c.GetSynapses(this);
 
-            foreach(Synapse s in synapses)
-            //Parallel.ForEach(synapses, s =>
+            double synPermConnected = c.GetSynPermConnected();
+
+            double[] row = new double[perms.Length];
+            Parallel.ForEach(synapses, s =>
+            //foreach (Synapse s in synapses)
             {
                 int inputIndex = s.GetInputIndex();
                 s.SetPermanence(c, perms[inputIndex]);
-                if (perms[inputIndex] >= c.GetSynPermConnected())
+                if (perms[inputIndex] >= synPermConnected)
                 {
-                    c.GetConnectedCounts().Set(1, index, inputIndex);
+                    row[inputIndex] = 1;
+                    //c.GetConnectedCounts().At(index, inputIndex, 1.0);
                 }
                 else
                 {
-                    c.GetConnectedCounts().Set(0, index, inputIndex);
+                    row[inputIndex] = 0;
+                    //c.GetConnectedCounts().At(index, inputIndex, 0.0);
                 }
             }
-            //);
+            );
+
+            // Lock connections for the matrix, it's not thread safe
+            c.GetConnectedCounts().SetRow(index, row);
+
         }
 
         /**
@@ -120,11 +135,11 @@ namespace HTM.Net.Model
                 _pool.SetPermanence(c, _pool.GetSynapseWithInput(inputIndexes[i]), perms[i]);
                 if (perms[i] >= c.GetSynPermConnected())
                 {
-                    c.GetConnectedCounts().Set(1, index, i);
+                    c.GetConnectedCounts().At(index, i, 1);
                 }
                 else
                 {
-                    c.GetConnectedCounts().Set(0, index, i);
+                    c.GetConnectedCounts().At(index, i, 0);
                 }
             }
         }

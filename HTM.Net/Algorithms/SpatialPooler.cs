@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HTM.Net.Model;
 using HTM.Net.Util;
+using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
+using MathNet.Numerics.Providers.LinearAlgebra.Mkl;
 
 namespace HTM.Net.Algorithms
 {
@@ -45,7 +51,17 @@ namespace HTM.Net.Algorithms
         /// <param name="c"></param>
         public void InitMatrices(Connections c)
         {
-            if (c == null) throw new ArgumentNullException("c");
+            bool runInParallel = c.IsSpatialInParallelMode();
+            if (runInParallel)
+            {
+                Control.UseMultiThreading();
+            }
+            else
+            {
+                Control.TryUseNativeMKL();
+            }
+
+            if (c == null) throw new ArgumentNullException(nameof(c));
             SparseObjectMatrix<Column> mem = c.GetMemory() ?? new SparseObjectMatrix<Column>(c.GetColumnDimensions());
             c.SetMemory(mem);
 
@@ -65,7 +81,14 @@ namespace HTM.Net.Algorithms
 
             c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
 
-            c.SetConnectedMatrix(new SparseBinaryMatrix(new int[] { numColumns, numInputs }));
+            if (runInParallel)
+            {
+                c.SetConnectedMatrix(new DenseMatrix(numColumns, numInputs));
+            }
+            else
+            {
+                c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
+            }
 
             double[] tieBreaker = new double[numColumns];
             for (int i = 0; i < numColumns; i++)
@@ -98,15 +121,45 @@ namespace HTM.Net.Algorithms
             // Initialize the set of permanence values for each column. Ensure that
             // each column is connected to enough input bits to allow it to be
             // activated.
+            bool runInParallel = c.IsSpatialInParallelMode();
+
             int numColumns = c.GetNumColumns();
 
-            for (int i = 0; i < numColumns; i++)
+            Action<int> columnInit = i =>
             {
                 int[] potential = MapPotential(c, i, true);
                 Column column = c.GetColumn(i);
                 c.GetPotentialPools().Set(i, column.CreatePotentialPool(c, potential));
                 double[] perm = InitPermanence(c, potential, i, c.GetInitConnectedPct());
                 UpdatePermanencesForColumn(c, perm, column, potential, true);
+            };
+
+            if (!runInParallel)
+            {
+                for (int i = 0; i < numColumns; i++)
+                {
+                    columnInit(i);
+                }
+            }
+            else
+            {
+                // Initialize in parallel (random deterministic is lost here)
+                Parallel.For(0, numColumns, columnInit);
+
+                //Matrix<double> matrix = c.GetConnectedCounts();
+                //SparseMatrix sparse = new SparseMatrix(matrix.RowCount, matrix.ColumnCount);
+                //ConcurrentDictionary<int, Vector<double>> map = new ConcurrentDictionary<int, Vector<double>>();
+                //// Convert the dense matrix to a sparse one
+                //Parallel.For(0, numColumns, i =>
+                //{
+                //    // Take a row from the dense matrix and convert it to a sparse one
+                //    map.TryAdd(i, SparseVector.OfVector(matrix.Row(i)));
+                //});
+                //foreach (var pair in map)
+                //{
+                //    sparse.SetRow(pair.Key,pair.Value);
+                //}
+                //c.SetConnectedMatrix(sparse);
             }
 
             UpdateInhibitionRadius(c);
@@ -352,7 +405,7 @@ namespace HTM.Net.Algorithms
             int[] minCoord = new int[c.GetInputDimensions().Length];
             Arrays.Fill(maxCoord, -1);
             Arrays.Fill(minCoord, ArrayUtils.Max(dimensions));
-            ISparseMatrix inputMatrix = c.GetInputMatrix();
+            var inputMatrix = c.GetInputMatrix();
             for (int i = 0; i < connected.Length; i++)
             {
                 maxCoord = ArrayUtils.MaxBetween(maxCoord, inputMatrix.ComputeCoordinates(connected[i]));
@@ -884,7 +937,8 @@ namespace HTM.Net.Algorithms
          */
         public double[] CalculateOverlapPct(Connections c, int[] overlaps)
         {
-            return ArrayUtils.Divide(overlaps, c.GetConnectedCounts().GetTrueCounts());
+            int[] trueCounts = c.GetConnectedCounts().RowSums().ToArray().Select(i => (int)i).ToArray(); // c.GetConnectedCounts().GetTrueCounts()
+            return ArrayUtils.Divide(overlaps, trueCounts);
         }
 
         /**

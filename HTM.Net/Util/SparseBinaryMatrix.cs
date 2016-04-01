@@ -1,4 +1,9 @@
-﻿namespace HTM.Net.Util
+﻿using System;
+using System.Linq;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
+
+namespace HTM.Net.Util
 {
     /// <summary>
     /// Implementation of a sparse matrix which contains binary byte values only.
@@ -267,6 +272,33 @@
             dimensionMultiples = InitDimensionMultiples(
                     isColumnMajor ? Reverse(_dimensions) : _dimensions);
             return added;
+        }
+    }
+
+    public static class MatrixDoubleExtentions
+    {
+        public static void RightVecSumAtNZ(this Matrix<double> matrix, int[] inputVector, int[] results, double stimulusThreshold = 0)
+        {
+            Vector<double> inputVec = DenseVector.OfEnumerable(inputVector.Select(i => (double) i));
+            
+            Vector<double> vecResult = matrix.Multiply(inputVec);
+            int[] tempResults = vecResult.Select(v => (int) v).ToArray();
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                results[i] = tempResults[i] < stimulusThreshold ? 0 : tempResults[i];
+            }
+        }
+
+        public static void ClearStatistics(this Matrix<double> matrix, int row)
+        {
+            matrix.ClearRow(row);
+        }
+
+        public static int[] GetTrueCounts(this Matrix<double> matrix)
+        {
+            var rowSums = matrix.RowSums().Select(d => (int) d);
+            return rowSums.ToArray();
         }
     }
 }

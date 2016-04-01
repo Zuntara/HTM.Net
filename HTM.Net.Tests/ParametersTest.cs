@@ -18,9 +18,11 @@ namespace HTM.Net.Tests
             @params.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new[] { 2048 });
             @params.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 20.0);
             @params.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, null);
+            @params.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
             @params.Apply(dc);
             Assert.AreEqual(20.0, dc.PotentialPct, 0, "Setter did not work");
             Assert.IsTrue(Arrays.AreEqual(new[] { 2048 }, dc.GetColumnDimensions()), "Setter did not work");
+            Assert.IsTrue(dc.SpParallelMode, "dc.SpParallelMode");
         }
 
         [TestMethod]
@@ -59,6 +61,8 @@ namespace HTM.Net.Tests
         public class DummyContainer : DummyContainerBase
         {
             public double PotentialPct { get; set; } = 0;
+
+            public bool SpParallelMode { get; set; }
         }
 
         [TestMethod]
@@ -178,7 +182,7 @@ namespace HTM.Net.Tests
         public void TestSize()
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
-            Assert.AreEqual(65, @params.Size());
+            Assert.AreEqual(66, @params.Size());
         }
 
         [TestMethod]
@@ -186,7 +190,7 @@ namespace HTM.Net.Tests
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
             Assert.IsNotNull(@params.Keys());
-            Assert.AreEqual(65, @params.Keys().Count);
+            Assert.AreEqual(66, @params.Keys().Count);
         }
 
         [TestMethod]

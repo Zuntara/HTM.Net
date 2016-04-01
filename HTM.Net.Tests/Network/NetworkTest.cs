@@ -253,6 +253,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -331,7 +332,8 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, false);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -354,7 +356,7 @@ namespace HTM.Net.Tests.Network
             int r1Hits = 0, r2Hits = 0;
             network.Observe().Subscribe(output =>
             {
-                Debug.WriteLine("Hit network observe() subscription");
+                //Debug.WriteLine("Hit network observe() subscription");
                 _netInference = (ManualInput)output;
                 if (r1.GetHead().GetInference().GetPredictiveCells().Count > 0 &&
                     r2.GetHead().GetInference().GetPredictiveCells().Count > 0)
@@ -366,48 +368,17 @@ namespace HTM.Net.Tests.Network
 
             r1.Observe().Subscribe(output =>
             {
-                Debug.WriteLine("Hit region1 observe() subscription");
+                //Debug.WriteLine("Hit region1 observe() subscription");
                 _topInference = (ManualInput)output;
                 r1Hits++;
             }, Console.WriteLine, () => { });
 
             r2.Observe().Subscribe(output =>
             {
-                Debug.WriteLine("Hit region2 observe() subscription");
+                //Debug.WriteLine("Hit region2 observe() subscription");
                 _bottomInference = (ManualInput)output;
                 r2Hits++;
             }, Console.WriteLine, () => { });
-
-            //network.Observe().Subscribe(new Subscriber<Inference>() {
-            //        @Override public void onCompleted() { }
-            //        @Override public void onError(Throwable e) { Console.WriteLine(e); }
-            //        @Override public void onNext(Inference i)
-            //        {
-            //            netInference = (ManualInput)i;
-            //            if (r1.GetHead().GetInference().GetPredictiveCells().Count > 0 &&
-            //                r2.GetHead().GetInference().GetPredictiveCells().Count > 0)
-            //            {
-            //                network.halt();
-            //            }
-            //        }
-            //    });
-
-            //r1.Observe().Subscribe(new Subscriber<Inference>() {
-            //    @Override public void onCompleted() { }
-            //    @Override public void onError(Throwable e) { Console.WriteLine(e); }
-            //    @Override public void onNext(Inference i)
-            //    {
-            //        topInference = (ManualInput)i;
-            //    }
-            //});
-            //r2.Observe().Subscribe(new Subscriber<Inference>() {
-            //    @Override public void onCompleted() { }
-            //    @Override public void onError(Throwable e) { Console.WriteLine(e); }
-            //    @Override public void onNext(Inference i)
-            //    {
-            //        bottomInference = (ManualInput)i;
-            //    }
-            //});
 
             network.Start();
 
@@ -415,6 +386,9 @@ namespace HTM.Net.Tests.Network
             try
             {
                 r2.Lookup("1").GetLayerThread().Wait();//5000);
+
+                Assert.IsTrue(r1Hits>0);
+                Assert.AreEqual(r1Hits, r2Hits);
 
                 Console.WriteLine("Hits R1 = {0}, R2 = {1}", r1Hits, r2Hits);
                 //Console.WriteLine("top ff = " + Arrays.ToString(_topInference.GetFeedForwardSparseActives()));

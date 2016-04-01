@@ -42,6 +42,7 @@ namespace HTM.Net.Research.Tests.Vision
             p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(1956)); // The seed that Grok uses
             p.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 1);
+            p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
 
             Connections cn = new Connections();
             p.Apply(cn);

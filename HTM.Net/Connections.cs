@@ -4,6 +4,8 @@ using System.Threading;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace HTM.Net
 {
@@ -70,7 +72,7 @@ namespace HTM.Net
          * information is readily available from 'connectedSynapses', it is
          * stored separately for efficiency purposes.
          */
-        private AbstractSparseBinaryMatrix connectedCounts;
+        private Matrix<double> connectedCounts;
         /**
          * The inhibition radius determines the size of a column's local
          * neighborhood. of a column. A cortical column must overcome the overlap
@@ -162,6 +164,14 @@ namespace HTM.Net
         protected int seed = 42;
         /** The random number generator */
         protected IRandom random = new MersenneTwister(42);
+        /// <summary>
+        /// If true this will initialize and run the spatial pooler multithreaded, this will 
+        /// make the network less deterministic because the random generator will return different values on different places,
+        /// even when a seed is used. (can be a problem for unit tests)
+        /// </summary>
+        protected bool spParallelMode = false;
+
+        public object SyncRoot = new object();
 
         ///////// paCLA extensions
 
@@ -604,7 +614,7 @@ namespace HTM.Net
          * Returns the indexed count of connected synapses per column.
          * @return
          */
-        public AbstractSparseBinaryMatrix GetConnectedCounts()
+        public Matrix<double> GetConnectedCounts()
         {
             return connectedCounts;
         }
@@ -616,27 +626,29 @@ namespace HTM.Net
          */
         public int GetConnectedCount(int columnIndex)
         {
-            return connectedCounts.GetTrueCount(columnIndex);
+            return (int)connectedCounts.Row(columnIndex).Sum();
+            //return connectedCounts.GetTrueCount(columnIndex);
         }
 
-        /**
-         * Sets the indexed count of synapses connected at the columns in each index.
-         * @param counts
-         */
-        public void SetConnectedCounts(int[] counts)
-        {
-            for (int i = 0; i < counts.Length; i++)
-            {
-                connectedCounts.SetTrueCount(i, counts[i]);
-            }
-        }
+        ///**
+        // * Sets the indexed count of synapses connected at the columns in each index.
+        // * @param counts
+        // */
+        //public void SetConnectedCounts(int[] counts)
+        //{
+        //    for (int i = 0; i < counts.Length; i++)
+        //    {
+        //        //connectedCounts.SetTrueCount(i, counts[i]);
+        //        throw new InvalidOperationException();
+        //    }
+        //}
 
         /**
          * Sets the connected count {@link AbstractSparseBinaryMatrix}
          * @param columnIndex
          * @param count
          */
-        public void SetConnectedMatrix(AbstractSparseBinaryMatrix matrix)
+        public void SetConnectedMatrix(Matrix<double> matrix)
         {
             this.connectedCounts = matrix;
         }
@@ -1199,6 +1211,15 @@ namespace HTM.Net
             Console.WriteLine("connectedPermanence        = " + GetConnectedPermanence());
             Console.WriteLine("permanenceIncrement        = " + GetPermanenceIncrement());
             Console.WriteLine("permanenceDecrement        = " + GetPermanenceDecrement());
+        }
+        /// <summary>
+        /// If true this will initialize and run the spatial pooler multithreaded, this will 
+        /// make the network less deterministic because the random generator will return different values on different places,
+        /// even when a seed is used. (can be a problem for unit tests)
+        /// </summary>
+        public bool IsSpatialInParallelMode()
+        {
+            return spParallelMode;
         }
 
         /////////////////////////////// Temporal Memory //////////////////////////////
