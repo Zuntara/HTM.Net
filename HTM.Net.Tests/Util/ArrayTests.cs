@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -180,6 +181,42 @@ namespace HTM.Net.Tests.Util
             Debug.WriteLine("Speed: " + watch.ElapsedMilliseconds);
 
             Assert.IsTrue(myArray.All(i => i == 1));
+        }
+
+        [TestMethod]
+        public void TestArrayToString_Normal()
+        {
+            int[] values = new[] {1, 2, 3};
+            string s = Arrays.ToString(values);
+            Assert.AreEqual("[1, 2, 3]", s);
+
+            List<int> ints = new List<int> {1,2,3};
+            s = Arrays.ToString(ints);
+            Assert.AreEqual("[1, 2, 3]", s);
+
+            List<object>  objs = new List<object> { 1, 2, 3 };
+            s = Arrays.ToString(ints);
+            Assert.AreEqual("[1, 2, 3]", s);
+
+            List<object> strings = new List<object> { "myString", 2.1, 3 };
+            s = Arrays.ToString(strings);
+            Assert.AreEqual("[myString, 2,1, 3]", s);
+        }
+
+        [TestMethod]
+        public void TestArrayToString_Nested()
+        {
+            List<int[]> ints = new List<int[]> { new [] {1,2}, new[] { 3, 4 }, new[] { 5, 6 } };
+            string s = Arrays.ToString(ints);
+            Assert.AreEqual("[[1, 2], [3, 4], [5, 6]]", s);
+        }
+
+        [TestMethod]
+        public void TestArrayToString_Combined()
+        {
+            List<object> objs = new List<object> { new[] { 1, 2 }, new List<int>{ 3, 4 }, new List<object> { 5, 6.1 } };
+            string s = Arrays.ToString(objs);
+            Assert.AreEqual("[[1, 2], [3, 4], [5, 6,1]]", s);
         }
     }
 }

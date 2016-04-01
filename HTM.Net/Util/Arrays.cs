@@ -87,7 +87,7 @@ namespace HTM.Net.Util
             sb.Append("[");
             foreach (var item in v)
             {
-                if (item is IEnumerable)
+                if (item is IEnumerable && !(item is string))
                 {
                     sb.AppendFormat("{0}, ", ToString(item as IEnumerable));
                 }
@@ -107,7 +107,7 @@ namespace HTM.Net.Util
             sb.Append("[");
             foreach (var item in v)
             {
-                if (item is IEnumerable)
+                if (item is IEnumerable && !(item is string))
                 {
                     sb.AppendFormat("{0}, ", ToString(item as IEnumerable));
                 }
