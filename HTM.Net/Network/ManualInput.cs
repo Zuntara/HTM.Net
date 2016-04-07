@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Model;
@@ -33,7 +34,7 @@ namespace HTM.Net.Network
         /// <summary>
         /// Tuple = { Name, inputValue, bucketIndex, encoding }
         /// </summary>
-        private Map<string, NamedTuple> _classifierInput;
+        private Map<string, object> _classifierInput;
         /// <summary>
         /// Holds one classifier for each field
         /// </summary>
@@ -61,6 +62,11 @@ namespace HTM.Net.Network
         /// Active <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t"
         /// </summary>
         private HashSet<Cell> _activeCells;
+
+        // KNN fields
+        private List<double> _categories;
+        private List<double> _probabilities;
+        private List<int> _bestPrototypeIndices;
 
         private Map<string, ClassifierResult<object>> _classification;
         private double _anomalyScore;
@@ -110,9 +116,9 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="classifierInput"></param>
         /// <returns></returns>
-        public ManualInput SetClassifierInput(Map<string, NamedTuple> classifierInput)
+        public ManualInput SetClassifierInput(Map<string, object> classifierInput)
         {
-            this._classifierInput = classifierInput;
+            _classifierInput = classifierInput;
             return this;
         }
 
@@ -172,11 +178,11 @@ namespace HTM.Net.Network
         /// </ul>
         /// </summary>
         /// <returns>the current classifier input</returns>
-        public Map<string, NamedTuple> GetClassifierInput()
+        public Map<string, object> GetClassifierInput()
         {
             if (_classifierInput == null)
             {
-                _classifierInput = new Map<string, NamedTuple>();
+                _classifierInput = new Map<string, object>();
             }
             return _classifierInput;
         }
@@ -272,7 +278,7 @@ namespace HTM.Net.Network
         internal ManualInput Copy()
         {
             ManualInput retVal = new ManualInput();
-            retVal._classifierInput = new Map<string, NamedTuple>(this._classifierInput);
+            retVal._classifierInput = new Map<string, object>(this._classifierInput);
             retVal._classifiers = new NamedTuple(this._classifiers.GetKeys(), this._classifiers.Values().ToArray());
             retVal._layerInput = this._layerInput;
             retVal._sdr = Arrays.CopyOf(this._sdr, this._sdr.Length);
@@ -285,7 +291,9 @@ namespace HTM.Net.Network
             retVal._anomalyScore = this._anomalyScore;
             retVal._customObject = this._customObject;
             retVal._activeCells = new HashSet<Cell>(this._activeCells);
-
+            if (_categories != null) retVal._categories = new List<double>(_categories);
+            if (_bestPrototypeIndices != null) retVal._bestPrototypeIndices = new List<int>(_bestPrototypeIndices);
+            if (_probabilities != null) retVal._probabilities = new List<double>(_probabilities);
             return retVal;
         }
 
@@ -300,14 +308,12 @@ namespace HTM.Net.Network
             return _classification[fieldName];
         }
 
-        /**
-         * Sets the specified field's last classifier computation and returns
-         * this <see cref="IInference"/>
-         * 
-         * @param fieldName
-         * @param classification
-         * @return
-         */
+        /// <summary>
+        /// Sets the specified field's last classifier computation and returns this <see cref="IInference"/>
+        /// </summary>
+        /// <param name="fieldName"></param>
+        /// <param name="classification"></param>
+        /// <returns></returns>
         public ManualInput StoreClassification(string fieldName, ClassifierResult<object> classification)
         {
             if (this._classification == null)
@@ -440,6 +446,48 @@ namespace HTM.Net.Network
             SetPreviousPredictiveCells(_predictiveCells);
             _predictiveCells = cells;
             return this;
+        }
+
+        /// <summary>
+        /// Returns the KNN categories output
+        /// A vector representing, for each category index, the likelihood that the input to the node belongs
+        /// to that category based on the number of neighbors of that category that are among the nearest K.
+        /// </summary>
+        /// <returns></returns>
+        public List<double> GetCategories()
+        {
+            if (_categories == null)
+                _categories = new List<double>();
+            return _categories;
+        }
+
+        public int GetInferredCategory()
+        {
+            return ArrayUtils.Argmax(_categories);
+        }
+
+        /// <summary>
+        /// A vector representing, for each category index, the probability that the input to the node belongs
+        /// to that category based on the distance to the nearest neighbor of each category.
+        /// </summary>
+        /// <returns></returns>
+        public List<double> GetCategoryProbabilities()
+        {
+            if (_probabilities == null)
+                _probabilities = new List<double>();
+            return _probabilities;
+        }
+
+        /// <summary>
+        /// A vector that lists, in descending order of the match, the positions of the prototypes
+        /// that best match the input pattern.
+        /// </summary>
+        /// <returns></returns>
+        public List<int> GetBestPrototypeIndices()
+        {
+            if (_bestPrototypeIndices == null)
+                _bestPrototypeIndices = new List<int>();
+            return _bestPrototypeIndices;
         }
     }
 }

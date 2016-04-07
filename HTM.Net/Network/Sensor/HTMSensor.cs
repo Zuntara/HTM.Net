@@ -9,7 +9,7 @@ namespace HTM.Net.Network.Sensor
 {
     public interface IHTMSensor : ISensor
     {
-        IStream<int[]> GetOutputStream();
+        IBaseStream GetOutputStream();
 
         IDictionary<string, object> GetInputMap();
 
@@ -46,7 +46,7 @@ namespace HTM.Net.Network.Sensor
         private Header header;
         private Parameters localParameters;
         private MultiEncoder encoder;
-        private IStream<int[]> outputStream;
+        private IBaseStream outputStream;
         private List<int[]> output;
         private InputMap inputMap;
 
@@ -201,174 +201,6 @@ namespace HTM.Net.Network.Sensor
         }
 
         /**
-         * Customized Iterator which allows "forking" of a Stream
-         * into multiple fanouts.
-         */
-        //private class Copy : IEnumerator<int[]>, ILocalEnumerator
-        //{
-        //    private readonly HTMSensor<T> _parentSensor;
-        //    private readonly LinkedList<int[]> list;
-
-        //    public Copy(HTMSensor<T> parentSensor, LinkedList<int[]> l)
-        //    {
-        //        _parentSensor = parentSensor;
-        //        this.list = l;
-        //    }
-
-        //    //public bool hasNext() { return !list.isEmpty() || mainIterator.hasNext(); }
-        //    //public int[] next()
-        //    //{
-        //    //    if (list.isEmpty())
-        //    //    {
-        //    //        // We want to make sure only one thread calls next at a time
-        //    //        criticalAccessLock.lock ();
-        //    //        int[] next = mainIterator.next();
-        //    //        foreach (List<int[]> l in fanOuts) { l.add(next); }
-        //    //        criticalAccessLock.unlock();
-        //    //    }
-        //    //    return list.remove(0);
-        //    //}
-
-        //    public void Dispose()
-        //    {
-        //        list.Clear();
-        //    }
-
-        //    public bool MoveNext()
-        //    {
-        //        Debug.WriteLine("Moving next in copy");
-        //        if (!list.Any())
-        //        {
-        //            // We want to make sure only one thread calls next at a time
-        //            lock (_parentSensor._criticalAccessLock)
-        //            {
-        //                bool moved = _parentSensor.mainIterator.MoveNext();
-        //                if (!moved) return false;
-        //                int[] next = (int[])_parentSensor.mainIterator.Current;
-        //                foreach (var l in _parentSensor.fanOuts)
-        //                {
-        //                    l.AddLast(next);
-        //                    Current = next;
-        //                }
-        //            }
-        //        }
-        //        list.RemoveFirst();
-        //        return true;
-        //    }
-
-        //    public void Reset()
-        //    {
-        //        lock (_parentSensor._criticalAccessLock)
-        //        {
-        //        Debug.WriteLine("Resetting the main iterator of output stream");
-        //            _parentSensor.mainIterator.Reset();
-        //        }
-        //    }
-
-        //    public int[] Current { get; internal set; }
-
-        //    object IEnumerator.Current
-        //    {
-        //        get { return Current; }
-        //    }
-
-        //    #region Implementation of ILocalEnumerator
-
-        //    public int GetIndex()
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    public void SetIndex(int index)
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    public bool HasNext()
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    public void SetOffset(int offset)
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    public int GetOffset()
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    public void MakeTerminal()
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    public bool IsTerminal()
-        //    {
-        //        throw new NotImplementedException();
-        //    }
-
-        //    #endregion
-        //}
-
-        //private class ObjectStreamCopier : IEnumerator<int[]>
-        //{
-        //    private readonly HTMSensor<T> _parentSensor;
-        //    private readonly LinkedList<int[]> _list;
-
-        //    public ObjectStreamCopier(HTMSensor<T> parentSensor, LinkedList<int[]> l)
-        //    {
-        //        _parentSensor = parentSensor;
-        //        this._list = l;
-        //    }
-
-        //    public void Dispose()
-        //    {
-        //        _list.Clear();
-        //    }
-
-        //    public bool MoveNext()
-        //    {
-        //        Debug.WriteLine("Moving next in copy");
-        //        if (!_list.Any())
-        //        {
-        //            // We want to make sure only one thread calls next at a time
-        //            lock (_parentSensor._criticalAccessLock)
-        //            {
-        //                bool moved = _parentSensor.mainIterator.MoveNext();
-        //                if (!moved) return false;
-        //                int[] next = (int[])_parentSensor.mainIterator.Current;
-        //                // Add item to all the fanouts
-        //                foreach (var fanOutList in _parentSensor.fanOuts)
-        //                {
-        //                    fanOutList.AddLast(next);
-        //                    Current = next;
-        //                }
-        //            }
-        //        }
-        //        //_list.RemoveFirst();
-        //        return true;
-        //    }
-
-        //    public void Reset()
-        //    {
-        //        lock (_parentSensor._criticalAccessLock)
-        //        {
-        //            Debug.WriteLine("Resetting the main iterator of output stream");
-        //            _parentSensor.mainIterator.Reset();
-        //        }
-        //    }
-
-        //    public int[] Current { get; internal set; }
-
-        //    object IEnumerator.Current
-        //    {
-        //        get { return Current; }
-        //    }
-        //}
-
-        /**
          * Specialized {@link Map} for the avoidance of key hashing. This
          * optimization overrides {@link Map#get(Object)directly accesses the input arrays providing input
          * and should be extremely faster.
@@ -468,14 +300,14 @@ namespace HTM.Net.Network.Sensor
         /// Returns the encoded output stream of the underlying <see cref="IStream{T}"/>'s encoder.
         /// </summary>
         /// <returns>the encoded output stream.</returns>
-        public IStream<int[]> GetOutputStream()
+        public IBaseStream GetOutputStream()
         {
             if (IsTerminal())
             {
                 throw new InvalidOperationException("Stream is already \"terminal\" (operated upon or empty)");
             }
 
-            MultiEncoder encoder = (MultiEncoder)GetEncoder();
+            MultiEncoder encoder = GetEncoder();
             if (encoder == null)
             {
                 throw new InvalidOperationException("setLocalParameters(Parameters) must be called before calling this method.");
@@ -483,7 +315,7 @@ namespace HTM.Net.Network.Sensor
 
             // Protect outputStream formation and creation of "fan out" also make sure
             // that no other thread is trying to update the fan out lists
-            IStream<int[]> retVal = null;
+            IBaseStream retVal = null;
             try
             {
                 System.Threading.Monitor.Enter(_criticalAccessLock);
@@ -517,27 +349,27 @@ namespace HTM.Net.Network.Sensor
                     output = new List<int[]>();
 
                     IMetaStream inputStream = @delegate.GetInputStream();
-                    IStream<int[]> mappedInputStream = ((IMetaStream<string[]>)inputStream).Map(i =>
+                    IBaseStream mappedInputStream;
+                    if (inputStream.NeedsStringMapping())
                     {
-                        //Debug.WriteLine(">> Calling HTM Sensor mapping");
-                        string[] arr = i;
-                        inputMap.arr = arr;
-                        return Input(arr, fieldNames, fieldTypes, output, isParallel);
-                    });
-
-                    outputStream = mappedInputStream;
-
-                    //mainIterator = outputStream.GetEnumerator();
+                        mappedInputStream = inputStream.Map(i =>
+                        {
+                            //Debug.WriteLine(">> Calling HTM Sensor mapping");
+                            string[] arr = i;
+                            inputMap.arr = arr;
+                            return Input(arr, fieldNames, fieldTypes, output, isParallel);
+                        });
+                        outputStream = mappedInputStream;
+                    }
+                    else
+                    {
+                        // TODO: use explorers and filters to map the image
+                        mappedInputStream = inputStream.DoStreamMapping();
+                        outputStream = mappedInputStream;
+                    }
                 }
 
-                //LinkedList<int[]> l = new LinkedList<int[]>();
-                //fanOuts.Add(l);
-
-                //ObjectStreamCopier copy = new ObjectStreamCopier(this, l);
-                //Copy copy = new Copy(this, l);
-                //copy.Reset();
-                //retVal = new Stream<int[]>(l, copy, outputStream.GetStreamState());
-                retVal = outputStream.Copy();
+                retVal = outputStream.CopyUntyped();
             }
             catch (Exception e)
             {

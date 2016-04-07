@@ -33,7 +33,7 @@ namespace HTM.Net.Research.Vision
             List<string> tags = new List<string>();
             foreach (var o in imageList)
             {
-                var image = (Bitmap)Image.FromFile(Path.Combine(path, o.image));
+                var image = (Bitmap)System.Drawing.Image.FromFile(Path.Combine(path, o.image));
 
                 images.Add(image);
                 tags.Add(o.tag);

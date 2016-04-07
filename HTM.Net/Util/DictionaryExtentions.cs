@@ -283,8 +283,8 @@ namespace HTM.Net.Util
 
         }
 
-        public Map(IDictionary<TKey, TValue> classifierInput)
-            : base(classifierInput)
+        public Map(IDictionary<TKey, TValue> input)
+            : base(input)
         {
         }
 

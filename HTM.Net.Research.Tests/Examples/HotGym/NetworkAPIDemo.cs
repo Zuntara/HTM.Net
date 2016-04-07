@@ -11,6 +11,7 @@ using HTM.Net.Datagen;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Tests.Properties;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.HotGym
 {
@@ -229,7 +230,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
                 }
                 if (infer.GetRecordNum() > 0)
                 {
-                    double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
+                    double actual = (double)((NamedTuple)infer.GetClassifierInput()[classifierField]).Get("inputValue");
                     double error = Math.Abs(_predictedValue - actual);
                     StringBuilder sb = new StringBuilder()
                             .Append(infer.GetRecordNum()).Append(", ")
@@ -269,7 +270,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             }
             if (infer.GetRecordNum() > 0)
             {
-                double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
+                double actual = (double)((NamedTuple)infer.GetClassifierInput()[classifierField]).Get("inputValue");
                 double error = Math.Abs(_predictedValue - actual);
 
                 PredictionValue value = new PredictionValue();

@@ -7,6 +7,7 @@ namespace HTM.Net.Util
     {
         double NextDouble();
         int NextInt(int maxValue);
+        double[][] GetMatrix(int rows, int cols, double? threshold = null);
     }
 
     // https://github.com/numenta/htm.java/blob/master/src/main/java/org/numenta/nupic/util/MersenneTwister.java
@@ -691,6 +692,24 @@ namespace HTM.Net.Util
             return NextDouble() < probability;
         }
 
+        public double[][] GetMatrix(int rows, int cols, double? threshold = null)
+        {
+            double[][] matrix = new double[rows][];
+            for (int i = 0; i < rows; i++)
+            {
+                matrix[i] = new double[cols];
+                for (int j = 0; j < cols; j++)
+                {
+                    matrix[i][j] = NextDouble();
+                    if (threshold.HasValue && matrix[i][j] <= threshold.Value)
+                    {
+                        matrix[i][j] = 0.0;
+                    }
+                }
+            }
+            return matrix;
+        }
+
         public T Choice<T>(T[] array)
         {
             return array[Next(0, array.Length)];
@@ -703,6 +722,24 @@ namespace HTM.Net.Util
             : base(seed)
         {
 
+        }
+
+        public double[][] GetMatrix(int rows, int cols, double? threshold = null)
+        {
+            double[][] matrix = new double[rows][];
+            for (int i = 0; i < rows; i++)
+            {
+                matrix[i] = new double[cols];
+                for (int j = 0; j < cols; j++)
+                {
+                    matrix[i][j] = NextDouble();
+                    if (threshold.HasValue && matrix[i][j] <= threshold.Value)
+                    {
+                        matrix[i][j] = 0.0;
+                    }
+                }
+            }
+            return matrix;
         }
 
         public int NextInt(int maxValue)

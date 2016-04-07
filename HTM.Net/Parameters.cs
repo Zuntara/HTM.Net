@@ -790,7 +790,7 @@ namespace HTM.Net
             }
             bool result = false;
             BeanUtil beanUtil = BeanUtil.GetInstance();
-            BeanUtil.InternalPropertyInfo[] properties = beanUtil.GetPropertiesInfoForBean(cn.GetType());
+            BeanUtil.InternalPropertyInfo[] properties = beanUtil.GetPropertiesInfoForBean(cn.GetType(), new Dictionary<Type, BeanUtil.InternalPropertyInfo[]>());
             for (int i = 0; i < properties.Length; i++)
             {
                 BeanUtil.InternalPropertyInfo property = properties[i];

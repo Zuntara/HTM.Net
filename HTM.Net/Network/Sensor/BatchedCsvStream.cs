@@ -1009,7 +1009,7 @@ namespace HTM.Net.Network.Sensor
     /// Defines a CSV stream that reads CSV files
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class BatchedCsvStream<T> : IMetaStream<T>
+    public class BatchedCsvStream<T> : IMetaStream
     {
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(BatchedCsvStream<T>));
 
@@ -1187,14 +1187,9 @@ namespace HTM.Net.Network.Sensor
 
         #region Implementation of IMetaStream
 
-        public IStream<TResult> Map<TResult>(Func<T, TResult> mapFunc)
+        public IBaseStream Map(Func<string[], int[]> mapFunc)
         {
-            throw new NotImplementedException();
-        }
-
-        public IStream<int[]> Map(Func<string[], int[]> mapFunc)
-        {
-            return _contentStream.Map(mapFunc);
+            return (IBaseStream) _contentStream.Map(mapFunc);
             //return new Stream<int[]>(_contents.Select(mapFunc).ToArray());
         }
 
@@ -1234,6 +1229,19 @@ namespace HTM.Net.Network.Sensor
         public bool IsParallel()
         {
             return false;
+        }
+        /// <summary>
+        /// Returns true when a string[] to int[] conversion is needed (when the raw input is string)
+        /// </summary>
+        /// <returns></returns>
+        public bool NeedsStringMapping()
+        {
+            return true;
+        }
+
+        public IBaseStream DoStreamMapping()
+        {
+            throw new NotSupportedException("Not needed here, is for images");
         }
 
         #endregion

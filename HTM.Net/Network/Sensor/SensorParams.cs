@@ -35,6 +35,8 @@ namespace HTM.Net.Network.Sensor
                 public static readonly Args U = new Args(new string[] { "FILE", "URI" });
                 public static readonly Args P = new Args(new string[] { "FILE", "PATH" });
                 public static readonly Args O = new Args(new string[] { "NAME", "ONSUB" });
+                public static readonly Args I = new Args(new string[] { "DIMENSIONS" });
+                public static readonly Args IO = new Args(new string[] { "ONSUB", "DIMENSIONS" });
 
                 private readonly string[] _arr;
 
@@ -57,6 +59,16 @@ namespace HTM.Net.Network.Sensor
             public static Keys.Args Obs()
             {
                 return Keys.Args.O;
+            }
+
+            public static Keys.Args Image()
+            {
+                return Keys.Args.I;
+            }
+
+            public static Keys.Args ImageObs()
+            {
+                return Keys.Args.IO;
             }
         }
 

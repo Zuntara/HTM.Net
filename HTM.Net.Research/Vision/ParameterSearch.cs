@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
 
@@ -41,19 +42,22 @@ namespace HTM.Net.Research.Vision
 
             // Specify parameter values to search
             CombinationParameters parameters = new CombinationParameters();
-            parameters.Define("synPermConn", new List<object> { 0.5 });
-            parameters.Define("synPermDecFrac", new List<object> { 1.0,0.5,0.1 });
-            parameters.Define("synPermIncFrac", new List<object> { 1.0,0.5,0.1 });
+            parameters.Define("synPermConn", 0.5);
+            parameters.Define("synPermDecFrac", 1.0, 0.5, 0.1);
+            parameters.Define("synPermIncFrac", 1.0, 0.5, 0.1);
+            parameters.Define("numActiveColumnsPerInhArea", 32.0, 64.0);
 
             // Run the model until all combinations have been tried
             while (parameters.GetNumResults() < parameters.GetNumCombinations())
             {
                 // Pick a combination of parameter values
-                parameters.NextCombination();
+                IDictionary<string, object> combinations;
+                int combinationNr = parameters.NextCombination(out combinations);
 
-                double synPermConnected = (double) parameters.GetValue("synPermConn");
-                var synPermDec = synPermConnected * (double)parameters.GetValue("synPermDecFrac");
-                var synPermInc = synPermConnected * (double)parameters.GetValue("synPermIncFrac");
+                double synPermConnected = (double)combinations.Get("synPermConn");
+                var synPermDec = synPermConnected * (double)combinations.Get("synPermDecFrac");
+                var synPermInc = synPermConnected * (double)combinations.Get("synPermIncFrac");
+                var numActiveColumnsPerInhArea = (double)combinations.Get("numActiveColumnsPerInhArea");
 
                 // Instantiate our spatial pooler
                 Parameters p = Parameters.GetAllDefaultParameters();
@@ -63,7 +67,7 @@ namespace HTM.Net.Research.Vision
                 p.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.8);
                 p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
                 p.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0); // Using numActiveColumnsPerInhArea
-                p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 64.0);
+                p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, numActiveColumnsPerInhArea);
                 // All input activity can contribute to feature output
                 p.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 0.0);
                 p.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, synPermDec);
@@ -74,6 +78,7 @@ namespace HTM.Net.Research.Vision
                 p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses
                 p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(1956)); // The seed that Grok uses
                 p.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 1);
+                //p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
 
                 Connections cn = new Connections();
                 p.Apply(cn);
@@ -104,10 +109,87 @@ namespace HTM.Net.Research.Vision
                 var accurancy = tb.Test(testingVectors, testingTags, clf, learn: true);
 
                 // Add results to the list
-                parameters.AppendResults(new List<object> {accurancy, numCycles});
+                parameters.AppendResults(combinationNr, new List<object> { accurancy, numCycles });
             }
-            parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] {"\t{0}","\t{0}"});
+            parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
             Console.WriteLine("The maximum number of training cycles is set to: {0}", maxTrainingCycles);
+        }
+
+        public void ExecuteThreaded(string dataSet = TrainingDataSet, double minAccuracy = 100.0, int maxTrainingCycles = 5)
+        {
+            var tupleTraining = DatasetReader.GetImagesAndTags(dataSet);
+            // Get training images and convert them to vectors.
+            var trainingImages = (List<Bitmap>)tupleTraining.Get(0);
+            var trainingTags = tupleTraining.Get(1) as List<string>;
+            var trainingVectors = trainingImages.Select((i, index) => new { index, vector = i.ToVector() })
+                .ToDictionary(k => k.index, v => v.vector);
+
+            // Specify parameter values to search
+            CombinationParameters parameters = new CombinationParameters();
+            parameters.Define("synPermConn", 0.5);
+            parameters.Define("synPermDecFrac", 1.0, 0.5, 0.1);
+            parameters.Define("synPermIncFrac", 1.0, 0.5, 0.1);
+            parameters.Define("numActiveColumnsPerInhArea", 32.0, 64.0);
+
+            Parallel.For(0, parameters.GetNumCombinations(), i =>
+            {
+                var combinations = parameters.GetCombination(i);
+                double synPermConnected = (double)combinations.Get("synPermConn");
+                var synPermDec = synPermConnected * (double)combinations.Get("synPermDecFrac");
+                var synPermInc = synPermConnected * (double)combinations.Get("synPermIncFrac");
+                var numActiveColumnsPerInhArea = (double)combinations.Get("numActiveColumnsPerInhArea");
+
+                // Instantiate our spatial pooler
+                Parameters p = Parameters.GetAllDefaultParameters();
+                p.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new[] { 32, 32 }); // Size of image patch
+                p.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new[] { 32, 32 });
+                p.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 10000); // Ensures 100% potential pool
+                p.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.8);
+                p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
+                p.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0); // Using numActiveColumnsPerInhArea
+                p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, numActiveColumnsPerInhArea);
+                // All input activity can contribute to feature output
+                p.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 0.0);
+                p.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, synPermDec);
+                p.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, synPermInc);
+                p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, synPermConnected);
+                p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 1000);
+                p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
+                p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses
+                p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(1956)); // The seed that Grok uses
+                p.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 1);
+
+                Connections cn = new Connections();
+                p.Apply(cn);
+
+                SpatialPooler sp = new SpatialPooler();
+                sp.Init(cn);
+
+                // Instantiate the spatial pooler test bench.
+                VisionTestBench tb = new VisionTestBench(cn, sp);
+
+                // Instantiate the classifier
+                KNNClassifier clf = KNNClassifier.GetBuilder().Apply(p);
+
+                int numCycles = tb.Train(trainingVectors, trainingTags, clf, maxTrainingCycles, minAccuracy);
+
+                // Get testing images and convert them to vectors.
+                var tupleTesting = DatasetReader.GetImagesAndTags(dataSet);
+                var testingImages = (List<System.Drawing.Bitmap>)tupleTesting.Get(0);
+                var testingTags = tupleTesting.Get(1) as List<string>;
+                var testingVectors = testingImages.Select((bitmap, index) => new { index, vector = bitmap.ToVector() })
+                    .ToDictionary(k => k.index, v => v.vector);
+
+                // Reverse the order of the vectors and tags for testing
+                testingTags.Reverse();
+                testingVectors.Reverse();
+
+                // Test the spatial pooler on testingVectors.
+                var accurancy = tb.Test(testingVectors, testingTags, clf, learn: true);
+
+                // Add results to the list
+                parameters.AppendResults(i, new List<object> { accurancy, numCycles });
+            });
         }
     }
 }

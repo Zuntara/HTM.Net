@@ -350,7 +350,7 @@ namespace HTM.Net.Encoders
         {
             if (GetW() < 21)
             {
-                throw new InvalidOperationException("Number of bits in the SDR (%d) must be greater than 2, and recommended >= 21 (use forced=True to override)");
+                throw new InvalidOperationException(string.Format("Number of bits in the SDR ({0}) must be greater than 2, and recommended >= 21 (use forced=True to override)", GetW()));
             }
         }
 

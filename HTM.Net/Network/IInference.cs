@@ -21,12 +21,12 @@ namespace HTM.Net.Network
          * 
          * @return
          */
-         int GetRecordNum();
+        int GetRecordNum();
         /**
          * Returns the {@link ComputeCycle}
          * @return
          */
-         ComputeCycle GetComputeCycle();
+        ComputeCycle GetComputeCycle();
         /**
          * Returns a custom Object during sequence processing where one or more 
          * {@link Func1}(s) were added to a {@link Layer} in between algorithmic
@@ -34,27 +34,25 @@ namespace HTM.Net.Network
          *  
          * @return  the custom object set during processing
          */
-         object GetCustomObject();
+        object GetCustomObject();
         /**
          * Returns the {@link Map} used as input into a given {@link CLAClassifier}
          * if it exists.
          * 
          * @return
          */
-        Map<string, NamedTuple> GetClassifierInput();
+        Map<string, object> GetClassifierInput();
         /**
          * Returns a tuple containing key/value pairings of input field
          * names to the {@link CLAClassifier} used in conjunction with it.
          * 
          * @return
          */
-         NamedTuple GetClassifiers();
-        /**
-         * Returns the object used as input into a given Layer
-         * which is associated with this computation result.
-         * @return
-         */
-         object GetLayerInput();
+        NamedTuple GetClassifiers();
+        /// <summary>
+        /// Returns the object used as input into a given Layer which is associated with this computation result.
+        /// </summary>
+        object GetLayerInput();
 
         /**
          * Returns the <em>Sparse Distributed Representation</em> vector
@@ -63,14 +61,14 @@ namespace HTM.Net.Network
          * 
          * @return
          */
-         int[] GetSdr();
+        int[] GetSdr();
         /**
          * Returns the initial encoding produced by an {@link Encoder} or one
          * of its subtypes.
          * 
          * @return
          */
-         int[] GetEncoding();
+        int[] GetEncoding();
 
         /// <summary>
         /// Returns the most recent <see cref="ClassifierResult{T}"/>
@@ -107,5 +105,32 @@ namespace HTM.Net.Network
         /// </summary>
         /// <returns></returns>
         HashSet<Cell> GetPredictiveCells();
+
+        /// <summary>
+        /// Returns the KNN categories output
+        /// A vector representing, for each category index, the likelihood that the input to the node belongs
+        /// to that category based on the number of neighbors of that category that are among the nearest K.
+        /// </summary>
+        /// <returns></returns>
+        List<double> GetCategories();
+
+        /// <summary>
+        /// Returns the inferred category index
+        /// </summary>
+        /// <returns></returns>
+        int GetInferredCategory();
+
+        /// <summary>
+        /// A vector representing, for each category index, the probability that the input to the node belongs
+        /// to that category based on the distance to the nearest neighbor of each category.
+        /// </summary>
+        /// <returns></returns>
+        List<double> GetCategoryProbabilities();
+        /// <summary>
+        /// A vector that lists, in descending order of the match, the positions of the prototypes
+        /// that best match the input pattern.
+        /// </summary>
+        /// <returns></returns>
+        List<int> GetBestPrototypeIndices();
     }
 }

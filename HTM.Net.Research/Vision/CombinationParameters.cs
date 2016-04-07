@@ -6,104 +6,85 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Research.Vision
 {
-    /// <summary>
-    /// This class provides methods for searching ranges of parameters to see how
-    /// they affect performance.
-    /// </summary>
     public class CombinationParameters
     {
         private List<string> _names;
         private List<List<object>> _allowedValues;
-        private List<List<object>> _values;
-        private List<List<int>> _valueIndexes;
-        private List<List<object>> _results;
-        private int numCombinations;
-        private IRandom random = new XorshiftRandom(42);
+        private List<List<object>> _combinations;
+        private Map<int, List<object>> _results; // combination_index, values
+        private int _currentCombinationProgress;
 
-        /// <summary>
-        /// Have to keep track of the names and valid values of each parameter
-        /// defined by the user.
-        /// </summary>
         public CombinationParameters()
         {
-            // list of parameter names
             _names = new List<string>();
-            // list of allowed parameter values
             _allowedValues = new List<List<object>>();
-            // list of past and present parameter value indexes
-            _valueIndexes = new List<List<int>>();
-            // list of past and present results that correspond to each set of parameter values
-            _results = new List<List<object>>();
-            // the number of possible combinations of parameter values for all parameters
-            numCombinations = 1;
-
-            _values = new List<List<object>>();
+            _currentCombinationProgress = 0;
+            _results = new Map<int, List<object>>();
         }
 
-        /// <summary>
-        /// This method allows users to define a parameter by providing its name and a list of values for the parameter.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="allowedValues"></param>
         public void Define(string name, List<object> allowedValues)
         {
             if (!_names.Contains(name))
             {
                 _names.Add(name);
                 _allowedValues.Add(allowedValues);
-                numCombinations = numCombinations + allowedValues.Count;
+                CalculateCombinations();
             }
             else
             {
-                Console.WriteLine("Parameter: {0} is already defined!");
+                Console.WriteLine("Parameter: {0} is already defined!", name);
             }
+        }
+        public void Define(string name, params object[] allowedValues)
+        {
+            if (!_names.Contains(name))
+            {
+                _names.Add(name);
+                _allowedValues.Add(new List<object>(allowedValues));
+                CalculateCombinations();
+            }
+            else
+            {
+                Console.WriteLine("Parameter: {0} is already defined!", name);
+            }
+        }
+        private void CalculateCombinations()
+        {
+            List<List<object>> result = _allowedValues.CartesianProduct();
+            _combinations = result;
         }
 
         /// <summary>
-        /// This method returns the names of all defined parameters.
+        /// Returns the index of the combination and the combination itself.
         /// </summary>
+        /// <param name="values"></param>
         /// <returns></returns>
-        public List<string> GetNames()
+        public int NextCombination(out IDictionary<string, object> values)
         {
-            return _names;
+            _currentCombinationProgress = _currentCombinationProgress%(_combinations.Count);
+            int index = _currentCombinationProgress;
+            _currentCombinationProgress++;
+
+            List<object> combinations = _combinations[index];
+
+            values = combinations
+                .Select((obj, idx) => new {Name = _names[idx], Value = obj})
+                .ToDictionary(k=>k.Name, v=>v.Value);
+
+            return index;
         }
         /// <summary>
-        /// This method returns the current value of the parameter specified by name.
+        /// Returns a specific combination
         /// </summary>
-        /// <param name="name"></param>
+        /// <param name="index"></param>
         /// <returns></returns>
-        public object GetValue(string name)
+        public IDictionary<string, object> GetCombination(int index)
         {
-            Debug.Assert(_names.Contains(name));
-            int i = _names.IndexOf(name);
-            Debug.Assert(_valueIndexes.Last().Count > i);
-            return _allowedValues[i][_valueIndexes.Last()[i]];
-        }
-        /// <summary>
-        /// This method returns the current values of all defined parameters.
-        /// </summary>
-        public IEnumerable<object> GetAllValues()
-        {
-            return _valueIndexes.Last().Select((i,j) => _allowedValues[j][i]);
-        }
-        /// <summary>
-        /// This method adds an item to the results list.
-        /// </summary>
-        public void AppendResults(List<object> items)
-        {
-            Console.WriteLine("Just completed parameter Combination: {0}", Arrays.ToString(GetAllValues()));
-            _results.Add(items);
-            Console.WriteLine();
-            Console.WriteLine("Parameter combinations completed: {0}/{1}", _results.Count, numCombinations);
-            Console.WriteLine();
-        }
-        /// <summary>
-        /// This method returns the number of items in the results list.
-        /// </summary>
-        /// <returns></returns>
-        public int GetNumResults()
-        {
-            return _results.Count;
+            List<object> combinations = _combinations[index];
+
+            return combinations
+                .Select((obj, idx) => new { Name = _names[idx], Value = obj })
+                .ToDictionary(k => k.Name, v => v.Value);
         }
         /// <summary>
         /// This method prints a summary of all the results.
@@ -113,101 +94,80 @@ namespace HTM.Net.Research.Vision
         public void PrintResults(IEnumerable<string> resultNames, IEnumerable<string> formatStrings)
         {
             Console.WriteLine();
-            Console.WriteLine("Summary of results");
+            Console.WriteLine("Summary of results:");
             Console.WriteLine();
 
-            var headerList = GetNames();
+            // Write header list
+            var headerList = _names.ToList();
             headerList.AddRange(resultNames);
             string headerString = string.Join("\t", headerList);
             Console.WriteLine(headerString);
-            int i = 0;
-            foreach (var result in _results)
+
+            foreach (var resultPair in _results)
             {
-                if(_valueIndexes.Count <= i) throw new InvalidOperationException("Did you call NextCombination?");
-                var values = _valueIndexes[i].Select((j,k) => _allowedValues[k][j]);
+                // Print combination values
+                var values = _combinations[resultPair.Key];
                 string valueString = string.Join("\t", values);
 
                 int f = 0;
                 foreach (string formatString in formatStrings)
                 {
-                    valueString += string.Format(formatString, result[f]);
+                    valueString += string.Format(formatString, resultPair.Value[f]);
                     f++;
                 }
                 Console.WriteLine(valueString);
-                i++;
             }
         }
         /// <summary>
-        /// This method randomly selects a value for each parameter from its list of
-        /// allowed parameter values.  If the resulting combination has already been
-        /// used then it tries again.
+        /// This method adds an item to the results list.
         /// </summary>
-        public void NextRandomCombination()
+        public void AppendResults(int combinationNumber, List<object> results)
         {
-            List<object> randomCombination = new List<object>();
-            for (int i = 0; i < _names.Count; i++)
-            {
-                var combination = GetRandomChoice(_allowedValues[i]);
-                randomCombination.Add(combination);
-            }
-
-            if (_values.Any(vl=> vl.SequenceEqual(randomCombination)))
-            {
-                NextRandomCombination();
-            }
-            else
-            {
-                _values.Add(randomCombination);
-                Console.WriteLine("Parameter combination: {0}", Arrays.ToString(GetAllValues()));
-            }
-        }
-        /// <summary>
-        /// This method finds the next combination of parameter values using the
-        /// allowed value lists for each parameter.
-        /// </summary>
-        public void NextCombination()
-        {
-            if (_valueIndexes.Count == 0)
-            {
-                // list of value indexes is empty so this is the first combination, 
-                // each parameter gets the first value in its list of allowed values
-                _valueIndexes.Add(_names.Select(n => 0).ToList());
-            }
-            else
-            {
-                var newValueIndexes = _valueIndexes.Last().ToList();
-                int i = 0;
-                while (i < _names.Count)
-                {
-                    // if current value is not the last in the list
-                    if (_valueIndexes.Last()[i] != _allowedValues[i].Count - 1)
-                    {
-                        // change parameter to next value in allowed value list and return
-                        newValueIndexes[i] += 1;
-                        break;
-                    }
-                    else
-                    {
-                        // change parameter to first value in allowed value list
-                        newValueIndexes[i] = 0;
-                        // move next parameter to next value in its allowed value list
-                        i++;
-                    }
-                }
-                _valueIndexes.Add(newValueIndexes);
-            }
-            Console.WriteLine("Parameter combination: {0}", Arrays.ToString(GetAllValues()));
-        }
-
-        private object GetRandomChoice(IList<object> list)
-        {
-            int index = random.NextInt(list.Count);
-            return list[index];
+            Console.WriteLine("Just completed parameter Combination: {0}", Arrays.ToString(_combinations[combinationNumber]));
+            _results[combinationNumber] = results;
+            Console.WriteLine();
+            Console.WriteLine("Parameter combinations completed: {0}/{1}", _results.Count, GetNumCombinations());
+            Console.WriteLine();
         }
 
         public int GetNumCombinations()
         {
-            return numCombinations;
+            return _combinations.Count;
+        }
+        /// <summary>
+        /// This method returns the number of items in the results list.
+        /// </summary>
+        /// <returns></returns>
+        public int GetNumResults()
+        {
+            return _results.Count;
+        }
+    }
+
+    public static class ListExtentions
+    {
+        public static IEnumerable<IEnumerable<T>> CartesianProduct<T>(this IEnumerable<IEnumerable<T>> sequences)
+        {
+            IEnumerable<IEnumerable<T>> emptyProduct = new[] { Enumerable.Empty<T>() };
+            return sequences.Aggregate(
+                emptyProduct,
+                (accumulator, sequence) =>
+                    from accseq in accumulator
+                    from item in sequence
+                    select accseq.Concat(new[] { item })
+                );
+        }
+
+        public static List<List<T>> CartesianProduct<T>(this List<List<T>> sequences)
+        {
+            IEnumerable<List<T>> emptyProduct = new[] { new List<T>() };
+            return sequences.Aggregate(
+                emptyProduct,
+                (accumulator, sequence) =>
+                    from accseq in accumulator
+                    from item in sequence
+                    select accseq.Concat(new[] { item }).ToList()
+                ).ToList();
         }
     }
 }

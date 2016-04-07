@@ -11,6 +11,7 @@ using HTM.Net.Algorithms;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Generators;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.Sine
 {
@@ -250,7 +251,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 }
                 if (infer.GetRecordNum() > 0)
                 {
-                    double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
+                    double actual = (double)((NamedTuple)infer.GetClassifierInput()[classifierField]).Get("inputValue");
                     double error = Math.Abs(_predictedValue - actual);
                     StringBuilder sb = new StringBuilder()
                             .Append(infer.GetRecordNum()).Append(", ")
@@ -290,7 +291,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             }
             if (infer.GetRecordNum() > 0)
             {
-                double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
+                double actual = (double)((NamedTuple)infer.GetClassifierInput()[classifierField]).Get("inputValue");
                 double error = Math.Abs(_predictedValue - actual);
 
                 PredictionValue value = new PredictionValue();

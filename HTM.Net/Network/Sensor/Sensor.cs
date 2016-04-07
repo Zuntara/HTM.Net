@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using HTM.Net.Encoders;
+using HTM.Net.Util;
 
 namespace HTM.Net.Network.Sensor
 {

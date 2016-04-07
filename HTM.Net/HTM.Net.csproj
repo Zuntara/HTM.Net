@@ -53,6 +53,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Reactive.Core, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-Core.2.2.5\lib\net45\System.Reactive.Core.dll</HintPath>
@@ -97,6 +98,7 @@
     <Compile Include="Network\ILayer.cs" />
     <Compile Include="Network\LayerMask.cs" />
     <Compile Include="Network\Sensor\CustomFileSensor.cs" />
+    <Compile Include="Network\Sensor\ImageDefinition.cs" />
     <Compile Include="Network\Sensor\Optional.cs" />
     <Compile Include="Network\Sensor\YieldingFileReader.cs" />
     <Compile Include="Network\Transformer.cs" />

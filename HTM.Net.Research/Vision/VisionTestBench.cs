@@ -380,7 +380,7 @@ namespace HTM.Net.Research.Vision
             permanencesImage.Save(fileName, ImageFormat.Jpeg);
         }
 
-        private Image ConvertToImage(byte[] perms, string mode)
+        private System.Drawing.Image ConvertToImage(byte[] perms, string mode)
         {
             int size = (int)Math.Pow(perms.Length, 0.5);
             Bitmap im = new Bitmap(size, size, PixelFormat.Format24bppRgb);

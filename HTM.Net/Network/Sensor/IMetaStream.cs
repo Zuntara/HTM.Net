@@ -3,6 +3,9 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network.Sensor
 {
+    /// <summary>
+    /// Adds meta information retrieval to a <see cref="IStream{T}"/>
+    /// </summary>
     public interface IMetaStream
     {
         /// <summary>
@@ -29,20 +32,15 @@ namespace HTM.Net.Network.Sensor
 
         bool IsParallel();
 
-        IStream<int[]> Map(Func<string[], int[]> mapFunc);
+        IBaseStream Map(Func<string[], int[]> mapFunc);
         void ForEach(Action<object> action);
         long Count();
-    }
+        /// <summary>
+        /// Returns true when a string[] to int[] conversion is needed (when the raw input is string)
+        /// </summary>
+        /// <returns></returns>
+        bool NeedsStringMapping();
 
-    /**
-     * Adds meta information retrieval to a {@link Stream}
-     * 
-     * @author metaware
-     *
-     * @param <T>   the source type of the {@link Stream}
-     */
-    public interface IMetaStream<out TSource> : IMetaStream // Stream<T>
-    {
-        //IStream<TResult> Map<TResult>(Func<TSource, TResult> mapFunc);
+        IBaseStream DoStreamMapping();
     }
 }

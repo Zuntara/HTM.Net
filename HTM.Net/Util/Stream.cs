@@ -14,6 +14,17 @@ namespace HTM.Net.Util
         int Count();
     }
 
+    public interface IBaseStream
+    {
+        /// <summary>
+        /// Reads an entry from the stream as an object
+        /// </summary>
+        /// <returns></returns>
+        object ReadUntyped();
+        bool EndOfStream { get; }
+        IBaseStream CopyUntyped();
+    }
+
     public interface IStream<T>
     {
         event Action<bool> TerminalChanged;
@@ -26,6 +37,10 @@ namespace HTM.Net.Util
         bool IsTerminal();
         void SetOffset(int offset);
         StreamState GetStreamState();
+        /// <summary>
+        /// Create a fanout copy stream of the current stream. This makes it possible to read the stream multiple times.
+        /// </summary>
+        /// <returns></returns>
         IStream<T> Copy();
         IEnumerator GetEnumerator();
         int Count();
@@ -52,7 +67,7 @@ namespace HTM.Net.Util
     // to avoid collection modified errors and to avoid relooping the same data again and hitting the mappings too many.
 
     // New version for streaming
-    public class Stream<TModel> : IStream<TModel>, IStream
+    public class Stream<TModel> : IStream<TModel>, IStream, IBaseStream
     {
         private IStream _parentStream;
         private StreamState _streamState;
@@ -183,6 +198,11 @@ namespace HTM.Net.Util
             return default(TModel);
         }
 
+        public object ReadUntyped()
+        {
+            return Read();
+        }
+
         public TModel First()
         {
             if (!IsTerminal())
@@ -272,9 +292,17 @@ namespace HTM.Net.Util
             _childStreams.Add(fanOut);
             return fanOut;
         }
+
+        public IBaseStream CopyUntyped()
+        {
+            // Create a fanout stream
+            var fanOut = new FanOutStream<TModel>(this, _streamState);
+            _childStreams.Add(fanOut);
+            return fanOut;
+        }
     }
 
-    public class FanOutStream<TModel> : IStream<TModel>
+    public class FanOutStream<TModel> : IStream<TModel>, IBaseStream
     {
         private StreamState _streamState;
         private readonly int _id;
@@ -332,6 +360,11 @@ namespace HTM.Net.Util
             return value;
         }
 
+        public object ReadUntyped()
+        {
+            return Read();
+        }
+
         public bool IsTerminal()
         {
             return _parentStream.IsTerminal();
@@ -350,6 +383,11 @@ namespace HTM.Net.Util
         public bool EndOfStream
         {
             get { return _parentStream.EndOfStream; }
+        }
+
+        public IBaseStream CopyUntyped()
+        {
+            throw new NotSupportedException("Create a stream from the parent stream!");
         }
 
         public TModel First()

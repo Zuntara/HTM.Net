@@ -9,6 +9,7 @@ using HTM.Net.Datagen;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Tests.Properties;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.PaHotGym
 {
@@ -214,7 +215,7 @@ namespace HTM.Net.Research.Tests.Examples.PaHotGym
                 }
                 if (infer.GetRecordNum() > 0)
                 {
-                    double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
+                    double actual = (double)((NamedTuple)infer.GetClassifierInput()[classifierField]).Get("inputValue");
                     double error = Math.Abs(predictedValue - actual);
                     StringBuilder sb = new StringBuilder()
                             .Append(infer.GetRecordNum()).Append(", ")

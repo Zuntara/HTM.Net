@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using HTM.Net.Util;
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 using Tuple = HTM.Net.Util.Tuple;
@@ -17,6 +18,8 @@ namespace HTM.Net.Algorithms
     /// </summary>
     public class KNNClassifier
     {
+        #region Fields
+
         /** The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b> */
         private int _k = 1;
         /** If true, patterns must match exactly when assigning class labels */
@@ -112,7 +115,9 @@ namespace HTM.Net.Algorithms
         private double[] _mean;
         private double[][] _a;
         private double[] _s;
-        private NearestNeighbor _M;
+        private NearestNeighbor _M; 
+
+        #endregion
 
         #region Construction
 
@@ -173,6 +178,25 @@ namespace HTM.Net.Algorithms
             // used by network builder
             _specificIndexTraining = false;
             _nextTrainingIndices = null;
+        }
+
+        public KnnClassifierResult Compute(double[] inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1
+            , bool computeScores = true, bool overCategories = true, bool infer = true, bool learn = true)
+        {
+            KnnClassifierResult retVal = new KnnClassifierResult();
+
+            if (infer)
+            {
+                var inferResult = Infer(inputPattern, computeScores, overCategories, partitionId);
+                retVal.SetInferResult(inferResult);
+            }
+
+            if (learn)
+            {
+                int numPatterns = Learn(inputPattern, inputCategory, partitionId, isSparse, rowId);
+                retVal.SetNumPatterns(numPatterns);
+            }
+            return retVal;
         }
 
         /**
@@ -435,7 +459,7 @@ namespace HTM.Net.Algorithms
         /// <param name="overCategories">NO EFFECT</param>
         /// <param name="partitionId"></param>
         /// <returns></returns>
-        public Tuple Infer(double[] inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
+        public KnnInferResult Infer(double[] inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
         {
             int? winner;
             double[] inferenceResult;
@@ -458,7 +482,7 @@ namespace HTM.Net.Algorithms
                 inferenceResult = new double[maxCategoryIdx + 1];
                 dist = GetDistances(inputPattern, partitionId: partitionId);
                 int validVectorCount = _categoryList.Count - _categoryList.Count(c => c == -1);
-
+                bool touchedInference = false;
                 // Loop through the indices of the nearest neighbors.
                 if (_exact)
                 {
@@ -468,6 +492,7 @@ namespace HTM.Net.Algorithms
                     {
                         foreach (int i in exactMatches.Take(Math.Min(_k, validVectorCount)))
                         {
+                            touchedInference = true;
                             inferenceResult[_categoryList[i]] += 1.0;
                         }
                     }
@@ -477,11 +502,12 @@ namespace HTM.Net.Algorithms
                     var sorted = ArrayUtils.Argsort(dist);
                     foreach (int i in sorted.Take(Math.Min(_k, validVectorCount)))
                     {
+                        touchedInference = true;
                         inferenceResult[_categoryList[i]] += 1.0;
                     }
                 }
                 // Prepare inference results.
-                if (inferenceResult.Any())
+                if (inferenceResult.Any(i=>i > 0.0) && touchedInference)
                 {
                     winner = ArrayUtils.Argmax(inferenceResult);
                     inferenceResult = ArrayUtils.Divide(inferenceResult, inferenceResult.Sum());
@@ -491,8 +517,7 @@ namespace HTM.Net.Algorithms
                     winner = null;
                 }
                 categoryDist = MinScorePerCategory(maxCategoryIdx, _categoryList, dist);
-                categoryDist = ArrayUtils.Clip(categoryDist, 0, 1);
-
+                categoryDist = ArrayUtils.Clip(categoryDist, 0.0, 1.0);
             }
             /*
                 if self.verbosity >= 1:
@@ -503,7 +528,7 @@ namespace HTM.Net.Algorithms
               print "  pct neighbors of each category:", inferenceResult
               print "  dist of each prototype:", dist
               print "  dist of each category:", categoryDist*/
-            return new Tuple(winner, inferenceResult, dist, categoryDist);
+            return new KnnInferResult(new[] { "winner", "inference", "protoDistance", "categoryDistances" }, winner, inferenceResult, dist, categoryDist);
         }
 
         /// <summary>
@@ -640,10 +665,10 @@ namespace HTM.Net.Algorithms
             int[] idx = ArrayUtils.Where(v, d => d < fractionOfMax);
             if (idx.Length > 0)
             {
-                Console.WriteLine("Number of PCA dimensions chosen: " + idx[0] + "out of " + v.Length);
-                return idx[0];
+                Console.WriteLine("Number of PCA dimensions chosen: " + (idx[0]+1) + " out of " + v.Length);
+                return idx[0]+1;
             }
-            Console.WriteLine("Number of PCA dimensions chosen: " + (v.Length - 1) + "out of " + v.Length);
+            Console.WriteLine("Number of PCA dimensions chosen: " + (v.Length - 1) + " out of " + v.Length);
             return v.Length - 1;
         }
 
@@ -669,18 +694,18 @@ namespace HTM.Net.Algorithms
 
         private double[] MinScorePerCategory(int maxCategoryIdx, List<int> categoryList, double[] dist)
         {
-            var c = categoryList.ToArray();
-            var d = dist.ToArray();
+            var categories = categoryList.ToArray();
+            var distance = dist.ToArray();
 
             int n = maxCategoryIdx + 1;
-            double[] s = new double[n];
+            double[] scores = new double[n];
 
-            int nScores = c.Length;
+            int nScores = categories.Length;
             for (int i = 0; i < nScores; i++)
             {
-                s[c[i]] = Math.Min(s[c[i]], d[i]);
+                scores[categories[i]] = Math.Min(scores[categories[i]], distance[i]);
             }
-            return s;
+            return scores;
         }
 
         /// <summary>
@@ -800,13 +825,13 @@ namespace HTM.Net.Algorithms
                 if (distanceMethod == DistanceMethod.Norm)
                 {
                     double[][] mArr = _M.ToDense();
-                    double[][] subbed = ArrayUtils.Sub(mArr, inputPattern);
+                    double[][] subbed = ArrayUtils.SubstractRows(mArr, inputPattern);
                     double[][] abs = ArrayUtils.Abs(subbed);
                     double[][] powDist = ArrayUtils.Power(abs, distanceNorm.Value);
 
                     // dist = dist.sum(1)
-                    dist = powDist.Select(a => a.Sum()).ToArray();
-
+                    //dist = powDist.Select(a => a.Sum()).ToArray();
+                    dist = ArrayUtils.Sum(powDist, 1);
                     dist = ArrayUtils.Power(dist, 1.0 / distanceNorm.Value);
                     dist = ArrayUtils.Divide(dist, dist.Max());
                 }
@@ -818,7 +843,7 @@ namespace HTM.Net.Algorithms
             return dist;
         }
 
-        private void FinishLearning()
+        public void FinishLearning()
         {
             if (numSvdDims != null && _vt == null)
             {
@@ -1090,6 +1115,16 @@ namespace HTM.Net.Algorithms
         public double? GetFractionOfMax()
         {
             return fractionOfMax;
+        }
+
+        public int GetNumPatterns()
+        {
+            return _numPatterns;
+        }
+
+        public List<int> GetCategoryList()
+        {
+            return _categoryList;
         }
 
         /**
@@ -1391,18 +1426,56 @@ namespace HTM.Net.Algorithms
         }
 
         #endregion
+    }
 
-        
+    public class KnnInferResult : NamedTuple
+    {
+        public KnnInferResult(string[] keys, params object[] objects) : base(keys, objects)
+        {
+        }
+        /// <summary>
+        /// Gets the winner category
+        /// </summary>
+        /// <returns></returns>
+        public int? GetWinner()
+        {
+            return (int?)Get("winner");
+        }
+        /// <summary>
+        /// pct neighbors of each category
+        /// </summary>
+        /// <returns></returns>
+        public double[] GetInference()
+        {
+            return (double[])Get("inference");
+        }
+        /// <summary>
+        /// dist of each prototype
+        /// </summary>
+        /// <returns></returns>
+        public double[] GetProtoDistance()
+        {
+            return (double[])Get("protoDistance");
+        }
+        /// <summary>
+        /// dist of each category
+        /// </summary>
+        /// <returns></returns>
+        public double[] GetCategoryDistances()
+        {
+            return (double[])Get("categoryDistances");
+        }
     }
 
     //Utils
     public class NearestNeighbor
     {
-        private SparseMatrix _backingMatrix;
+        private Matrix<double> _backingMatrix;
         private int _addedRows;
 
         public NearestNeighbor(int rows, int cols)
         {
+            Control.UseMultiThreading();
             _backingMatrix = new SparseMatrix(rows == 0 ? 1 : rows, cols);
             _addedRows = rows;
         }
@@ -1483,7 +1556,7 @@ namespace HTM.Net.Algorithms
             }
             else
             {
-                _backingMatrix = (SparseMatrix)_backingMatrix.InsertRow(row, new DenseVector(denseVector));
+                _backingMatrix = _backingMatrix.InsertRow(row, new DenseVector(denseVector));
             }
             _addedRows++;
         }

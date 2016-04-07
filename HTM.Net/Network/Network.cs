@@ -469,15 +469,14 @@ namespace HTM.Net.Network
             //});
         }
 
-        /**
-         * Connects the specified source to the specified sink (the order of
-         * processing flows from source to sink, or lower level region to higher
-         * level region). 
-         * @param regionSink        the receiving end of the connection
-         * @param regionSource      the source end of the connection
-         * 
-         * @return  this {@code Network}
-         */
+        /// <summary>
+        /// Connects the specified source to the specified sink (the order of
+        /// processing flows from source to sink, or lower level region to higher
+        /// level region). 
+        /// </summary>
+        /// <param name="regionSink">the receiving end of the connection</param>
+        /// <param name="regionSource">the source end of the connection</param>
+        /// <returns>the current network</returns>
         public Network Connect(string regionSink, string regionSource)
         {
             Region source = Lookup(regionSource);

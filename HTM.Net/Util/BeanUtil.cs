@@ -13,7 +13,7 @@ namespace HTM.Net.Util
     {
         //TODO introduce proper log in future
         //private static final Log LOG = LogFactory.getLog(BeanUtil.class);
-        private Dictionary<Type, InternalPropertyInfo[]> properties = new Dictionary<Type, InternalPropertyInfo[]>();
+        //private Dictionary<Type, InternalPropertyInfo[]> properties = new Dictionary<Type, InternalPropertyInfo[]>();
         private static readonly MemberInfo[] EMPTY_PROPERTY_DESCRIPTOR = new MemberInfo[0];
         private static BeanUtil INSTANCE = new BeanUtil();
 
@@ -169,12 +169,12 @@ namespace HTM.Net.Util
             {
                 throw new ArgumentException("Property name is required and can not be null");
             }
-            InternalPropertyInfo[] infos = GetPropertiesInfoForBean(beanClass);
+            InternalPropertyInfo[] infos = GetPropertiesInfoForBean(beanClass, new Dictionary<Type, InternalPropertyInfo[]>());
             return infos.FirstOrDefault(info => name.Equals(info.GetName(), StringComparison.CurrentCultureIgnoreCase));
         }
 
 
-        public InternalPropertyInfo[] GetPropertiesInfoForBean(Type beanClass)
+        public InternalPropertyInfo[] GetPropertiesInfoForBean(Type beanClass, Dictionary<Type, InternalPropertyInfo[]> properties)
         {
             if (beanClass == null)
             {

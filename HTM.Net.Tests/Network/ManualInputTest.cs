@@ -29,7 +29,7 @@ namespace HTM.Net.Tests.Network
         [TestMethod]
         public void TestCopy()
         {
-            Map<string, NamedTuple> classifierInput = new Map<string, NamedTuple>();
+            Map<string, object> classifierInput = new Map<string, object>();
             NamedTuple classifiers = new NamedTuple(new[] { "one", "two" }, 1, 2);
             object layerInput = new object();
             int[] sdr = new[] { 20 };

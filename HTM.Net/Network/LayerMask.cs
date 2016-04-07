@@ -9,6 +9,7 @@ namespace HTM.Net.Network
         SpatialPooler = 1,
         TemporalMemory = 2,
         ClaClassifier = 4,
-        AnomalyComputer = 8
+        AnomalyComputer = 8,
+        KnnClassifier = 16
     }
 }

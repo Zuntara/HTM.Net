@@ -580,9 +580,9 @@ namespace HTM.Net.Tests.Network.Sensor
             htmSensor.InitEncoder(GetTestEncoderParams());
 
             // Ensure that the HTMSensor's output stream can be retrieved more than once.
-            IStream<int[]> outputStream = htmSensor.GetOutputStream();
-            IStream<int[]> outputStream2 = htmSensor.GetOutputStream();
-            IStream<int[]> outputStream3 = htmSensor.GetOutputStream();
+            IStream<int[]> outputStream = (IStream<int[]>) htmSensor.GetOutputStream();
+            IStream<int[]> outputStream2 = (IStream<int[]>)htmSensor.GetOutputStream();
+            IStream<int[]> outputStream3 = (IStream<int[]>)htmSensor.GetOutputStream();
 
             // Check to make sure above multiple retrieval doesn't flag the underlying stream as operated upon
             Assert.IsFalse(htmSensor.IsTerminal());

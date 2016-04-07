@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
+using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
 
 namespace HTM.Net.Network
@@ -286,16 +287,24 @@ namespace HTM.Net.Network
                 {
                     sequenceStart = ObservableDispatch[typeof(IDictionary)];
                 }
-                else if (typeof(TInput).IsArray)
+                else if (t.GetType().IsArray)
                 {
-                    if (typeof(TInput) == typeof(string[]))
+                    if (t is string[])
                     {
-                        sequenceStart = ObservableDispatch[typeof(string[])];
+                        sequenceStart = ObservableDispatch[typeof (string[])];
                     }
-                    else if (typeof(TInput) == typeof(int[]))
+                    else if (t is int[])
                     {
-                        sequenceStart = ObservableDispatch[typeof(int[])];
+                        sequenceStart = ObservableDispatch[typeof (int[])];
                     }
+                }
+                else if (t is ImageDefinition)
+                {
+                    sequenceStart = ObservableDispatch[typeof(ImageDefinition)];
+                }
+                else
+                {
+                    throw new ArgumentException("Input type is not mappable to IInference, there is no dispatcher defined. " + t.GetType().Name, nameof(t));
                 }
             }
 

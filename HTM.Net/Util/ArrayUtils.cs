@@ -1118,6 +1118,43 @@ namespace HTM.Net.Util
             //return sum;
         }
 
+        public static double[] Sum(double[][] array, int axis)
+        {
+            /*
+            >>> np.sum([[0, 1], [0, 5]], axis=0)
+            array([0, 6])
+            >>> np.sum([[0, 1], [0, 5]], axis=1)
+            array([1, 5])
+            */
+            switch (axis)
+            {
+                case 0: // cols
+                    {
+                        int cols = array[0].Length;
+                        double[] result = new double[cols];
+                        for (int c = 0; c < cols; c++)
+                        {
+                            for (int r = 0; r < array.Length; r++)
+                            {
+                                result[c] += array[r][c];
+                            }
+                        }
+                        return result;
+                    }
+                case 1: // rows
+                    {
+                        double[] result = new double[array.Length];
+                        for (int r = 0; r < array.Length; r++)
+                        {
+                            result[r] += array[r].Sum();
+                        }
+                        return result;
+                    }
+                default:
+                    throw new ArgumentException("axis must be either '0' or '1'");
+            }
+        }
+
         /**
          * Sparse or due to the arrays containing the indexes of "on bits",
          * the <em>or</em> of which is equal to the mere combination of the two
@@ -1900,11 +1937,11 @@ namespace HTM.Net.Util
             }
         }
 
-        /**
-         * Returns the index of the max value in the specified array
-         * @param array the array to find the max value index in
-         * @return the index of the max value
-         */
+        /// <summary>
+        /// Returns the index of the max value in the specified array
+        /// </summary>
+        /// <param name="array">the array to find the max value index in</param>
+        /// <returns>the index of the max value</returns>
         public static int Argmax(int[] array)
         {
             int index = -1;
@@ -1940,11 +1977,11 @@ namespace HTM.Net.Util
             return index;
         }
 
-        /**
-         * Returns the index of the max value in the specified array
-         * @param array the array to find the max value index in
-         * @return the index of the max value
-         */
+        /// <summary>
+        /// Returns the index of the max value in the specified array
+        /// </summary>
+        /// <param name="array">the array to find the max value index in</param>
+        /// <returns>the index of the max value</returns>
         public static int Argmax(double[] array)
         {
             int index = -1;
@@ -1956,6 +1993,29 @@ namespace HTM.Net.Util
                     max = array[i];
                     index = i;
                 }
+            }
+            return index;
+        }
+
+        /// <summary>
+        /// Returns the index of the max value in the specified array
+        /// </summary>
+        /// <param name="array">the array to find the max value index in</param>
+        /// <returns>the index of the max value</returns>
+        public static int Argmax(IEnumerable<double> array)
+        {
+            int index = -1;
+            double max = double.MinValue;
+
+            int i = 0;
+            foreach (double value in array)
+            {
+                if (value > max)
+                {
+                    max = value;
+                    index = i;
+                }
+                i++;
             }
             return index;
         }
@@ -2033,6 +2093,19 @@ namespace HTM.Net.Util
                 arr[i] -= amount;
             }
             return arr;
+        }
+
+        internal static double[][] SubstractRows(double[][] matrix, double[] vector)
+        {
+            double[][] retVal = (double[][])matrix.Clone();
+            for (int row = 0; row < retVal.Length; row++)
+            {
+                for (int col = 0; col < retVal[row].Length; col++)
+                {
+                    retVal[row][col] = matrix[row][col] - vector[col];
+                }
+            }
+            return retVal;
         }
 
         internal static double[][] Sub(double[][] arr, double[] amount)
@@ -3335,7 +3408,7 @@ namespace HTM.Net.Util
                 // concatinate on columns
                 double[][] newArray = CreateJaggedArray<double>(matrix.Length, matrix[0].Length + subMatrix[0].Length);
 
-                for(int rowNr = 0; rowNr < matrix.Length; rowNr++)
+                for (int rowNr = 0; rowNr < matrix.Length; rowNr++)
                 {
                     int colNr = 0;
                     for (int c = 0; c < matrix[rowNr].Length; c++)

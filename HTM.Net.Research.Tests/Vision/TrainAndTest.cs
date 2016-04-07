@@ -1,9 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Reactive.Subjects;
 using HTM.Net.Algorithms;
+using HTM.Net.Network;
+using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Vision;
+using HTM.Net.Research.Vision.Network;
+using HTM.Net.Research.Vision.Sensor;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -61,7 +67,7 @@ namespace HTM.Net.Research.Tests.Vision
             var tupleTraining = DatasetReader.GetImagesAndTags(trainingDataset);
             var trainingImages = (List<Bitmap>)tupleTraining.Get(0);
             var trainingTags = tupleTraining.Get(1) as List<string>;
-            var trainingVectors = trainingImages.Select((i, index) => new {index, vector = i.ToVector()})
+            var trainingVectors = trainingImages.Select((i, index) => new { index, vector = i.ToVector() })
                 .ToDictionary(k => k.index, v => v.vector);
 
             // Train the spatial pooler on trainingVectors.
@@ -69,7 +75,7 @@ namespace HTM.Net.Research.Tests.Vision
 
             // Get testing images and convert them to vectors.
             var tupleTesting = DatasetReader.GetImagesAndTags(trainingDataset);
-            var testingImages = (List<System.Drawing.Bitmap>)tupleTesting.Get(0);
+            var testingImages = (List<Bitmap>)tupleTesting.Get(0);
             var testingTags = tupleTesting.Get(1) as List<string>;
             var testingVectors = testingImages.Select((i, index) => new { index, vector = i.ToVector() })
                 .ToDictionary(k => k.index, v => v.vector);
@@ -92,39 +98,220 @@ namespace HTM.Net.Research.Tests.Vision
         {
             ParameterSearch search = new ParameterSearch();
 
-            search.Execute(dataSet: "cmr_hex.xml");
+            search.ExecuteThreaded(dataSet: "cmr_hex.xml");
         }
 
-        [TestMethod]
-        public void TestPrintMethodOfCombinationParameters()
+        //[TestMethod]
+        //public void TestPrintMethodOfCombinationParameters()
+        //{
+        //    CombinationParameters parameters = new CombinationParameters();
+        //    parameters.Define("synPermConn", new List<object> { 0.5 });
+        //    parameters.Define("synPermDecFrac", new List<object> { 1.0, 0.5, 0.1 });
+        //    parameters.Define("synPermIncFrac", new List<object> { 1.0, 0.5, 0.1 });
+
+        //    // Pick a combination of parameter values
+        //    parameters.NextCombination();
+
+        //    // Add results to the list
+        //    parameters.AppendResults(new List<object> { 67.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 68.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 57.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 47.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 37.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 27.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 17.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 16.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+
+        //    parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
+        //}
+
+        //[TestMethod]
+        public void TestParameterCombinations()
         {
             CombinationParameters parameters = new CombinationParameters();
+
             parameters.Define("synPermConn", new List<object> { 0.5 });
             parameters.Define("synPermDecFrac", new List<object> { 1.0, 0.5, 0.1 });
-            parameters.Define("synPermIncFrac", new List<object> { 1.0, 0.5, 0.1 });
+            parameters.Define("synPermIncFrac", 1.0, 0.5, 0.1);
 
             // Pick a combination of parameter values
-            parameters.NextCombination();
+            IDictionary<string, object> combis;
+            int combiNr = parameters.NextCombination(out combis);
+
+            Assert.IsNotNull(combis);
+            Assert.AreEqual(3, combis.Count);
+            Assert.AreEqual(9, parameters.GetNumCombinations());
+            Assert.AreEqual(0, combiNr);
 
             // Add results to the list
-            parameters.AppendResults(new List<object> { 67.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 68.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 57.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 47.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 37.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 27.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 17.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 16.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
+            parameters.AppendResults(combiNr, new List<object> { 67.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 68.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 57.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 47.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 37.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 27.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 17.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 16.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 14.8, 3 }); // accurancy , cycles
+
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
 
             parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
+        }
+
+        // https://github.com/numenta/nupic.vision/blob/master/nupic/vision/tests/integration/nupicvision/regions/image_knn_test.py
+        /// <summary>
+        /// This test is a simple end to end test. It creates a simple network with an
+        /// ImageSensor and a KNNClassifier region.It creates a 'dataset' with two random
+        /// images, trains the network and then runs inference to ensures we can correctly
+        /// classify them.This tests that the plumbing is working well.
+        /// </summary>
+        [TestMethod]
+        public void TestSimpleImageNetwork()
+        {
+            Parameters pars = Parameters.GetAllDefaultParameters();
+
+            pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
+
+            Map<string, object> catInnerSettings = new Map<string, object>();
+            catInnerSettings.Add("fieldName", "category");
+            catInnerSettings.Add("name", "category");
+            catInnerSettings.Add("n", 8);
+            catInnerSettings.Add("w", 3);
+            catInnerSettings.Add("forced", true);
+            catInnerSettings.Add("resolution", 1);
+            catInnerSettings.Add("radius", 0);
+            catInnerSettings.Add("minVal", 0);
+            catInnerSettings.Add("maxVal", 10);
+            catInnerSettings.Add("fieldType", "int");
+            catInnerSettings.Add("encoderType", "ScalarEncoder");
+
+            Map<string, object> imgInnerSettings = new Map<string, object>();
+            imgInnerSettings.Add("fieldName", "imageIn");
+            imgInnerSettings.Add("n", 1024); // width
+            imgInnerSettings.Add("name", "imageIn");
+            imgInnerSettings.Add("fieldType", "darr");
+            imgInnerSettings.Add("encoderType", "SDRPassThroughEncoder");
+
+            Map<String, Map<String, Object>> settings = new Map<string, Map<string, object>>();
+            settings.Add("imageIn", imgInnerSettings);
+            settings.Add("category", catInnerSettings);
+
+            pars.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
+            //pars.SetParameterByKey(Parameters.KEY.MAX_CATEGORYCOUNT, 2);
+
+            ReplaySubject<ImageDefinition> subject = new ReplaySubject<ImageDefinition>();
+
+            var network = Network.Network.Create("ImageNetwork", pars);
+            network
+                .Add(Network.Network.CreateRegion("Region 1")
+                .Add(new KnnLayer("KNN Layer", network, pars))
+                .Add(Network.Network.CreateLayer("Layer 1", pars)
+                .Add(Sensor<ImageDefinition>.Create(ObservableImageSensor.Create, SensorParams.Create(
+                            SensorParams.Keys.ImageObs, subject, new { width = 32, height = 32 }))))
+                    .Connect("KNN Layer", "Layer 1"));
+
+            network.Close();
+
+            // Test the sensor data retrieval
+            IHTMSensor htmSensor = (IHTMSensor)network.GetSensor();
+            KnnLayer classifierLayer = ((KnnLayer)network.Lookup("Region 1").Lookup("KNN Layer"));
+
+            // Make sure learning is on
+            Assert.IsTrue((bool)classifierLayer.GetParameter("learningMode"));
+
+            var outStream = htmSensor.GetOutputStream();
+
+            Bitmap b1 = new Bitmap(32, 32);
+            using (Graphics g = Graphics.FromImage(b1))
+            {
+                g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+                g.DrawRectangle(new Pen(Color.Black, 1), 10, 10, 20, 20);
+            }
+
+            Bitmap b2 = new Bitmap(32, 32);
+            using (Graphics g = Graphics.FromImage(b2))
+            {
+                g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+                g.DrawRectangle(new Pen(Color.Black, 1), 15, 15, 25, 25);
+            }
+            //b1.Save(@"C:\temp\test.jpg", ImageFormat.Jpeg);
+
+            subject.OnNext(new ImageDefinition { Image = b1, CategoryIndices = new []{0}, ImageInputField = "imageIn" });
+
+            var inputObject1 = outStream.ReadUntyped();
+            int[] intArray = inputObject1 as int[];
+            //Debug.WriteLineIf(intArray != null, Arrays.ToString(intArray));
+
+            Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
+
+            // Same logic as in start but executed manually
+            if (intArray != null) tailLayer.GetFunctionFactory().Inference.SetEncoding(intArray);
+            tailLayer.Compute(inputObject1);
+
+            subject.OnNext(new ImageDefinition { Image = b2, CategoryIndices = new[] { 1 }, ImageInputField = "imageIn" });
+
+            var inputObject2 = outStream.ReadUntyped();
+            intArray = inputObject2 as int[];
+            //Debug.WriteLineIf(intArray != null, Arrays.ToString(intArray));
+
+            // Same logic as in start but executed manually
+            if (intArray != null) tailLayer.GetFunctionFactory().Inference.SetEncoding(intArray);
+            tailLayer.Compute(inputObject2);
+
+            // turn off learning and turn on inference mode
+            classifierLayer.SetParameter("inferenceMode", true);
+            classifierLayer.SetParameter("learningMode", false);
+
+            // Check parameters
+            Assert.IsFalse((bool)classifierLayer.GetParameter("learningMode"));
+            Assert.IsTrue((bool)classifierLayer.GetParameter("inferenceMode"));
+            Assert.AreEqual(2, classifierLayer.GetParameter("categoryCount"));
+            Assert.AreEqual(2, classifierLayer.GetParameter("patternCount"));
+
+            // Now test the network to make sure it categories the images correctly
+            int numCorrect = 0;
+            tailLayer.Compute(inputObject1);
+
+            var inference = tailLayer.GetInference();
+
+            int inferredCategory = inference.GetInferredCategory();
+            if (((ImageDefinition)inputObject1).CategoryIndices[0] == inferredCategory)
+            {
+                numCorrect += 1;
+            }
+            tailLayer.Compute(inputObject2);
+            inferredCategory = inference.GetInferredCategory();
+            if (((ImageDefinition)inputObject2).CategoryIndices[0] == inferredCategory)
+            {
+                numCorrect += 1;
+            }
+
+            Assert.AreEqual(2, numCorrect);
         }
     }
 }

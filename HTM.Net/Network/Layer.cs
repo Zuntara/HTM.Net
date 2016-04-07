@@ -118,7 +118,7 @@ namespace HTM.Net.Network
     {
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
 
-        private readonly FunctionFactory _factory;
+        protected readonly FunctionFactory _factory;
 
         /// <summary>
         /// Active columns in the <see cref="SpatialPooler"/> at time "t"
@@ -689,11 +689,6 @@ namespace HTM.Net.Network
 
             try
             {
-                //T inputVar = (T)Convert.ChangeType(new int[] { }, typeof(T));
-                //if (typeof(T) == typeof(int[]))
-                //{
-                //    inputVar = (T)Convert.ChangeType(new int[] { }, typeof(T));
-                //}
                 CompleteDispatch(new int[] { });
             }
             catch (Exception e)
@@ -707,12 +702,18 @@ namespace HTM.Net.Network
 
                 //////////////////////////
 
-                var outputStream = Sensor.GetOutputStream();
+                var outputStream = (IBaseStream)Sensor.GetOutputStream();
 
-                int[] intArray;
+                int[] intArray = null;
+                object inputObject;
+
                 while (!outputStream.EndOfStream)
                 {
-                    intArray = outputStream.Read();
+                    inputObject = outputStream.ReadUntyped();
+                    if (inputObject is int[])
+                    {
+                        intArray = (int[])inputObject;
+                    }
                     bool doComputation = false;
                     bool computed = false;
                     try
@@ -743,9 +744,9 @@ namespace HTM.Net.Network
                     {
 
                         //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                        _factory.Inference.SetEncoding(intArray);
+                        if (intArray != null) _factory.Inference.SetEncoding(intArray);
 
-                        Compute(intArray);
+                        Compute(inputObject);
                         computed = true;
 
                         // Notify all downstream observers that the stream is closed
@@ -769,100 +770,10 @@ namespace HTM.Net.Network
                 }
 
                 Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
-                //////////////////////////
-
-                // Applies "terminal" function, at this point the input stream
-                // is "sealed".
-                //sensor.GetOutputStream().Filter(i =>
-                //{
-                //    try
-                //    {
-                //        if (isHalted)
-                //        {
-                //            NotifyComplete();
-                //            if (next != null)
-                //            {
-                //                next.Halt();
-                //            }
-                //            return false;
-                //        }
-                //        return true;
-                //    }
-                //    catch (Exception e)
-                //    {
-                //        Console.WriteLine(e);
-                //        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
-                //        throw;
-                //    }
-                //}).ForEach(intArray =>
-                //{
-                //    try
-                //    {
-
-                //        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                //        factory.inference.Encoding(intArray);
-
-                //        //T computeInput = (T)Convert.ChangeType(intArray, typeof(int[]));
-
-                //        Compute(intArray);
-
-                //        // Notify all downstream observers that the stream is closed
-                //        if (!sensor.HasNext())
-                //        {
-                //            NotifyComplete();
-                //        }
-                //    }
-                //    catch (Exception e)
-                //    {
-                //        Console.WriteLine(e);
-                //        if (Debugger.IsAttached) Debugger.Break();
-                //        NotifyError(e);
-                //    }
-
-                //});
             }, TaskCreationOptions.LongRunning);
 
             //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
             LayerThread.Start();
-            //        (LAYER_THREAD = new Thread("Sensor Layer [" + getName() + "] Thread")
-            //        {
-
-            //            public void run()
-            //          {
-            //    LOGGER.debug("Layer [" + getName() + "] started Sensor output stream processing.");
-
-            //    // Applies "terminal" function, at this point the input stream
-            //    // is "sealed".
-            //    sensor.GetOutputStream().filter(i-> {
-            //        if (isHalted)
-            //        {
-            //            notifyComplete();
-            //            if (next != null)
-            //            {
-            //                next.halt();
-            //            }
-            //            return false;
-            //        }
-
-            //        if (Thread.currentThread().isInterrupted())
-            //        {
-            //            notifyError(new RuntimeException("Unknown Exception while filtering input"));
-            //        }
-
-            //        return true;
-            //    }).forEach(intArray-> {
-            //        ((ManualInput)Layer.this.factory.inference).encoding(intArray);
-
-            //        Layer.this.compute((T)intArray);
-
-            //        // Notify all downstream observers that the stream is closed
-            //        if (!sensor.hasNext())
-            //        {
-            //            notifyComplete();
-            //        }
-            //    });
-            //}
-            //        }).start();
 
             Logger.Debug(string.Format("Start called on Layer thread {0}", LayerThread));
         }
@@ -1089,6 +1000,7 @@ namespace HTM.Net.Network
             obsDispatch.Add(typeof(ManualInput), _factory.CreateManualInputFunc(Publisher.Select(t => t)));
             obsDispatch.Add(typeof(string[]), _factory.CreateEncoderFunc(Publisher.Select(t => t)));
             obsDispatch.Add(typeof(int[]), _factory.CreateVectorFunc(Publisher.Select(t => t)));
+            obsDispatch.Add(typeof(ImageDefinition), _factory.CreateImageFunc(Publisher.Select(t => t)));
 
             return obsDispatch;
         }
@@ -1335,8 +1247,8 @@ namespace HTM.Net.Network
         /// <returns></returns>
         private NamedTuple MakeClassifiers(MultiEncoder encoder)
         {
-            if(_classifiers!=null) return _classifiers;
-            Type classificationType = (Type) Params.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE);
+            if (_classifiers != null) return _classifiers;
+            Type classificationType = (Type)Params.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE);
 
             string[] names = new string[encoder.GetEncoders(encoder).Count];
             IClassifier[] ca = new IClassifier[names.Length];
@@ -1344,7 +1256,7 @@ namespace HTM.Net.Network
             foreach (EncoderTuple et in encoder.GetEncoders(encoder))
             {
                 names[i] = et.GetFieldName();
-                ca[i] = (IClassifier) Activator.CreateInstance(classificationType); //new CLAClassifier();
+                ca[i] = (IClassifier)Activator.CreateInstance(classificationType); //new CLAClassifier();
                 i++;
             }
             var result = new NamedTuple(names, (object[])ca);
@@ -1412,6 +1324,11 @@ namespace HTM.Net.Network
             return SDR.AsCellIndices(ActiveCells = cc.ActiveCells());
         }
 
+        public FunctionFactory GetFunctionFactory()
+        {
+            return _factory;
+        }
+
         //////////////////////////////////////////////////////////////
         //        Inner Class Definition Transformer Example        //
         //////////////////////////////////////////////////////////////
@@ -1432,11 +1349,11 @@ namespace HTM.Net.Network
         /// <see cref="Layer{T}.ResolveObservableSequence{V}(V)"/>
         /// <see cref="Layer{T}.FillInSequence(System.IObservable{HTM.Net.Network.ManualInput})"/>
         /// </summary>
-        internal class FunctionFactory
+        public class FunctionFactory
         {
             internal Layer<T> Layer { get; set; }
 
-            internal ManualInput Inference = new ManualInput();
+            public ManualInput Inference = new ManualInput();
 
             public FunctionFactory(Layer<T> layer)
             {
@@ -1600,7 +1517,10 @@ namespace HTM.Net.Network
                 protected override ManualInput DoMapping(int[] input)
                 {
                     // Indicates a value that skips the encoding step
-                    return FunctionFactory.Inference.SetRecordNum(FunctionFactory.Layer.GetRecordNum()).SetSdr(input).SetLayerInput(input);
+                    return FunctionFactory.Inference
+                        .SetRecordNum(FunctionFactory.Layer.GetRecordNum())
+                        .SetSdr(input)
+                        .SetLayerInput(input);
                 }
 
                 //    public Observable<ManualInput> call(Observable<int[]> t1)
@@ -1615,6 +1535,33 @@ namespace HTM.Net.Network
                 //    }
                 //});
                 //        }
+            }
+
+            /// <summary>
+            /// Transforms image definition to manual input
+            /// </summary>
+            class ImageDefinition2Inference : Transformer<ImageDefinition, ManualInput>
+            {
+                private FunctionFactory FunctionFactory { get; }
+
+                public ImageDefinition2Inference(FunctionFactory functionFactory)
+                {
+                    FunctionFactory = functionFactory;
+                }
+
+                protected override ManualInput DoMapping(ImageDefinition input)
+                {
+                    // Indicates a value that skips the encoding step
+                    return FunctionFactory.Inference
+                        .SetRecordNum(FunctionFactory.Layer.GetRecordNum())
+                        .SetSdr(input.InputVector)
+                        // TODO: find where the category in is set
+                        .SetClassifierInput(new Map<string, object>
+                        {
+                            { "categoryIn", input.CategoryIndices }
+                        })
+                        .SetLayerInput(input.InputVector);
+                }
             }
 
             /**
@@ -1702,6 +1649,13 @@ namespace HTM.Net.Network
                 //return @in.ofType(typeof(int[])).compose(new Vector2Inference());
             }
 
+            public IObservable<ManualInput> CreateImageFunc(IObservable<object> input)
+            {
+                var transformer = new ImageDefinition2Inference(this);
+                return transformer.TransformFiltered(input, t => t is ImageDefinition);
+                //return @in.ofType(typeof(int[])).compose(new Vector2Inference());
+            }
+
             public IObservable<ManualInput> CreateManualInputFunc(IObservable<object> input)
             {
                 var transformer = new Copy2Inference(this);
@@ -1786,7 +1740,7 @@ namespace HTM.Net.Network
                     int recordNum = Layer.GetRecordNum();
                     foreach (string key in ci.Keys)
                     {
-                        NamedTuple inputs = ci[key];
+                        NamedTuple inputs = (NamedTuple) ci[key];
                         bucketIdx = inputs.Get("bucketIdx");
                         actValue = inputs.Get("inputValue");
 
