@@ -70,12 +70,10 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             }
         }
 
-        /**
-         * Creates a basic {@link Network} with 1 {@link Region} and 1 {@link PALayer}. However
-         * this basic network contains all algorithmic components.
-         *
-         * @return  a basic Network
-         */
+        /// <summary>
+        /// Creates a basic <see cref="Network"/> with 1 <see cref="Region"/> and 1 <see cref="ILayer"/>. 
+        /// However this basic network contains all algorithmic components.
+        /// </summary>
         internal Network.Network CreateBasicNetworkCla()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
