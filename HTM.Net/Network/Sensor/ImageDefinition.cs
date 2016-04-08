@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using Kaliko.ImageLibrary;
 
 namespace HTM.Net.Network.Sensor
 {
@@ -8,7 +9,7 @@ namespace HTM.Net.Network.Sensor
     public class ImageDefinition
     {
         public int RecordNum { get; set; }
-        public Bitmap Image { get; set; }
+        public KalikoImage Image { get; set; }
         public string ImageInputField { get; set; }
         public int[] CategoryIndices { get; set; }
 

@@ -81,6 +81,11 @@ namespace HTM.Net.Util
                 container[index] = value;
         }
 
+        public static Tuple operator +(Tuple left, Tuple right)
+        {
+            return new Tuple(left.container.Union(right.container));
+        }
+
         /**
          * Returns the number of items in this {@code Tuple}
          * 

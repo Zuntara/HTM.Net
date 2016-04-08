@@ -39,13 +39,11 @@ namespace HTM.Net.Network.Sensor
             return new HTMSensor<T>(factoryMethod(t));
         }
 
-        /**
-         * Returns an instance of {@link SensorParams} used 
-         * to initialize the different types of Sensors with
-         * their resource location or source object.
-         * 
-         * @return a {@link SensorParams} object.
-         */
+        /// <summary>
+        /// Returns an instance of <see cref="SensorParams"/> used 
+        /// to initialize the different types of Sensors with
+        /// their resource location or source object.
+        /// </summary>
         public abstract SensorParams GetParams();
 
         /**
@@ -78,5 +76,5 @@ namespace HTM.Net.Network.Sensor
         bool EndOfStream();
     }
 
-    
+
 }

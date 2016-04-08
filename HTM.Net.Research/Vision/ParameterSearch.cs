@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
+using Kaliko.ImageLibrary;
 
 namespace HTM.Net.Research.Vision
 {
@@ -35,7 +36,7 @@ namespace HTM.Net.Research.Vision
         {
             var tupleTraining = DatasetReader.GetImagesAndTags(dataSet);
             // Get training images and convert them to vectors.
-            var trainingImages = (List<Bitmap>)tupleTraining.Get(0);
+            var trainingImages = (List<KalikoImage>)tupleTraining.Get(0);
             var trainingTags = tupleTraining.Get(1) as List<string>;
             var trainingVectors = trainingImages.Select((i, index) => new { index, vector = i.ToVector() })
                 .ToDictionary(k => k.index, v => v.vector);
@@ -96,7 +97,7 @@ namespace HTM.Net.Research.Vision
 
                 // Get testing images and convert them to vectors.
                 var tupleTesting = DatasetReader.GetImagesAndTags(dataSet);
-                var testingImages = (List<System.Drawing.Bitmap>)tupleTesting.Get(0);
+                var testingImages = (List<KalikoImage>)tupleTesting.Get(0);
                 var testingTags = tupleTesting.Get(1) as List<string>;
                 var testingVectors = testingImages.Select((i, index) => new { index, vector = i.ToVector() })
                     .ToDictionary(k => k.index, v => v.vector);
@@ -119,7 +120,7 @@ namespace HTM.Net.Research.Vision
         {
             var tupleTraining = DatasetReader.GetImagesAndTags(dataSet);
             // Get training images and convert them to vectors.
-            var trainingImages = (List<Bitmap>)tupleTraining.Get(0);
+            var trainingImages = (List<KalikoImage>)tupleTraining.Get(0);
             var trainingTags = tupleTraining.Get(1) as List<string>;
             var trainingVectors = trainingImages.Select((i, index) => new { index, vector = i.ToVector() })
                 .ToDictionary(k => k.index, v => v.vector);
@@ -175,7 +176,7 @@ namespace HTM.Net.Research.Vision
 
                 // Get testing images and convert them to vectors.
                 var tupleTesting = DatasetReader.GetImagesAndTags(dataSet);
-                var testingImages = (List<System.Drawing.Bitmap>)tupleTesting.Get(0);
+                var testingImages = (List<KalikoImage>)tupleTesting.Get(0);
                 var testingTags = tupleTesting.Get(1) as List<string>;
                 var testingVectors = testingImages.Select((bitmap, index) => new { index, vector = bitmap.ToVector() })
                     .ToDictionary(k => k.index, v => v.vector);

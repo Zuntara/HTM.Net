@@ -1261,14 +1261,38 @@ namespace HTM.Net.Util
          * @param interval    the amount by which to increment the values
          * @return
          */
-        public static int[] XRange(int lowerBounds, int upperBounds, int interval)
+        public static IEnumerable<int> XRange(int start, int stop, int step)
         {
-            List<int> ints = new List<int>();
-            for (int i = lowerBounds; i < upperBounds; i += interval)
+            // go up
+            if (start < stop && stop != -1)
             {
-                ints.Add(i);
+                for (int i = start; i < stop; i += step)
+                {
+                    yield return i;
+                }
             }
-            return ints.ToArray();
+            else if (start < stop && stop == -1)
+            {
+                for (int i = start; ; i += step)
+                {
+                    yield return i;
+                }
+            }
+            // go down
+            else if (start > stop && stop != -1)
+            {
+                for (int i = start; i > stop; i += step)
+                {
+                    yield return i;
+                }
+            }
+            else if (start > stop && stop == -1)
+            {
+                for (int i = start; ; i += step)
+                {
+                    yield return i;
+                }
+            }
         }
 
         /**

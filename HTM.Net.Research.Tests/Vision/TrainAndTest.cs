@@ -11,6 +11,7 @@ using HTM.Net.Research.Vision;
 using HTM.Net.Research.Vision.Network;
 using HTM.Net.Research.Vision.Sensor;
 using HTM.Net.Util;
+using Kaliko.ImageLibrary;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Research.Tests.Vision
@@ -65,7 +66,7 @@ namespace HTM.Net.Research.Tests.Vision
 
             // Get testing images and convert them to vectors.
             var tupleTraining = DatasetReader.GetImagesAndTags(trainingDataset);
-            var trainingImages = (List<Bitmap>)tupleTraining.Get(0);
+            var trainingImages = (List<KalikoImage>)tupleTraining.Get(0);
             var trainingTags = tupleTraining.Get(1) as List<string>;
             var trainingVectors = trainingImages.Select((i, index) => new { index, vector = i.ToVector() })
                 .ToDictionary(k => k.index, v => v.vector);
@@ -75,7 +76,7 @@ namespace HTM.Net.Research.Tests.Vision
 
             // Get testing images and convert them to vectors.
             var tupleTesting = DatasetReader.GetImagesAndTags(trainingDataset);
-            var testingImages = (List<Bitmap>)tupleTesting.Get(0);
+            var testingImages = (List<KalikoImage>)tupleTesting.Get(0);
             var testingTags = tupleTesting.Get(1) as List<string>;
             var testingVectors = testingImages.Select((i, index) => new { index, vector = i.ToVector() })
                 .ToDictionary(k => k.index, v => v.vector);
@@ -246,19 +247,22 @@ namespace HTM.Net.Research.Tests.Vision
 
             var outStream = htmSensor.GetOutputStream();
 
-            Bitmap b1 = new Bitmap(32, 32);
-            using (Graphics g = Graphics.FromImage(b1))
+            Bitmap b1s = new Bitmap(32, 32);
+            using (Graphics g = Graphics.FromImage(b1s))
             {
                 g.FillRectangle(Brushes.White, 0, 0, 32, 32);
                 g.DrawRectangle(new Pen(Color.Black, 1), 10, 10, 20, 20);
             }
+            KalikoImage b1 = new KalikoImage(b1s);
 
-            Bitmap b2 = new Bitmap(32, 32);
-            using (Graphics g = Graphics.FromImage(b2))
+            Bitmap b2s = new Bitmap(32, 32);
+            using (Graphics g = Graphics.FromImage(b2s))
             {
                 g.FillRectangle(Brushes.White, 0, 0, 32, 32);
                 g.DrawRectangle(new Pen(Color.Black, 1), 15, 15, 25, 25);
             }
+            KalikoImage b2 = new KalikoImage(b2s);
+
             //b1.Save(@"C:\temp\test.jpg", ImageFormat.Jpeg);
 
             subject.OnNext(new ImageDefinition { Image = b1, CategoryIndices = new []{0}, ImageInputField = "imageIn" });

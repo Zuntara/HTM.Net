@@ -4975,7 +4975,7 @@ namespace HTM.Net.Research.Swarming
             bool exitNow = false;
             string candidateSwarm = null;
             //for (_ in xrange(numModels))
-            for (int i = 0; i < ArrayUtils.XRange(0, numModels, 1).Length; i++)
+            for (int i = 0; i < ArrayUtils.XRange(0, numModels, 1).ToArray().Length; i++)
             {
                 candidateParticle = null;
 
