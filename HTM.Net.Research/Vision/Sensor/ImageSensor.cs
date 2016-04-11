@@ -30,20 +30,21 @@ namespace HTM.Net.Research.Vision.Sensor
         private List<ImageListEntry> _imageList;
         private Map<string, KalikoImage> categoryInfo;
         private ExplorerEntry explorer;
-        private Queue<int> _imageQueue;
+        private List<int> _imageQueue;
         private int _pixelCount;
-        private Queue<int> _filterQueue;
+        private List<Tuple> _filterQueue;
         private ExplorerPosition _prevPosition;
         private bool blankWithReset;
         private int depth;
         private int enabledWidth, width;
         private int enabledHeight, height;
-        private object filters;
+        private List<FilterEntry> filters;
         private Color background;
         private List<FilterEntry> postFilters;
         private bool invertOutput;
         private bool logFilteredImages;
         private int _iteration;
+        private int _holdForOffset;
 
         /// <summary>
         /// Creates a new Image sensor with sensor parameters
@@ -150,17 +151,76 @@ namespace HTM.Net.Research.Vision.Sensor
 
             if (!skipExplorerUpdate)
             {
-                this.explorer.Explorer.Update(new Map<string, object> { { "numImages", _imageList.Count } });
+                explorer.Explorer.Update(new Map<string, object> { { "numImages", _imageList.Count } });
             }
 
             LogCommand(new NamedTuple(new[] { "index" }, _imageList.Count - 1));
 
             if (clearImageList)
             {
-                this.explorer.Explorer.First();
+                explorer.Explorer.First();
             }
 
             return new Tuple(_imageList.Count, _imageList.Count(i => i.HasMask));
+        }
+
+        /// <summary>
+        /// Generate the next sensor output and send it out.
+        /// This method is called by the runtime engine.
+        /// </summary>
+        public void Compute()
+        {
+            if (_imageList.Count == 0)
+            {
+                throw new InvalidOperationException("ImageSensor can't run compute: no images loaded");
+            }
+
+            // Check to see if new image belongs to a new sequence, if so force Reset
+            var prevPosition = _prevPosition;
+            int? prevSequenceID;
+            if (prevPosition != null)
+            {
+                prevSequenceID = _imageList[prevPosition.Image.GetValueOrDefault()].SequenceIndex;
+            }
+            else
+            {
+                prevSequenceID = null;
+            }
+
+            //UpdatePrevPosition(); // TODO 
+
+            var newPosition = _prevPosition;
+            int? newSequenceID;
+            if (newPosition != null)
+            {
+                newSequenceID = _imageList[newPosition.Image.GetValueOrDefault()].SequenceIndex;
+            }
+            else
+            {
+                newSequenceID = null;
+            }
+            if (newSequenceID != prevSequenceID)
+            {
+                _prevPosition.Reset = true;
+            }
+
+            int holdFor = explorer.Explorer.GetHoldFor();
+            _holdForOffset += 1;
+            if (_holdForOffset >= holdFor)
+            {
+                _holdForOffset = 0;
+                explorer.Explorer.Next();
+            }
+            _iteration += 1;
+
+            Tuple outputImgsTuple = GetOutputImages();
+            var outputImages = outputImgsTuple.Get(0);
+            var finalOutput = outputImgsTuple.Get(1);
+
+            // Compile information about this iteration and log it
+            //var imageInfo = GetImageInfo();
+
+            // TODO: finish implementation and write tests
         }
 
         /// <summary>
@@ -365,7 +425,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
             // Concatenate all responses into one flat list of simultaneous responses
             List<object> responses = new List<object>();
-            foreach (KalikoImage kImage in (IList) filtered)
+            foreach (KalikoImage kImage in (IList)filtered)
             {
                 var response = ApplyPostFilters(kImage, filterIndex + 1);
                 if (rawOutput != null)
@@ -399,21 +459,21 @@ namespace HTM.Net.Research.Vision.Sensor
 
             // Iterate through the specified list of filter positions
             // Run filters as necessary
-            List<Tuple> allFilteredImages = _imageList[position.Image.GetValueOrDefault()].Filtered;
+            Dictionary<Tuple, List<KalikoImage>> allFilteredImages = _imageList[position.Image.GetValueOrDefault()].Filtered;
             Tuple filterPosition = new Tuple();
             foreach (var filterPair in position.Filters)
             {
                 int? filterIndex = filterPair.Item1;
                 filterPosition += new Tuple(filterPair.Item2);
 
-                if (!allFilteredImages.Contains(filterPosition))
+                if (!allFilteredImages.ContainsKey(filterPosition))
                 {
                     KalikoImage imageToFilter;
                     // Run the filter
                     if (filterPosition.Count > 1)
                     {
                         // Use the first of the simultaneous responses
-                        imageToFilter = allFilteredImages[(int) filterPosition.Get(0)].Get(0) as KalikoImage;
+                        imageToFilter = allFilteredImages[filterPosition][0] as KalikoImage;
                     }
                     else
                     {
@@ -422,21 +482,123 @@ namespace HTM.Net.Research.Vision.Sensor
                         // dict in case the filter wants to use it.
                         // TODO ?
                     }
-                    var newFilteredImages = ApplyFilter(imageToFilter, position.Image, filterIndex);
-                    foreach (Tuple newFilteredImage in newFilteredImages)
+                    var newFilteredImages = ApplyFilter(imageToFilter, position.Image, filterIndex.GetValueOrDefault());
+                    int j = 0;
+                    foreach (List<KalikoImage> newFilteredImage in newFilteredImages)
                     {
-                        int j = (int) newFilteredImage.Get(0);
-                        KalikoImage image = (KalikoImage) newFilteredImage.Get(1);
-                        // TODO: complete
+                        List<KalikoImage> image = (List<KalikoImage>)newFilteredImage;
+                        // Store in the dictionary of filtered images
+                        var thisFilterPosition = filterPosition + new Tuple(j);
+                        allFilteredImages[thisFilterPosition] = image;
+                        // Update the filter queue
+                        var thisFilterTuple = new Tuple(position.Image, thisFilterPosition);
+                        if (_filterQueue.Contains(thisFilterTuple))
+                        {
+                            _filterQueue.Remove(thisFilterTuple);
+                        }
+                        _filterQueue.Insert(0, thisFilterTuple);
+
                     }
                 }
             }
-            throw new NotImplementedException();
+            // Update the queues to mark this image as recently accessed
+            // Only mark the original image if it could be loaded from disk again
+            if (position.Image.HasValue && !string.IsNullOrWhiteSpace(_imageList[position.Image.Value].ImagePath))
+            {
+                if (_imageQueue.Contains(position.Image.Value))
+                {
+                    _imageQueue.Remove(position.Image.Value);
+                }
+                _imageQueue.Insert(0, position.Image.Value);
+            }
+            // Mark all precursors to the current filter
+            for (int i = 1; i < position.Filters.Count + 1; i++)
+            {
+                var partialFilterTuple = new Tuple(position.Image, new Tuple(position.Filters.Take(i)));
+                if (_filterQueue.Contains(partialFilterTuple))
+                {
+                    _filterQueue.Remove(partialFilterTuple);
+                }
+                _filterQueue.Insert(0, partialFilterTuple);
+            }
+
+            //MeetMemoryLimit();     // TODO: implement
+
+            return allFilteredImages[filterPosition];
         }
 
-        private IEnumerable<Tuple> ApplyFilter(KalikoImage imageToFilter, int? image, int? filterIndex)
+        /// <summary>
+        /// Apply the specified filter to the image.
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="imageIndex"></param>
+        /// <param name="filterIndex"></param>
+        /// <returns></returns>
+        private IEnumerable<List<KalikoImage>> ApplyFilter(KalikoImage image, int? imageIndex, int filterIndex)
         {
-            throw new NotImplementedException();
+            var filteredProcessed = filters[filterIndex].Filter.Process(image);
+
+            List<List<KalikoImage>> filtered = new List<List<KalikoImage>>();
+            if (!(filteredProcessed is IList))
+            {
+                filtered.Add(new List<KalikoImage> { filteredProcessed as KalikoImage });
+            }
+            else
+            {
+                foreach (var item in (IList)filteredProcessed)
+                {
+                    if (!(item is IList))
+                    {
+                        filtered.Add(new List<KalikoImage> { item as KalikoImage });
+                    }
+                    else
+                    {
+                        List<KalikoImage> imgList = new List<KalikoImage>();
+                        foreach (var lItem in (IList)item)
+                        {
+                            imgList.Add((KalikoImage)lItem);
+                        }
+                        filtered.Add(imgList);
+                    }
+                }
+            }
+
+            //  Verify that the filter produced the correct number of outputs
+            object oOutputCount = filters[filterIndex].Filter.GetOutputCount();
+            Tuple outputCount;
+            if (!(oOutputCount is Tuple))
+            {
+                outputCount = new Tuple(oOutputCount, 1);
+            }
+            else
+            {
+                outputCount = (Tuple)oOutputCount;
+            }
+            if ((int)outputCount.Get(0) != filtered.Count || filtered.Any(outputs => outputCount.Count != (int)outputCount.Get(0)))
+            {
+                throw new InvalidOperationException("The %s filter " + filters[filterIndex].FilterName +
+                         "did not return the correct number of outputs. The number of images that it returned does not " +
+                         "match the return value of the filter's getOutputCount() method.");
+            }
+
+            foreach (var item in filtered)
+            {
+                foreach (var img in item)
+                {
+                    // Verify that the image has the correct mode
+                    // TODO
+
+                    // Update the pixel count
+                    _pixelCount += image.Width * image.Height;
+                }
+            }
+
+            if (logFilteredImages)
+            {
+                // Save filter output to disk
+                // TODO
+            }
+            return filtered;
         }
 
         /// <summary>
@@ -477,7 +639,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 CategoryName = categoryName,
                 CategoryIndex = null,
                 PartitionId = null,
-                Filtered = new List<Tuple>(),
+                Filtered = new Dictionary<Tuple, List<KalikoImage>>(),
                 SequenceIndex = sequenceIndex,
                 FrameIndex = frameIndex
             };
@@ -520,7 +682,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
                     if (image == null)
                     {
-                        _imageQueue.Enqueue(_imageList.Count - 1);
+                        _imageQueue.Insert(0, _imageList.Count - 1);
                     }
                     // Append this category to categoryInfo
                     categoryInfo.Add(item.CategoryName, original);
@@ -665,8 +827,8 @@ namespace HTM.Net.Research.Vision.Sensor
         private void ClearImageList(bool skipExplorerUpdate)
         {
             _imageList = new List<ImageListEntry>();
-            _imageQueue = new Queue<int>();
-            _filterQueue = new Queue<int>();
+            _imageQueue = new List<int>();
+            _filterQueue = new List<Tuple>();
             _pixelCount = 0;
             _prevPosition = null;
             if (!skipExplorerUpdate)
@@ -690,7 +852,7 @@ namespace HTM.Net.Research.Vision.Sensor
         public string CategoryName { get; set; }
         public int? CategoryIndex { get; set; }
         public int? PartitionId { get; set; }
-        public List<Tuple> Filtered { get; set; }
+        public Dictionary<Tuple, List<KalikoImage>> Filtered { get; set; }
         public int? SequenceIndex { get; set; }
         public int? FrameIndex { get; set; }
 
@@ -1060,14 +1222,70 @@ namespace HTM.Net.Research.Vision.Sensor
 
     public abstract class BaseFilter
     {
+        protected IRandom random;
+        protected bool reproducable;
+        protected int background;
+        protected string mode;
+
+        /// <summary>
+        /// Creates a new instance of a BaseFilter
+        /// </summary>
+        /// <param name="seed">Seed for the random number generator. A specific random number generator instance 
+        /// is always created for each filter, so that they do not affect each other.</param>
+        /// <param name="reproducable">Seed the random number generator with a hash of the image pixels on each call to process(), 
+        /// in order to ensure that the filter always generates the same output for a particular input image.</param>
+        protected BaseFilter(int? seed = null, bool reproducable = false)
+        {
+            if (seed.HasValue && reproducable)
+                throw new InvalidOperationException("Cannot use 'seed' and 'reproducible' together");
+            if (seed.HasValue)
+                random = new XorshiftRandom(seed.GetValueOrDefault());
+
+            this.reproducable = reproducable;
+            mode = "gray";
+            background = 0;
+        }
+        /// <summary>
+        /// Returns a single image, or a list containing one or more images.
+        /// Post filtersIt can also return an additional raw output numpy array
+        /// that will be used as the output of the ImageSensor
+        /// </summary>
+        /// <param name="image">The image to process.</param>
+        /// <returns></returns>
         public virtual object Process(KalikoImage image)
         {
-            throw new NotImplementedException();
+            if (reproducable)
+            {
+                // Seed the random instance with a hash of the image pixels
+                random = new XorshiftRandom(image.GetHashCode());
+            }
+            return null;
         }
-
+        /// <summary>
+        /// Return the number of images returned by each call to process().
+        /// 
+        /// If the filter creates multiple simultaneous outputs, return a tuple:
+        /// (outputCount, simultaneousOutputCount).
+        /// </summary>
         public virtual object GetOutputCount()
         {
-            throw new NotImplementedException();
+            return 1;
+        }
+        /// <summary>
+        /// Accept new parameters from ImageSensor and update state.
+        /// </summary>
+        /// <param name="mode"></param>
+        /// <param name="background"></param>
+        public virtual void Update(string mode = null, int? background = null)
+        {
+            if (mode != null)
+            {
+                this.mode = mode;
+            }
+            if (background.HasValue)
+            {
+                this.background = background.Value;
+            }
         }
     }
 
