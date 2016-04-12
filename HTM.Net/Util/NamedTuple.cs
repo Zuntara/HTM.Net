@@ -32,7 +32,7 @@ namespace HTM.Net.Util
             {
                 throw new ArgumentException("Keys and values must be same length.");
             }
-
+            
             _keys = keys;
 
             _entries = new Bucket[keys.Length * 2];
@@ -417,6 +417,8 @@ namespace HTM.Net.Util
          */
         internal static object[] Interleave<TF, TS>(TF[] first, TS[] second)
         {
+            if(first == null || second == null || first.Length == 0 || second.Length == 0)
+                throw new ArgumentException("There must be at least one key given to interleave!");
             int flen = first.Length, slen = second.Length;
             object[] retVal = new object[flen + slen];
             for (int i = 0, j = 0, k = 0; i < flen || j < slen;)

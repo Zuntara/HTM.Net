@@ -35,8 +35,8 @@ namespace HTM.Net.Network.Sensor
                 public static readonly Args U = new Args(new string[] { "FILE", "URI" });
                 public static readonly Args P = new Args(new string[] { "FILE", "PATH" });
                 public static readonly Args O = new Args(new string[] { "NAME", "ONSUB" });
-                public static readonly Args I = new Args(new string[] { "DIMENSIONS" });
-                public static readonly Args IO = new Args(new string[] { "ONSUB", "DIMENSIONS" });
+                public static readonly Args I = new Args(new string[] { "IMAGECONFIG" });
+                public static readonly Args IO = new Args(new string[] { "ONSUB", "IMAGECONFIG" });
 
                 private readonly string[] _arr;
 
@@ -72,15 +72,14 @@ namespace HTM.Net.Network.Sensor
             }
         }
 
-        /**
-         * Takes a String array of keys (via {@link Supplier#get()} and a varargs 
-         * array of their values, creating key/value pairs. In this case, the keys are 
-         * all predetermined to be one of the {@link Keys.Args} types which specify the 
-         * keys which are to be used.
-         * 
-         * @param keySet       a Supplier yielding a particular set of String keys
-         * @param values       the values correlated with the specified keys.
-         */
+        /// <summary>
+        /// Takes a String array of keys (via {@link Supplier#get()} and a varargs 
+        /// array of their values, creating key/value pairs. In this case, the keys are 
+        /// all predetermined to be one of the {@link Keys.Args} types which specify the 
+        /// keys which are to be used.
+        /// </summary>
+        /// <param name="keySet">a Supplier yielding a particular set of String keys</param>
+        /// <param name="values">the values correlated with the specified keys.</param>
         private SensorParams(Func<Keys.Args> keySet, params object[] values)
             : base(keySet().Get(), values)
         {

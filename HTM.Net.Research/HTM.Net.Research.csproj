@@ -103,7 +103,10 @@
     <Compile Include="Vision\Image\ImageUtils.cs" />
     <Compile Include="Vision\Network\KnnLayer.cs" />
     <Compile Include="Vision\ParameterSearch.cs" />
+    <Compile Include="Vision\Sensor\Explorers\BaseExplorer.cs" />
     <Compile Include="Vision\Sensor\ImageSensor.cs" />
+    <Compile Include="Vision\Sensor\ImageSensorConfig.cs" />
+    <Compile Include="Vision\Sensor\Explorers\ImageSweep.cs" />
     <Compile Include="Vision\VisionTestBench.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -111,6 +111,11 @@ namespace HTM.Net.Research.Vision.Image
             return channels;
         }
 
+        public static Rectangle GetBBox(this KalikoImage image)
+        {
+            throw new NotImplementedException("todo");
+        }
+
         public static Tuple<byte, byte> GetExtrema(this byte[] imageBytes)
         {
             return new Tuple<byte,byte>(imageBytes.Min(), imageBytes.Max());

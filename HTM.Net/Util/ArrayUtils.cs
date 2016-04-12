@@ -2986,6 +2986,39 @@ namespace HTM.Net.Util
             return result;
         }
 
+        public static int[][] Reshape(int[] flatArray, int dimWidth)
+        {
+            int rows = flatArray.Length/dimWidth;
+            int[][] jagged = CreateJaggedArray<int>(rows, dimWidth);
+
+            int i = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < dimWidth; c++)
+                {
+                    jagged[r][c] = flatArray[i++];
+                }
+            }
+            return jagged;
+        }
+
+        public static int[] Reshape(int[][] matrix)
+        {
+            int rows = matrix.Length;
+            int cols = matrix[0].Length;
+
+            int[] flatArray = new int[rows*cols];
+            int i = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    flatArray[i++] = matrix[r][c];
+                }
+            }
+            return flatArray;
+        }
+
         /**
          * Takes a two-dimensional array of r rows and c columns and reshapes it to
          * have (r*c)/n by n columns. The value in location [i][j] of the input array

@@ -225,21 +225,29 @@ namespace HTM.Net.Research.Tests.Vision
             pars.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
             //pars.SetParameterByKey(Parameters.KEY.MAX_CATEGORYCOUNT, 2);
 
-            ReplaySubject<ImageDefinition> subject = new ReplaySubject<ImageDefinition>();
-
             var network = Network.Network.Create("ImageNetwork", pars);
             network
                 .Add(Network.Network.CreateRegion("Region 1")
                 .Add(new KnnLayer("KNN Layer", network, pars))
                 .Add(Network.Network.CreateLayer("Layer 1", pars)
-                .Add(Sensor<ImageDefinition>.Create(ObservableImageSensor.Create, SensorParams.Create(
-                            SensorParams.Keys.ImageObs, subject, new { width = 32, height = 32 }))))
+                .Add(Sensor<ImageDefinition>.Create(ImageSensor.Create, SensorParams.Create(
+                            SensorParams.Keys.Image, new ImageSensorConfig
+                            {
+                                Width = 32,
+                                Height = 32,
+                                ExplorerConfig = new ExplorerConfig
+                                {
+                                    ExplorerName = "ImageSweep"
+                                }
+                            }))))
                     .Connect("KNN Layer", "Layer 1"));
 
             network.Close();
 
             // Test the sensor data retrieval
-            IHTMSensor htmSensor = (IHTMSensor)network.GetSensor();
+            HTMSensor<ImageDefinition> htmSensor = (HTMSensor<ImageDefinition>)network.GetSensor();
+            ImageSensor sensor = (ImageSensor)htmSensor.GetDelegateSensor();
+
             KnnLayer classifierLayer = ((KnnLayer)network.Lookup("Region 1").Lookup("KNN Layer"));
 
             // Make sure learning is on
@@ -265,7 +273,11 @@ namespace HTM.Net.Research.Tests.Vision
 
             //b1.Save(@"C:\temp\test.jpg", ImageFormat.Jpeg);
 
-            subject.OnNext(new ImageDefinition { Image = b1, CategoryIndices = new []{0}, ImageInputField = "imageIn" });
+            sensor.LoadSingleImage(b1, categoryName: "1");
+            sensor.LoadSingleImage(b2, categoryName: "1");
+            sensor.Compute();
+
+            //subject.OnNext(new ImageDefinition { Image = b1, CategoryIndices = new []{0}, ImageInputField = "imageIn" });
 
             var inputObject1 = outStream.ReadUntyped();
             int[] intArray = inputObject1 as int[];
@@ -277,7 +289,7 @@ namespace HTM.Net.Research.Tests.Vision
             if (intArray != null) tailLayer.GetFunctionFactory().Inference.SetEncoding(intArray);
             tailLayer.Compute(inputObject1);
 
-            subject.OnNext(new ImageDefinition { Image = b2, CategoryIndices = new[] { 1 }, ImageInputField = "imageIn" });
+            //subject.OnNext(new ImageDefinition { Image = b2, CategoryIndices = new[] { 1 }, ImageInputField = "imageIn" });
 
             var inputObject2 = outStream.ReadUntyped();
             intArray = inputObject2 as int[];

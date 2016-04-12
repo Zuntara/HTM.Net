@@ -9,10 +9,9 @@ namespace HTM.Net.Network.Sensor
     public class ImageDefinition
     {
         public int RecordNum { get; set; }
-        public KalikoImage Image { get; set; }
-        public string ImageInputField { get; set; }
+        //public KalikoImage Image { get; set; }
+        //public string ImageInputField { get; set; }
         public int[] CategoryIndices { get; set; }
-
         public int[] InputVector { get; set; }
     }
 }

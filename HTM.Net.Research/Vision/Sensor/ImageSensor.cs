@@ -5,9 +5,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Vision.Image;
+using HTM.Net.Research.Vision.Sensor.Explorers;
 using HTM.Net.Util;
 using Kaliko.ImageLibrary;
 using Kaliko.ImageLibrary.Filters;
@@ -19,41 +22,44 @@ namespace HTM.Net.Research.Vision.Sensor
     /// <summary>
     /// ImageSensor, an extensible sensor for images.
     /// </summary>
-    public class ImageSensor : Sensor<Bitmap>
+    public class ImageSensor : Sensor<ImageDefinition>
     {
         protected const int HEADER_SIZE = 3;
         protected const int BATCH_SIZE = 20;
         protected const bool DEFAULT_PARALLEL_MODE = false;
 
         protected RawImageStream _imageStream;
+        protected ReplaySubject<ImageDefinition> _obsStream;
         protected readonly SensorParams _params;
+        protected readonly ImageSensorConfig _imageParameters;
+
         private List<ImageListEntry> _imageList;
-        private Map<string, KalikoImage> categoryInfo;
-        private ExplorerEntry explorer;
         private List<int> _imageQueue;
         private int _pixelCount;
+        private int _holdForOffset;
+        private int _iteration;
         private List<Tuple> _filterQueue;
         private ExplorerPosition _prevPosition;
-        private bool blankWithReset;
-        private int depth;
-        private int enabledWidth, width;
-        private int enabledHeight, height;
+
+        private List<CategoryEntry> categoryInfo;
+        private ExplorerEntry explorer;
         private List<FilterEntry> filters;
-        private Color background;
         private List<FilterEntry> postFilters;
-        private bool invertOutput;
-        private bool logFilteredImages;
-        private int _iteration;
-        private int _holdForOffset;
+        private int enabledWidth;
+        private int enabledHeight;
+        private List<KalikoImage> outputImage;
+        private KalikoImage locationImage;
+        private int _auxDataWidth;
+        private object _cubeOutputs;
 
         /// <summary>
         /// Creates a new Image sensor with sensor parameters
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        public static Sensor<Bitmap> Create(SensorParams p)
+        public static Sensor<ImageDefinition> Create(SensorParams p)
         {
-            Sensor<Bitmap> fs = new ImageSensor(p);
+            ImageSensor fs = new ImageSensor(p);
             return fs;
         }
 
@@ -64,20 +70,111 @@ namespace HTM.Net.Research.Vision.Sensor
         protected ImageSensor(SensorParams @params)
         {
             _params = @params;
-            if (!_params.HasKey("DIMENSIONS"))
+            if (!_params.HasKey("IMAGECONFIG"))
             {
-                throw new ArgumentException("Passed improperly formed Tuple: no key for \"DIMENSIONS\"");
+                throw new ArgumentException("Passed improperly formed Tuple: no key for \"IMAGECONFIG\"");
+            }
+            if (!(_params["IMAGECONFIG"] is ImageSensorConfig))
+            {
+                throw new ArgumentException("Passed improperly formed Tuple: key \"IMAGECONFIG\" is not of type ImageSensorConfig");
+            }
+            ImageSensorConfig config = (ImageSensorConfig)_params["IMAGECONFIG"];
+            _imageParameters = config;
+
+            // TODO: add some validations?
+
+            // In NuPIC 2, these are all None
+            if (_imageParameters.CategoryOut != null && _imageParameters.CategoryOut.Length != 1)
+            {
+                throw new InvalidOperationException("The 'CategoryOut' output element count must be 1.");
+            }
+            if (_imageParameters.PartitionOut != null && _imageParameters.PartitionOut.Length != 1)
+            {
+                throw new InvalidOperationException("The 'PartitionOut' output element count must be 1.");
+            }
+            if (_imageParameters.ResetOut != null && _imageParameters.ResetOut.Length != 1)
+            {
+                throw new InvalidOperationException("The 'ResetOut' output element count must be 1.");
+            }
+            if (_imageParameters.BboxOut != null && _imageParameters.BboxOut.Length != 4)
+            {
+                throw new InvalidOperationException("The 'BboxOut' output element count must be 4.");
+            }
+            if (_imageParameters.AlphaOut != null && _imageParameters.AlphaOut.Length != _imageParameters.Width * _imageParameters.Height)
+            {
+                throw new InvalidOperationException("The 'AlphaOut' output element count must be equal to width * height");
             }
 
-            dynamic dims = _params["DIMENSIONS"];
-            width = dims.width;
-            height = dims.height;
+            if (_imageParameters.Mode == "bw" && _imageParameters.Background != 0)
+            {
+                _imageParameters.Background = 255;
+            }
+            enabledHeight = _imageParameters.Height;
+            enabledWidth = _imageParameters.Width;
 
-            //IObservable<ImageDefinition> obs = null;
-            //obs = (IObservable<ImageDefinition>)@params.Get("ONSUB");
+            // The imageList data structure contains all the information about all the
+            // images which have been loaded via and of the load* methods. Some images
+            // may not be in memory, but their metadata is always kept in imageList.
+            // imageList[imageIndex] returns all the information about the image with
+            // the specified index, in a dictionary. The keys in the dictionary are:
+            //   'image': The unfiltered image.
+            //   'imagePath': The path from which the image was loaded.
+            //   'maskPath': The path from which the mask was loaded.
+            //   'categoryName': The name of the image's category.
+            //   'categoryIndex': The index of the image's category.
+            //   'filtered': A dictionary of filtered images created from this image.
+            // In general, images are only loaded once they are needed. But if an image
+            // is loaded via loadSerializedImage, then its entry in imageList has an
+            //   'image' value but no 'imagePath' value. Thus, it will never be deleted
+            // from memory because it cannot be recovered. All other images are fair
+            // game.
+            // The 'filtered' dictionary requires more explanation. Each key in the
+            // dictionary is a tuple specifying the positions of the filters that
+            // generated the image. (Filters can generate multiple outputs, so an
+            // image that comes out of the filter pipeline must be referenced by its
+            // position in the outputs of each filter in the pipeline). The dictionary
+            // also contains images that have been run through only part of the filter
+            // pipeline, which are kept around for us as inputs for the remaining
+            // filters.
+            // Here is an example with 3 filters in the pipeline:
+            //   0: A Resize filter that generates 3 outputs (small, medium, large)
+            //   1: An EqualizeHistogram filter that generates 1 output
+            //   2: A Rotation2D filter that generates 5 outputs (5 rotation angles)
+            // A typical key for an image would be (0, 0, 2), specifying the smallest
+            // scale from the Resize filter (0), the only output from the
+            // EqualizeHistogram filter (0), and the middle rotation angle (2).
+            // Another valid key would be (1), specifying an image that has gone through
+            // the Resize filter (the middle scale), but which has not been through
+            // the other filters yet. This image would neven be shown to the network,
+            // but it would be used by ImageSensor to compute other images.
+            // The _getFilteredImages method is the only method which directly accesses
+            // the filtered images in imageList. Filtering is only done on-demand.
+            // If _getFilteredImages is called and the requested images have not yet
+            // been created, _applyFilter is called to run each filter, and the
+            // resulting images are stored in imageList for later use. They may be
+            // deleted due to the memoryLimit parameter, in which case they will be
+            // recreated later if necessary.
 
-            //this._imageStream = RawImageStream.Batch(
-            //    new Stream<ImageDefinition>(obs), BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
+            _imageList = new List<ImageListEntry>();
+            categoryInfo = new List<CategoryEntry>(); // (categoryName, canonicalImage) for each category
+            _imageQueue = new List<int>(); // Queue of image indices for managing memory
+            _filterQueue = new List<Tuple>(); // Queue of filter outputs for mananging memory
+            _pixelCount = 0; // Count of total loaded pixels for mananging memory
+            outputImage = null; // Copy of the last image sent to the network
+            locationImage = null; // Copy of the location image for the last output
+            _prevPosition = null; // Position used for the last compute iteration
+            _imageParameters.CategoryOutputFile = null; // To write the category on each iteration
+            _iteration = 0; // Internal iteration counter
+            _holdForOffset = 0;
+            _auxDataWidth = _imageParameters.AuxDataWidth.GetValueOrDefault();
+            explorer = null;
+            SetFilters();
+            SetExplorer();
+
+            // Create stream that will spit out the images
+            _obsStream = new ReplaySubject<ImageDefinition>();
+            var internalStream = new Stream<ImageDefinition>(_obsStream);
+            _imageStream = RawImageStream.Batch(this, internalStream, BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
         }
 
         /// <summary>
@@ -121,6 +218,7 @@ namespace HTM.Net.Research.Vision.Sensor
         }
 
         #region Specifics
+
         /// <summary>
         /// Add the specified image to the list of images.
         /// </summary>
@@ -165,14 +263,62 @@ namespace HTM.Net.Research.Vision.Sensor
         }
 
         /// <summary>
+        /// Add the specified image to the list of images.
+        /// </summary>
+        /// <param name="imageObj">Image to load.</param>
+        /// <param name="maskPath">Path to mask to load with this image.</param>
+        /// <param name="categoryName">Name of the category of this image.</param>
+        /// <param name="clearImageList">If True, all loaded images are removed before this image is loaded. If False, this image is appended to the list of images.</param>
+        /// <param name="skipExplorerUpdate"></param>
+        /// <param name="auxPath">Path to the auxiliary data for the image.</param>
+        /// <param name="userAuxData"></param>
+        /// <param name="sequenceIndex">Unique sequence index.</param>
+        /// <param name="frameIndex">The frame number within the sequence.</param>
+        public Tuple LoadSingleImage(KalikoImage imageObj, string maskPath = null, string categoryName = null, bool clearImageList = true,
+            bool skipExplorerUpdate = false, string[] auxPath = null, object userAuxData = null, int? sequenceIndex = null,
+            int? frameIndex = null)
+        {
+            if (clearImageList)
+            {
+                ClearImageList(skipExplorerUpdate: true);
+            }
+
+            bool manualAux = userAuxData != null;
+
+            AddImage(image: imageObj, maskPath: maskPath,
+                   categoryName: categoryName, auxPath: auxPath,
+                   manualAux: manualAux, userAuxData: userAuxData,
+                   sequenceIndex: sequenceIndex, frameIndex: frameIndex);
+
+            if (!skipExplorerUpdate)
+            {
+                explorer.Explorer.Update(new Map<string, object> { { "numImages", _imageList.Count } });
+            }
+
+            LogCommand(new NamedTuple(new[] { "index" }, _imageList.Count - 1));
+
+            if (clearImageList)
+            {
+                explorer.Explorer.First();
+            }
+
+            return new Tuple(_imageList.Count, _imageList.Count(i => i.HasMask));
+        }
+
+        /// <summary>
         /// Generate the next sensor output and send it out.
         /// This method is called by the runtime engine.
         /// </summary>
-        public void Compute()
+        public void Compute(ImageSensorOutput output = null)
         {
             if (_imageList.Count == 0)
             {
                 throw new InvalidOperationException("ImageSensor can't run compute: no images loaded");
+            }
+
+            if (output == null)
+            {
+                output = _imageParameters;
             }
 
             // Check to see if new image belongs to a new sequence, if so force Reset
@@ -187,7 +333,8 @@ namespace HTM.Net.Research.Vision.Sensor
                 prevSequenceID = null;
             }
 
-            //UpdatePrevPosition(); // TODO 
+            UpdatePrevPosition();
+            if (prevPosition == null) prevPosition = _prevPosition;
 
             var newPosition = _prevPosition;
             int? newSequenceID;
@@ -214,13 +361,198 @@ namespace HTM.Net.Research.Vision.Sensor
             _iteration += 1;
 
             Tuple outputImgsTuple = GetOutputImages();
-            var outputImages = outputImgsTuple.Get(0);
-            var finalOutput = outputImgsTuple.Get(1);
+            var outputImages = (List<KalikoImage>)outputImgsTuple.Get(0);
+            var finalOutput = (KalikoImage)outputImgsTuple.Get(1);
 
             // Compile information about this iteration and log it
-            //var imageInfo = GetImageInfo();
+            ImageListEntry imageInfo = GetImageInfo();
+            string fileName = "";
+            if (string.IsNullOrWhiteSpace(imageInfo.ImagePath))
+            {
+                fileName = "";
+            }
+            else
+            {
+                fileName = Path.GetFileName(imageInfo.ImagePath);
+            }
+            int category = imageInfo.CategoryIndex.GetValueOrDefault(-1);
+            string categoryName;
+            if (category == -1)
+            {
+                categoryName = "";
+            }
+            else
+            {
+                categoryName = categoryInfo[category].CategoryName;
+            }
+            LogCommand(new NamedTuple(new[] { "iteration", "position", "filename", "categoryIndex", "categoryName", "erode", "blank" },
+                _iteration, explorer.Explorer.GetPosition(), fileName, category, categoryName, imageInfo.Erode, prevPosition.Reset.GetValueOrDefault() && _imageParameters.BlankWithReset), null);
 
-            // TODO: finish implementation and write tests
+            // If we don"t have a partition ID at this point (e.g., because
+            // of memory limits), then we need to try and pull from the
+            // just-loaded image
+            if (imageInfo.PartitionId == null)
+            {
+                int? imgPos = explorer.Explorer.GetPosition().Image;
+                imageInfo.PartitionId = _imageList[imgPos.GetValueOrDefault()].PartitionId;
+            }
+
+            if (_imageParameters.Depth == 1)
+            {
+                outputImage = new List<KalikoImage> { outputImages[0] };
+            }
+            else
+            {
+                outputImage = outputImages;
+            }
+
+            // Invalidate the old location image
+            locationImage = null;
+
+            // Log the images and locations if specified
+            if (_imageParameters.LogOutputImages) LogOutputImages();
+            if (_imageParameters.LogOriginalImages) LogOriginalImage();
+            if (_imageParameters.LogLocationImages) LogLocationImage();
+
+            // Save category to file
+            WriteCategoryToFile(category);
+
+            // Process the output
+            // --------------------------------------------------------------------------
+
+            // Convert the output images to a numpy vector
+            var croppedArrays = outputImages.Select(image => ArrayUtils.Reshape(image.IntArray, image.Width)).ToList();
+            // Pad the images to fit the full output size if necessary generating
+            // a stack of images, each of them self.width X self.height
+            var pad = _cubeOutputs != null &&
+                      (_imageParameters.Depth > 1 || croppedArrays[0].Length != _imageParameters.Height ||
+                       croppedArrays[0][0].Length != _imageParameters.Width);
+
+            List<int[][]> fullArrays;
+            if (pad)
+            {
+                fullArrays = ArrayUtils.XRange(0, _imageParameters.Depth, 1)
+                    .Select(i => ArrayUtils.CreateJaggedArray<int>(_imageParameters.Height, _imageParameters.Width))
+                    .ToList();
+                throw new NotImplementedException("todo");
+            }
+            else
+            {
+                fullArrays = croppedArrays;
+            }
+            // Flatten and concatenate the arrays
+            int[] outputArray = fullArrays.SelectMany(fa => ArrayUtils.Reshape(fa)).ToArray();
+
+            // Send black and white images as binary (0, 1) instead of (0..255)
+            if (_imageParameters.Mode == "bw")
+            {
+                outputArray = outputArray.Select(o => (int)Math.Round(o / 255.0)).ToArray();
+            }
+
+            // dataOut - main output
+            if (finalOutput == null)
+            {
+                output.DataOut = outputArray;
+            }
+            else
+            {
+                output.DataOut = finalOutput.IntArray;
+            }
+
+            // categoryOut - category index
+            output.CategoryOut = new[] { category };
+            // auxDataOut - auxiliary data
+            var auxDataOut = imageInfo.AuxData;
+            if (auxDataOut != null)
+            {
+                output.AuxDataOut = auxDataOut;
+            }
+            // resetOut - reset flag
+            if (output.ResetOut != null)
+            {
+                output.ResetOut = new[] { prevPosition.Reset.GetValueOrDefault() ? 1 : 0 };
+            }
+            // bboxOut - bounding box
+            if (output.BboxOut != null && output.BboxOut.Length == 4)
+            {
+                var bbox = outputImages[0].Split()[3].GetBBox();
+                if (bbox == null)
+                {
+                    bbox = new Rectangle(0, 0, 0, 0);
+                }
+                output.BboxOut = new[] { bbox.X, bbox.Y, bbox.Width, bbox.Height };
+                // Optionally log the bounding box information
+                if (_imageParameters.LogBoundingBox)
+                {
+                    LogBoundingBox(bbox);
+                }
+            }
+            // alphaOut - alpha channel
+            if (output.AlphaOut != null && output.AlphaOut.Length > 1)
+            {
+                var alphaOut = outputImages[0].Split()[3].IntArray;
+                if (!imageInfo.Erode)
+                {
+                    // Change the 0th element of the output to signal that the alpha
+                    // channel should be dilated, not eroded
+                    alphaOut[0] = -alphaOut[0] - 1;
+                }
+                output.AlphaOut = alphaOut;
+            }
+            //  partitionOut - partition ID (defaults to zero)
+            if (output.PartitionOut != null)
+            {
+                var partition = imageInfo.PartitionId.GetValueOrDefault(0);
+                output.PartitionOut = new[] { partition };
+            }
+
+            WriteToInputStream(output);
+        }
+
+        /// <summary>
+        /// Writes the output of the compute() method to the input stream for usage in the network
+        /// </summary>
+        /// <param name="output"></param>
+        private void WriteToInputStream(ImageSensorOutput output)
+        {
+            ImageDefinition definition = new ImageDefinition();
+            definition.CategoryIndices = output.CategoryOut;
+            definition.InputVector = output.DataOut;
+            definition.RecordNum = _iteration-1;
+            //definition.ImageInputField = null;
+
+            _obsStream.OnNext(definition);
+        }
+
+        /// <summary>
+        ///  Deep copy position to self.prevPosition.
+        /// </summary>
+        private void UpdatePrevPosition()
+        {
+            var position = explorer.Explorer.GetPosition();
+            _prevPosition = new ExplorerPosition
+            {
+                Image = position.Image,
+                Filters = new List<int>(position.Filters),
+                Offset = position.Offset,
+                Reset = position.Reset
+            };
+        }
+
+        /// <summary>
+        /// Get the dictionary of info for the image, excluding actual PIL images.
+        /// </summary>
+        /// <param name="imageIndex">Image index to use. Uses current position if not specified.</param>
+        private ImageListEntry GetImageInfo(int? imageIndex = null)
+        {
+            if (!imageIndex.HasValue)
+            {
+                imageIndex = explorer.Explorer.GetPosition().Image;
+            }
+            var item = _imageList[imageIndex.GetValueOrDefault()].Copy();
+            item.Image = null;
+            item.Filtered = null;
+            return item;
         }
 
         /// <summary>
@@ -232,9 +564,9 @@ namespace HTM.Net.Research.Vision.Sensor
         /// </summary>
         private Tuple GetOutputImages()
         {
-            if (_prevPosition.Reset.GetValueOrDefault() && blankWithReset)
+            if (_prevPosition.Reset.GetValueOrDefault() && _imageParameters.BlankWithReset)
             {
-                var images = new KalikoImage[depth];
+                var images = new KalikoImage[_imageParameters.Depth];
                 for (int i = 0; i < images.Length; i++)
                 {
                     images[i] = new KalikoImage(enabledWidth, enabledHeight);
@@ -258,8 +590,8 @@ namespace HTM.Net.Research.Vision.Sensor
                 // size (for example, when using a fish-eye post filter). If we detect
                 // that the enabledSize is greater than the sensor size, then change our
                 // crop bounds
-                int dstImgWidth = Math.Max(width, enabledWidth);
-                int dstImgHeight = Math.Max(width, enabledHeight);
+                int dstImgWidth = Math.Max(_imageParameters.Width, enabledWidth);
+                int dstImgHeight = Math.Max(_imageParameters.Width, enabledHeight);
 
                 // Cut out the relevant part of each image
                 List<KalikoImage> newImages = new List<KalikoImage>();
@@ -272,7 +604,7 @@ namespace HTM.Net.Research.Vision.Sensor
                     int y = (int)(offset.Y * scaleY[i]);
 
                     var croppedImage = image.Clone();
-                    croppedImage.BackgroundColor = background;
+                    croppedImage.BackgroundColor = Color.FromArgb(_imageParameters.Background, _imageParameters.Background, _imageParameters.Background);
                     croppedImage.Crop(Math.Max(0, x), Math.Max(0, y),
                         Math.Min(x + dstImgWidth, image.Width), Math.Min(x + dstImgHeight, image.Height));
                     // TODO : review , the original code adds alpha mask and pastes image into new one with max(0,-x) and max(0,-y)
@@ -291,7 +623,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
                 // Filter through the post filters
                 KalikoImage finalOutput = null;
-                if (postFilters != null)
+                if (_imageParameters.PostFilters != null)
                 {
                     List<KalikoImage> newCroppedImages = new List<KalikoImage>();
                     for (int i = 0; i < croppedImages.Count; i++)
@@ -314,14 +646,14 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
 
                 // Check that the number of images matches the depth
-                if (croppedImages.Count != depth)
+                if (croppedImages.Count != _imageParameters.Depth)
                 {
                     throw new InvalidOperationException(string.Format("The filters and postFilters created {0} images to send out simultaneously, which does not match ImageSensor's depth parameter, set to {1}.",
-                        croppedImages.Count, depth));
+                        croppedImages.Count, _imageParameters.Depth));
                 }
 
                 // Invert output if necessary
-                if (invertOutput)
+                if (_imageParameters.InvertOutput)
                 {
                     foreach (KalikoImage image in croppedImages)
                     {
@@ -343,7 +675,7 @@ namespace HTM.Net.Research.Vision.Sensor
         {
             // Filter the image
             object rawOutput = null;
-            var filtered = postFilters[filterIndex].Filter.Process(image);
+            var filtered = _imageParameters.PostFilters[filterIndex].Filter.Process(image);
 
             // Handle special case where the post filter wants to control the output
             // of the image sensor (e.g convolution post filters)
@@ -375,7 +707,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
             }
             // Verify that the filter produced the correct number of outputs
-            object outputCount = postFilters[filterIndex].Filter.GetOutputCount();
+            object outputCount = _imageParameters.PostFilters[filterIndex].Filter.GetOutputCount();
             if (outputCount is Tuple || outputCount is IList)
             {
                 if ((outputCount as Tuple)?.Count == 1 || (outputCount as IList)?.Count == 1)
@@ -391,12 +723,12 @@ namespace HTM.Net.Research.Vision.Sensor
             if (((IList)filtered).Count != (int)outputCount)
             {
                 throw new InvalidOperationException(string.Format("{0} postFilter did not return the correct number of outputs",
-                    postFilters[filterIndex].FilterName));
+                    _imageParameters.PostFilters[filterIndex].FilterName));
             }
 
-            if (logFilteredImages)
+            if (_imageParameters.LogFilteredImages)
             {
-                string filterSavePath = filterIndex + postFilters[filterIndex].FilterName;
+                string filterSavePath = filterIndex + _imageParameters.PostFilters[filterIndex].FilterName;
                 if (!Directory.Exists(filterSavePath))
                 {
                     Directory.CreateDirectory(filterSavePath);
@@ -418,7 +750,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
             }
 
-            if (filterIndex == postFilters.Count - 1)
+            if (filterIndex == _imageParameters.PostFilters.Count - 1)
             {
                 return new Tuple(filtered, rawOutput);
             }
@@ -451,7 +783,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 // Image needs to be loaded
                 LoadImage(position.Image.GetValueOrDefault());
             }
-            if (filters == null)
+            if (_imageParameters.Filters == null)
             {
                 // No filters - return original version
                 return new List<KalikoImage> { _imageList[position.Image.GetValueOrDefault()].Image };
@@ -461,10 +793,10 @@ namespace HTM.Net.Research.Vision.Sensor
             // Run filters as necessary
             Dictionary<Tuple, List<KalikoImage>> allFilteredImages = _imageList[position.Image.GetValueOrDefault()].Filtered;
             Tuple filterPosition = new Tuple();
-            foreach (var filterPair in position.Filters)
+            int filterIndex = 0;
+            foreach (var pos in position.Filters)
             {
-                int? filterIndex = filterPair.Item1;
-                filterPosition += new Tuple(filterPair.Item2);
+                filterPosition += new Tuple(pos);
 
                 if (!allFilteredImages.ContainsKey(filterPosition))
                 {
@@ -482,7 +814,7 @@ namespace HTM.Net.Research.Vision.Sensor
                         // dict in case the filter wants to use it.
                         // TODO ?
                     }
-                    var newFilteredImages = ApplyFilter(imageToFilter, position.Image, filterIndex.GetValueOrDefault());
+                    var newFilteredImages = ApplyFilter(imageToFilter, position.Image, filterIndex);
                     int j = 0;
                     foreach (List<KalikoImage> newFilteredImage in newFilteredImages)
                     {
@@ -500,6 +832,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
                     }
                 }
+                filterIndex++;
             }
             // Update the queues to mark this image as recently accessed
             // Only mark the original image if it could be loaded from disk again
@@ -526,6 +859,23 @@ namespace HTM.Net.Research.Vision.Sensor
 
             return allFilteredImages[filterPosition];
         }
+        /// <summary>
+        /// Get the specified image, loading it if necessary.
+        /// </summary>
+        /// <param name="index">Index of the image to retrieve. Retrieves the current image if not specified.</param>
+        /// <returns></returns>
+        private KalikoImage GetOriginalImages(int? index = null)
+        {
+            if (!index.HasValue)
+            {
+                index = explorer.Explorer.GetPosition().Image;
+            }
+            if (_imageList[index.GetValueOrDefault()].Image == null)
+            {
+                LoadImage(index.GetValueOrDefault());
+            }
+            return _imageList[index.GetValueOrDefault()].Image;
+        }
 
         /// <summary>
         /// Apply the specified filter to the image.
@@ -536,7 +886,7 @@ namespace HTM.Net.Research.Vision.Sensor
         /// <returns></returns>
         private IEnumerable<List<KalikoImage>> ApplyFilter(KalikoImage image, int? imageIndex, int filterIndex)
         {
-            var filteredProcessed = filters[filterIndex].Filter.Process(image);
+            var filteredProcessed = _imageParameters.Filters[filterIndex].Filter.Process(image);
 
             List<List<KalikoImage>> filtered = new List<List<KalikoImage>>();
             if (!(filteredProcessed is IList))
@@ -564,7 +914,7 @@ namespace HTM.Net.Research.Vision.Sensor
             }
 
             //  Verify that the filter produced the correct number of outputs
-            object oOutputCount = filters[filterIndex].Filter.GetOutputCount();
+            object oOutputCount = _imageParameters.Filters[filterIndex].Filter.GetOutputCount();
             Tuple outputCount;
             if (!(oOutputCount is Tuple))
             {
@@ -576,7 +926,7 @@ namespace HTM.Net.Research.Vision.Sensor
             }
             if ((int)outputCount.Get(0) != filtered.Count || filtered.Any(outputs => outputCount.Count != (int)outputCount.Get(0)))
             {
-                throw new InvalidOperationException("The %s filter " + filters[filterIndex].FilterName +
+                throw new InvalidOperationException("The %s filter " + _imageParameters.Filters[filterIndex].FilterName +
                          "did not return the correct number of outputs. The number of images that it returned does not " +
                          "match the return value of the filter's getOutputCount() method.");
             }
@@ -593,7 +943,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
             }
 
-            if (logFilteredImages)
+            if (_imageParameters.LogFilteredImages)
             {
                 // Save filter output to disk
                 // TODO
@@ -614,6 +964,7 @@ namespace HTM.Net.Research.Vision.Sensor
         /// <summary>
         /// Create a dictionary for an image and metadata and add to the imageList.
         /// </summary>
+        /// <param name="image"></param>
         /// <param name="imagePath"></param>
         /// <param name="maskPath"></param>
         /// <param name="categoryName"></param>
@@ -629,7 +980,7 @@ namespace HTM.Net.Research.Vision.Sensor
         {
             ImageListEntry item = new ImageListEntry
             {
-                Image = null,
+                Image = image,
                 ImagePath = imagePath,
                 AuxData = userAuxData,
                 AuxPath = auxPath,
@@ -665,9 +1016,10 @@ namespace HTM.Net.Research.Vision.Sensor
             }
             else
             {
+                // Look up the category in categoryInfo
                 for (int i = 0; i < categoryInfo.Count; i++)
                 {
-                    if (categoryInfo.ElementAt(i).Key.Equals(item.CategoryName, StringComparison.InvariantCultureIgnoreCase))
+                    if (categoryInfo.ElementAt(i).CategoryName.Equals(item.CategoryName, StringComparison.InvariantCultureIgnoreCase))
                     {
                         item.CategoryIndex = i;
                         break;
@@ -678,14 +1030,14 @@ namespace HTM.Net.Research.Vision.Sensor
                     // This is the first image of this category (blank categories ignored)
                     item.CategoryIndex = categoryInfo.Count;
                     // Load the image in order to use it for categoryInfo
-                    var original = LoadImage(_imageList.Count - 1, returnOriginal: true, setErodeFlag: setErodeFlag);
+                    KalikoImage original = LoadImage(_imageList.Count - 1, returnOriginal: true, setErodeFlag: setErodeFlag);
 
                     if (image == null)
                     {
                         _imageQueue.Insert(0, _imageList.Count - 1);
                     }
                     // Append this category to categoryInfo
-                    categoryInfo.Add(item.CategoryName, original);
+                    categoryInfo.Add(new CategoryEntry { CategoryName = item.CategoryName, CanonicalImage = original });
                 }
                 else if (image != null)
                 {
@@ -837,10 +1189,102 @@ namespace HTM.Net.Research.Vision.Sensor
             }
         }
 
+        /// <summary>
+        /// Write the specified category index to the file at self.categoryOutputFile.
+        /// </summary>
+        /// <param name="category">Category index (integer).</param>
+        private void WriteCategoryToFile(int category)
+        {
+            // TODO: implement when needed.
+        }
+
+        private void LogLocationImage()
+        {
+            // TODO: implement when needed.
+        }
+
+        private void LogOriginalImage()
+        {
+            // TODO: implement when needed.
+        }
+
+        private void LogOutputImages()
+        {
+            // TODO: implement when needed.
+        }
+
+        private void LogBoundingBox(Rectangle bbox)
+        {
+            // TODO: implement when needed.
+        }
+
+        private void SetFilters()
+        {
+            filters = new List<FilterEntry>();
+        }
+
+        /// <summary>
+        /// Set the explorer (algorithm used to explore the input space).
+        /// </summary>
+        private void SetExplorer()
+        {
+            var config = _imageParameters.ExplorerConfig;
+            if (config == null)
+            {
+                throw new InvalidOperationException("Must specify explorer (try 'Flash' for no sweeping)");
+            }
+            explorer = new ExplorerEntry();
+            explorer.ExplorerName = config.ExplorerName;
+            explorer.ExplorerArgs = config.ExplorerArgs;
+
+            Type explorerType = Type.GetType(config.ExplorerName) ??
+                Type.GetType(typeof(BaseExplorer).Namespace + "." + config.ExplorerName);
+
+            explorer.Explorer = BaseExplorer.CreateWithParameters(explorerType, GetOriginalImages, GetFilteredImages, GetImageInfo,
+                (int?)config.ExplorerArgs.Get("seed"), (int)config.ExplorerArgs.Get("holdFor", 1), config.ExplorerArgs);
+
+            explorer.Explorer.Update(new Map<string, object>
+            {
+                {"numImages", _imageList.Count },
+                {"numFilters", filters.Count },
+                {"numFilterOutputs", GetNumFilterOutputs(filters) },
+                {"enabledWidth", enabledWidth },
+                {"enabledHeight", enabledHeight },
+                {"blankWithReset", _imageParameters.BlankWithReset },
+            });
+        }
+        /// <summary>
+        /// Return the number of outputs for each filter.
+        /// Ignores simultaneous outputs.
+        /// </summary>
+        /// <param name="filters"></param>
+        /// <returns></returns>
+        private static List<int> GetNumFilterOutputs(List<FilterEntry> filters)
+        {
+            var numFilterOutputs = new List<int>();
+            foreach (var f in filters)
+            {
+                var n = f.Filter.GetOutputCount();
+                if (n is Tuple)
+                {
+                    numFilterOutputs.Add((int)((Tuple)n).Get(0));
+                }
+                else if (n is int)
+                {
+                    numFilterOutputs.Add((int)n);
+                }
+                else
+                {
+                    throw new InvalidOperationException(string.Format("{0} filter must return an int or a tuple of two ints from getOutputCount()", f.FilterName));
+                }
+            }
+            return numFilterOutputs;
+        }
+
         #endregion
     }
 
-    internal class ImageListEntry
+    public class ImageListEntry
     {
         public KalikoImage Image { get; set; }
         public string ImagePath { get; set; }
@@ -857,367 +1301,56 @@ namespace HTM.Net.Research.Vision.Sensor
         public int? FrameIndex { get; set; }
 
         public bool HasMask { get { return !string.IsNullOrWhiteSpace(MaskPath); } }
+
+        public ImageListEntry Copy()
+        {
+            ImageListEntry entry = new ImageListEntry();
+
+            entry.Image = Image.Clone();
+            entry.ImagePath = ImagePath;
+            entry.AuxData = AuxData;
+            entry.AuxPath = AuxPath;
+            entry.ManualAux = ManualAux;
+            entry.MaskPath = MaskPath;
+            entry.Erode = Erode;
+            entry.CategoryName = CategoryName;
+            entry.CategoryIndex = CategoryIndex;
+            entry.PartitionId = PartitionId;
+            entry.Filtered = new Dictionary<Tuple, List<KalikoImage>>(Filtered);
+            entry.SequenceIndex = SequenceIndex;
+            entry.FrameIndex = FrameIndex;
+
+            return entry;
+        }
     }
 
 
-    internal class ExplorerEntry
+    public class ExplorerConfig
     {
+        public ExplorerConfig()
+        {
+            ExplorerArgs = new Map<string, object>();
+        }
         public string ExplorerName { get; set; }
         public Map<string, object> ExplorerArgs { get; set; }
+    }
+
+    internal class ExplorerEntry : ExplorerConfig
+    {
         public BaseExplorer Explorer { get; set; }
     }
 
-    internal class FilterEntry
+    public class FilterEntry
     {
         public string FilterName { get; set; }
         public Map<string, object> FilterArgs { get; set; }
         public BaseFilter Filter { get; set; }
     }
 
-    /// <summary>
-    /// BaseExplorer is the base class for all ImageSensor explorers. An explorer is
-    /// a plugin to ImageSensor that defines how the sensor moves through the "input
-    /// space" of images, filtered images, and positions of the sensor "window" on
-    /// the image.
-    /// The basic job of the explorer is to take the current sensor position (image
-    /// number, filtered version, (x,y) offset) and move to the next position. For
-    /// example, the ExhaustiveSweep filter with default parameters shifts the
-    /// offset one pixel to the right on each iteration, and then moves the offset
-    /// down and back to the left side of the image when it falls off the edge of the
-    /// bounding box. When it is done sweeping left-to-right, it sweeps
-    /// top-to-bottom, and then moves on to the next image. The RandomSweep explorer
-    /// works similarly, but after completely one sweep across the image, it randomly
-    /// chooses a new image and a place to start the sweep. The Flash explorer is the
-    /// simplest explorer; it just shows each image once and then moves to the next
-    /// one.
-    /// Explorers do a lot of ImageSensor's work. They maintain the sensor's position
-    /// and increment it. They know how to seek to a certain image, iteration, and
-    /// filtered version. They decide when to send a reset signal (end of a temporal
-    /// sequence). Some of them can report how many iterations are necessary to
-    /// explore all the inputs (though some cannot, like RandomSweep).
-    /// All other ImageSensor explorers should subclass BaseExplorer and implement
-    /// at least next(), and probably __init__(), first(), and seek() as well.
-    /// Deterministic explorers that can calculate a total number of iterations
-    /// should override the getNumIterations() method.
-    /// </summary>
-    public abstract class BaseExplorer
+    internal class CategoryEntry
     {
-        protected readonly Func<KalikoImage> _getOriginalImage;
-        protected readonly Func<ExplorerPosition, List<KalikoImage>> _getFilteredImages;
-        protected readonly Func<object> _getImageInfo;
-        protected readonly int? _seed;
-        protected readonly int _holdFor, _initialSetSeed;
-        protected IRandom _random;
-        protected ExplorerPosition _position;
-        protected int _numFilters;
-        protected int _numImages;
-        protected int _enabledWidth;
-        protected int _enabledHeight;
-        protected List<int> _numFilterOutputs;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="getOriginalImage">ImageSensor method to get an original image.</param>
-        /// <param name="getFilteredImages">ImageSensor method to get filtered images.</param>
-        /// <param name="getImageInfo">ImageSensor method to get imageInfo.</param>
-        /// <param name="seed">Seed for the random number generator. A specific random number
-        /// generator instance is always created for each explorer, so that they do not affect each other.
-        /// </param>
-        /// <param name="holdFor">how many iterations to hold each output image for. Default is 1.
-        /// The sensor will take care of dealing with this - nothing special needs to be done by the explorer.
-        /// </param>
-        protected BaseExplorer(Func<KalikoImage> getOriginalImage, Func<ExplorerPosition, List<KalikoImage>> getFilteredImages,
-            Func<object> getImageInfo, int? seed = null, int holdFor = 1)
-        {
-            _getOriginalImage = getOriginalImage;
-            _getFilteredImages = getFilteredImages;
-            _getImageInfo = getImageInfo;
-            _seed = seed;
-            _holdFor = holdFor;
-            if (seed.HasValue)
-            {
-                _initialSetSeed = seed.Value;
-                _random = new XorshiftRandom(seed.Value);
-            }
-            else
-            {
-                _initialSetSeed = Environment.TickCount;
-                _random = new XorshiftRandom(_initialSetSeed);
-            }
-        }
-
-        /// <summary>
-        /// Set up the position.
-        /// 
-        /// BaseExplorer picks image 0, offset (0,0), etc., but explorers that wish
-        /// to set a different first position should extend this method. Such explorers
-        /// may wish to call BaseExplorer.first(center=False), which initializes the
-        /// position tuple but does not call centerImage() (which could cause
-        /// unnecessary filtering to occur).
-        /// </summary>
-        /// <param name="center"></param>
-        public virtual void First(bool center = true)
-        {
-            _position = new ExplorerPosition
-            {
-                Image = 0,
-                Filters = new List<Tuple<int?, ExplorerPosition>>(), //new int[_numFilters],
-                Offset = new Point(0, 0),
-                Reset = false
-            };
-            for (int i = 0; i < _numFilters; i++)
-            {
-                _position.Filters.Add(null);
-            }
-
-            if (_numImages > 0 && center)
-            {
-                CenterImage();
-            }
-        }
-
-        /// <summary>
-        /// Go to the next position (next iteration).
-        /// 
-        /// seeking -- Boolean that indicates whether the explorer is calling next()
-        ///   from seek(). If True, the explorer should avoid unnecessary computation
-        ///   that would not affect the seek command. The last call to next() from
-        ///   seek() will be with seeking=False.
-        /// </summary>
-        /// <param name="seeking"></param>
-        public virtual void Next(bool seeking = false)
-        {
-            // Do nothing here yet
-        }
-
-        /// <summary>
-        /// Seek to the specified position or iteration.
-        /// 
-        /// ImageSensor checks validity of inputs, checks that one (but not both) of
-        /// position and iteration are None, and checks that if position is not None,
-        /// at least one of its values is not None.
-        /// 
-        /// Updates value of position.
-        /// </summary>
-        /// <param name="iteration">Target iteration number (or None)</param>
-        /// <param name="position">Target position (or None)</param>
-        public virtual void Seek(int? iteration = null, ExplorerPosition position = null)
-        {
-            if (!iteration.HasValue && position == null)
-            {
-                throw new InvalidOperationException("iteration or position must be given.");
-            }
-            if (iteration.HasValue)
-            {
-                RestoreRandomState();
-                First();
-                if (iteration > 0)
-                {
-                    for (int i = 0; i < iteration.Value - 1; i++)
-                    {
-                        Next(true);
-                    }
-                    Next();
-                }
-            }
-            else
-            {
-                if (position.Image.HasValue) _position.Image = position.Image;
-                if (position.Filters != null) _position.Filters = position.Filters;
-                if (position.Offset.HasValue) _position.Offset = position.Offset;
-                if (position.Reset.HasValue) _position.Reset = position.Reset;
-            }
-        }
-        /// <summary>
-        /// Update state with new parameters from ImageSensor and call first().
-        /// </summary>
-        /// <param name="kwargs"></param>
-        public void Update(Map<string, object> kwargs)
-        {
-            var beanUtil = BeanUtil.GetInstance();
-            foreach (var key in kwargs.Keys)
-            {
-                beanUtil.SetSimpleProperty(this, key, kwargs[key]);
-            }
-            First();
-        }
-
-        /// <summary>
-        /// Get the number of iterations required to completely explore the input space.
-        /// Explorers that do not wish to support this method should not override it.
-        /// ImageSensor takes care of the input validation.
-        /// </summary>
-        /// <param name="image">If None, returns the sum of the iterations for all the loaded images. 
-        /// Otherwise, image should be an integer specifying the image for which to calculate iterations.</param>
-        public virtual int GetNumIterations(int? image)
-        {
-            return -1;
-        }
-
-        /// <summary>
-        /// Restore the initial random state of the explorer.
-        /// </summary>
-        public void RestoreRandomState()
-        {
-            _random = new XorshiftRandom(_initialSetSeed);
-        }
-
-        /// <summary>
-        /// Return True if the enabled region of the image specified by the current position is blank.
-        /// </summary>
-        /// <param name="fallOfObject">
-        /// If True, the image is considered blank only if the mask is entirely black. 
-        /// Otherwise, it is considered blank if any of mask is black.
-        /// </param>
-        /// <param name="position">Position to use. Uses current position if not specified.</param>
-        /// <returns></returns>
-        public bool IsBlank(bool fallOfObject, ExplorerPosition position = null)
-        {
-            if (position == null) position = _position;
-
-            Point xy1 = position.Offset.GetValueOrDefault();
-            int x2 = xy1.X + _enabledWidth;
-            int y2 = xy1.Y + _enabledHeight;
-            KalikoImage mask = _getFilteredImages(position)[0].Split()[3];
-            //var extrema = 
-            throw new NotImplementedException("Check BaseExporer.py line 195");
-        }
-
-        /// <summary>
-        /// Return True if the current position and enabled size contains at least
-        /// some of the region specified by the bounding box.
-        /// </summary>
-        /// <param name="position">Position to use. Uses current position if not specified.</param>
-        /// <returns></returns>
-        public bool IsValid(ExplorerPosition position = null)
-        {
-            if (position == null) position = _position;
-            Point xy1 = position.Offset.GetValueOrDefault();
-            Rectangle bbox = new Rectangle(new Point(), _getFilteredImages(position)[0].Split()[3].Size);
-            if ((bbox.Location.X - _enabledWidth >= xy1.X) ||
-                (bbox.Location.Y - _enabledHeight >= xy1.Y) ||
-                (bbox.Size.Width + _enabledWidth <= xy1.X) ||
-                (bbox.Size.Height + _enabledHeight <= xy1.Y))
-            {
-                return false;
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// Get all the filtered versions of the image, as a flat list.
-        /// Each item in the list is a list of images, containing an image for each
-        /// simultaneous response.
-        /// </summary>
-        /// <param name="image">Image index to use. Uses current position if not specified.</param>
-        public List<List<KalikoImage>> GetAllFilteredVersionsOfImage(int? image = null)
-        {
-            if (!image.HasValue) image = _position.Image.GetValueOrDefault();
-
-            List<List<KalikoImage>> filteredImages = new List<List<KalikoImage>>();
-            var filterPosition = new List<Tuple<int?, ExplorerPosition>>();
-            for (int i = 0; i < _numFilters; i++)
-            {
-                filterPosition.Add(null);
-            }
-
-            var emptyPositions = new List<Tuple<int?, ExplorerPosition>>();
-            for (int i = 0; i < _numFilters; i++)
-            {
-                emptyPositions.Add(null);
-            }
-
-            var position = new ExplorerPosition
-            {
-                Image = image,
-                Filters = filterPosition
-            };
-            while (true)
-            {
-                filteredImages.Add(_getFilteredImages(position));
-                foreach (int i in ArrayUtils.XRange(_numFilters - 1, -1, -1))
-                {
-                    filterPosition[i] = new Tuple<int?, ExplorerPosition>(filterPosition[i].Item1 + 1, filterPosition[i].Item2);
-
-                    if (filterPosition[i].Item1 == _numFilterOutputs[i])
-                    {
-                        filterPosition[i] = new Tuple<int?, ExplorerPosition>(0, filterPosition[i].Item2);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                if (filterPosition.SequenceEqual(emptyPositions))
-                {
-                    break;
-                }
-            }
-            return filteredImages;
-        }
-
-        /// <summary>
-        /// Pick a random image from a uniform distribution.
-        /// </summary>
-        /// <param name="random">Instance of random.Random.</param>
-        /// <returns></returns>
-        public int PickRandomImage(IRandom random)
-        {
-            return random.NextInt(_numImages - 1);
-        }
-
-        /// <summary>
-        /// Pick a random position for each filter from uniform distributions.
-        /// </summary>
-        /// <param name="random">Instance of random.Random.</param>
-        /// <returns></returns>
-        public int[] PickRandomFilters(IRandom random)
-        {
-            return ArrayUtils.XRange(0, _numFilters, 1)
-                .Select(i => random.NextInt(_numFilterOutputs[i] - 1))
-                .ToArray();
-        }
-        /// <summary>
-        /// Update the offset to center the current image.
-        /// </summary>
-        public void CenterImage()
-        {
-            var image = _getFilteredImages(null)[0];
-            _position.Offset = new Point((image.Width - _enabledWidth) / 2, (image.Height - _enabledHeight) / 2);
-        }
-
-        /// <summary>
-        /// Get the number of filtered versions for each original image.
-        /// </summary>
-        /// <returns></returns>
-        private int GetNumFilteredVersionsPerImage()
-        {
-            int numFilteredVersions = 1;
-            foreach (int i in ArrayUtils.XRange(0, _numFilters, 1))
-            {
-                numFilteredVersions *= _numFilterOutputs[i];
-            }
-            return numFilteredVersions;
-        }
-
-        /// <summary>
-        /// Get the number of filtered versions for each original image.
-        /// </summary>
-        public int NumFilteredVersionsPerImage
-        {
-            get { return GetNumFilteredVersionsPerImage(); }
-        }
-
-        public int GetHoldFor()
-        {
-            return _holdFor;
-        }
-
-        public ExplorerPosition GetPosition()
-        {
-            return _position;
-        }
+        public string CategoryName { get; set; }
+        public KalikoImage CanonicalImage { get; set; }
     }
 
     public abstract class BaseFilter
@@ -1292,7 +1425,8 @@ namespace HTM.Net.Research.Vision.Sensor
     public class ExplorerPosition
     {
         public int? Image { get; set; }
-        public List<Tuple<int?, ExplorerPosition>> Filters { get; set; }
+        //public List<Tuple<int?, ExplorerPosition>> Filters { get; set; }
+        public List<int> Filters { get; set; }
         public Point? Offset { get; set; }
         public bool? Reset { get; set; }
     }
@@ -1320,8 +1454,8 @@ namespace HTM.Net.Research.Vision.Sensor
 
             IObservable<ImageDefinition> obs = null;
             obs = (IObservable<ImageDefinition>)@params.Get("ONSUB");
-            this.stream = RawImageStream.Batch(
-                new Stream<ImageDefinition>(obs), BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
+            //this.stream = RawImageStream.Batch(
+            //    new Stream<ImageDefinition>(obs), BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
 
         }
 
@@ -1380,6 +1514,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
     public class RawImageStream : IMetaStream
     {
+        public ImageSensor ParentSensor { get; set; }
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(RawImageStream));
 
         private readonly int _headerLength;
@@ -1392,8 +1527,9 @@ namespace HTM.Net.Research.Vision.Sensor
 
         }
 
-        public RawImageStream(IStream<ImageDefinition> stream, int headerSize, Func<ImageDefinition, ImageDefinition> mappingFunc)
+        public RawImageStream(ImageSensor parentSensor, IStream<ImageDefinition> stream, int headerSize, Func<ImageDefinition, ImageDefinition> mappingFunc)
         {
+            ParentSensor = parentSensor;
             _headerLength = headerSize;
             MakeHeader(stream);
 
@@ -1405,7 +1541,6 @@ namespace HTM.Net.Research.Vision.Sensor
             {
                 _contentStream = stream.Map(bitmapDef =>
                 {
-
                     return bitmapDef;
                 });
             }
@@ -1464,8 +1599,6 @@ namespace HTM.Net.Research.Vision.Sensor
             // todo: replace with configurable vector transformers
             return (IBaseStream)_contentStream.Map(bitmapDef =>
            {
-               // Convert to bitmap to an array of ints
-               bitmapDef.InputVector = bitmapDef.Image.ToVector();
                return bitmapDef;
            });
 
@@ -1501,14 +1634,14 @@ namespace HTM.Net.Research.Vision.Sensor
         /// <param name="isParallel">if true, batching will take place, otherwise not</param>
         /// <param name="headerLength">number of header lines</param>
         /// <returns></returns>
-        public static RawImageStream Batch(IStream<ImageDefinition> stream, int batchSize, bool isParallel, int headerLength, Func<ImageDefinition, ImageDefinition> mappingFunc = null)
+        public static RawImageStream Batch(ImageSensor parentSensor, IStream<ImageDefinition> stream, int batchSize, bool isParallel, int headerLength, Func<ImageDefinition, ImageDefinition> mappingFunc = null)
         {
             //Notice the Type of the Stream becomes String[] - This is an important optimization for 
             //parsing the sequence number later. (to avoid calling String.split() on each entry)
             //Initializes and creates the CsvHeader here:
 
             // Create a new string that returns arrays of strings
-            RawImageStream csv = new RawImageStream(stream, headerLength, mappingFunc);
+            RawImageStream csv = new RawImageStream(parentSensor, stream, headerLength, mappingFunc);
             stream.SetOffset(headerLength);
             if (isParallel)
             {
@@ -1538,6 +1671,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
             IStream<ImageDefinition> stream = _contentStream.Map(value =>
             {
+                Debug.WriteLine("Passing the continuation ");
                 value.RecordNum = i++;
                 return value;
                 //string[] retVal = new string[value.Length + 1];

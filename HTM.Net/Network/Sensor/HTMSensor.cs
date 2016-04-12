@@ -600,6 +600,11 @@ namespace HTM.Net.Network.Sensor
             return @delegate.GetInputStream().IsTerminal();
         }
 
+        public ISensor GetDelegateSensor()
+        {
+            return @delegate;
+        }
+
         /**
          * Returns the {@link Header} container for Sensor meta
          * information associated with the input characteristics and configured
