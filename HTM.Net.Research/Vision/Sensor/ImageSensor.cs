@@ -5,16 +5,17 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Vision.Image;
 using HTM.Net.Research.Vision.Sensor.Explorers;
+using HTM.Net.Research.Vision.Sensor.Filters;
 using HTM.Net.Util;
 using Kaliko.ImageLibrary;
 using Kaliko.ImageLibrary.Filters;
 using log4net;
+using log4net.Repository.Hierarchy;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Vision.Sensor
@@ -24,6 +25,8 @@ namespace HTM.Net.Research.Vision.Sensor
     /// </summary>
     public class ImageSensor : Sensor<ImageDefinition>
     {
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(ImageSensor));
+
         protected const int HEADER_SIZE = 3;
         protected const int BATCH_SIZE = 20;
         protected const bool DEFAULT_PARALLEL_MODE = false;
@@ -173,8 +176,12 @@ namespace HTM.Net.Research.Vision.Sensor
 
             // Create stream that will spit out the images
             _obsStream = new ReplaySubject<ImageDefinition>();
-            var internalStream = new Stream<ImageDefinition>(_obsStream);
-            _imageStream = RawImageStream.Batch(this, internalStream, BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
+            var internalStream = new ComputedStream<ImageDefinition>(_obsStream, () =>
+            {
+                // Call compute method before we are going to read
+                Compute();
+            });
+            _imageStream = RawImageStream.Batch(internalStream, BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
         }
 
         /// <summary>
@@ -214,7 +221,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
         public override bool EndOfStream()
         {
-            throw new System.NotImplementedException();
+            return _iteration == _imageList.Count;
         }
 
         #region Specifics
@@ -306,6 +313,54 @@ namespace HTM.Net.Research.Vision.Sensor
         }
 
         /// <summary>
+        /// Add multiple images to the list of images.
+        /// 
+        /// This command is equivalent to calling loadSingleImage repeatedly, but it
+        /// is faster because it avoids updating the explorer between each image, and
+        /// because it only involves one call to the runtime engine.
+        /// </summary>
+        /// <param name="images">List of images.</param>
+        /// <param name="categoryNames">Category name for each image (or can be a single string 
+        /// with the category name that should be applied to all images).</param>
+        /// <param name="clearImageList">If True, all loaded images are removed before this
+        /// image is loaded.If False, this image is appended to the list of images.</param>
+        /// <returns></returns>
+        public Tuple LoadSpecificImages(KalikoImage[] images, string[] categoryNames, bool clearImageList = true)
+        {
+            if (categoryNames != null && categoryNames.Length < images.Length && categoryNames.Length == 1)
+            {
+                // One category for all
+                string categoryName = categoryNames[0];
+                categoryNames = new string[images.Length];
+                for (int i = 0; i < categoryNames.Length; i++)
+                {
+                    categoryNames[i] = categoryName;
+                }
+            }
+            if (categoryNames != null && categoryNames.Length != images.Length)
+            {
+                throw new InvalidOperationException("category name count does not match images");
+            }
+            if (clearImageList)
+            {
+                ClearImageList(true);
+            }
+            for (int i = 0; i < images.Length; i++)
+            {
+                string categoryName = null;
+                if (categoryNames != null)
+                {
+                    categoryName = categoryNames[i];
+                }
+
+                LoadSingleImage(images[i], categoryName: categoryName, clearImageList: false, skipExplorerUpdate: true);
+            }
+            explorer.Explorer.Update(new Map<string, object> { {"numImages", _imageList.Count} });
+
+            return new Tuple(_imageList.Count, _imageList.Count(i => i.HasMask));
+        }
+
+        /// <summary>
         /// Generate the next sensor output and send it out.
         /// This method is called by the runtime engine.
         /// </summary>
@@ -315,6 +370,8 @@ namespace HTM.Net.Research.Vision.Sensor
             {
                 throw new InvalidOperationException("ImageSensor can't run compute: no images loaded");
             }
+
+            Debug.WriteLine("Calling Compute() with {0} images in memory.", _imageList.Count);
 
             if (output == null)
             {
@@ -421,7 +478,7 @@ namespace HTM.Net.Research.Vision.Sensor
             // --------------------------------------------------------------------------
 
             // Convert the output images to a numpy vector
-            var croppedArrays = outputImages.Select(image => ArrayUtils.Reshape(image.IntArray, image.Width)).ToList();
+            var croppedArrays = outputImages.Select(image => ArrayUtils.ReshapeAverage(image.ByteArray, image.Width, 3, 1)).ToList();
             // Pad the images to fit the full output size if necessary generating
             // a stack of images, each of them self.width X self.height
             var pad = _cubeOutputs != null &&
@@ -518,7 +575,7 @@ namespace HTM.Net.Research.Vision.Sensor
             ImageDefinition definition = new ImageDefinition();
             definition.CategoryIndices = output.CategoryOut;
             definition.InputVector = output.DataOut;
-            definition.RecordNum = _iteration-1;
+            definition.RecordNum = _iteration - 1;
             //definition.ImageInputField = null;
 
             _obsStream.OnNext(definition);
@@ -623,7 +680,7 @@ namespace HTM.Net.Research.Vision.Sensor
 
                 // Filter through the post filters
                 KalikoImage finalOutput = null;
-                if (_imageParameters.PostFilters != null)
+                if (postFilters != null)
                 {
                     List<KalikoImage> newCroppedImages = new List<KalikoImage>();
                     for (int i = 0; i < croppedImages.Count; i++)
@@ -675,7 +732,7 @@ namespace HTM.Net.Research.Vision.Sensor
         {
             // Filter the image
             object rawOutput = null;
-            var filtered = _imageParameters.PostFilters[filterIndex].Filter.Process(image);
+            var filtered = postFilters[filterIndex].Filter.Process(image);
 
             // Handle special case where the post filter wants to control the output
             // of the image sensor (e.g convolution post filters)
@@ -707,7 +764,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
             }
             // Verify that the filter produced the correct number of outputs
-            object outputCount = _imageParameters.PostFilters[filterIndex].Filter.GetOutputCount();
+            object outputCount = postFilters[filterIndex].Filter.GetOutputCount();
             if (outputCount is Tuple || outputCount is IList)
             {
                 if ((outputCount as Tuple)?.Count == 1 || (outputCount as IList)?.Count == 1)
@@ -723,12 +780,12 @@ namespace HTM.Net.Research.Vision.Sensor
             if (((IList)filtered).Count != (int)outputCount)
             {
                 throw new InvalidOperationException(string.Format("{0} postFilter did not return the correct number of outputs",
-                    _imageParameters.PostFilters[filterIndex].FilterName));
+                    postFilters[filterIndex].FilterName));
             }
 
             if (_imageParameters.LogFilteredImages)
             {
-                string filterSavePath = filterIndex + _imageParameters.PostFilters[filterIndex].FilterName;
+                string filterSavePath = filterIndex + postFilters[filterIndex].FilterName;
                 if (!Directory.Exists(filterSavePath))
                 {
                     Directory.CreateDirectory(filterSavePath);
@@ -750,7 +807,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
             }
 
-            if (filterIndex == _imageParameters.PostFilters.Count - 1)
+            if (filterIndex == postFilters.Count - 1)
             {
                 return new Tuple(filtered, rawOutput);
             }
@@ -783,7 +840,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 // Image needs to be loaded
                 LoadImage(position.Image.GetValueOrDefault());
             }
-            if (_imageParameters.Filters == null)
+            if (filters == null || !filters.Any())
             {
                 // No filters - return original version
                 return new List<KalikoImage> { _imageList[position.Image.GetValueOrDefault()].Image };
@@ -886,7 +943,7 @@ namespace HTM.Net.Research.Vision.Sensor
         /// <returns></returns>
         private IEnumerable<List<KalikoImage>> ApplyFilter(KalikoImage image, int? imageIndex, int filterIndex)
         {
-            var filteredProcessed = _imageParameters.Filters[filterIndex].Filter.Process(image);
+            var filteredProcessed = filters[filterIndex].Filter.Process(image);
 
             List<List<KalikoImage>> filtered = new List<List<KalikoImage>>();
             if (!(filteredProcessed is IList))
@@ -914,7 +971,7 @@ namespace HTM.Net.Research.Vision.Sensor
             }
 
             //  Verify that the filter produced the correct number of outputs
-            object oOutputCount = _imageParameters.Filters[filterIndex].Filter.GetOutputCount();
+            object oOutputCount = filters[filterIndex].Filter.GetOutputCount();
             Tuple outputCount;
             if (!(oOutputCount is Tuple))
             {
@@ -924,10 +981,10 @@ namespace HTM.Net.Research.Vision.Sensor
             {
                 outputCount = (Tuple)oOutputCount;
             }
-            if ((int)outputCount.Get(0) != filtered.Count || filtered.Any(outputs => outputCount.Count != (int)outputCount.Get(0)))
+            if ((int)outputCount.Get(0) != filtered.Count || filtered.Any(outputs => outputs.Count != (int)outputCount.Get(0)))
             {
-                throw new InvalidOperationException("The %s filter " + _imageParameters.Filters[filterIndex].FilterName +
-                         "did not return the correct number of outputs. The number of images that it returned does not " +
+                throw new InvalidOperationException("The " + filters[filterIndex].FilterName +
+                         " filter did not return the correct number of outputs. The number of images that it returned does not " +
                          "match the return value of the filter's getOutputCount() method.");
             }
 
@@ -980,7 +1037,7 @@ namespace HTM.Net.Research.Vision.Sensor
         {
             ImageListEntry item = new ImageListEntry
             {
-                Image = image,
+                Image = image?.Clone(),
                 ImagePath = imagePath,
                 AuxData = userAuxData,
                 AuxPath = auxPath,
@@ -1178,6 +1235,8 @@ namespace HTM.Net.Research.Vision.Sensor
         /// <param name="skipExplorerUpdate"></param>
         private void ClearImageList(bool skipExplorerUpdate)
         {
+            Logger.Info("Clearing images");
+            
             _imageList = new List<ImageListEntry>();
             _imageQueue = new List<int>();
             _filterQueue = new List<Tuple>();
@@ -1218,9 +1277,108 @@ namespace HTM.Net.Research.Vision.Sensor
             // TODO: implement when needed.
         }
 
+        /// <summary>
+        /// Change one or more filters, and recompute the ones that changed.
+        /// Filters should be located next to the BaseFilter.
+        /// </summary>
         private void SetFilters()
         {
+            var configs = _imageParameters.FilterConfigs;
+
             filters = new List<FilterEntry>();
+
+            if (configs != null)
+            {
+                foreach (FilterConfig config in configs)
+                {
+                    FilterEntry entry = new FilterEntry();
+                    entry.FilterName = config.FilterName;
+                    entry.FilterArgs = config.FilterArgs;
+
+                    filters.Add(entry);
+                    //Type filterType = Type.GetType(config.FilterName) ?? 
+                    //    Type.GetType(typeof(BaseFilter).Namespace + "." + config.FilterName);
+
+                    //entry.Filter = BaseFilter.CreateWithParameters(filterType, config.FilterArgs);
+                }
+                ImportFilters(filters);
+
+                // Validate no filter except the last returns simultaneous responses
+                for (int i = 0; i < filters.Count - 1; i++)
+                {
+                    var outputCount = filters[i].Filter.GetOutputCount();
+                    if (outputCount is Tuple && ((Tuple)outputCount).Count > 1 && (int)((Tuple)outputCount).Get(1) > 1)
+                    {
+                        throw new InvalidOperationException(string.Format("Only the last filter can return a nested list of images (multiple simultaneous responses). " +
+                                                            "The {0} filter index {1} of {2} creates {3} simultaneous responses.",
+                                                            filters[i].FilterName, i, filters.Count - 1, (int)((Tuple)outputCount).Get(1)));
+                    }
+                }
+                // Invalidate the filtered versions of all images
+                foreach (var item in _imageList)
+                {
+                    if (item.Filtered != null && item.Filtered.Any())
+                    {
+                        item.Filtered = new Dictionary<Tuple, List<KalikoImage>>();
+                    }
+                }
+                _filterQueue = new List<Tuple>();
+                // Update the pixel count to only count to the original images
+                _pixelCount = 0;
+                foreach (var i in _imageQueue)
+                {
+                    var image = _imageList[i].Image;
+                    _pixelCount += image.Width * image.Height;
+                }
+                // Tell the explorer about these new filters
+                if (explorer != null && explorer.Explorer != null)
+                {
+                    explorer.Explorer.Update(new Map<string, object> { { "numFilters", filters.Count }, { "numFilterOutputs", GetNumFilterOutputs(filters) } });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Import and instantiate all the specified filters.
+        /// This method lives on its own so that it can be used by both _setFilters
+        /// and _setPostFilters.
+        /// </summary>
+        private void ImportFilters(List<FilterEntry> filterEntries)
+        {
+            for (int i = 0; i < filterEntries.Count; i++)
+            {
+                // Import the filter
+                // If name is just the class name, such as 'PadToFit', we assume the same
+                // name for the module: names = ['PadToFit', 'PadToFit']
+                // If name is of the form 'ModuleName.ClassName' (useful to try multiple
+                // versions of the same filter): names = ['ModuleName', 'ClassName']
+                // By default, ImageSensor searches for filters in
+                // nupic.vision.regions.ImageSensorFilters. If the import fails, it tries
+                // the import unmodified - so you may use filters that are located
+                // anywhere that Python knows about.
+                string moduleName = "";
+                string className = "";
+                if (!filterEntries[i].FilterName.Contains("."))
+                {
+                    moduleName = className = filterEntries[i].FilterName;
+                }
+                else
+                {
+                    string[] components = filterEntries[i].FilterName.Split('.');
+                    moduleName = string.Join(".", components.Take(components.Length - 1));
+                    className = components.Last();
+                }
+
+                // Search the filter
+                Type filterType = Type.GetType(moduleName + "." + className) ??
+                    Type.GetType(typeof(BaseFilter).Namespace + "." + className);
+                if (filterType == null)
+                {
+                    throw new InvalidOperationException("Could not find filter: " + filterEntries[i].FilterName);
+                }
+                filterEntries[i].Filter = BaseFilter.CreateWithParameters(filterType, filterEntries[i].FilterArgs);
+                filterEntries[i].Filter.Update(_imageParameters.Mode, _imageParameters.Background);
+            }
         }
 
         /// <summary>
@@ -1253,6 +1411,9 @@ namespace HTM.Net.Research.Vision.Sensor
                 {"blankWithReset", _imageParameters.BlankWithReset },
             });
         }
+
+
+
         /// <summary>
         /// Return the number of outputs for each filter.
         /// Ignores simultaneous outputs.
@@ -1283,446 +1444,4 @@ namespace HTM.Net.Research.Vision.Sensor
 
         #endregion
     }
-
-    public class ImageListEntry
-    {
-        public KalikoImage Image { get; set; }
-        public string ImagePath { get; set; }
-        public object AuxData { get; set; }
-        public string[] AuxPath { get; set; }
-        public bool ManualAux { get; set; }
-        public string MaskPath { get; set; }
-        public bool Erode { get; set; }
-        public string CategoryName { get; set; }
-        public int? CategoryIndex { get; set; }
-        public int? PartitionId { get; set; }
-        public Dictionary<Tuple, List<KalikoImage>> Filtered { get; set; }
-        public int? SequenceIndex { get; set; }
-        public int? FrameIndex { get; set; }
-
-        public bool HasMask { get { return !string.IsNullOrWhiteSpace(MaskPath); } }
-
-        public ImageListEntry Copy()
-        {
-            ImageListEntry entry = new ImageListEntry();
-
-            entry.Image = Image.Clone();
-            entry.ImagePath = ImagePath;
-            entry.AuxData = AuxData;
-            entry.AuxPath = AuxPath;
-            entry.ManualAux = ManualAux;
-            entry.MaskPath = MaskPath;
-            entry.Erode = Erode;
-            entry.CategoryName = CategoryName;
-            entry.CategoryIndex = CategoryIndex;
-            entry.PartitionId = PartitionId;
-            entry.Filtered = new Dictionary<Tuple, List<KalikoImage>>(Filtered);
-            entry.SequenceIndex = SequenceIndex;
-            entry.FrameIndex = FrameIndex;
-
-            return entry;
-        }
-    }
-
-
-    public class ExplorerConfig
-    {
-        public ExplorerConfig()
-        {
-            ExplorerArgs = new Map<string, object>();
-        }
-        public string ExplorerName { get; set; }
-        public Map<string, object> ExplorerArgs { get; set; }
-    }
-
-    internal class ExplorerEntry : ExplorerConfig
-    {
-        public BaseExplorer Explorer { get; set; }
-    }
-
-    public class FilterEntry
-    {
-        public string FilterName { get; set; }
-        public Map<string, object> FilterArgs { get; set; }
-        public BaseFilter Filter { get; set; }
-    }
-
-    internal class CategoryEntry
-    {
-        public string CategoryName { get; set; }
-        public KalikoImage CanonicalImage { get; set; }
-    }
-
-    public abstract class BaseFilter
-    {
-        protected IRandom random;
-        protected bool reproducable;
-        protected int background;
-        protected string mode;
-
-        /// <summary>
-        /// Creates a new instance of a BaseFilter
-        /// </summary>
-        /// <param name="seed">Seed for the random number generator. A specific random number generator instance 
-        /// is always created for each filter, so that they do not affect each other.</param>
-        /// <param name="reproducable">Seed the random number generator with a hash of the image pixels on each call to process(), 
-        /// in order to ensure that the filter always generates the same output for a particular input image.</param>
-        protected BaseFilter(int? seed = null, bool reproducable = false)
-        {
-            if (seed.HasValue && reproducable)
-                throw new InvalidOperationException("Cannot use 'seed' and 'reproducible' together");
-            if (seed.HasValue)
-                random = new XorshiftRandom(seed.GetValueOrDefault());
-
-            this.reproducable = reproducable;
-            mode = "gray";
-            background = 0;
-        }
-        /// <summary>
-        /// Returns a single image, or a list containing one or more images.
-        /// Post filtersIt can also return an additional raw output numpy array
-        /// that will be used as the output of the ImageSensor
-        /// </summary>
-        /// <param name="image">The image to process.</param>
-        /// <returns></returns>
-        public virtual object Process(KalikoImage image)
-        {
-            if (reproducable)
-            {
-                // Seed the random instance with a hash of the image pixels
-                random = new XorshiftRandom(image.GetHashCode());
-            }
-            return null;
-        }
-        /// <summary>
-        /// Return the number of images returned by each call to process().
-        /// 
-        /// If the filter creates multiple simultaneous outputs, return a tuple:
-        /// (outputCount, simultaneousOutputCount).
-        /// </summary>
-        public virtual object GetOutputCount()
-        {
-            return 1;
-        }
-        /// <summary>
-        /// Accept new parameters from ImageSensor and update state.
-        /// </summary>
-        /// <param name="mode"></param>
-        /// <param name="background"></param>
-        public virtual void Update(string mode = null, int? background = null)
-        {
-            if (mode != null)
-            {
-                this.mode = mode;
-            }
-            if (background.HasValue)
-            {
-                this.background = background.Value;
-            }
-        }
-    }
-
-    public class ExplorerPosition
-    {
-        public int? Image { get; set; }
-        //public List<Tuple<int?, ExplorerPosition>> Filters { get; set; }
-        public List<int> Filters { get; set; }
-        public Point? Offset { get; set; }
-        public bool? Reset { get; set; }
-    }
-
-    public class ObservableImageSensor : Sensor<IObservable<ImageDefinition>>
-    {
-        private const int HEADER_SIZE = 3;
-        private const int BATCH_SIZE = 20;
-        private const bool DEFAULT_PARALLEL_MODE = false;
-
-        private RawImageStream stream;
-        private SensorParams @params;
-
-        private ObservableImageSensor(SensorParams @params)
-        {
-            if (!@params.HasKey("ONSUB"))
-            {
-                throw new ArgumentException("Passed improperly formed Tuple: no key for \"ONSUB\"");
-            }
-            if (!@params.HasKey("DIMENSIONS"))
-            {
-                throw new ArgumentException("Passed improperly formed Tuple: no key for \"DIMENSIONS\"");
-            }
-            this.@params = @params;
-
-            IObservable<ImageDefinition> obs = null;
-            obs = (IObservable<ImageDefinition>)@params.Get("ONSUB");
-            //this.stream = RawImageStream.Batch(
-            //    new Stream<ImageDefinition>(obs), BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
-
-        }
-
-        public static ObservableImageSensor Create(SensorParams p)
-        {
-            ObservableImageSensor sensor = new ObservableImageSensor(p);
-
-            return sensor as ObservableImageSensor;
-        }
-
-        /**
-         * Returns the {@link SensorParams} object used to configure this
-         * {@code ObservableSensor}
-         * 
-         * @return the SensorParams
-         */
-        public override SensorParams GetParams()
-        {
-            return @params;
-        }
-
-        /**
-         * Returns the configured {@link MetaStream}.
-         * 
-         * @return  the MetaStream
-         */
-        public override IMetaStream GetInputStream()
-        {
-            return (IMetaStream)stream;
-        }
-
-        public override MultiEncoder GetEncoder()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool EndOfStream()
-        {
-            throw new NotImplementedException();
-        }
-
-        /**
-         * Returns the values specifying meta information about the 
-         * underlying stream.
-         */
-        public override IValueList GetMetaInfo()
-        {
-            return stream.GetMeta();
-        }
-
-        public override void InitEncoder(Parameters p)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class RawImageStream : IMetaStream
-    {
-        public ImageSensor ParentSensor { get; set; }
-        private static readonly ILog LOGGER = LogManager.GetLogger(typeof(RawImageStream));
-
-        private readonly int _headerLength;
-        private ImageHeader _header;
-        private bool _isArrayType;
-        internal IStream<ImageDefinition> _contentStream;
-
-        public RawImageStream()
-        {
-
-        }
-
-        public RawImageStream(ImageSensor parentSensor, IStream<ImageDefinition> stream, int headerSize, Func<ImageDefinition, ImageDefinition> mappingFunc)
-        {
-            ParentSensor = parentSensor;
-            _headerLength = headerSize;
-            MakeHeader(stream);
-
-            if (mappingFunc != null)
-            {
-                _contentStream = stream.Map(mappingFunc);
-            }
-            else
-            {
-                _contentStream = stream.Map(bitmapDef =>
-                {
-                    return bitmapDef;
-                });
-            }
-            LOGGER.Debug("Created RawImageStream");
-        }
-
-        private void MakeHeader(IStream<ImageDefinition> stream)
-        {
-            //List<string[]> contents = new List<string[]>();
-
-            //for (int i = 0; i < _headerLength; i++)
-            //{
-            //    contents.Add(stream.Read().Split(','));
-            //}
-            //stream.SetOffset(_headerLength);
-            //BatchedCsvStream<>.BatchedCsvHeader<string[]> header = new BatchedCsvStream<>.BatchedCsvHeader<string[]>(contents, _headerLength);
-            //_header = header;
-            //_isArrayType = IsArrayType();
-
-            //if (LOGGER.IsDebugEnabled)
-            //{
-            //    LOGGER.Debug("Created Header:");
-            //    foreach (string[] h in contents)
-            //    {
-            //        LOGGER.Debug("\t" + Arrays.ToString(h));
-            //    }
-            //    LOGGER.Debug("Successfully created BatchedCsvHeader.");
-            //}
-            _header = new ImageHeader();
-            _isArrayType = true;
-        }
-
-        public IValueList GetMeta()
-        {
-            return _header;
-        }
-
-        public bool IsTerminal()
-        {
-            return _contentStream.IsTerminal();
-        }
-
-        public bool IsParallel()
-        {
-            return false;
-        }
-
-        public IBaseStream Map(Func<string[], int[]> mapFunc)
-        {
-            throw new NotSupportedException("This conversion is not for images");
-            // return (IBaseStream)_contentStream.Map(mapFunc);
-        }
-
-        public IBaseStream DoStreamMapping()
-        {
-            // todo: replace with configurable vector transformers
-            return (IBaseStream)_contentStream.Map(bitmapDef =>
-           {
-               return bitmapDef;
-           });
-
-            //return _contentStream.Map(b => b.ToVector());    
-        }
-
-        public void ForEach(Action<object> action)
-        {
-            throw new NotImplementedException();
-        }
-
-        public long Count()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Returns true when a string[] to int[] conversion is needed (when the raw input is string)
-        /// </summary>
-        /// <returns></returns>
-        public bool NeedsStringMapping()
-        {
-            return false;
-        }
-
-        /// <summary>
-        /// Factory method to create a {@code BatchedCsvStream}. If isParallel is false,
-        /// this stream will behave like a typical stream. See also {@link BatchedCsvStream#batch(Stream, int, boolean, int, int)}
-        /// for more fine grained setting of characteristics.
-        /// </summary>
-        /// <param name="stream">Incomming stream</param>
-        /// <param name="batchSize">the "chunk" length to be processed by each Threaded task</param>
-        /// <param name="isParallel">if true, batching will take place, otherwise not</param>
-        /// <param name="headerLength">number of header lines</param>
-        /// <returns></returns>
-        public static RawImageStream Batch(ImageSensor parentSensor, IStream<ImageDefinition> stream, int batchSize, bool isParallel, int headerLength, Func<ImageDefinition, ImageDefinition> mappingFunc = null)
-        {
-            //Notice the Type of the Stream becomes String[] - This is an important optimization for 
-            //parsing the sequence number later. (to avoid calling String.split() on each entry)
-            //Initializes and creates the CsvHeader here:
-
-            // Create a new string that returns arrays of strings
-            RawImageStream csv = new RawImageStream(parentSensor, stream, headerLength, mappingFunc);
-            stream.SetOffset(headerLength);
-            if (isParallel)
-            {
-                throw new NotImplementedException("Check the spliterator stuff");
-            }
-            IStream<ImageDefinition> s = !isParallel ? csv.Continuation(isParallel) : null;
-            csv._contentStream = s;
-            return csv;
-        }
-
-        /// <summary>
-        /// Returns the portion of the <see cref="Stream"/> <em>not containing</em>
-        /// the header. To obtain the header, refer to: <see cref="GetHeader()"/>
-        /// </summary>
-        /// <param name="parallel">flag indicating whether the underlying stream should be parallelized.</param>
-        /// <returns>the stream continuation</returns>
-        internal IStream<ImageDefinition> Continuation(bool parallel)
-        {
-            //_isTerminal = true;
-
-            if (_contentStream == null)
-            {
-                throw new InvalidOperationException("You must first create a BatchCsvStream by calling batch(Stream, int, bool, int)");
-            }
-
-            int i = 0;
-
-            IStream<ImageDefinition> stream = _contentStream.Map(value =>
-            {
-                Debug.WriteLine("Passing the continuation ");
-                value.RecordNum = i++;
-                return value;
-                //string[] retVal = new string[value.Length + 1];
-                //Array.Copy(value, 0, retVal, 1, value.Length);
-                //retVal[0] = i++.ToString();
-                //return retVal;
-            });
-
-            return stream;
-        }
-    }
-
-    public class ImageHeader : IValueList
-    {
-        public Tuple GetRow(int row)
-        {
-            if (row == 0)
-            {
-                return new Tuple("category", "imageIn");
-            }
-            if (row == 1)
-            {
-                return new Tuple("int", "darr");
-            }
-            if (row == 2)
-            {
-                return new Tuple(",");
-            }
-            throw new NotImplementedException();
-        }
-
-        public int Size()
-        {
-            return 3;
-        }
-
-        public bool IsLearn()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsReset()
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<FieldMetaType> GetFieldTypes()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-
 }

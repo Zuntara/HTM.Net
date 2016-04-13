@@ -68,9 +68,9 @@ namespace HTM.Net.Research.Vision.Sensor
         /// list containing both the filter name and a dictionary specifying its
         /// arguments.
         /// </summary>
-        public List<FilterEntry> Filters { get; set; }
+        public FilterConfig[] FilterConfigs { get; set; }
 
-        public List<FilterEntry> PostFilters { get; set; }
+        public List<FilterConfig> PostFilterConfigs { get; set; }
         /// <summary>
         /// YAML serialized list containing either a single string
         /// (the name of the explorer) or a list containing both the explorer name

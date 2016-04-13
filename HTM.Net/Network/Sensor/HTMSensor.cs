@@ -386,7 +386,11 @@ namespace HTM.Net.Network.Sensor
         public override bool EndOfStream()
         {
             //return ((ILocalEnumerator)mainIterator).HasNext(); // TODO: check that this is correct!
-            return !((Stream<int[]>)outputStream).EndOfStream;
+            if (outputStream != null)
+            {
+                return !((IStream<int[]>) outputStream).EndOfStream;
+            }
+            return @delegate.EndOfStream();
         }
 
         /**

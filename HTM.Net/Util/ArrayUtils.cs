@@ -3001,6 +3001,24 @@ namespace HTM.Net.Util
             }
             return jagged;
         }
+        public static int[][] ReshapeAverage(byte[] flatArray, int dimWidth, int avgWidth, int offsetWidth)
+        {
+            int rows = (flatArray.Length / (avgWidth+offsetWidth)) / dimWidth;
+            int[][] jagged = CreateJaggedArray<int>(rows, dimWidth);
+
+            int i = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < dimWidth; c++)
+                {
+                    for (int a = 0; a < avgWidth; a++)
+                        jagged[r][c] += flatArray[i++];
+                    jagged[r][c] /= avgWidth;
+                    for (int o = 0; o < offsetWidth; o++) i++;
+                }
+            }
+            return jagged;
+        }
 
         public static int[] Reshape(int[][] matrix)
         {

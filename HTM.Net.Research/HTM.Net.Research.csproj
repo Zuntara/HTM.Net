@@ -103,10 +103,20 @@
     <Compile Include="Vision\Image\ImageUtils.cs" />
     <Compile Include="Vision\Network\KnnLayer.cs" />
     <Compile Include="Vision\ParameterSearch.cs" />
+    <Compile Include="Vision\Sensor\Filters\BaseFilter.cs" />
+    <Compile Include="Vision\Sensor\CategoryEntry.cs" />
+    <Compile Include="Vision\Sensor\ExplorerConfig.cs" />
+    <Compile Include="Vision\Sensor\ExplorerEntry.cs" />
+    <Compile Include="Vision\Sensor\ExplorerPosition.cs" />
     <Compile Include="Vision\Sensor\Explorers\BaseExplorer.cs" />
+    <Compile Include="Vision\Sensor\FilterEntry.cs" />
+    <Compile Include="Vision\Sensor\ImageHeader.cs" />
+    <Compile Include="Vision\Sensor\ImageListEntry.cs" />
     <Compile Include="Vision\Sensor\ImageSensor.cs" />
     <Compile Include="Vision\Sensor\ImageSensorConfig.cs" />
     <Compile Include="Vision\Sensor\Explorers\ImageSweep.cs" />
+    <Compile Include="Vision\Sensor\ObservableImageSensor.cs" />
+    <Compile Include="Vision\Sensor\RawImageStream.cs" />
     <Compile Include="Vision\VisionTestBench.cs" />
   </ItemGroup>
   <ItemGroup>

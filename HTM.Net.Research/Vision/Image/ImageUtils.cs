@@ -174,17 +174,23 @@ namespace HTM.Net.Research.Vision.Image
                 int r = bytes[i + 2];   // Red channel
                 int a = bytes[i + 3];   // Alpha channel
 
-                int lum = (int)(0.2126 * r + 0.7152 * g + 0.0722 * b);
+                int grayScale = (int)((r * 0.3) + (g * 0.59) + (b * 0.11));
 
-                a = (a << 24);
-                r = (lum << 16);
-                g = (lum << 8);
-                b = lum;
+                //int lum = (int)(0.2126 * r + 0.7152 * g + 0.0722 * b);
 
-                bytes[i] = (byte)b;
-                bytes[i + 1] = (byte)g;
-                bytes[i + 2] = (byte)r;
-                bytes[i + 3] = (byte)a;
+                //a = (a << 24);
+                //r = (lum << 16);
+                //g = (lum << 8);
+                //b = lum;
+
+                bytes[i] = (byte)grayScale;
+                bytes[i+1] = (byte)grayScale;
+                bytes[i+2] = (byte)grayScale;
+                bytes[i+3] = (byte)a;
+                //bytes[i] = (byte)b;
+                //bytes[i + 1] = (byte)g;
+                //bytes[i + 2] = (byte)r;
+                //bytes[i + 3] = (byte)a;
             }
             // Write back the manipulated bytes to the image
             // (This is important, otherwise nothing will be changed!)

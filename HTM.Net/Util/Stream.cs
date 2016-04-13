@@ -70,14 +70,20 @@ namespace HTM.Net.Util
     public class Stream<TModel> : IStream<TModel>, IStream, IBaseStream
     {
         private IStream _parentStream;
-        private StreamState _streamState;
-        private readonly int _id;
-        private StreamCollection<TModel> _baseStream;
-        private IEnumerator<TModel> _localEnumerator;
+        protected StreamState _streamState;
+        protected readonly int _id;
+        protected IStreamCollection<TModel> _baseStream;
+        protected IEnumerator<TModel> _localEnumerator;
         private int _currentlyRead, _offset;
         private readonly List<FanOutStream<TModel>> _childStreams = new List<FanOutStream<TModel>>();
         private readonly List<IStream> _transformStreams = new List<IStream>();
-        private bool _observableMode;
+        protected bool _observableMode;
+
+        protected Stream()
+        {
+            // Used by derived classes
+            _id = StreamIdentifier.GeneralId++;
+        } 
 
         public Stream(IEnumerable<TModel> source)
         {
@@ -171,7 +177,7 @@ namespace HTM.Net.Util
             throw new NotSupportedException("This stream does not support writing to!");
         }
 
-        public TModel Read()
+        public virtual TModel Read()
         {
             lock (_streamState.SyncRoot)
             {
@@ -302,6 +308,42 @@ namespace HTM.Net.Util
         }
     }
 
+    public class ComputedStream<TModel> : Stream<TModel>
+    {
+        public ComputedStream(IEnumerable<TModel> source, Action beforeReadAction) 
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            _baseStream = new ComputedStreamCollection<TModel>(_id, source, beforeReadAction, IncrementCurrentlyRead);
+            _localEnumerator = _baseStream.GetEnumerator();
+            _streamState = new StreamState();
+        }
+
+        public ComputedStream(IObservable<TModel> input, Action beforeReadAction) 
+        {
+            LinkedList<TModel> obsContent = new LinkedList<TModel>();
+            _baseStream = new ComputedStreamCollection<TModel>(_id, obsContent, beforeReadAction, IncrementCurrentlyRead);
+            _localEnumerator = _baseStream.GetEnumerator();
+            _streamState = new StreamState();
+            _observableMode = true;
+            _streamState.ObservableSource = true;
+            input.Subscribe(item =>
+            {
+                //Debug.WriteLine(String.Format("> {2} Adding item to local cache in stream: {0} - currently read: {1}",
+                //    item, _currentlyRead, _id));
+                lock (_streamState.SyncRoot)
+                {
+                    obsContent.AddLast(item);
+                }
+            }, () => { _streamState.IsTerminated = true; });
+        }
+
+        public override TModel Read()
+        {
+            Debug.WriteLine("Executing read on ComputedStream");
+            return base.Read();
+        }
+    }
+
     public class FanOutStream<TModel> : IStream<TModel>, IBaseStream
     {
         private StreamState _streamState;
@@ -406,7 +448,14 @@ namespace HTM.Net.Util
         }
     }
 
-    public class StreamCollection<TModel> : IEnumerable<TModel>, IEnumerator<TModel>
+    public interface IStreamCollection<TModel> : IEnumerable<TModel>, IEnumerator<TModel>
+    {
+        void SetAfterReadAction(Action afterReadAction);
+        void SetOffsetting(int offset);
+        void Terminate();
+    }
+
+    public class StreamCollection<TModel> : IStreamCollection<TModel>
     {
         protected readonly int _streamId;
         protected Action _afterRead;
@@ -528,7 +577,7 @@ namespace HTM.Net.Util
             _offsetting = Math.Max(0, offset - Count);
         }
 
-        internal void SetAfterReadAction(Action incrementCurrentlyRead)
+        public void SetAfterReadAction(Action incrementCurrentlyRead)
         {
             _afterRead = incrementCurrentlyRead;
         }
@@ -592,6 +641,35 @@ namespace HTM.Net.Util
                     _source.AddLast(_select(_lazyEnumerator.Current));
                 }
             }
+        }
+    }
+
+    public class ComputedStreamCollection<TModel> : StreamCollection<TModel>
+    {
+        private readonly Action _beforeRead;
+
+        protected ComputedStreamCollection(int streamId, Action beforeRead, Action afterRead = null) 
+            : base(streamId, afterRead)
+        {
+            _beforeRead = beforeRead;
+        }
+
+        public ComputedStreamCollection(int streamId, IEnumerable<TModel> source, Action beforeRead, Action afterRead = null) 
+            : base(streamId, source, afterRead)
+        {
+            _beforeRead = beforeRead;
+        }
+
+        public ComputedStreamCollection(int streamId, LinkedList<TModel> source, Action beforeRead, Action afterRead = null) 
+            : base(streamId, source, afterRead)
+        {
+            _beforeRead = beforeRead;
+        }
+
+        public override bool MoveNext()
+        {
+            _beforeRead?.Invoke();
+            return base.MoveNext();
         }
     }
 }

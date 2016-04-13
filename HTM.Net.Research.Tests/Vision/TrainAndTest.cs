@@ -134,7 +134,7 @@ namespace HTM.Net.Research.Tests.Vision
         //    parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
         //}
 
-        //[TestMethod]
+        [TestMethod]
         public void TestParameterCombinations()
         {
             CombinationParameters parameters = new CombinationParameters();
@@ -271,32 +271,24 @@ namespace HTM.Net.Research.Tests.Vision
             }
             KalikoImage b2 = new KalikoImage(b2s);
 
-            //b1.Save(@"C:\temp\test.jpg", ImageFormat.Jpeg);
+            Assert.IsTrue(!b1.ByteArray.All(i => i == 255));
+            Assert.IsTrue(!b2.ByteArray.All(i => i == 255));
+            Assert.IsTrue(!b2.ByteArray.SequenceEqual(b1.ByteArray));
 
-            sensor.LoadSingleImage(b1, categoryName: "1");
-            sensor.LoadSingleImage(b2, categoryName: "1");
-            sensor.Compute();
+            sensor.LoadSpecificImages(new[] {b1, b2}, new[] {"1", "2"});
 
-            //subject.OnNext(new ImageDefinition { Image = b1, CategoryIndices = new []{0}, ImageInputField = "imageIn" });
-
-            var inputObject1 = outStream.ReadUntyped();
-            int[] intArray = inputObject1 as int[];
-            //Debug.WriteLineIf(intArray != null, Arrays.ToString(intArray));
+            ImageDefinition inputObject1 = outStream.ReadUntyped() as ImageDefinition;
+            //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
 
             Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
 
             // Same logic as in start but executed manually
-            if (intArray != null) tailLayer.GetFunctionFactory().Inference.SetEncoding(intArray);
             tailLayer.Compute(inputObject1);
 
-            //subject.OnNext(new ImageDefinition { Image = b2, CategoryIndices = new[] { 1 }, ImageInputField = "imageIn" });
-
-            var inputObject2 = outStream.ReadUntyped();
-            intArray = inputObject2 as int[];
-            //Debug.WriteLineIf(intArray != null, Arrays.ToString(intArray));
+            ImageDefinition inputObject2 = outStream.ReadUntyped() as ImageDefinition;
+            //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
 
             // Same logic as in start but executed manually
-            if (intArray != null) tailLayer.GetFunctionFactory().Inference.SetEncoding(intArray);
             tailLayer.Compute(inputObject2);
 
             // turn off learning and turn on inference mode
@@ -306,14 +298,14 @@ namespace HTM.Net.Research.Tests.Vision
             // Check parameters
             Assert.IsFalse((bool)classifierLayer.GetParameter("learningMode"));
             Assert.IsTrue((bool)classifierLayer.GetParameter("inferenceMode"));
-            Assert.AreEqual(2, classifierLayer.GetParameter("categoryCount"));
-            Assert.AreEqual(2, classifierLayer.GetParameter("patternCount"));
+            Assert.AreEqual(2, classifierLayer.GetParameter("categoryCount"), "Incorrect category count");
+            Assert.AreEqual(2, classifierLayer.GetParameter("patternCount"), "Incorrect pattern count");
 
             // Now test the network to make sure it categories the images correctly
             int numCorrect = 0;
             tailLayer.Compute(inputObject1);
 
-            var inference = tailLayer.GetInference();
+            IInference inference = tailLayer.GetInference();
 
             int inferredCategory = inference.GetInferredCategory();
             if (((ImageDefinition)inputObject1).CategoryIndices[0] == inferredCategory)
@@ -327,7 +319,7 @@ namespace HTM.Net.Research.Tests.Vision
                 numCorrect += 1;
             }
 
-            Assert.AreEqual(2, numCorrect);
+            Assert.AreEqual(2, numCorrect, "Classification error");
         }
     }
 }
