@@ -115,7 +115,7 @@ namespace HTM.Net.Algorithms
         private double[] _mean;
         private double[][] _a;
         private double[] _s;
-        private NearestNeighbor _M; 
+        private NearestNeighbor _M;
 
         #endregion
 
@@ -507,7 +507,7 @@ namespace HTM.Net.Algorithms
                     }
                 }
                 // Prepare inference results.
-                if (inferenceResult.Any(i=>i > 0.0) && touchedInference)
+                if (inferenceResult.Any(i => i > 0.0) && touchedInference)
                 {
                     winner = ArrayUtils.Argmax(inferenceResult);
                     inferenceResult = ArrayUtils.Divide(inferenceResult, inferenceResult.Sum());
@@ -665,8 +665,8 @@ namespace HTM.Net.Algorithms
             int[] idx = ArrayUtils.Where(v, d => d < fractionOfMax);
             if (idx.Length > 0)
             {
-                Console.WriteLine("Number of PCA dimensions chosen: " + (idx[0]+1) + " out of " + v.Length);
-                return idx[0]+1;
+                Console.WriteLine("Number of PCA dimensions chosen: " + (idx[0] + 1) + " out of " + v.Length);
+                return idx[0] + 1;
             }
             Console.WriteLine("Number of PCA dimensions chosen: " + (v.Length - 1) + " out of " + v.Length);
             return v.Length - 1;

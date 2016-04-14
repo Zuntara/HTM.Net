@@ -665,6 +665,10 @@ namespace HTM.Net.Research.Vision.Sensor
                     croppedImage.Crop(Math.Max(0, x), Math.Max(0, y),
                         Math.Min(x + dstImgWidth, image.Width), Math.Min(x + dstImgHeight, image.Height));
                     // TODO : review , the original code adds alpha mask and pastes image into new one with max(0,-x) and max(0,-y)
+
+                    // TODO: copy cropped image into other image
+                    croppedImage = croppedImage.Scale(new Kaliko.ImageLibrary.Scaling.PadScaling(image.Width, image.Height,
+                        image.BackgroundColor));
                     newImages.Add(croppedImage);
                 }
 

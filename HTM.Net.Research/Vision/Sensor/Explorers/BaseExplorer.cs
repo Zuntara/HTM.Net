@@ -88,6 +88,14 @@ namespace HTM.Net.Research.Vision.Sensor.Explorers
 
             explorer.Initialize(getOriginalImage, getFilteredImages, getImageInfo, seed, holdFor);
 
+            if (extraAgruments != null)
+            {
+                var beanUtil = BeanUtil.GetInstance();
+                foreach (var key in extraAgruments.Keys)
+                {
+                    beanUtil.SetSimpleProperty(explorer, key, extraAgruments[key]);
+                }
+            }
             return explorer;
         }
 
@@ -125,13 +133,11 @@ namespace HTM.Net.Research.Vision.Sensor.Explorers
 
         /// <summary>
         /// Go to the next position (next iteration).
-        /// 
-        /// seeking -- Boolean that indicates whether the explorer is calling next()
+        /// </summary>
+        /// <param name="seeking">Boolean that indicates whether the explorer is calling next()
         ///   from seek(). If True, the explorer should avoid unnecessary computation
         ///   that would not affect the seek command. The last call to next() from
-        ///   seek() will be with seeking=False.
-        /// </summary>
-        /// <param name="seeking"></param>
+        ///   seek() will be with seeking=False.</param>
         public virtual void Next(bool seeking = false)
         {
             // Do nothing here yet

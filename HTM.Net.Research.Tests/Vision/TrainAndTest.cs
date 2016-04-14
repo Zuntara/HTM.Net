@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Reactive.Subjects;
 using HTM.Net.Algorithms;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -277,7 +276,7 @@ namespace HTM.Net.Research.Tests.Vision
 
             sensor.LoadSpecificImages(new[] {b1, b2}, new[] {"1", "2"});
 
-            ImageDefinition inputObject1 = outStream.ReadUntyped() as ImageDefinition;
+            ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
             //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
 
             Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
@@ -285,7 +284,7 @@ namespace HTM.Net.Research.Tests.Vision
             // Same logic as in start but executed manually
             tailLayer.Compute(inputObject1);
 
-            ImageDefinition inputObject2 = outStream.ReadUntyped() as ImageDefinition;
+            ImageDefinition inputObject2 = (ImageDefinition)outStream.ReadUntyped();
             //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
 
             // Same logic as in start but executed manually
@@ -308,13 +307,13 @@ namespace HTM.Net.Research.Tests.Vision
             IInference inference = tailLayer.GetInference();
 
             int inferredCategory = inference.GetInferredCategory();
-            if (((ImageDefinition)inputObject1).CategoryIndices[0] == inferredCategory)
+            if (inputObject1.CategoryIndices[0] == inferredCategory)
             {
                 numCorrect += 1;
             }
             tailLayer.Compute(inputObject2);
             inferredCategory = inference.GetInferredCategory();
-            if (((ImageDefinition)inputObject2).CategoryIndices[0] == inferredCategory)
+            if (inputObject2.CategoryIndices[0] == inferredCategory)
             {
                 numCorrect += 1;
             }
@@ -416,7 +415,7 @@ namespace HTM.Net.Research.Tests.Vision
 
             sensor.LoadSpecificImages(new[] { b1, b2 }, new[] { "1", "2" });
 
-            ImageDefinition inputObject1 = outStream.ReadUntyped() as ImageDefinition;
+            ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
             //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
 
             Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
@@ -424,7 +423,7 @@ namespace HTM.Net.Research.Tests.Vision
             // Same logic as in start but executed manually
             tailLayer.Compute(inputObject1);
 
-            ImageDefinition inputObject2 = outStream.ReadUntyped() as ImageDefinition;
+            ImageDefinition inputObject2 = (ImageDefinition)outStream.ReadUntyped();
             //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
 
             // Same logic as in start but executed manually
@@ -447,13 +446,162 @@ namespace HTM.Net.Research.Tests.Vision
             IInference inference = tailLayer.GetInference();
 
             int inferredCategory = inference.GetInferredCategory();
-            if (((ImageDefinition)inputObject1).CategoryIndices[0] == inferredCategory)
+            if (inputObject1.CategoryIndices[0] == inferredCategory)
             {
                 numCorrect += 1;
             }
             tailLayer.Compute(inputObject2);
             inferredCategory = inference.GetInferredCategory();
-            if (((ImageDefinition)inputObject2).CategoryIndices[0] == inferredCategory)
+            if (inputObject2.CategoryIndices[0] == inferredCategory)
+            {
+                numCorrect += 1;
+            }
+
+            Assert.AreEqual(2, numCorrect, "Classification error");
+        }
+
+        [TestMethod]
+        public void TestSimpleImageNetwork_WithEyeMovementExplorer()
+        {
+            Parameters pars = Parameters.GetAllDefaultParameters();
+
+            pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
+
+            Map<string, object> catInnerSettings = new Map<string, object>();
+            catInnerSettings.Add("fieldName", "category");
+            catInnerSettings.Add("name", "category");
+            catInnerSettings.Add("n", 8);
+            catInnerSettings.Add("w", 3);
+            catInnerSettings.Add("forced", true);
+            catInnerSettings.Add("resolution", 1);
+            catInnerSettings.Add("radius", 0);
+            catInnerSettings.Add("minVal", 0);
+            catInnerSettings.Add("maxVal", 10);
+            catInnerSettings.Add("fieldType", "int");
+            catInnerSettings.Add("encoderType", "ScalarEncoder");
+
+            Map<string, object> imgInnerSettings = new Map<string, object>();
+            imgInnerSettings.Add("fieldName", "imageIn");
+            imgInnerSettings.Add("n", 1024); // width
+            imgInnerSettings.Add("name", "imageIn");
+            imgInnerSettings.Add("fieldType", "darr");
+            imgInnerSettings.Add("encoderType", "SDRPassThroughEncoder");
+
+            Map<String, Map<String, Object>> settings = new Map<string, Map<string, object>>();
+            settings.Add("imageIn", imgInnerSettings);
+            settings.Add("category", catInnerSettings);
+
+            pars.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
+            //pars.SetParameterByKey(Parameters.KEY.MAX_CATEGORYCOUNT, 2);
+
+            var network = Network.Network.Create("ImageNetwork", pars);
+            network
+                .Add(Network.Network.CreateRegion("Region 1")
+                    .Add(new KnnLayer("KNN Layer", network, pars))
+                    .Add(Network.Network.CreateLayer("Layer 1", pars)
+                        .Add(Sensor<ImageDefinition>.Create(ImageSensor.Create, SensorParams.Create(
+                            SensorParams.Keys.Image, new ImageSensorConfig
+                            {
+                                Width = 32,
+                                Height = 32,
+                                ExplorerConfig = new ExplorerConfig
+                                {
+                                    ExplorerName = "EyeMovements"
+                                },
+                                //FilterConfigs = new[]
+                                //{
+                                //    new FilterConfig
+                                //    {
+                                //        FilterName = "AddNoise",
+                                //        FilterArgs = new Map<string, object> {{"noiseLevel", 0.2}}
+                                //    }
+                                //}
+                            }))))
+                    .Connect("KNN Layer", "Layer 1"));
+
+            network.Close();
+
+            // Test the sensor data retrieval
+            HTMSensor<ImageDefinition> htmSensor = (HTMSensor<ImageDefinition>)network.GetSensor();
+            ImageSensor sensor = (ImageSensor)htmSensor.GetDelegateSensor();
+
+            KnnLayer classifierLayer = ((KnnLayer)network.Lookup("Region 1").Lookup("KNN Layer"));
+
+            // Make sure learning is on
+            Assert.IsTrue((bool)classifierLayer.GetParameter("learningMode"));
+
+            var outStream = htmSensor.GetOutputStream();
+
+            Bitmap b1s = new Bitmap(32, 32);
+            using (Graphics g = Graphics.FromImage(b1s))
+            {
+                g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+                g.DrawRectangle(new Pen(Color.Black, 1), 10, 10, 20, 20);
+            }
+            KalikoImage b1 = new KalikoImage(b1s);
+
+            Bitmap b2s = new Bitmap(32, 32);
+            using (Graphics g = Graphics.FromImage(b2s))
+            {
+                g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+                g.DrawRectangle(new Pen(Color.Black, 1), 15, 15, 25, 25);
+            }
+            KalikoImage b2 = new KalikoImage(b2s);
+
+            Assert.IsTrue(!b1.ByteArray.All(i => i == 255));
+            Assert.IsTrue(!b2.ByteArray.All(i => i == 255));
+            Assert.IsTrue(!b2.ByteArray.SequenceEqual(b1.ByteArray));
+
+            sensor.LoadSpecificImages(new[] { b1, b2 }, new[] { "1", "2" });
+
+            ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
+            //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
+
+            Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
+
+            // Same logic as in start but executed manually
+            tailLayer.Compute(inputObject1);
+            for (int i = 0; i < 8; i++)
+            {
+                // Still 8 iterations for eyemovements to go
+                tailLayer.Compute(outStream.ReadUntyped());
+            }
+
+            ImageDefinition inputObject2 = (ImageDefinition)outStream.ReadUntyped();
+            //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
+
+            // Same logic as in start but executed manually
+            tailLayer.Compute(inputObject2);
+            for (int i = 0; i < 8; i++)
+            {
+                // Still 8 iterations for eyemovements to go
+                tailLayer.Compute(outStream.ReadUntyped());
+            }
+            // turn off learning and turn on inference mode
+            classifierLayer.SetParameter("inferenceMode", true);
+            classifierLayer.SetParameter("learningMode", false);
+
+            // Check parameters
+            Assert.IsFalse((bool)classifierLayer.GetParameter("learningMode"));
+            Assert.IsTrue((bool)classifierLayer.GetParameter("inferenceMode"));
+            Assert.AreEqual(8, classifierLayer.GetParameter("categoryCount"), "Incorrect category count");
+            Assert.AreEqual(8, classifierLayer.GetParameter("patternCount"), "Incorrect pattern count");
+
+            // Now test the network to make sure it categories the images correctly
+            int numCorrect = 0;
+            tailLayer.Compute(inputObject1);
+            
+
+            IInference inference = tailLayer.GetInference();
+
+            int inferredCategory = inference.GetInferredCategory();
+            if (inputObject1.CategoryIndices[0] == inferredCategory)
+            {
+                numCorrect += 1;
+            }
+            tailLayer.Compute(inputObject2);
+            inferredCategory = inference.GetInferredCategory();
+            if (inputObject2.CategoryIndices[0] == inferredCategory)
             {
                 numCorrect += 1;
             }

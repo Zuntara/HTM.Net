@@ -103,6 +103,7 @@
     <Compile Include="Vision\Image\ImageUtils.cs" />
     <Compile Include="Vision\Network\KnnLayer.cs" />
     <Compile Include="Vision\ParameterSearch.cs" />
+    <Compile Include="Vision\Sensor\Explorers\EyeMovements.cs" />
     <Compile Include="Vision\Sensor\Filters\AddNoise.cs" />
     <Compile Include="Vision\Sensor\Filters\BaseFilter.cs" />
     <Compile Include="Vision\Sensor\CategoryEntry.cs" />
