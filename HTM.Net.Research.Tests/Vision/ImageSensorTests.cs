@@ -2,6 +2,7 @@
 using System.Drawing;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Vision.Sensor;
+using HTM.Net.Util;
 using Kaliko.ImageLibrary;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -153,7 +154,8 @@ namespace HTM.Net.Research.Tests.Vision
                         {
                             new FilterConfig
                             {
-                                FilterName = "AddNoise"
+                                FilterName = "AddNoise",
+                                FilterArgs = new Map<string, object> { { "noiseLevel", 0.2 } }
                             }
                         }
                     }));

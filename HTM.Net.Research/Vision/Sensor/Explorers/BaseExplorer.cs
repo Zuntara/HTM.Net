@@ -225,7 +225,7 @@ namespace HTM.Net.Research.Vision.Sensor.Explorers
             Point xy1 = position.Offset.GetValueOrDefault();
             int x2 = xy1.X + _enabledWidth;
             int y2 = xy1.Y + _enabledHeight;
-            KalikoImage mask = _getFilteredImages(position)[0].Split()[3];
+            KalikoImage mask = _getFilteredImages(position)[0].SplitGrayscale()[1];
             //var extrema = 
             throw new NotImplementedException("Check BaseExporer.py line 195");
         }
@@ -240,7 +240,7 @@ namespace HTM.Net.Research.Vision.Sensor.Explorers
         {
             if (position == null) position = _position;
             Point xy1 = position.Offset.GetValueOrDefault();
-            Rectangle bbox = new Rectangle(new Point(), _getFilteredImages(position)[0].Split()[3].Size);
+            Rectangle bbox = new Rectangle(new Point(), _getFilteredImages(position)[0].SplitGrayscale()[1].Size);
             if ((bbox.Location.X - _enabledWidth >= xy1.X) ||
                 (bbox.Location.Y - _enabledHeight >= xy1.Y) ||
                 (bbox.Size.Width + _enabledWidth <= xy1.X) ||

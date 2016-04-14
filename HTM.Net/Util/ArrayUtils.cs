@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -1028,6 +1029,16 @@ namespace HTM.Net.Util
             return arr;
         }
 
+        public static double[] Add(int[] arr, double[] amount)
+        {
+            double[] results = new double[arr.Length];
+            for (int i = 0; i < arr.Length; i++)
+            {
+                results[i] = arr[i] + amount[i];
+            }
+            return results;
+        }
+
         /**
          * Returns the passed in array with every value being altered
          * by the addition of the specified double amount at the same
@@ -1560,7 +1571,7 @@ namespace HTM.Net.Util
         {
             Parallel.For(0, values.Length, i =>
             {
-                values[i] = Math.Min(1, Math.Max(0, values[i]));
+                values[i] = Math.Min(max, Math.Max(min, values[i]));
             });
 
 
@@ -2988,7 +2999,7 @@ namespace HTM.Net.Util
 
         public static int[][] Reshape(int[] flatArray, int dimWidth)
         {
-            int rows = flatArray.Length/dimWidth;
+            int rows = flatArray.Length / dimWidth;
             int[][] jagged = CreateJaggedArray<int>(rows, dimWidth);
 
             int i = 0;
@@ -3003,7 +3014,7 @@ namespace HTM.Net.Util
         }
         public static int[][] ReshapeAverage(byte[] flatArray, int dimWidth, int avgWidth, int offsetWidth)
         {
-            int rows = (flatArray.Length / (avgWidth+offsetWidth)) / dimWidth;
+            int rows = (flatArray.Length / (avgWidth + offsetWidth)) / dimWidth;
             int[][] jagged = CreateJaggedArray<int>(rows, dimWidth);
 
             int i = 0;
@@ -3025,7 +3036,7 @@ namespace HTM.Net.Util
             int rows = matrix.Length;
             int cols = matrix[0].Length;
 
-            int[] flatArray = new int[rows*cols];
+            int[] flatArray = new int[rows * cols];
             int i = 0;
             for (int r = 0; r < rows; r++)
             {
@@ -3521,6 +3532,43 @@ namespace HTM.Net.Util
                 pVal += step;
                 yield return pVal;
             }
+        }
+
+        public static IEnumerable<int> RoundToInt(IEnumerable<double> collection)
+        {
+            return collection.Select(value => (int)Math.Round(value));
+        }
+
+        // merges the second collection with the first collection after x positions
+        public static byte[] MergeGrouped(byte[] first, byte[] second, int firstRepeated, int positionOffset)
+        {
+            byte[] result = new byte[(first.Length * firstRepeated) + second.Length];
+
+            int s = 0;
+            int f = 0;
+            int i = 0;
+            int counter = 0;
+            // alpha on 3, 7, 11, 15
+            // img on 0 1 2  4 5 6    8 9 10   12 13 14 
+
+            while (i < result.Length)
+            {
+                bool adapt = ++counter%2 == 0;
+                if (adapt && i > 0)
+                {
+                    result[i++] = second[s++];
+                }
+                else
+                {
+                    for (int j = 0; j < firstRepeated; j++)
+                    {
+                        result[i++] = first[f];
+                    }
+                    f++;
+                }
+            }
+
+            return result;
         }
     }
 }

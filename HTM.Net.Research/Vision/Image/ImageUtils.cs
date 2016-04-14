@@ -87,11 +87,12 @@ namespace HTM.Net.Research.Vision.Image
             return image;
         }
 
-        public static List<KalikoImage> Split(this KalikoImage image)
+        public static List<KalikoImage> SplitGrayscale(this KalikoImage image)
         {
+            image = image.Clone();
+            image.ApplyFilter(new GrayScaleFilter());
+
             List<KalikoImage> channels = new List<KalikoImage>();
-            channels.Add(new KalikoImage(image.Width, image.Height));
-            channels.Add(new KalikoImage(image.Width, image.Height));
             channels.Add(new KalikoImage(image.Width, image.Height));
             channels.Add(new KalikoImage(image.Width, image.Height));
             // Split in channels
@@ -103,10 +104,32 @@ namespace HTM.Net.Research.Vision.Image
                 byte r = bytes[i + 2];   // Red channel
                 byte a = bytes[i + 3];   // Alpha channel
 
-                channels[0].ByteArray[i] = b;
-                channels[1].ByteArray[i] = g;
-                channels[2].ByteArray[i] = r;
-                channels[3].ByteArray[i] = a;
+                channels[0].ByteArray[i] = (byte)((b+g+r)/3);
+                channels[1].ByteArray[i] = a;
+            }
+            return channels;
+        }
+
+        public static List<byte[]> SplitBytesGrayscale(this KalikoImage image)
+        {
+            image = image.Clone();
+            image.ApplyFilter(new GrayScaleFilter());
+
+            List<byte[]> channels = new List<byte[]>();
+            channels.Add(new byte[image.Width * image.Height]);
+            channels.Add(new byte[image.Width * image.Height]);
+            
+            // Split in channels
+            var bytes = image.ByteArray;
+            for (int i = 0, l = bytes.Length, c = 0; i < l; i += 4, c++)
+            {
+                byte b = bytes[i];       // Blue channel
+                byte g = bytes[i + 1];   // Green channel
+                byte r = bytes[i + 2];   // Red channel
+                byte a = bytes[i + 3];   // Alpha channel
+
+                channels[0][c] = (byte)((b + g + r) / 3);
+                channels[1][c] = a;
             }
             return channels;
         }
@@ -118,7 +141,7 @@ namespace HTM.Net.Research.Vision.Image
 
         public static Tuple<byte, byte> GetExtrema(this byte[] imageBytes)
         {
-            return new Tuple<byte,byte>(imageBytes.Min(), imageBytes.Max());
+            return new Tuple<byte, byte>(imageBytes.Min(), imageBytes.Max());
         }
     }
 
@@ -184,9 +207,9 @@ namespace HTM.Net.Research.Vision.Image
                 //b = lum;
 
                 bytes[i] = (byte)grayScale;
-                bytes[i+1] = (byte)grayScale;
-                bytes[i+2] = (byte)grayScale;
-                bytes[i+3] = (byte)a;
+                bytes[i + 1] = (byte)grayScale;
+                bytes[i + 2] = (byte)grayScale;
+                bytes[i + 3] = (byte)a;
                 //bytes[i] = (byte)b;
                 //bytes[i + 1] = (byte)g;
                 //bytes[i + 2] = (byte)r;

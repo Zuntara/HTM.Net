@@ -532,7 +532,7 @@ namespace HTM.Net.Research.Vision.Sensor
             // bboxOut - bounding box
             if (output.BboxOut != null && output.BboxOut.Length == 4)
             {
-                var bbox = outputImages[0].Split()[3].GetBBox();
+                var bbox = outputImages[0].SplitGrayscale()[1].GetBBox();
                 if (bbox == null)
                 {
                     bbox = new Rectangle(0, 0, 0, 0);
@@ -547,7 +547,7 @@ namespace HTM.Net.Research.Vision.Sensor
             // alphaOut - alpha channel
             if (output.AlphaOut != null && output.AlphaOut.Length > 1)
             {
-                var alphaOut = outputImages[0].Split()[3].IntArray;
+                var alphaOut = outputImages[0].SplitGrayscale()[1].IntArray;
                 if (!imageInfo.Erode)
                 {
                     // Change the 0th element of the output to signal that the alpha
@@ -1209,7 +1209,7 @@ namespace HTM.Net.Research.Vision.Sensor
                 }
                 else
                 {
-                    var extrema = item.Image.Split()[3].ByteArray.GetExtrema(); // alpha channel
+                    var extrema = item.Image.SplitGrayscale()[1].ByteArray.GetExtrema(); // alpha channel
                     if (extrema.Item1 != extrema.Item2)
                     {
                         // Nonuniform alpha channel
