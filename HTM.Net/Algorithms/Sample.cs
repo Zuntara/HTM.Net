@@ -3,11 +3,10 @@ using System.Text;
 
 namespace HTM.Net.Algorithms
 {
-    /**
- * A sample data point or record consisting of a timestamp, value, and score.
- * This class is used as an input value to methods in the {@link AnomalyLikelihood}
- * class.
- */
+    /// <summary>
+    /// A sample data point or record consisting of a timestamp, value, and score.
+    /// This class is used as an input value to methods in the <see cref="AnomalyLikelihood"/> class.
+    /// </summary>
     public class Sample
     {
         public readonly DateTime date;
