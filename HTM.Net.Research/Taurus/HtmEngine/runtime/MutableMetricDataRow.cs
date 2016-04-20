@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Algorithms;
-using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -74,7 +73,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         }
     }
 
-    // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/anomaly_likelihood_helper.py
+    // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/().py
 
     /// <summary>
     /// Helper class for running AnomalyLikelihood calculations in AnomalyService
@@ -105,7 +104,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             _statisticsMinSampleSize = 10;
             _statisticsSampleSize = 10;
 
-            algorithms = new AnomalyLikelihood(true, _statisticsSampleSize, true, 0, _statisticsMinSampleSize);
+            Parameters pars = Parameters.Empty();
+            pars.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
+            algorithms = (AnomalyLikelihood) Anomaly.Create(pars);
         }
 
         private void GenerateAnomalyParams()

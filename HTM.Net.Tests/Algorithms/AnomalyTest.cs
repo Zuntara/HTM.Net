@@ -4,11 +4,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Tests.Algorithms
 {
-    /**
- * Tests for anomaly score functions and classes.
- * 
- * @author David Ray
- */
+    /// <summary>
+    /// Tests for anomaly score functions and classes.
+    /// </summary>
     [TestClass]
     public class AnomalyTest
     {

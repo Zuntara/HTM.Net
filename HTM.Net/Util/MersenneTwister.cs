@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using MathNet.Numerics.Random;
 
 namespace HTM.Net.Util
@@ -7,6 +8,7 @@ namespace HTM.Net.Util
     {
         double NextDouble();
         int NextInt(int maxValue);
+        double NextGaussian();
         double[][] GetMatrix(int rows, int cols, double? threshold = null);
     }
 
@@ -692,6 +694,33 @@ namespace HTM.Net.Util
             return NextDouble() < probability;
         }
 
+        private bool __haveNextNextGaussian;
+        private double __nextNextGaussian;
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public double NextGaussian()
+        {
+            if (__haveNextNextGaussian)
+            {
+                __haveNextNextGaussian = false;
+                return __nextNextGaussian;
+            }
+            else
+            {
+                double v1, v2, s;
+                do
+                {
+                    v1 = 2 * NextDouble() - 1; // between -1.0 and 1.0
+                    v2 = 2 * NextDouble() - 1; // between -1.0 and 1.0
+                    s = v1 * v1 + v2 * v2;
+                } while (s >= 1 || s == 0);
+                double multiplier = Math.Sqrt(-2 * Math.Log(s) / s);
+                __nextNextGaussian = v2 * multiplier;
+                __haveNextNextGaussian = true;
+                return v1 * multiplier;
+            }
+        }
+
         public double[][] GetMatrix(int rows, int cols, double? threshold = null)
         {
             double[][] matrix = new double[rows][];
@@ -745,6 +774,33 @@ namespace HTM.Net.Util
         public int NextInt(int maxValue)
         {
             return Next(maxValue);
+        }
+
+        private bool __haveNextNextGaussian;
+        private double __nextNextGaussian;
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public double NextGaussian()
+        {
+            if (__haveNextNextGaussian)
+            {
+                __haveNextNextGaussian = false;
+                return __nextNextGaussian;
+            }
+            else
+            {
+                double v1, v2, s;
+                do
+                {
+                    v1 = 2 * NextDouble() - 1; // between -1.0 and 1.0
+                    v2 = 2 * NextDouble() - 1; // between -1.0 and 1.0
+                    s = v1 * v1 + v2 * v2;
+                } while (s >= 1 || s == 0);
+                double multiplier = Math.Sqrt(-2 * Math.Log(s) / s);
+                __nextNextGaussian = v2 * multiplier;
+                __haveNextNextGaussian = true;
+                return v1 * multiplier;
+            }
         }
     }
 

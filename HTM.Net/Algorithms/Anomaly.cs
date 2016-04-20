@@ -236,7 +236,7 @@ namespace HTM.Net.Algorithms
             /// </summary>
             public List<double> GetMetrics()
             {
-                return AveragedRecords.Select(s => s.score).ToList();
+                return AveragedRecords.Select(s => s.Score).ToList();
             }
 
             /// <summary>
@@ -244,7 +244,7 @@ namespace HTM.Net.Algorithms
             /// </summary>
             public List<double> GetSamples()
             {
-                return AveragedRecords.Select(s => s.value).ToList();
+                return AveragedRecords.Select(s => s.Value).ToList();
             }
 
             /// <summary>

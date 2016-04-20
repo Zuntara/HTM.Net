@@ -323,7 +323,7 @@ namespace HTM.Net
             public static readonly KEY ANOMALY_KEY_LEARNING_PERIOD = new KEY("claLearningPeriod", typeof(int));
             public static readonly KEY ANOMALY_KEY_ESTIMATION_SAMPLES = new KEY("estimationSamples", typeof(int));
             public static readonly KEY ANOMALY_KEY_USE_MOVING_AVG = new KEY("useMovingAverage", typeof(bool));
-            public static readonly KEY ANOMALY_KEY_WINDOW_SIZE = new KEY("slidingWindowSize", typeof(int));
+            public static readonly KEY ANOMALY_KEY_WINDOW_SIZE = new KEY("windowSize", typeof(int));
             public static readonly KEY ANOMALY_KEY_IS_WEIGHTED = new KEY("isWeighted", typeof(bool));
             // config
             public static readonly KEY ANOMALY_KEY_DIST = new KEY("distribution", typeof(Statistic));

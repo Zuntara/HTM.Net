@@ -196,7 +196,7 @@ namespace HTM.Net.Algorithms
                 samples = records.GetSamples();
                 Statistic metricDistribution = EstimateNormal(samples.Skip(skipRecords).Take(samples.Count).ToArray(), false);
 
-                if (metricDistribution.variance < 1.5e-5)
+                if (metricDistribution.Variance < 1.5e-5)
                 {
                     distribution = NullDistribution();
                 }
@@ -207,7 +207,7 @@ namespace HTM.Net.Algorithms
             double[] likelihoods = new double[records.AveragedRecords.Count];
             foreach (Sample sample in records.AveragedRecords)
             {
-                likelihoods[i++] = NormalProbability(sample.score, distribution);
+                likelihoods[i++] = NormalProbability(sample.Score, distribution);
             }
 
             // Filter likelihood values
@@ -302,11 +302,11 @@ namespace HTM.Net.Algorithms
             int i = 0;
             foreach (Sample sample in anomalyScores)
             {
-                MovingAverage.Calculation calc = MovingAverage.Compute(historicalValues, total, sample.score, windowSize);
+                MovingAverage.Calculation calc = MovingAverage.Compute(historicalValues, total, sample.Score, windowSize);
                 aggRecordList.Add(
                     new Sample(
-                        sample.date,
-                        sample.value,
+                        sample.Date.GetValueOrDefault(),
+                        sample.Value,
                         calc.GetAverage()));
                 total = calc.GetTotal();
                 likelihoods[i++] = NormalProbability(calc.GetAverage(), (Statistic)@params.Distribution());
@@ -422,11 +422,11 @@ namespace HTM.Net.Algorithms
                 // Python version has check for malformed records here, but can't happen in java version. //
                 ////////////////////////////////////////////////////////////////////////////////////////////
 
-                MovingAverage.Calculation calc = MovingAverage.Compute(historicalValues, total, record.score, windowSize);
+                MovingAverage.Calculation calc = MovingAverage.Compute(historicalValues, total, record.Score, windowSize);
 
                 Sample avgRecord = new Sample(
-                    record.date,
-                    record.value,
+                    record.Date.GetValueOrDefault(),
+                    record.Value,
                     calc.GetAverage());
                 averagedRecordList.Add(avgRecord);
                 total = calc.GetTotal();
@@ -514,14 +514,14 @@ namespace HTM.Net.Algorithms
         public double NormalProbability(double x, Statistic s)
         {
             // Distribution is symmetrical around mean
-            if (x < s.mean)
+            if (x < s.Mean)
             {
-                double xp = 2 * s.mean - x;
+                double xp = 2 * s.Mean - x;
                 return 1.0 - NormalProbability(xp, s);
             }
 
             // How many standard deviations above the mean are we - scaled by 10X for table
-            double xs = 10 * (x - s.mean) / s.stdev;
+            double xs = 10 * (x - s.Mean) / s.Stdev;
 
             xs = Math.Round(xs);
             if (xs > 70)
@@ -576,7 +576,7 @@ namespace HTM.Net.Algorithms
             }
 
             Statistic stat = @params.Distribution();
-            if (stat.mean == 0 || stat.variance == 0 || stat.stdev == 0)
+            if (stat.Mean == 0 || stat.Variance == 0 || stat.Stdev == 0)
             {
                 return false;
             }
@@ -706,9 +706,9 @@ namespace HTM.Net.Algorithms
                 if (cachedNode == null)
                 {
                     JObject distribution = new JObject();
-                    distribution.Add(Parameters.KEY.ANOMALY_KEY_MEAN.GetFieldName(), this.distribution.mean);
-                    distribution.Add(Parameters.KEY.ANOMALY_KEY_VARIANCE.GetFieldName(), this.distribution.variance);
-                    distribution.Add(Parameters.KEY.ANOMALY_KEY_STDEV.GetFieldName(), this.distribution.stdev);
+                    distribution.Add(Parameters.KEY.ANOMALY_KEY_MEAN.GetFieldName(), this.distribution.Mean);
+                    distribution.Add(Parameters.KEY.ANOMALY_KEY_VARIANCE.GetFieldName(), this.distribution.Variance);
+                    distribution.Add(Parameters.KEY.ANOMALY_KEY_STDEV.GetFieldName(), this.distribution.Stdev);
 
                     double[] historicalLikelihoods = (double[])_parameters.GetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE);
                     JArray historics = new JArray(historicalLikelihoods);

@@ -12,9 +12,9 @@ namespace HTM.Net.Algorithms
  */
     public class AnomalyLikelihoodMetrics
     {
-        private AnomalyLikelihood.AnomalyParams @params;
-        private Anomaly.AveragedAnomalyRecordList aggRecordList;
-        private double[] likelihoods;
+        private readonly AnomalyLikelihood.AnomalyParams _params;
+        private Anomaly.AveragedAnomalyRecordList _aggRecordList;
+        private double[] _likelihoods;
 
         /**
          * Constructs a new {@code AnomalyLikelihoodMetrics}
@@ -27,9 +27,9 @@ namespace HTM.Net.Algorithms
          */
         public AnomalyLikelihoodMetrics(double[] likelihoods, Anomaly.AveragedAnomalyRecordList aggRecordList, AnomalyLikelihood.AnomalyParams @params)
         {
-            this.@params = @params;
-            this.aggRecordList = aggRecordList;
-            this.likelihoods = likelihoods;
+            _params = @params;
+            _aggRecordList = aggRecordList;
+            _likelihoods = likelihoods;
         }
 
         /**
@@ -45,9 +45,9 @@ namespace HTM.Net.Algorithms
             //}
 
             return new AnomalyLikelihoodMetrics(
-                Arrays.CopyOf(likelihoods, likelihoods.Length),
-                aggRecordList,
-                new AnomalyLikelihood.AnomalyParams(@params.GetParameters()));
+                Arrays.CopyOf(_likelihoods, _likelihoods.Length),
+                _aggRecordList,
+                new AnomalyLikelihood.AnomalyParams(_params.GetParameters()));
         }
 
         /**
@@ -56,7 +56,7 @@ namespace HTM.Net.Algorithms
          */
         public double[] GetLikelihoods()
         {
-            return likelihoods;
+            return _likelihoods;
         }
 
         /**
@@ -69,7 +69,7 @@ namespace HTM.Net.Algorithms
          */
         public Anomaly.AveragedAnomalyRecordList GetAvgRecordList()
         {
-            return aggRecordList;
+            return _aggRecordList;
         }
 
         /**
@@ -82,16 +82,16 @@ namespace HTM.Net.Algorithms
          */
         public AnomalyLikelihood.AnomalyParams GetParams()
         {
-            return @params;
+            return _params;
         }
 
         public override int GetHashCode()
         {
             const int prime = 31;
             int result = 1;
-            result = prime * result + ((aggRecordList == null) ? 0 : aggRecordList.GetHashCode());
-            result = prime * result + likelihoods.GetHashCode();
-            result = prime * result + ((@params == null) ? 0 : @params.GetHashCode());
+            result = prime * result + ((_aggRecordList == null) ? 0 : _aggRecordList.GetHashCode());
+            result = prime * result + _likelihoods.GetHashCode();
+            result = prime * result + ((_params == null) ? 0 : _params.GetHashCode());
             return result;
         }
 
@@ -104,19 +104,19 @@ namespace HTM.Net.Algorithms
             if (GetType() != obj.GetType())
                 return false;
             AnomalyLikelihoodMetrics other = (AnomalyLikelihoodMetrics)obj;
-            if (aggRecordList == null)
+            if (_aggRecordList == null)
             {
-                if (other.aggRecordList != null)
+                if (other._aggRecordList != null)
                     return false;
             }
-            else if (!aggRecordList.Equals(other.aggRecordList))
+            else if (!_aggRecordList.Equals(other._aggRecordList))
                 return false;
-            if (!Arrays.AreEqual(likelihoods, other.likelihoods))
+            if (!Arrays.AreEqual(_likelihoods, other._likelihoods))
                 return false;
-            if (@params == null) {
-                if (other.@params != null)
+            if (_params == null) {
+                if (other._params != null)
                 return false;
-            } else if (!@params.Equals(other.@params))
+            } else if (!_params.Equals(other._params))
             return false;
             return true;
         }

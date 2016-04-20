@@ -23,18 +23,18 @@ namespace HTM.Net.Algorithms
  */
     public class Statistic
     {
-        public readonly double mean;
-        public readonly double variance;
-        public readonly double stdev;
-        public readonly NamedTuple entries;
+        public double Mean { get; }
+        public double Variance { get; }
+        public double Stdev { get; }
+        public NamedTuple Entries { get; set; }
 
         public Statistic(double mean, double variance, double stdev)
         {
-            this.mean = mean;
-            this.variance = variance;
-            this.stdev = stdev;
+            Mean = mean;
+            Variance = variance;
+            Stdev = stdev;
 
-            this.entries = new NamedTuple(new string[] { "mean", "variance", "stdev" }, mean, variance, stdev);
+            Entries = new NamedTuple(new[] { "mean", "variance", "stdev" }, mean, variance, stdev);
         }
 
         /**
@@ -46,9 +46,9 @@ namespace HTM.Net.Algorithms
         public JObject ToJson()
         {
             JObject distribution = new JObject();
-            distribution.Add("mean", mean);
-            distribution.Add("variance", variance);
-            distribution.Add("stdev", stdev);
+            distribution.Add("mean", Mean);
+            distribution.Add("variance", Variance);
+            distribution.Add("stdev", Stdev);
 
             return distribution;
         }
@@ -57,11 +57,11 @@ namespace HTM.Net.Algorithms
         {
             const int prime = 31;
             int result = 1;
-            long temp = BitConverter.DoubleToInt64Bits(mean);
+            long temp = BitConverter.DoubleToInt64Bits(Mean);
             result = prime * result + (int)(temp ^ (int)((uint)temp >> 32));
-            temp = BitConverter.DoubleToInt64Bits(stdev);
+            temp = BitConverter.DoubleToInt64Bits(Stdev);
             result = prime * result + (int)(temp ^ (int)((uint)temp >> 32));
-            temp = BitConverter.DoubleToInt64Bits(variance);
+            temp = BitConverter.DoubleToInt64Bits(Variance);
             result = prime * result + (int)(temp ^ (int)((uint)temp >> 32));
             return result;
         }
@@ -75,11 +75,11 @@ namespace HTM.Net.Algorithms
             if (GetType() != obj.GetType())
                 return false;
             Statistic other = (Statistic)obj;
-            if (BitConverter.DoubleToInt64Bits(mean) != BitConverter.DoubleToInt64Bits(other.mean))
+            if (BitConverter.DoubleToInt64Bits(Mean) != BitConverter.DoubleToInt64Bits(other.Mean))
                 return false;
-            if (BitConverter.DoubleToInt64Bits(stdev) != BitConverter.DoubleToInt64Bits(other.stdev))
+            if (BitConverter.DoubleToInt64Bits(Stdev) != BitConverter.DoubleToInt64Bits(other.Stdev))
                 return false;
-            if (BitConverter.DoubleToInt64Bits(variance) != BitConverter.DoubleToInt64Bits(other.variance))
+            if (BitConverter.DoubleToInt64Bits(Variance) != BitConverter.DoubleToInt64Bits(other.Variance))
                 return false;
             return true;
         }

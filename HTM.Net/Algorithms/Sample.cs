@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Text;
 
 namespace HTM.Net.Algorithms
@@ -9,11 +10,11 @@ namespace HTM.Net.Algorithms
     /// </summary>
     public class Sample
     {
-        public readonly DateTime date;
+        public readonly DateTime? Date;
         /** Same thing as average */
-        public readonly double score;
+        public readonly double Score;
         /** Original value */
-        public readonly double value;
+        public readonly double Value;
 
         public Sample(DateTime timeStamp, double value, double score)
         {
@@ -21,18 +22,18 @@ namespace HTM.Net.Algorithms
             {
                 throw new ArgumentException("Sample must have a valid date");
             }
-            this.date = timeStamp;
-            this.value = value;
-            this.score = score;
+            Date = timeStamp;
+            Value = value;
+            Score = score;
         }
 
         /**
          * Returns a {@link DateTime} object representing the internal timestamp
          * @return
          */
-        public DateTime TimeStamp()
+        public DateTime? TimeStamp()
         {
-            return date;
+            return Date;
         }
 
         /**
@@ -40,19 +41,19 @@ namespace HTM.Net.Algorithms
          */
         public override string ToString()
         {
-            return new StringBuilder(TimeStamp().ToString()).Append(", value: ").
-                Append(value).Append(", metric: ").Append(score).ToString();
+            return new StringBuilder(TimeStamp().GetValueOrDefault().ToString(CultureInfo.InvariantCulture)).Append(", value: ").
+                Append(Value).Append(", metric: ").Append(Score).ToString();
         }
 
         public override int GetHashCode()
         {
             const int prime = 31;
             int result = 1;
-            result = prime * result + ((date == null) ? 0 : date.GetHashCode());
+            result = prime * result + ((Date == null) ? 0 : Date.GetHashCode());
             long temp;
-            temp = BitConverter.DoubleToInt64Bits(score);
+            temp = BitConverter.DoubleToInt64Bits(Score);
             result = prime * result + (int)(temp ^ (int)((uint)temp >> 32));
-            temp = BitConverter.DoubleToInt64Bits(value);
+            temp = BitConverter.DoubleToInt64Bits(Value);
             result = prime * result + (int)(temp ^ (int)((uint)temp >> 32));
             return result;
         }
@@ -66,16 +67,16 @@ namespace HTM.Net.Algorithms
             if (GetType() != obj.GetType())
                 return false;
             Sample other = (Sample)obj;
-            if (date == null)
+            if (Date == null)
             {
-                if (other.date != null)
+                if (other.Date != null)
                     return false;
             }
-            else if (!date.Equals(other.date))
+            else if (!Date.Equals(other.Date))
                 return false;
-            if (BitConverter.DoubleToInt64Bits(score) != BitConverter.DoubleToInt64Bits(other.score))
+            if (BitConverter.DoubleToInt64Bits(Score) != BitConverter.DoubleToInt64Bits(other.Score))
                 return false;
-            if (BitConverter.DoubleToInt64Bits(value) != BitConverter.DoubleToInt64Bits(other.value))
+            if (BitConverter.DoubleToInt64Bits(Value) != BitConverter.DoubleToInt64Bits(other.Value))
                 return false;
             return true;
         }
