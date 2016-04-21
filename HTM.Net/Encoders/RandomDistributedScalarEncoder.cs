@@ -469,11 +469,7 @@ namespace HTM.Net.Encoders
             return bucketMap[index];
         }
 
-        /**
-         * {@inheritDoc}
-         */
-
-
+        
         public override int[] GetBucketIndices(double x)
         {
             if (double.IsNaN(x))
@@ -650,6 +646,10 @@ namespace HTM.Net.Encoders
             this.numRetry = numRetry;
         }
 
+        public int GetNumBuckets()
+        {
+            return bucketMap.Count;
+        }
 
         public override string ToString()
         {
