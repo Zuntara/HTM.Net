@@ -109,8 +109,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             _log = log;
             // from config
             _minStatisticsRefreshInterval = 10;
-            _statisticsMinSampleSize = 10;
-            _statisticsSampleSize = 10;
+            _statisticsMinSampleSize = 200;
+            _statisticsSampleSize = 1000;
 
             Parameters pars = Parameters.Empty();
             pars.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
@@ -130,8 +130,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// returned verbatim</param>
         /// <returns>new anomaly likelihood parameters; defaultAnomalyParams, if there 
         /// are not enough samples in statsSampleCache.</returns>
-        private Map<string, object> GenerateAnomalyParams(string metricId, List<MetricData> statsSampleCache, Map<string, object> defaultAnomalyParams)
+        internal Map<string, object> GenerateAnomalyParams(string metricId, List<MetricData> statsSampleCache, Map<string, object> defaultAnomalyParams)
         {
+            if(string.IsNullOrWhiteSpace(metricId)) throw new ArgumentNullException("metricId");
+            if(statsSampleCache == null) throw new ArgumentNullException("statsSampleCache");
             if (statsSampleCache.Count < _statisticsMinSampleSize)
             {
                 // Not enough samples in cache
@@ -147,7 +149,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             // Create input sequence for algorithms
             var samples = statsSampleCache.Skip(statsSampleCache.Count - numSamples).Take(statsSampleCache.Count);
 
-            var scores = samples.Select(row => new Sample(row.Timestamp, row.MetricValue, row.RawAnomalyScore)).ToList();
+            var scores = samples.Select(row => new Sample(row.Timestamp, row.MetricValue, row.RawAnomalyScore.GetValueOrDefault())).ToList();
 
             Debug.Assert(scores.Count >= _statisticsMinSampleSize);
             Debug.Assert(scores.Count <= _statisticsSampleSize);
@@ -188,7 +190,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         ///     model's initial "catch-up" phase when large inference result batches are
         ///     prevalent.
         /// </remarks>
-        public object UpdateModelAnomalyScores(Metric metricObj, List<MetricData> metricDataRows)
+        public Map<string, object> UpdateModelAnomalyScores(Metric metricObj, List<MetricData> metricDataRows)
         {
             // When populated, a cached list of MetricData instances for updating anomaly likelyhood params
             List<MetricData> statsSampleCache = null;
@@ -203,7 +205,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 throw new MetricNotActiveError(string.Format("Metric {0} is not active.", metricObj.Uid));
             }
 
-            ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams);
+            ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
             var anomalyParams = (Map<string, object>)modelParams.AnomalyLikelihoodParams;
             if (anomalyParams == null)
             {
@@ -230,7 +235,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     // b. We already updated anomaly likelyhood stats (we had sufficient
                     //      samples for it)
                     // TODO: unit-test
-                    endRowID = (int)anomalyParams["last_rowid_for_stats"] + statisticsRefreshInterval;
+                    endRowID = (long)anomalyParams["last_rowid_for_stats"] + statisticsRefreshInterval;
                     if (endRowID < metricDataRows[startRowIndex].Rowid)
                     {
                         // We're here if:
@@ -303,7 +308,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                 foreach (var md in metricDataRows.Skip(startRowIndex).Take((int)limitIndex))
                 {
-                    var computed = algorithms.UpdateAnomalyLikelihoods(new List<Sample> { new Sample(md.Timestamp, md.MetricValue, md.RawAnomalyScore) },
+                    _log.DebugFormat("params contents: {0}", anomalyParams["params"]);
+                    var computed = algorithms.UpdateAnomalyLikelihoods(new List<Sample> { new Sample(md.Timestamp, md.MetricValue, md.RawAnomalyScore.GetValueOrDefault()) },
                         (AnomalyLikelihood.AnomalyParams)anomalyParams["params"]);
                     var likelihood = computed.GetLikelihoods().First();
 
@@ -380,7 +386,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// self._statisticsMinSampleSize, then the given defaultAnomalyParams will be
         /// returned in the tuple.
         /// </remarks>
-        private NamedTuple RefreshAnomalyParams(string metricId, List<MetricData> statsSampleCache, List<MetricData> consumedSamples,
+        internal NamedTuple RefreshAnomalyParams(string metricId, List<MetricData> statsSampleCache, List<MetricData> consumedSamples,
             Map<string, object> defaultAnomalyParams)
         {
             // Update the samples cache
@@ -416,14 +422,14 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns>an iterable that yields up to `limit` MetricData tail
         /// instances with non-null raw_anomaly_score ordered by metric data timestamp
         /// in ascending order</returns>
-        private List<MetricData> TailMetricDataWithRawAnomalyScores(string metricId, int limit)
+        internal List<MetricData> TailMetricDataWithRawAnomalyScores(string metricId, int limit)
         {
             if (limit == 0) return new List<MetricData>();
             var rows = RepositoryFactory.Metric.GetMetricDataWithRawAnomalyScoresTail(metricId, limit);
             return rows.OrderBy(r => r.Timestamp).ToList();
         }
 
-        private object GetMetricLogPrefix(Metric metricObj)
+        internal object GetMetricLogPrefix(Metric metricObj)
         {
             throw new NotImplementedException();
         }
@@ -451,7 +457,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         ///   the anomaly likelihood params, then startRowIndex will reference past
         ///   the last item in the given metricDataRows sequence.
         /// </returns>
-        private NamedTuple InitAnomalyLikelihoodModel(Metric metricObj, List<MetricData> metricDataRows)
+        internal NamedTuple InitAnomalyLikelihoodModel(Metric metricObj, List<MetricData> metricDataRows)
         {
             if (metricObj.Status != MetricStatus.Active)
             {
@@ -509,7 +515,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="batchSize">number of elements in the inference result batch being processed.</param>
         /// <returns>an integer that indicates how many samples should be processed until the next refresh of anomaly likelihood parameters</returns>
-        private int GetStatisticsRefreshInterval(int batchSize)
+        internal int GetStatisticsRefreshInterval(int batchSize)
         {
             return (int)Math.Max(_minStatisticsRefreshInterval, batchSize * 0.1);
         }
@@ -1622,15 +1628,28 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             return newMetric;
         }
-
+        /// <summary>
+        /// Get count of processed MetricData for the given metricId.
+        /// </summary>
+        /// <param name="metricId"></param>
+        /// <returns></returns>
         public int GetProcessedMetricDataCount(string metricId)
         {
-            throw new NotImplementedException();
+            return _metricData.Count(md => md.Uid == metricId && md.RawAnomalyScore != null);
         }
-
+        /// <summary>
+        /// Get MetricData ordered by timestamp, descending
+        /// </summary>
+        /// <param name="metricId">Metric uid</param>
+        /// <param name="limit">Limit on number of results to return</param>
+        /// <returns></returns>
         public List<MetricData> GetMetricDataWithRawAnomalyScoresTail(string metricId, int limit)
         {
-            throw new NotImplementedException();
+            return _metricData
+                .Where(md => md.Uid == metricId && md.RawAnomalyScore != null)
+                .OrderByDescending(md => md.Timestamp)
+                .Take(limit)
+                .ToList();
         }
     }
 
@@ -1667,8 +1686,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
 
         }
-        public MetricData(string metricId, DateTime timestamp, float metricValue,
-            float anomalyScore, long rowid)
+        public MetricData(string metricId, DateTime timestamp, double metricValue,
+            double anomalyScore, long rowid)
         {
             MetricId = metricId;
             Timestamp = timestamp;
@@ -1681,7 +1700,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public DateTime Timestamp { get; set; }
         public double MetricValue { get; set; }
         public double AnomalyScore { get; set; }
-        public double RawAnomalyScore { get; set; }
+        public double? RawAnomalyScore { get; set; }
 
 
         public int DisplayValue { get; set; }

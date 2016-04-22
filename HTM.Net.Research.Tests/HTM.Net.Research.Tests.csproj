@@ -116,11 +116,13 @@
     <Compile Include="Swarming\SimpleV2PermutationsFile.cs" />
     <Compile Include="Swarming\SwarmingTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Taurus\AnomalyLikelihoodHelperTests.cs" />
     <Compile Include="Taurus\MetricUtilTests.cs" />
     <Compile Include="Vision\ImageSensorTests.cs" />
     <Compile Include="Vision\TrainAndTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
     <None Include="Resources\1_100.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

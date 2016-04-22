@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace HTM.Net.Algorithms
 {
@@ -12,9 +13,17 @@ namespace HTM.Net.Algorithms
  */
     public class MovingAverage
     {
+            [JsonProperty]
         private Calculation calc;
 
+            [JsonProperty]
         private int windowSize;
+
+        [JsonConstructor]
+        private MovingAverage()
+        {
+            
+        }
 
         /**
          * Constructs a new {@code MovingAverage}
@@ -195,8 +204,11 @@ namespace HTM.Net.Algorithms
          */
         public class Calculation
         {
+            [JsonProperty]
             internal double average;
+            [JsonProperty]
             internal List<double> historicalValues;
+            [JsonProperty]
             internal double total;
 
             public Calculation()

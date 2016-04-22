@@ -19,6 +19,12 @@ namespace HTM.Net.Util
         private readonly int _thisHashcode;
         private readonly string[] _emptyKeys = new string[0];
 
+        [Obsolete("This may not be used in code - here for deserialisation", true)]
+        public NamedTuple()
+        {
+            
+        }
+
         /**
          * Constructs and new {@code NamedTuple}
          * 

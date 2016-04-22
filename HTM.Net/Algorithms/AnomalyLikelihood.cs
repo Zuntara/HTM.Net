@@ -137,7 +137,8 @@ namespace HTM.Net.Algorithms
             {
                 likelihoodRetval = 0.5;
             }
-            else {
+            else
+            {
                 if (distribution == null || iteration % reestimationPeriod == 0)
                 {
                     this.distribution = EstimateAnomalyLikelihoods(
@@ -180,7 +181,8 @@ namespace HTM.Net.Algorithms
             {
                 distribution = NullDistribution();
             }
-            else {
+            else
+            {
                 List<double> samples = records.GetMetrics();
                 distribution = EstimateNormal(samples.Skip(skipRecords).Take(samples.Count).ToArray(), true);
 
@@ -233,7 +235,7 @@ namespace HTM.Net.Algorithms
             if (LOG.IsDebugEnabled)
             {
                 LOG.Debug(string.Format("Discovered params={0} Number of likelihoods:{1}  First 20 likelihoods:{2}",
-                        @params, len, Arrays.CopyOfRange(filteredLikelihoods, 0, 20)));
+                        @params, len, Arrays.ToString(Arrays.CopyOfRange(filteredLikelihoods, 0, 20))));
             }
 
             return new AnomalyLikelihoodMetrics(filteredLikelihoods, records, @params);
@@ -383,11 +385,13 @@ namespace HTM.Net.Algorithms
                         // Previous value is not in redzone, so leave as-is
                         filteredLikelihoods[i + 1] = v;
                     }
-                    else {
+                    else
+                    {
                         filteredLikelihoods[i + 1] = yellowThreshold;
                     }
                 }
-                else {
+                else
+                {
                     // Value is below the redzone, so leave as-is
                     filteredLikelihoods[i + 1] = v;
                 }
@@ -629,14 +633,25 @@ namespace HTM.Net.Algorithms
         /// </summary>
         public class AnomalyParams
         {
-            private readonly Parameters _parameters;
+            [JsonProperty]
+            private Parameters _parameters;
             /** Cached Json formatting. Possible because Objects of this class is immutable */
             private JObject cachedNode;
 
-            private readonly Statistic distribution;
-            private readonly MovingAverage movingAverage;
-            private readonly double[] historicalLikelihoods;
-            private readonly int windowSize;
+            [JsonProperty]
+            private Statistic distribution;
+            [JsonProperty]
+            private MovingAverage movingAverage;
+            [JsonProperty]
+            private double[] historicalLikelihoods;
+            [JsonProperty]
+            private int windowSize;
+
+            [JsonConstructor]
+            private AnomalyParams()
+            {
+                
+            }
 
             /// <summary>
             /// Constructs a new <see cref="AnomalyParams"/>
