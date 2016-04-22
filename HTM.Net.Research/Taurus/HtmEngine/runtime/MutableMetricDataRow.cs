@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Web.UI.WebControls;
 using HTM.Net.Algorithms;
@@ -114,9 +115,22 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             algorithms = (AnomalyLikelihood)Anomaly.Create(pars);
         }
 
-        private void GenerateAnomalyParams()
+        /// <summary>
+        /// Generate the model's anomaly likelihood parameters from the given sample cache.
+        /// </summary>
+        /// <param name="metricId">the metric ID</param>
+        /// <param name="statsSampleCache">a sequence of MetricData instances that
+        /// comprise the cache of samples for the current inference result batch with
+        /// valid raw_anomaly_score in the processed order(by rowid/timestamp). At
+        /// least self._statisticsMinSampleSize samples are needed.</param>
+        /// <param name="defaultAnomalyParams">the default anomaly params value; if can't
+        /// generate new ones(not enough samples in cache), this value will be
+        /// returned verbatim</param>
+        /// <returns>new anomaly likelihood parameters; defaultAnomalyParams, if there 
+        /// are not enough samples in statsSampleCache.</returns>
+        private Map<string, object> GenerateAnomalyParams(string metricId, List<MetricData> statsSampleCache, Map<string, object> defaultAnomalyParams)
         {
-
+            throw new NotImplementedException("todo");
         }
 
         /// <summary>
@@ -141,10 +155,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         ///     model's initial "catch-up" phase when large inference result batches are
         ///     prevalent.
         /// </remarks>
-        public object UpdateModelAnomalyScores(RepositoryMetric metricObj, List<MutableMetricDataRow> metricDataRows)
+        public object UpdateModelAnomalyScores(Metric metricObj, List<MetricData> metricDataRows)
         {
             // When populated, a cached list of MetricData instances for updating anomaly likelyhood params
-            List<RepositoryMetricData> statsSampleCache = null;
+            List<MetricData> statsSampleCache = null;
 
             // Index into metricDataRows where processing is to resume
             int startRowIndex = 0;
@@ -153,19 +167,19 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             if (metricObj.Status != MetricStatus.Active)
             {
-                throw new MetricNotActiveError();
+                throw new MetricNotActiveError(string.Format("Metric {0} is not active.", metricObj.Uid));
             }
 
-            var modelParams = JsonConvert.DeserializeObject<Map<string, object>>(metricObj.ModelParams);
-            var anomalyParams = (Map<string, object>)modelParams.Get("anomalyLikelihoodParams", null);
+            ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams);
+            var anomalyParams = (Map<string, object>)modelParams.AnomalyLikelihoodParams;
             if (anomalyParams == null)
             {
                 // We don't have a likelihood model yet. Create one if we have sufficient
                 // records with raw anomaly scores
                 var initData = InitAnomalyLikelihoodModel(metricObj, metricDataRows);
-                anomalyParams = initData.AnomalyParams;
-                statsSampleCache = initData.StatsSampleCache;
-                startRowIndex = initData.StartRowIndex;
+                anomalyParams = (Map<string, object>)initData["anomalyParams"];
+                statsSampleCache = (List<MetricData>)initData["statsSampleCache"];
+                startRowIndex = (int)initData["startRowIndex"];
             }
 
             // Do anomaly likelihood processing on the rest of the new samples
@@ -252,7 +266,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     endRowID, anomalyParams["last_rowid_for_stats"],
                     statisticsRefreshInterval, metricDataRows.Count);
 
-                List<RepositoryMetricData> consumedSamples = new List<RepositoryMetricData>();
+                List<MetricData> consumedSamples = new List<MetricData>();
 
                 foreach (var md in metricDataRows.Skip(startRowIndex).Take((int)limitIndex))
                 {
@@ -289,8 +303,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     // of anomaly params
                     var result = RefreshAnomalyParams(metricId: metricObj.Uid, statsSampleCache: statsSampleCache,
                         consumedSamples: consumedSamples, defaultAnomalyParams: anomalyParams);
-                    anomalyParams = result.AnomalyParams;
-                    statsSampleCache = result.StatsSampleCache;
+                    anomalyParams = (Map<string, object>)result["anomalyParams"];
+                    statsSampleCache = (List<MetricData>)result["statsSampleCache"];
                 }
                 startRowIndex += consumedSamples.Count;
             }
@@ -298,25 +312,173 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return anomalyParams;
         }
 
-        private dynamic RefreshAnomalyParams(string metricId, List<RepositoryMetricData> statsSampleCache, List<RepositoryMetricData> consumedSamples,
+        /// <summary>
+        /// Refresh anomaly likelihood parameters from the tail of statsSampleCache and consumedSamples 
+        /// up to self._statisticsSampleSize.
+        /// 
+        /// Update statsSampleCache, including initializing from metric_data table, if
+        /// needed, and appending of consumedSamples content.
+        /// </summary>
+        /// <param name="metricId">the metric ID</param>
+        /// <param name="statsSampleCache">A list of MetricData instances. null, if the
+        /// cache hasn't been initialized yet as is the case when the anomaly
+        /// likelihood model is being built for the first time for the model or are
+        /// being refreshed for the first time within a given result batch, in which
+        /// case it will be initialized as follows: up to the balance of
+        /// self._statisticsSampleSize in excess of consumedSamples will be loaded
+        /// from the metric_data table.</param>
+        /// <param name="consumedSamples">A sequence of samples that have been consumed by
+        /// anomaly processing, but are not yet in statsSampleCache.They will be
+        /// appended to statsSampleCache</param>
+        /// <param name="defaultAnomalyParams">the default anomaly params value; if can't
+        /// generate new ones, this value will be returned in the result tuple</param>
+        /// <returns>the tuple (anomalyParams, statsSampleCache)</returns>
+        /// <remarks>
+        /// If statsSampleCache was None on entry, it will be initialized as follows:
+        /// up to the balance of self._statisticsSampleSize in excess of
+        /// 
+        /// consumedSamples metric data rows with non-null raw anomaly scores will be
+        /// loaded from the metric_data table and consumedSamples will be appended to
+        /// it.If statsSampleCache was not None on entry, then elements from
+        /// consumedSamples will be appended to it.The returned statsSampleCache will
+        /// be a list NOTE: it may be an empty list, if there was nothing to fill it with.
+        /// 
+        /// If there are not enough total samples to satisfy
+        /// self._statisticsMinSampleSize, then the given defaultAnomalyParams will be
+        /// returned in the tuple.
+        /// </remarks>
+        private NamedTuple RefreshAnomalyParams(string metricId, List<MetricData> statsSampleCache, List<MetricData> consumedSamples,
             Map<string, object> defaultAnomalyParams)
         {
-            throw new NotImplementedException();
+            // Update the samples cache
+            if (statsSampleCache == null)
+            {
+                // The samples cache hasn't been initialized yet, so build it now;
+                // this happens when the model is being built for the first time or when
+                // anomaly params are being refreshed for the first time within an
+                // inference result batch.
+                // TODO: unit-test this
+                var tail = TailMetricDataWithRawAnomalyScores(metricId,
+                    Math.Max(0, _statisticsSampleSize - consumedSamples.Count));
+
+                statsSampleCache = new List<MetricData>(tail);
+                statsSampleCache.AddRange(consumedSamples);
+            }
+            else
+            {
+                // TODO: unit-test this
+                statsSampleCache.AddRange(consumedSamples);
+            }
+
+            var anomalyParams = GenerateAnomalyParams(metricId, statsSampleCache, defaultAnomalyParams);
+
+            return new NamedTuple(new[] { "anomalyParams", "statsSampleCache" }, anomalyParams, statsSampleCache);
         }
 
-        private object GetMetricLogPrefix(RepositoryMetric metricObj)
+        /// <summary>
+        /// Fetch the tail of metric_data rows with non-null raw_anomaly_score for the given metric ID
+        /// </summary>
+        /// <param name="metricId">the metric ID</param>
+        /// <param name="limit">max number of tail rows to fetch</param>
+        /// <returns>an iterable that yields up to `limit` MetricData tail
+        /// instances with non-null raw_anomaly_score ordered by metric data timestamp
+        /// in ascending order</returns>
+        private List<MetricData> TailMetricDataWithRawAnomalyScores(string metricId, int limit)
+        {
+            if (limit == 0) return new List<MetricData>();
+            var rows = RepositoryFactory.Metric.GetMetricDataWithRawAnomalyScoresTail(metricId, limit);
+            return rows.OrderBy(r => r.Timestamp).ToList();
+        }
+
+        private object GetMetricLogPrefix(Metric metricObj)
         {
             throw new NotImplementedException();
         }
 
-        private dynamic InitAnomalyLikelihoodModel(RepositoryMetric metricObj, List<MutableMetricDataRow> metricDataRows)
+        /// <summary>
+        /// Create the anomaly likelihood model for the given Metric instance.
+        /// Assumes that the metric doesn't have anomaly params yet.
+        /// </summary>
+        /// <param name="metricObj">Metric instance with no anomaly likelihood params</param>
+        /// <param name="metricDataRows">
+        /// a sequence of MetricData instances corresponding to the inference results batch in the processed order
+        /// (ascending by rowid and timestamp) with updated raw_anomaly_score and zeroed out anomaly_score corresponding 
+        /// to the new model inference results, but not yet updated in the database.Will not alter this sequence.</param>
+        /// <returns>
+        /// the tuple (anomalyParams, statsSampleCache, startRowIndex)
+        ///   anomalyParams: None, if there are too few samples; otherwise, the anomaly
+        ///   likelyhood objects as returned by algorithms.estimateAnomalyLikelihoods
+        /// statsSampleCache: None, if there are too few samples; otherwise, a list of
+        ///   MetricData instances comprising of a concatenation of rows sourced
+        ///   from metric_data tail and topped off with necessary items from the
+        ///   given metricDataRows for a minimum of self._statisticsMinSampleSize and
+        ///   a maximum of self._statisticsSampleSize total items.
+        /// startRowIndex: Index into the given metricDataRows where processing of
+        ///   anomaly scores is to start; if there are too few samples to generate
+        ///   the anomaly likelihood params, then startRowIndex will reference past
+        ///   the last item in the given metricDataRows sequence.
+        /// </returns>
+        private NamedTuple InitAnomalyLikelihoodModel(Metric metricObj, List<MetricData> metricDataRows)
         {
-            throw new NotImplementedException();
+            if (metricObj.Status != MetricStatus.Active)
+            {
+                throw new MetricNotActiveError(string.Format("getAnomalyLikelihoodParams failed because metric={0} is not ACTIVE; status={1}; resource={2}",
+                    metricObj.Uid, metricObj.Status, metricObj.Server));
+            }
+            ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams);
+            var anomalyParams = modelParams.AnomalyLikelihoodParams;
+            Debug.Assert(anomalyParams != null, "anomalyParams");
+
+            List<MetricData> statsSampleCache = null;
+
+            // Index into metricDataRows where processing of anomaly scores is to start
+            int startRowIndex = 0;
+
+            int numProcessedRows = RepositoryFactory.Metric.GetProcessedMetricDataCount(metricObj.Uid);
+
+            if (numProcessedRows + metricDataRows.Count >= _statisticsMinSampleSize)
+            {
+                // We have enough samples to initialize the anomaly likelihood model
+                // TODO: unit test
+
+                // Determine how many samples will be used from metricDataRows
+                int numToConsume = Math.Max(0, _statisticsMinSampleSize - numProcessedRows);
+                var consumedSamples = metricDataRows.Take(numToConsume).ToList();// [:numToConsume]
+                startRowIndex += numToConsume;
+
+                // Create the anomaly likelihood model
+                NamedTuple refeshResult = RefreshAnomalyParams(metricObj.Uid, null, consumedSamples, anomalyParams);
+                anomalyParams = (Map<string, object>)refeshResult["anomalyParams"];
+                statsSampleCache = (List<MetricData>)refeshResult["statsSampleCache"];
+
+                // If this assertion fails, it implies that the count retrieved by our
+                // call to MetricData.count above is no longer correct
+                _log.DebugFormat("Generated initial anomaly params for model={0}: umSamples={1}; firstRowID={2}; lastRowID={3};",
+                    metricObj.Uid, statsSampleCache.Count, statsSampleCache[0].Rowid, statsSampleCache.Last().Rowid);
+            }
+            else
+            {
+                // Not enough raw scores yet to begin anomaly likelyhoods processing
+                // TODO: unit-test
+                startRowIndex = metricDataRows.Count;
+            }
+
+            return new NamedTuple(new[] { "anomalyParams", "statsSampleCache", "startRowIndex" },
+                anomalyParams, statsSampleCache, startRowIndex);
         }
 
+        /// <summary>
+        /// Determine the interval for refreshing anomaly likelihood parameters.
+        /// 
+        /// The strategy is to use larger refresh intervals in large batches, which are
+        /// presumably older catch-up data, in order to speed up our processing.
+        /// Config-based self._minStatisticsRefreshInterval serves as the baseline.
+        /// </summary>
+        /// <param name="batchSize">number of elements in the inference result batch being processed.</param>
+        /// <returns>an integer that indicates how many samples should be processed until the next refresh of anomaly likelihood parameters</returns>
         private int GetStatisticsRefreshInterval(int batchSize)
         {
-            throw new NotImplementedException();
+            return (int)Math.Max(_minStatisticsRefreshInterval, batchSize * 0.1);
         }
     }
 
@@ -357,7 +519,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public class MetricNotActiveError : Exception
     {
+        public MetricNotActiveError(string message)
+            : base(message)
+        {
 
+        }
     }
     /// <summary>
     /// Raised when too many models or "instances" have been created
@@ -505,7 +671,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 //throw new NotAllowedResponse(new { result = "Not supported" });
                 throw new NotSupportedException();
             }
-            List<RepositoryMetric> response = new List<RepositoryMetric>();
+            List<Metric> response = new List<Metric>();
             if (model != null)
             {
                 var request = model;
@@ -535,7 +701,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             {
                 // AddStandardHeaders() // TODO: check what this does.
                 var metricRowList = CreateModels(model);
-                List<RepositoryMetric> metricDictList = metricRowList.Select(FormatMetricRowProxy).ToList();
+                List<Metric> metricDictList = metricRowList.Select(FormatMetricRowProxy).ToList();
                 response = metricDictList;
 
                 // return Created(response);
@@ -548,7 +714,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             }
         }
 
-        private RepositoryMetric FormatMetricRowProxy(RepositoryMetric metricObj)
+        private Metric FormatMetricRowProxy(Metric metricObj)
         {
             string displayName;
             if (metricObj.TagName != null && metricObj.TagName.Length > 0)
@@ -563,7 +729,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             string[] allowedKeys = GetMetricDisplayFields();
 
-            RepositoryMetric metricDict = metricObj.Clone(allowedKeys);
+            Metric metricDict = metricObj.Clone(allowedKeys);
             metricDict.Parameters = parameters;
             metricDict.DisplayName = displayName;
 
@@ -588,11 +754,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             };
         }
 
-        private static List<RepositoryMetric> CreateModels(CreateModelRequest[] request = null)
+        private static List<Metric> CreateModels(CreateModelRequest[] request = null)
         {
             if (request != null)
             {
-                List<RepositoryMetric> response = new List<RepositoryMetric>();
+                List<Metric> response = new List<Metric>();
                 foreach (var nativeMetric in request)
                 {
                     try
@@ -613,7 +779,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     internal class ModelHandler
     {
-        public static RepositoryMetric CreateModel(CreateModelRequest modelSpec = null)
+        public static Metric CreateModel(CreateModelRequest modelSpec = null)
         {
             if (modelSpec == null) throw new ArgumentNullException("modelSpec");
             bool importing = false;
@@ -648,7 +814,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             {
                 throw;
             }
-            return MetricRepository.GetMetric(metricId);
+            return RepositoryFactory.Metric.GetMetric(metricId);
         }
 
 
@@ -764,7 +930,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 // Convert modelSpec to canonical form
                 modelSpec = modelSpec.Clone();
                 modelSpec.MetricSpec.Uid = null;
-                ((CustomMetricSpec)modelSpec.MetricSpec).Metric = MetricRepository.GetMetric(metricId).Name;
+                ((CustomMetricSpec)modelSpec.MetricSpec).Metric = RepositoryFactory.Metric.GetMetric(metricId).Name;
             }
             else if (!string.IsNullOrWhiteSpace(metricSpec.Metric))
             {
@@ -791,7 +957,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 minVal = maxVal = null;
             }
 
-            int numDataRows = MetricRepository.GetMetricDataCount(metricId);
+            int numDataRows = RepositoryFactory.Metric.GetMetricDataCount(metricId);
             if (numDataRows > MODEL_CREATION_RECORD_THRESHOLD)
             {
                 var mstats = GetMetricStatistics(metricId);
@@ -818,7 +984,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="swarmParams">object returned by scalar_metric_utils.generateSwarmParams()</param>
         private void StartMonitoringWithRetries(string metricId, ModelSpec modelSpec, AnomalyParamSet swarmParams)
         {
-            var metricObj = MetricRepository.GetMetric(metricId);
+            var metricObj = RepositoryFactory.Metric.GetMetric(metricId);
             if (metricObj.DataSource != "custom")
             {
                 throw new InvalidOperationException("Not an HTM metric");
@@ -835,7 +1001,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             {
                 update["server"] = instanceName;
             }
-            MetricRepository.UpdateMetricColumns(metricId, update);
+            RepositoryFactory.Metric.UpdateMetricColumns(metricId, update);
 
             var modelStarted = ScalarMetricUtils.StartMonitoring(metricId, swarmParams, logger: _log);
             if (modelStarted)
@@ -861,7 +1027,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns>a dictionary with the metric's statistics  {"min": <min-value>, "max": <max-value>}</returns>
         private MetricStatistic GetMetricStatistics(string metricId)
         {
-            MetricStatistic stats = MetricRepository.GetMetricStats();
+            MetricStatistic stats = RepositoryFactory.Metric.GetMetricStats(metricId);
 
             var minVal = stats.Min;
             var maxVal = stats.Max;
@@ -894,14 +1060,14 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             var resource = MakeDefaultResourceName(metricName);
 
-            RepositoryMetric metricObj = MetricRepository.GetCustomMetricByName(metricName);
+            Metric metricObj = RepositoryFactory.Metric.GetCustomMetricByName(metricName);
 
             if (metricObj != null)
             {
                 throw new MetricAlreadyExists(metricObj.Uid, "Custom metric with matching name already exists");
             }
 
-            RepositoryMetric metricDict = MetricRepository.AddMetric(name:metricName, description: "Custom metric " + metricName, server: resource, location: "", pollInterval: DEFAULT_METRIC_PERIOD, status: MetricStatus.Unmonitored, datasource: "custom");
+            Metric metricDict = RepositoryFactory.Metric.AddMetric(name: metricName, description: "Custom metric " + metricName, server: resource, location: "", pollInterval: DEFAULT_METRIC_PERIOD, status: MetricStatus.Unmonitored, datasource: "custom");
 
             return metricDict.Uid;
         }
@@ -1090,6 +1256,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public double? Max { get; set; }
         public double? MinResolution { get; set; }
         public SensorParams SensorParams { get; set; }
+        public Map<string, object> AnomalyLikelihoodParams { get; set; }
     }
 
     public class SensorParams
@@ -1098,8 +1265,6 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     }
 
     #endregion
-
-
 
     public class MetricStatistic
     {
@@ -1169,34 +1334,89 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         }
     }
 
-
-    /// <summary>
-    /// https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/repository/queries.py
-    /// </summary>
-    public class MetricRepository
+    public static class RepositoryFactory
     {
-        public static RepositoryMetric GetMetric(string metricId)
+        private static IMetricRepository _metricRepository;
+
+        static RepositoryFactory()
         {
-            // sel = select(fields).where(schema.metric.c.uid == metricId).First()
-            throw new NotImplementedException();
+            _metricRepository = new MetricMemRepository();
         }
 
-        public static int GetMetricDataCount(string metricId)
-        {
-            //sel = (select([func.count()], from_obj=schema.metric_data).where(schema.metric_data.c.uid == metricId)).first()[0]
-            throw new NotImplementedException();
-        }
+        public static IMetricRepository Metric { get { return _metricRepository; } }
+    }
+
+    public interface IMetricRepository
+    {
+        Metric GetMetric(string metricId);
+        int GetMetricDataCount(string metricId);
         /// <summary>
         /// Update existing metric
         /// </summary>
         /// <param name="metricId"></param>
         /// <param name="update">fields with values to update</param>
-        public static void UpdateMetricColumns(string metricId, Map<string, object> update)
+        void UpdateMetricColumns(string metricId, Map<string, object> update);
+
+        MetricStatistic GetMetricStats(string metricId);
+        Metric GetCustomMetricByName(string metricName);
+
+        /// <summary>
+        /// Add metric
+        /// </summary>
+        /// <param name="uid"></param>
+        /// <param name="datasource"></param>
+        /// <param name="name"></param>
+        /// <param name="description"></param>
+        /// <param name="server"></param>
+        /// <param name="location"></param>
+        /// <param name="parameters"></param>
+        /// <param name="status"></param>
+        /// <param name="message"></param>
+        /// <param name="collectorError"></param>
+        /// <param name="lastTimestamp"></param>
+        /// <param name="pollInterval"></param>
+        /// <param name="tagName"></param>
+        /// <param name="modelParams"></param>
+        /// <param name="lastRowId"></param>
+        /// <returns>Key-value pairs for inserted columns and values</returns>
+        Metric AddMetric(string uid = null, string datasource = null, string name = null,
+            string description = null, string server = null, string location = null,
+            string parameters = null, MetricStatus? status = null, string message = null, string collectorError = null,
+            DateTime? lastTimestamp = null, int? pollInterval = null, string tagName = null, string modelParams = null,
+            long lastRowId = 0);
+
+        int GetProcessedMetricDataCount(string metricId);
+        List<MetricData> GetMetricDataWithRawAnomalyScoresTail(string metricId, int limit);
+    }
+
+    /// <summary>
+    /// https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/repository/queries.py
+    /// </summary>
+    public class MetricSqlRepository : IMetricRepository
+    {
+        public Metric GetMetric(string metricId)
+        {
+            // sel = select(fields).where(schema.metric.c.uid == metricId).First()
+            throw new NotImplementedException();
+        }
+
+        public int GetMetricDataCount(string metricId)
+        {
+            //sel = (select([func.count()], from_obj=schema.metric_data).where(schema.metric_data.c.uid == metricId)).first()[0]
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Update existing metric
+        /// </summary>
+        /// <param name="metricId"></param>
+        /// <param name="update">fields with values to update</param>
+        public void UpdateMetricColumns(string metricId, Map<string, object> update)
         {
             throw new NotImplementedException();
         }
 
-        public static MetricStatistic GetMetricStats()
+        public MetricStatistic GetMetricStats(string metricId)
         {
             /*
              sel = (select([func.min(schema.metric_data.c.metric_value),
@@ -1213,7 +1433,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             throw new NotImplementedException();
         }
 
-        public static RepositoryMetric GetCustomMetricByName(string metricName)
+        public Metric GetCustomMetricByName(string metricName)
         {
             // where = ((schema.metric.c.name == name) & (schema.metric.c.datasource == "custom")).first()
             throw new NotImplementedException();
@@ -1238,10 +1458,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="modelParams"></param>
         /// <param name="lastRowId"></param>
         /// <returns>Key-value pairs for inserted columns and values</returns>
-        public static RepositoryMetric AddMetric(string uid = null, string datasource = null, string name = null, 
-            string description = null, string server = null, string location = null, 
+        public Metric AddMetric(string uid = null, string datasource = null, string name = null,
+            string description = null, string server = null, string location = null,
             string parameters = null, MetricStatus? status = null, string message = null, string collectorError = null,
-            DateTime? lastTimestamp = null, int? pollInterval = null, string tagName= null, string modelParams = null,
+            DateTime? lastTimestamp = null, int? pollInterval = null, string tagName = null, string modelParams = null,
             long lastRowId = 0)
         {
             uid = uid ?? Guid.NewGuid().ToString();
@@ -1250,10 +1470,105 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             throw new NotImplementedException();
         }
+
+        public int GetProcessedMetricDataCount(string metricId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<MetricData> GetMetricDataWithRawAnomalyScoresTail(string metricId, int limit)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class MetricMemRepository : IMetricRepository
+    {
+        private List<Metric> _metric;
+        private List<MetricData> _metricData;
+
+        public MetricMemRepository()
+        {
+            _metric = new List<Metric>();
+            _metricData = new List<MetricData>();
+        }
+
+        public Metric GetMetric(string metricId)
+        {
+            return _metric.First(m => m.Uid == metricId);
+        }
+
+        public int GetMetricDataCount(string metricId)
+        {
+            //sel = (select([func.count()], from_obj=schema.metric_data).where(schema.metric_data.c.uid == metricId)).first()[0]
+            return _metricData.Count(md => md.Uid == metricId);
+        }
+
+        public void UpdateMetricColumns(string metricId, Map<string, object> update)
+        {
+            throw new NotImplementedException();
+        }
+
+        public MetricStatistic GetMetricStats(string metricId)
+        {
+            if (_metricData.Any(md => md.Uid == metricId))
+            {
+                var statMin = _metricData.Where(md => md.Uid == metricId).Min(md => md.MetricValue);
+                var statMax = _metricData.Where(md => md.Uid == metricId).Max(md => md.MetricValue);
+                return new MetricStatistic(statMin, statMax, null);
+            }
+            throw new InvalidOperationException("MetricStatisticsNotReadyError");
+        }
+
+        public Metric GetCustomMetricByName(string metricName)
+        {
+            return _metric.FirstOrDefault(m => m.Name.Equals(metricName, StringComparison.InvariantCultureIgnoreCase)
+                                               && m.DataSource == "custom");
+        }
+
+        public Metric AddMetric(string uid = null, string datasource = null, string name = null, string description = null,
+            string server = null, string location = null, string parameters = null, MetricStatus? status = null,
+            string message = null, string collectorError = null, DateTime? lastTimestamp = null, int? pollInterval = null,
+            string tagName = null, string modelParams = null, long lastRowId = 0)
+        {
+            uid = uid ?? Guid.NewGuid().ToString();
+
+            Metric newMetric = new Metric();
+
+            newMetric.Uid = uid;
+            newMetric.DataSource = datasource;
+            newMetric.Name = name;
+            newMetric.Description = description;
+            newMetric.Server = server;
+            newMetric.Location = location;
+            newMetric.Parameters = parameters;
+            newMetric.Status = status.GetValueOrDefault(MetricStatus.Unmonitored);
+            newMetric.Message = message;
+            //newMetric.c = collectorError;
+            newMetric.LastTimeStamp = lastTimestamp;
+            newMetric.PollInterval = pollInterval;
+            newMetric.TagName = tagName;
+            newMetric.ModelParams = modelParams;
+            newMetric.LastRowId = lastRowId;
+
+            _metric.Add(newMetric);
+
+            return newMetric;
+        }
+
+        public int GetProcessedMetricDataCount(string metricId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<MetricData> GetMetricDataWithRawAnomalyScoresTail(string metricId, int limit)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     // Table Metric
-    public class RepositoryMetric
+    public class Metric
     {
         public string Uid { get; set; }
         public string DataSource { get; set; }
@@ -1265,7 +1580,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public MetricStatus Status { get; set; }
         public string Message { get; set; }
         public DateTime? LastTimeStamp { get; set; }
-        public int PollInterval { get; set; }
+        public int? PollInterval { get; set; }
         public string TagName { get; set; }
         public string ModelParams { get; set; }
         public long LastRowId { get; set; }
@@ -1273,19 +1588,19 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         // Ignored in db
         public string DisplayName { get; set; }
 
-        public RepositoryMetric Clone(string[] allowedKeys)
+        public Metric Clone(string[] allowedKeys)
         {
             throw new NotImplementedException();
         }
     }
-
-    public class RepositoryMetricData
+    // Table MetricData
+    public class MetricData
     {
-        public RepositoryMetricData()
+        public MetricData()
         {
-            
+
         }
-        public RepositoryMetricData(string metricId, DateTime timestamp, float metricValue,
+        public MetricData(string metricId, DateTime timestamp, float metricValue,
             float anomalyScore, long rowid)
         {
             MetricId = metricId;
