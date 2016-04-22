@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Taurus.HtmEngine.runtime
@@ -635,9 +637,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// </summary>
     public class MetricUtils
     {
-        public static object GetMetricConfiguration()
+        public static MetricsConfiguration GetMetricsConfiguration()
         {
-            throw new NotImplementedException("todo?");
+            // Load the metrics.json file
+            string metrics = Properties.Resources.metrics;
+            return JsonConvert.DeserializeObject<MetricsConfiguration>(metrics);
         }
 
         /// <summary>
@@ -645,11 +649,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="metricsConfig">metrics configuration as returned by `getMetricsConfiguration()`</param>
         /// <returns>all metric names from the given metricsConfig</returns>
-        public static List<string> GetMetricNamesFromConfig(Map<string, object> metricsConfig)
+        public static List<string> GetMetricNamesFromConfig(MetricsConfiguration metricsConfig)
         {
-            return metricsConfig.Values.Select(v => v as Map<string, object>)
-                    .Where(m => m != null)
-                    .SelectMany(m => ((Map<string, object>)m["metrics"]).Keys)
+            return metricsConfig.Values
+                    .SelectMany(m => m.Metrics.Keys)
                     .ToList();
         }
 
@@ -664,6 +667,37 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             throw new InvalidOperationException("posts to /_models endpoint webapi");
         }
+    }
+
+    public class MetricsConfiguration : Dictionary<string, MetricConfigurationEntry>
+    {
+        
+    }
+
+    public class MetricConfigurationEntry
+    {
+        [JsonProperty("metrics")]
+        public Dictionary<string, MetricConfigurationEntryData> Metrics { get; set; }
+        [JsonProperty("stockExchange")]
+        public string StockExchange { get; set; }
+        [JsonProperty("symbol")]
+        public string Symbol { get; set; }
+    }
+
+    public class MetricConfigurationEntryData
+    {
+        [JsonProperty("metricType")]
+        public string MetricType { get; set; }
+        [JsonProperty("metricTypeName")]
+        public string MetricTypeName { get; set; }
+        [JsonProperty("modelParams")]
+        public Dictionary<string, object> ModelParams { get; set; }
+        [JsonProperty("provider")]
+        public string Provider { get; set; }
+        [JsonProperty("sampleKey")]
+        public string SampleKey { get; set; }
+        [JsonProperty("screenNames")]
+        public string[] ScreenNames { get; set; }
     }
 
     public class ModelsControllerApi
@@ -1658,6 +1692,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     #region Model swapper stuff
 
+    // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/model_swapper/model_swapper_interface.py
     // TODO:
 
     #endregion
