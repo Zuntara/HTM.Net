@@ -42,15 +42,9 @@ namespace HTM.Net.Research.Tests.Taurus
         public void GenerateAnomalyParams_NotEnoughRecords()
         {
             const long recordCount = 100;
-            IRandom random = new XorshiftRandom(42);
 
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), i * 0.2, random.NextDouble(), i));
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
             var result = helper.GenerateAnomalyParams(Guid.NewGuid().ToString(), metricData, new Map<string, object>());
@@ -62,15 +56,9 @@ namespace HTM.Net.Research.Tests.Taurus
         public void GenerateAnomalyParams_EnoughRecords_NullDistribution()
         {
             const long recordCount = 200;
-            IRandom random = new XorshiftRandom(42);
 
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), i * 0.2, random.NextDouble(), i));
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
             var result = helper.GenerateAnomalyParams(metricId,
@@ -98,18 +86,9 @@ namespace HTM.Net.Research.Tests.Taurus
         public void GenerateAnomalyParams_EnoughRecords_Distribution()
         {
             const long recordCount = 500;
-            IRandom random = new XorshiftRandom(42);
 
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), random.NextDouble() * 5, random.NextDouble(), i)
-                {
-                    RawAnomalyScore = random.NextDouble() * 5
-                });
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
             // execute multiple times
@@ -145,18 +124,9 @@ namespace HTM.Net.Research.Tests.Taurus
         public void InitAnomalyLikelihoodModel_NotActive()
         {
             const long recordCount = 500;
-            IRandom random = new XorshiftRandom(42);
-
+            
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), random.NextDouble() * 5, random.NextDouble(), i)
-                {
-                    RawAnomalyScore = random.NextDouble() * 5
-                });
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
 
@@ -170,18 +140,9 @@ namespace HTM.Net.Research.Tests.Taurus
         public void InitAnomalyLikelihoodModel_Active()
         {
             const long recordCount = 500;
-            IRandom random = new XorshiftRandom(42);
 
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), random.NextDouble() * 5, random.NextDouble(), i)
-                {
-                    RawAnomalyScore = random.NextDouble() * 5
-                });
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
 
@@ -206,18 +167,9 @@ namespace HTM.Net.Research.Tests.Taurus
         public void InitAnomalyLikelihoodModel_Active_NotEnoughRecords()
         {
             const long recordCount = 150;
-            IRandom random = new XorshiftRandom(42);
 
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), random.NextDouble() * 5, random.NextDouble(), i)
-                {
-                    RawAnomalyScore = random.NextDouble() * 5
-                });
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
 
@@ -254,22 +206,13 @@ namespace HTM.Net.Research.Tests.Taurus
             Assert.AreEqual((int)(200 * 0.1), interval);
         }
 
-        //[TestMethod]
+        [TestMethod]
         public void UpdateModelAnomalyScores()
         {
             const long recordCount = 500;
-            IRandom random = new XorshiftRandom(42);
 
             string metricId = Guid.NewGuid().ToString();
-            var metricData = new List<MetricData>();
-
-            for (int i = 0; i < recordCount; i++)
-            {
-                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5 * i)), random.NextDouble() * 5, random.NextDouble(), i)
-                {
-                    RawAnomalyScore = random.NextDouble() * 5
-                });
-            }
+            var metricData = GetMetricData(recordCount, metricId);
 
             AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
 
@@ -293,6 +236,71 @@ namespace HTM.Net.Research.Tests.Taurus
 
             var map = helper.UpdateModelAnomalyScores(metricObj, metricData);
             Assert.IsNotNull(map);
+        }
+
+        [TestMethod, ExpectedException(typeof(MetricNotActiveError))]
+        public void UpdateModelAnomalyScores_NotActive()
+        {
+            const long recordCount = 500;
+
+            string metricId = Guid.NewGuid().ToString();
+            var metricData = GetMetricData(recordCount, metricId);
+
+            AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
+
+            Metric metricObj = new Metric();
+            metricObj.Uid = metricId;
+            metricObj.Status = MetricStatus.Unmonitored;
+
+            ModelParams mPars = new ModelParams();
+
+            metricObj.ModelParams = JsonConvert.SerializeObject(mPars, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
+
+            helper.UpdateModelAnomalyScores(metricObj, metricData);
+        }
+
+        [TestMethod]
+        public void UpdateModelAnomalyScores_NoAnomalyArgs()
+        {
+            const long recordCount = 500;
+
+            string metricId = Guid.NewGuid().ToString();
+            var metricData = GetMetricData(recordCount, metricId);
+
+            AnomalyLikelihoodHelper helper = new AnomalyLikelihoodHelper(_log);
+
+            Metric metricObj = new Metric();
+            metricObj.Uid = metricId;
+            metricObj.Status = MetricStatus.Active;
+
+            ModelParams mPars = new ModelParams();
+
+            metricObj.ModelParams = JsonConvert.SerializeObject(mPars, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
+
+            var map = helper.UpdateModelAnomalyScores(metricObj, metricData);
+            Assert.IsNotNull(map);
+        }
+
+        private static List<MetricData> GetMetricData(long recordCount, string metricId)
+        {
+            IRandom random = new XorshiftRandom(42);
+            var metricData = new List<MetricData>();
+
+            for (int i = 0; i < recordCount; i++)
+            {
+                metricData.Add(new MetricData(metricId, DateTime.Now.AddMinutes(-(5*i)), random.NextDouble()*5,
+                    random.NextDouble(), i)
+                {
+                    RawAnomalyScore = random.NextDouble()*5
+                });
+            }
+            return metricData;
         }
     }
 }

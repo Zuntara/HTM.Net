@@ -118,6 +118,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Taurus\AnomalyLikelihoodHelperTests.cs" />
     <Compile Include="Taurus\MetricUtilTests.cs" />
+    <Compile Include="Taurus\ModelsControllerApiTest.cs" />
     <Compile Include="Vision\ImageSensorTests.cs" />
     <Compile Include="Vision\TrainAndTest.cs" />
   </ItemGroup>

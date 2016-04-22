@@ -96,7 +96,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         private int _statisticsSampleSize;
         private AnomalyLikelihood algorithms;
 
-        public const int  NUM_SKIP_RECORDS = 288;    // one day of records
+        public const int NUM_SKIP_RECORDS = 288;    // one day of records
 
         /// <summary>
         /// 
@@ -132,8 +132,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// are not enough samples in statsSampleCache.</returns>
         internal Map<string, object> GenerateAnomalyParams(string metricId, List<MetricData> statsSampleCache, Map<string, object> defaultAnomalyParams)
         {
-            if(string.IsNullOrWhiteSpace(metricId)) throw new ArgumentNullException("metricId");
-            if(statsSampleCache == null) throw new ArgumentNullException("statsSampleCache");
+            if (string.IsNullOrWhiteSpace(metricId)) throw new ArgumentNullException("metricId");
+            if (statsSampleCache == null) throw new ArgumentNullException("statsSampleCache");
             if (statsSampleCache.Count < _statisticsMinSampleSize)
             {
                 // Not enough samples in cache
@@ -308,7 +308,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                 foreach (var md in metricDataRows.Skip(startRowIndex).Take((int)limitIndex))
                 {
-                    _log.DebugFormat("params contents: {0}", anomalyParams["params"]);
+                    consumedSamples.Add(md);
                     var computed = algorithms.UpdateAnomalyLikelihoods(new List<Sample> { new Sample(md.Timestamp, md.MetricValue, md.RawAnomalyScore.GetValueOrDefault()) },
                         (AnomalyLikelihood.AnomalyParams)anomalyParams["params"]);
                     var likelihood = computed.GetLikelihoods().First();
@@ -466,7 +466,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             }
             ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams);
             var anomalyParams = modelParams.AnomalyLikelihoodParams;
-            Debug.Assert(anomalyParams != null, "anomalyParams");
+            //Debug.Assert(anomalyParams != null, "anomalyParams");
 
             List<MetricData> statsSampleCache = null;
 
@@ -669,15 +669,39 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="apiKey">API server's API Key</param>
         /// <param name="modelParams">model parameters dict per _models POST API</param>
         /// <returns>model info dictionary from the result of the _models POST request on success.</returns>
-        public static Map<string, object> CreateHtmModel(string host, string apiKey, Map<string, object> modelParams)
+        public static Map<string, object> CreateHtmModel(string host, string apiKey, CreateModelRequest modelParams)
         {
             throw new InvalidOperationException("posts to /_models endpoint webapi");
+        }
+
+        /// <summary>
+        /// Create a model for a metric
+        /// </summary>
+        /// <param name="host">API server's hostname or IP address</param>
+        /// <param name="apiKey">API server's API Key</param>
+        /// <param name="userInfo">A dict containing custom user info to be included in metricSpec</param>
+        /// <param name="modelParams">A dict containing custom model params to be included in modelSpec</param>
+        /// <param name="metricName">Name of the metric</param>
+        /// <param name="resourceName">Name of the resource with which the metric is associated</param>
+        /// <returns>model info dictionary from the result of the _models POST request on success.</returns>
+        public static Map<string, object> CreateCustomHtmModel(string host, string apiKey, string metricName, string resourceName, string userInfo, ModelParams modelParams)
+        {
+            CreateModelRequest mParams = new CreateModelRequest();
+            mParams.DataSource = "custom";
+            mParams.MetricSpec = new CustomMetricSpec
+            {
+                Metric = metricName,
+                Resource = resourceName,
+                UserInfo = userInfo
+            };
+            mParams.ModelParams = modelParams;
+            return CreateHtmModel(host, apiKey, mParams);
         }
     }
 
     public class MetricsConfiguration : Dictionary<string, MetricConfigurationEntry>
     {
-        
+
     }
 
     public class MetricConfigurationEntry
@@ -776,7 +800,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 response = metricDictList;
 
                 // return Created(response);
-                throw new NotImplementedException();
+                return response;
             }
             catch (Exception)
             {
@@ -820,7 +844,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 "message",
                 "lastTimestamp",
                 "pollInterval",
-                "tag_name",
+                "tagName",
                 "lastRowid"
             };
         }
@@ -901,6 +925,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns></returns>
         public static IDataSourceAdapter CreateDatasourceAdapter(string dataSource)
         {
+            if (dataSource == "custom")
+            {
+                return new CustomDatasourceAdapter();
+            }
             throw new NotImplementedException();
         }
 
@@ -915,8 +943,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public interface IDataSourceAdapter
     {
-        string ImportModel(CreateModelRequest modelSpec);
-        string MonitorMetric(CreateModelRequest modelSpec);
+        string ImportModel(ModelSpec modelSpec);
+        string MonitorMetric(ModelSpec modelSpec);
     }
 
     // https://github.com/numenta/numenta-apps/blob/master/htmengine/htmengine/adapters/datasource/custom/__init__.py
@@ -938,7 +966,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         }
 
-        public string ImportModel(CreateModelRequest modelSpec)
+        public string ImportModel(ModelSpec modelSpec)
         {
             throw new NotImplementedException();
         }
@@ -989,7 +1017,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         ///    }
         /// </remarks>
         /// <returns>datasource-specific unique model identifier</returns>
-        public string MonitorMetric(CreateModelRequest modelSpec)
+        public string MonitorMetric(ModelSpec modelSpec)
         {
             var metricSpec = modelSpec.MetricSpec;
 
@@ -999,7 +1027,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 // Via metric ID
                 metricId = metricSpec.Uid;
                 // Convert modelSpec to canonical form
-                modelSpec = modelSpec.Clone();
+                modelSpec = modelSpec.Clone() as ModelSpec;
                 modelSpec.MetricSpec.Uid = null;
                 ((CustomMetricSpec)modelSpec.MetricSpec).Metric = RepositoryFactory.Metric.GetMetric(metricId).Name;
             }
@@ -1066,7 +1094,16 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 throw new MetricAlreadyMonitored(metricId, "Custom metric={0} is already monitored by model={1}", metricObj.Name, metricObj);
             }
             // Save model specification in metric row
-            var update = new Map<string, object> { { "parameters", modelSpec } };
+            var update = new Map<string, object>
+            {
+                {
+                    "parameters",
+                    JsonConvert.SerializeObject(modelSpec, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    })
+                }
+            };
             var instanceName = GetInstanceNameForModelSpec(modelSpec);
             if (instanceName != null)
             {
@@ -1293,8 +1330,51 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 }
             }
         }
-
+        /// <summary>
+        /// Start monitoring an UNMONITORED metric.
+        /// NOTE: typically called either inside a transaction and/or with locked tables
+        /// Starts the CLA model if provided non-None swarmParams; otherwise defers model
+        /// creation to a later time and places the metric in MetricStatus.PENDING_DATA state.
+        /// </summary>
+        /// <param name="metricId">unique identifier of the metric row</param>
+        /// <param name="swarmParams">swarmParams generated via scalar_metric_utils.generateSwarmParams() or None.</param>
+        /// <param name="logger">logger object</param>
+        /// <returns> True if model was started; False if not</returns>
         public static bool StartMonitoring(string metricId, AnomalyParamSet swarmParams, ILog logger)
+        {
+            bool modelStarted = false;
+            DateTime startTime = DateTime.Now;
+            Metric metricObj = RepositoryFactory.Metric.GetMetric(metricId);
+            Debug.Assert(metricObj.Status == MetricStatus.Unmonitored);
+
+            if (swarmParams != null)
+            {
+                // We have swarmParams, so start the model
+                modelStarted = StartModelHelper(metricObj, swarmParams, logger);
+            }
+            else
+            {
+                // Put the metric into the PENDING_DATA state until enough data arrives for
+                // stats
+                MetricStatus refStatus = metricObj.Status;
+                RepositoryFactory.Metric.SetMetricStatus(metricId, MetricStatus.PendingData, refStatus: refStatus);
+                // refresh
+                var metricStatus = RepositoryFactory.Metric.GetMetric(metricId).Status;
+                if (metricStatus == MetricStatus.PendingData)
+                {
+                    logger.InfoFormat(
+                        "startMonitoring: promoted metric to model in PENDING_DATA; metric={0}; duration={1}",
+                        metricId, DateTime.Now - startTime);
+                }
+                else
+                {
+                    throw new InvalidOperationException("metric status change failed");
+                }
+            }
+            return modelStarted;
+        }
+
+        private static bool StartModelHelper(Metric metricObj, AnomalyParamSet swarmParams, ILog logger)
         {
             throw new NotImplementedException();
         }
@@ -1313,7 +1393,25 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         public Tuple InputRecordSchema { get; set; }
 
-        public static AnomalyParamSet BestSingleMetricAnomalyParams { get; private set; }
+        public static AnomalyParamSet BestSingleMetricAnomalyParams
+        {
+            get
+            {
+                return new AnomalyParamSet
+                {
+                    ModelConfig = new ModelConfig
+                    {
+                        ModelParams = new ModelParams
+                        {
+                            SensorParams = new SensorParams
+                            {
+                                Encoders = new Map<string, IEncoder>()
+                            }
+                        }
+                    }
+                };
+            }
+        }
     }
 
     public class ModelConfig
@@ -1328,6 +1426,18 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public double? MinResolution { get; set; }
         public SensorParams SensorParams { get; set; }
         public Map<string, object> AnomalyLikelihoodParams { get; set; }
+
+        public ModelParams Clone()
+        {
+            return new ModelParams
+            {
+                Min = Min,
+                Max = Max,
+                AnomalyLikelihoodParams = new Map<string, object>(AnomalyLikelihoodParams),
+                MinResolution = MinResolution,
+                SensorParams = SensorParams
+            };
+        }
     }
 
     public class SensorParams
@@ -1351,7 +1461,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public double? MinResolution { get; set; }
     }
 
-    public class ModelSpec
+    public class ModelSpec : ICloneable
     {
         public string DataSource { get; set; }
 
@@ -1359,6 +1469,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public object Data { get; set; }
         public ModelParams ModelParams { get; set; }
 
+        public virtual object Clone()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MetricSpec
@@ -1377,6 +1491,16 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// Optional identifier of resource that this metric applies to
         /// </summary>
         public string Resource { get; set; }
+
+        public virtual object Clone()
+        {
+            return new MetricSpec
+            {
+                Metric = Metric,
+                Resource = Resource,
+                Uid = Uid
+            };
+        }
     }
 
     /// <summary>
@@ -1395,13 +1519,30 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// Optional custom user info.
         /// </summary>
         public string UserInfo { get; set; }
+
+        public override object Clone()
+        {
+            return new CustomMetricSpec
+            {
+                Metric = Metric,
+                Resource = Resource,
+                Uid = Uid,
+                UserInfo = UserInfo,
+                Unit = Unit
+            };
+        }
     }
 
     public class CreateModelRequest : ModelSpec
     {
-        public CreateModelRequest Clone()
+        public override object Clone()
         {
-            throw new NotImplementedException();
+            CreateModelRequest req = new CreateModelRequest();
+            req.DataSource = DataSource;
+            req.Data = Data;
+            req.MetricSpec = MetricSpec?.Clone() as MetricSpec;
+            req.ModelParams = ModelParams?.Clone() as ModelParams;
+            return req;
         }
     }
 
@@ -1460,6 +1601,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         int GetProcessedMetricDataCount(string metricId);
         List<MetricData> GetMetricDataWithRawAnomalyScoresTail(string metricId, int limit);
+        void SetMetricStatus(string metricId, MetricStatus pendingData, MetricStatus refStatus);
     }
 
     /// <summary>
@@ -1553,6 +1695,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             throw new NotImplementedException();
         }
+
+        public void SetMetricStatus(string metricId, MetricStatus pendingData, MetricStatus refStatus)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MetricMemRepository : IMetricRepository
@@ -1579,7 +1726,13 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         public void UpdateMetricColumns(string metricId, Map<string, object> update)
         {
-            throw new NotImplementedException();
+            var metric = _metric.Single(m => m.Uid == metricId);
+
+            var bu = BeanUtil.GetInstance();
+            foreach (KeyValuePair<string, object> pair in update)
+            {
+                bu.SetSimpleProperty(metric, pair.Key, pair.Value);
+            }
         }
 
         public MetricStatistic GetMetricStats(string metricId)
@@ -1651,6 +1804,12 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 .Take(limit)
                 .ToList();
         }
+
+        public void SetMetricStatus(string metricId, MetricStatus status, MetricStatus refStatus)
+        {
+            var metric = _metric.Single(m => m.Uid == metricId && m.Status == refStatus);
+            metric.Status = status;
+        }
     }
 
     // Table Metric
@@ -1676,7 +1835,22 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         public Metric Clone(string[] allowedKeys)
         {
-            throw new NotImplementedException();
+            BeanUtil bu = BeanUtil.GetInstance();
+            Metric m = new Metric();
+
+            var props = GetType().GetProperties();
+
+            foreach (string key in allowedKeys)
+            {
+                var prop = props.SingleOrDefault(p => p.Name.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+                if (prop == null)
+                {
+                    Debug.WriteLine("!!!! prop not found > " + key);
+                }
+                bu.SetSimpleProperty(m, key, prop.GetValue(this));
+            }
+
+            return m;
         }
     }
     // Table MetricData
