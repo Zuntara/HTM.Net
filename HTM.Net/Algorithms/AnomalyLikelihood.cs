@@ -164,7 +164,7 @@ namespace HTM.Net.Algorithms
          * @param skipRecords
          * @return
          */
-        public AnomalyLikelihoodMetrics EstimateAnomalyLikelihoods(List<Sample> anomalyScores, int averagingWindow, int skipRecords)
+        public AnomalyLikelihoodMetrics EstimateAnomalyLikelihoods(List<Sample> anomalyScores, int averagingWindow = 10, int skipRecords = 0)
         {
             if (anomalyScores.Count == 0)
             {

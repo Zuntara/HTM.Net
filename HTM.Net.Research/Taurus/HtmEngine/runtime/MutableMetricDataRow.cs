@@ -2,18 +2,16 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Web.UI.WebControls;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
-using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
 using log4net;
-using log4net.Repository.Hierarchy;
 using Newtonsoft.Json;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 {
+    // For use with AnomalyService
     public class MutableMetricDataRow
     {
         public MutableMetricDataRow(double anomalyScore, string displayValue, double metricValue, double rawAnomalyScore,
@@ -96,6 +94,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         private int _statisticsSampleSize;
         private AnomalyLikelihood algorithms;
 
+        public const int  NUM_SKIP_RECORDS = 288;    // one day of records
+
         /// <summary>
         /// 
         /// </summary>
@@ -130,7 +130,38 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// are not enough samples in statsSampleCache.</returns>
         private Map<string, object> GenerateAnomalyParams(string metricId, List<MetricData> statsSampleCache, Map<string, object> defaultAnomalyParams)
         {
-            throw new NotImplementedException("todo");
+            if (statsSampleCache.Count < _statisticsMinSampleSize)
+            {
+                // Not enough samples in cache
+                // TODO: unit test this
+                _log.ErrorFormat("Not enough samples in cache to update anomaly params for model={0}: have={1}, which is less than min={2}; firstRowID={3}; lastRowID={4}.",
+                    metricId, statsSampleCache.Count, _statisticsMinSampleSize, statsSampleCache.FirstOrDefault()?.Rowid, statsSampleCache.LastOrDefault()?.Rowid);
+                return defaultAnomalyParams;
+            }
+            // We have enough samples to generate anomaly params
+            long lastRowId = statsSampleCache.Last().Rowid;
+            int numSamples = Math.Min(statsSampleCache.Count, _statisticsSampleSize);
+
+            // Create input sequence for algorithms
+            var samples = statsSampleCache.Skip(statsSampleCache.Count - numSamples).Take(statsSampleCache.Count);
+
+            var scores = samples.Select(row => new Sample(row.Timestamp, row.MetricValue, row.RawAnomalyScore)).ToList();
+
+            Debug.Assert(scores.Count >= _statisticsMinSampleSize);
+            Debug.Assert(scores.Count <= _statisticsSampleSize);
+
+            // Calculate estimator parameters
+            // We ignore statistics from the first day of data (288 records) since the
+            // CLA is still learning. For simplicity, this logic continues to ignore the
+            // first day of data even once the window starts sliding.
+            var metrics = algorithms.EstimateAnomalyLikelihoods(scores, skipRecords: NUM_SKIP_RECORDS);
+
+            AnomalyLikelihood.AnomalyParams anPars = metrics.GetParams();
+
+            var anomalyParams = new Map<string, object>();
+            anomalyParams["last_rowid_for_stats"] = lastRowId;
+            anomalyParams["params"] = anPars;
+            return anomalyParams;
         }
 
         /// <summary>
@@ -1334,6 +1365,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         }
     }
 
+    #region Repository stuff
+
     public static class RepositoryFactory
     {
         private static IMetricRepository _metricRepository;
@@ -1620,4 +1653,12 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public int DisplayValue { get; set; }
         public string MetricId { get; set; }
     }
+
+    #endregion
+
+    #region Model swapper stuff
+
+    // TODO:
+
+    #endregion
 }
