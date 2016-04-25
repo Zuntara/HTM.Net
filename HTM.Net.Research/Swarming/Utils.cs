@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using HTM.Net.Algorithms;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
@@ -86,7 +87,7 @@ namespace HTM.Net.Research.Swarming
             }
             catch (Exception)
             {
-                
+
                 throw;
             }
             //try
@@ -540,7 +541,8 @@ namespace HTM.Net.Research.Swarming
 
             if (dividendMonthSec["months"] > 0)
             { return (dividendMonthSec["months"]) / double.Parse(divisor["months"] as string); }
-            else {
+            else
+            {
                 return (dividendMonthSec["seconds"]) / divisorMonthSec["seconds"];
             }
 
@@ -829,6 +831,18 @@ namespace HTM.Net.Research.Swarming
         public bool tpEnable { get; set; }
         public bool trainSPNetOnlyIfRequested { get; set; }
         public ClassifierParamsDescr clParams { get; set; }
+        public AnomalyParamsDescr anomalyParams { get; set; }
+
+        public Parameters GetParameters()
+        {
+            Parameters pars = Parameters.Empty();
+            if (spEnable)
+            {
+                pars.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
+            }
+
+            return pars;
+        }
     }
 
 
@@ -921,6 +935,8 @@ namespace HTM.Net.Research.Swarming
         public double synPermActiveInc { get; set; }
         [ParameterMapping]
         public double synPermInactiveDec { get; set; }
+        [ParameterMapping]
+        public double maxBoost { get; set; }
     }
 
     public class ClassifierParamsDescr
@@ -931,7 +947,14 @@ namespace HTM.Net.Research.Swarming
         public int steps { get; set; }
     }
 
-
+    public class AnomalyParamsDescr
+    {
+        public int? slidingWindowSize { get; set; }
+        public Anomaly.Mode? mode { get; set; }
+        public bool? anomalyCacheRecords { get; set; }
+        public int? autoDetectThreshold { get; set; }
+        public int? autoDetectWaitRecords { get; set; }
+    }
 
     public class DescriptionConfigModel
     {
@@ -951,6 +974,13 @@ namespace HTM.Net.Research.Swarming
                 {"predictAheadTime",predictAheadTime },
                 {"modelParams",modelParams },
             };
+        }
+
+        public Parameters GetParameters()
+        {
+            var parameters = Parameters.Empty();
+            parameters.Union(modelParams.GetParameters());
+            return parameters;
         }
 
         public object this[string key]

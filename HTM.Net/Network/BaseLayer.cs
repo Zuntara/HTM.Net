@@ -53,7 +53,7 @@ namespace HTM.Net.Network
 
             Connections = new Connections();
 
-            AutoCreateClassifiers = (bool)p.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY);
+            AutoCreateClassifiers = (bool)p.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
         }
 
         protected BaseLayer(Parameters @params, MultiEncoder e, SpatialPooler sp, TemporalMemory tm,

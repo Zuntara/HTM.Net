@@ -42,7 +42,7 @@ namespace HTM.Net.Encoders
                 foreach (string field in sortedFields)
                 {
                     Map<string, object> @params = encoderSettings[field];
-
+                    if (@params == null) continue;
                     if (!@params.ContainsKey("fieldName") && !@params.ContainsKey("fieldname"))
                     {
                         throw new ArgumentException("Missing fieldname for encoder " + field);

@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
+using HTM.Net.Network.Sensor;
+using HTM.Net.Research.opf;
+using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -600,6 +605,24 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     {
 
     }
+
+    public class MetricsChangeError : Exception
+    {
+        public MetricsChangeError(string format, params object[] args)
+            : base(string.Format(format, args))
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// The requested model was not found (already deleted?)
+    /// </summary>
+    public class ModelNotFound : Exception
+    {
+
+    }
+
     /// <summary>
     /// Generic exception for non-specific error while getting all models
     /// </summary>
@@ -1081,7 +1104,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="metricId">unique identifier of the metric row</param>
         /// <param name="modelSpec">same as `modelSpec`` from `monitorMetric`</param>
         /// <param name="swarmParams">object returned by scalar_metric_utils.generateSwarmParams()</param>
-        private void StartMonitoringWithRetries(string metricId, ModelSpec modelSpec, AnomalyParamSet swarmParams)
+        private void StartMonitoringWithRetries(string metricId, ModelSpec modelSpec, BestSingleMetricAnomalyParamsDescription swarmParams)
         {
             var metricObj = RepositoryFactory.Metric.GetMetric(metricId);
             if (metricObj.DataSource != "custom")
@@ -1203,7 +1226,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns>if either minVal or maxVal is None, returns None; otherwise returns
         /// swarmParams object that is suitable for passing to startMonitoring and
         /// startModel</returns>
-        public static AnomalyParamSet GenerateSwarmParams(MetricStatistic stats)
+        public static BestSingleMetricAnomalyParamsDescription GenerateSwarmParams(MetricStatistic stats)
         {
             var minVal = stats.Min;
             var maxVal = stats.Max;
@@ -1213,9 +1236,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 return null;
             }
             // Create possible swarm parameters based on metric data
-            AnomalyParamSet swarmParams = GetScalarMetricWithTimeOfDayAnomalyParams(metricData: new[] { 0 }, minVal: minVal, maxVal: maxVal, minResolution: minResolution);
+            BestSingleMetricAnomalyParamsDescription swarmParams =
+                GetScalarMetricWithTimeOfDayAnomalyParams(metricData: new[] { 0 }, minVal: minVal, maxVal: maxVal, minResolution: minResolution);
 
             // 
+            swarmParams.inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
+            {
+                {"c0", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp )} ,
+                {"c1", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank ) },
+            };
             /*
              swarmParams["inputRecordSchema"] = (
                 fieldmeta.FieldMetaInfo("c0", fieldmeta.FieldMetaType.datetime,
@@ -1227,6 +1256,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return swarmParams;
         }
 
+        // https://github.com/numenta/nupic/blob/a5a7f52e39e30c5356c561547fc6ac3ffd99588c/src/nupic/frameworks/opf/common_models/cluster_params.py
 
         /// <summary>
         /// Return a dict that can be used to create an anomaly model via OPF's ModelFactory.
@@ -1258,7 +1288,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         ///  model.enableLearning()
         ///  model.enableInference(params["inferenceArgs"])
         /// </remarks>
-        private static AnomalyParamSet GetScalarMetricWithTimeOfDayAnomalyParams(int[] metricData, double? minVal, double? maxVal, double? minResolution)
+        private static BestSingleMetricAnomalyParamsDescription GetScalarMetricWithTimeOfDayAnomalyParams(int[] metricData, double? minVal, double? maxVal, double? minResolution)
         {
             // Default values
             if (!minResolution.HasValue) minResolution = 0.001;
@@ -1281,7 +1311,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 maxVal = minVal + 1;
             }
             // Load model parameters and update encoder params
-            var paramSet = AnomalyParamSet.BestSingleMetricAnomalyParams;
+            var paramSet = BestSingleMetricAnomalyParamsDescription.BestSingleMetricAnomalyParams;
             FixupRandomEncoderParams(paramSet, minVal, maxVal, minResolution);
             return paramSet;
         }
@@ -1313,19 +1343,20 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="minVal"></param>
         /// <param name="maxVal"></param>
         /// <param name="minResolution"></param>
-        private static void FixupRandomEncoderParams(AnomalyParamSet paramSet, double? minVal, double? maxVal,
+        private static void FixupRandomEncoderParams(BestSingleMetricAnomalyParamsDescription paramSet, double? minVal, double? maxVal,
             double? minResolution)
         {
-            var encodersDict = paramSet.ModelConfig.ModelParams.SensorParams.Encoders;
+            Map<string, Map<string, object>> encodersDict = paramSet.modelConfig.modelParams.sensorParams.encoders;
             foreach (var encoder in encodersDict.Values)
             {
                 if (encoder != null)
                 {
-                    if (encoder is RandomDistributedScalarEncoder)
+                    if (encoder["type"] == "RandomDistributedScalarEncoder")
                     {
                         var resolution = Math.Max(minResolution.Value,
-                            (maxVal.Value - minVal.Value) / ((RandomDistributedScalarEncoder)encoder).GetNumBuckets());
-                        encodersDict["c1"].SetResolution(resolution);
+                            (maxVal.Value - minVal.Value) / (double)encoder["numBuckets"]);
+                        encoder.Remove("numBuckets");
+                        encodersDict["c1"]["resolution"] = resolution;
                     }
                 }
             }
@@ -1340,7 +1371,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="swarmParams">swarmParams generated via scalar_metric_utils.generateSwarmParams() or None.</param>
         /// <param name="logger">logger object</param>
         /// <returns> True if model was started; False if not</returns>
-        public static bool StartMonitoring(string metricId, AnomalyParamSet swarmParams, ILog logger)
+        public static bool StartMonitoring(string metricId, BestSingleMetricAnomalyParamsDescription swarmParams, ILog logger)
         {
             bool modelStarted = false;
             DateTime startTime = DateTime.Now;
@@ -1373,50 +1404,417 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             }
             return modelStarted;
         }
-
-        private static bool StartModelHelper(Metric metricObj, AnomalyParamSet swarmParams, ILog logger)
+        /// <summary>
+        /// Start the model
+        /// </summary>
+        /// <param name="metricObj">metric, freshly-loaded</param>
+        /// <param name="swarmParams">non-None swarmParams generated via GenerateSwarmParams().</param>
+        /// <param name="logger">logger object</param>
+        /// <returns>True if model was started; False if not</returns>
+        private static bool StartModelHelper(Metric metricObj, BestSingleMetricAnomalyParamsDescription swarmParams, ILog logger)
         {
-            throw new NotImplementedException();
+            if (swarmParams == null)
+                throw new ArgumentNullException("swarmParams", "startModel: 'swarmParams' must be non-None: metric=" + metricObj.Uid);
+
+            string metricName = metricObj.Name;
+
+            if (!new[] { MetricStatus.Unmonitored, MetricStatus.PendingData, }.Contains(metricObj.Status))
+            {
+                if (new[] { MetricStatus.CreatePending, MetricStatus.Active, }.Contains(metricObj.Status))
+                {
+                    return false;
+                }
+                logger.ErrorFormat("Unexpected metric status; metric={0}", metricObj.Uid);
+                throw new InvalidOperationException(string.Format("startModel: unexpected metric status; metric={0}", metricObj.Uid));
+            }
+
+            var startTime = DateTime.Now;
+
+            // Save swarm parameters and update metric status
+            MetricStatus refStatus = metricObj.Status;
+            RepositoryFactory.Metric.UpdateMetricColumnsForRefStatus(metricObj.Uid, refStatus,
+                new Map<string, object>
+                {
+                    {"status", MetricStatus.CreatePending},
+                    {"modelParams", JsonConvert.SerializeObject(swarmParams)}
+                });
+
+            metricObj = RepositoryFactory.Metric.GetMetric(metricObj.Uid);
+
+            if (metricObj.Status != MetricStatus.CreatePending)
+            {
+                throw new MetricsChangeError("startModel: unable to start model={0}; metric status morphed from {1} to {2}",
+                    metricObj.Uid, refStatus, metricObj.Status);
+            }
+
+            // Request to create the CLA Model
+            try
+            {
+                ModelSwapperUtils.CreateHtmModel(metricObj.Uid, swarmParams);
+            }
+            catch (Exception e)
+            {
+                logger.ErrorFormat("startModel: createHTMModel failed. -> {0}", e);
+                RepositoryFactory.Metric.SetMetricStatus(metricObj.Uid, MetricStatus.Error, message: e.ToString());
+                throw;
+            }
+
+            logger.InfoFormat("startModel: started model uid={0}, name={1}; duration={2}",
+                metricObj.Uid, metricName, DateTime.Now - startTime);
+
+            return true;
         }
 
+        /// <summary>
+        /// Send backlog data to OPF/CLA model. Do not call this before starting the  model.
+        /// </summary>
+        /// <param name="metricId">unique identifier of the metric row</param>
+        /// <param name="logger">logger object</param>
         public static void SendBacklogDataToModel(string metricId, ILog logger)
         {
-            throw new NotImplementedException();
+            List<ModelInputRow> backlogData = RepositoryFactory.Metric.GetMetricData(metricId)
+                .Select(md => new ModelInputRow(rowId: md.Rowid,
+                    data: new List<string>
+                    {
+                        md.Timestamp.ToString("G"),
+                        md.MetricValue.ToString(NumberFormatInfo.InvariantInfo)
+                    }))
+                .ToList();
+
+            if (backlogData != null && backlogData.Any())
+            {
+                ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
+
+                ModelDataFeeder.SendInputRowsToModel(modelId: metricId, inputRows: backlogData, batchSize: 100,
+                    modelSwapper: modelSwapper, logger: logger, profiling: logger.IsDebugEnabled);
+            }
+
+            logger.InfoFormat("sendBacklogDataToModel: sent {0} backlog data rows to model={1}",
+                backlogData.Count, metricId);
         }
     }
 
     #region Swarming model stuff
 
-    public class AnomalyParamSet
+    public class BestSingleMetricAnomalyParamsDescription : DescriptionBase
     {
-        public ModelConfig ModelConfig { get; set; }
-
-        public Tuple InputRecordSchema { get; set; }
-
-        public static AnomalyParamSet BestSingleMetricAnomalyParams
+        public BestSingleMetricAnomalyParamsDescription()
         {
-            get
+            inferenceArgs = new Map<string, object>
             {
-                return new AnomalyParamSet
-                {
-                    ModelConfig = new ModelConfig
-                    {
-                        ModelParams = new ModelParams
-                        {
-                            SensorParams = new SensorParams
-                            {
-                                Encoders = new Map<string, IEncoder>()
-                            }
-                        }
-                    }
-                };
-            }
-        }
-    }
+                {"predictionSteps", new[] {1}},
+                {"predictedField", "c1"},
+                {"inputPredictedField", "auto"}
+            };
 
-    public class ModelConfig
-    {
-        public ModelParams ModelParams { get; set; }
+            var config = new DescriptionConfigModel
+            {
+                // Type of model that the rest of these parameters apply to.
+                model = "CLA",
+
+                // Version that specifies the format of the config.
+                version = 1,
+
+                // Intermediate variables used to compute fields in modelParams and also
+                // referenced from the control section.
+                aggregationInfo = new Map<string, object>
+                        {
+                            {"seconds", 0},
+                            {
+                                "fields", new Map<string, object>()
+                            },
+                            {"months", 0},
+                            {"days", 0},
+                            {"years", 0},
+                            {"hours", 0},
+                            {"microseconds", 0},
+                            {"weeks", 0},
+                            {"minutes", 0},
+                            {"milliseconds", 0},
+                        },
+
+                predictAheadTime = null,
+
+                // Model parameter dictionary.
+                modelParams = new ModelDescriptionParamsDescrModel
+                {
+                    // The type of inference that this model will perform
+                    inferenceType = InferenceType.TemporalAnomaly,
+
+                    sensorParams = new SensorParamsDescrModel
+                    {
+                        // Sensor diagnostic output verbosity control;
+                        // if > 0: sensor region will print out on screen what it"s sensing
+                        // at each step 0: silent; >=1: some info; >=2: more info;
+                        // >=3: even more info (see compute() in py/regions/RecordSensor.py)
+                        verbosity = 0,
+
+                        // Example:
+                        //     dsEncoderSchema = [
+                        //       DeferredDictLookup("__field_name_encoder"),
+                        //     ],
+                        //
+                        // (value generated from DS_ENCODER_SCHEMA)
+                        encoders = new Map<string, Map<string, object>>
+                                {
+                                    {
+                                        "c0_timeOfDay", new Map<string, object>
+                                        {
+                                            {"dayOfWeek", new Tuple(21, 9.49)},
+                                            {"fieldname", "c0"},
+                                            {"name", "c0"},
+                                            {"type", "DateEncoder"}
+                                        }
+                                    },
+                                    {
+                                        "c0_dayOfWeek", null
+                                    },
+                                    {
+                                        "c0_weekend", null
+                                    },
+                                    {
+                                        "c1", new Map<string, object>
+                                        {
+                                            {"fieldname", "c1"},
+                                            {"name", "c1"},
+                                            {"type", "RandomDistributedScalarEncoder"},
+                                            {"numBuckets", 130.0 }
+                                        }
+                                    }
+                                },
+
+                        // A dictionary specifying the period for automatically-generated
+                        // resets from a RecordSensor;
+                        //
+                        // None = disable automatically-generated resets (also disabled if
+                        // all of the specified values evaluate to 0).
+                        // Valid keys is the desired combination of the following:
+                        //   days, hours, minutes, seconds, milliseconds, microseconds, weeks
+                        //
+                        // Example for 1.5 days: sensorAutoReset = dict(days=1,hours=12),
+                        //
+                        // (value generated from SENSOR_AUTO_RESET)
+                        sensorAutoReset = null,
+                    },
+
+                    spEnable = true,
+
+                    spParams = new SpatialParamsDescr
+                    {
+                        // SP diagnostic output verbosity control;
+                        // 0: silent; >=1: some info; >=2: more info;
+                        spVerbosity = 0,
+
+                        globalInhibition = true,
+
+                        // Number of cell columns in the cortical region (same number for
+                        // SP and TP)
+                        // (see also tpNCellsPerCol)
+                        columnCount = new int[] { 2048 },
+
+                        inputWidth = new int[] { 0 },
+
+                        // SP inhibition control (absolute value);
+                        // Maximum number of active columns in the SP region"s output (when
+                        // there are more, the weaker ones are suppressed)
+                        numActiveColumnsPerInhArea = 40.0,
+
+                        seed = 1956,
+
+                        // potentialPct
+                        // What percent of the columns"s receptive field is available
+                        // for potential synapses. At initialization time, we will
+                        // choose potentialPct * (2*potentialRadius+1)^2
+                        potentialPct = 0.8,
+
+                        // The default connected threshold. Any synapse whose
+                        // permanence value is above the connected threshold is
+                        // a "connected synapse", meaning it can contribute to the
+                        // cell"s firing. Typical value is 0.10. Cells whose activity
+                        // level before inhibition falls below minDutyCycleBeforeInh
+                        // will have their own internal synPermConnectedCell
+                        // threshold set below this default value.
+                        // (This concept applies to both SP and TP and so "cells"
+                        // is correct here as opposed to "columns")
+                        synPermConnected = 0.2,
+
+                        synPermActiveInc = 0.003,
+
+                        synPermInactiveDec = 0.0005,
+
+                        maxBoost = 1.0
+                    },
+
+                    // Controls whether TP is enabled or disabled;
+                    // TP is necessary for making temporal predictions, such as predicting
+                    // the next inputs.  Without TP, the model is only capable of
+                    // reconstructing missing sensor inputs (via SP).
+                    tpEnable = true,
+
+                    tpParams = new TemporalParamsDescr
+                    {
+                        // TP diagnostic output verbosity control;
+                        // 0: silent; [1..6]: increasing levels of verbosity
+                        // (see verbosity in nupic/trunk/py/nupic/research/TP.py and TP10X*.py)
+                        verbosity = 0,
+
+                        // Number of cell columns in the cortical region (same number for
+                        // SP and TP)
+                        // (see also tpNCellsPerCol)
+                        columnCount = new[] { 2048 },
+
+                        // The number of cells (i.e., states), allocated per column.
+                        cellsPerColumn = 32,
+
+                        inputWidth = new[] { 2048 },
+
+                        seed = 1960,
+
+                        // Temporal Pooler implementation selector (see _getTPClass in
+                        // CLARegion.py).
+                        temporalImp = "cpp",
+
+                        // New Synapse formation count
+                        // NOTE: If None, use spNumActivePerInhArea
+                        //
+                        // TODO: need better explanation
+                        newSynapseCount = 20,
+
+                        // Maximum number of synapses per segment
+                        //  > 0 for fixed-size CLA
+                        // -1 for non-fixed-size CLA
+                        //
+                        // TODO: for Ron: once the appropriate value is placed in TP
+                        // constructor, see if we should eliminate this parameter from
+                        // description.py.
+                        maxSynapsesPerSegment = 32,
+
+                        // Maximum number of segments per cell
+                        //  > 0 for fixed-size CLA
+                        // -1 for non-fixed-size CLA
+                        //
+                        // TODO: for Ron: once the appropriate value is placed in TP
+                        // constructor, see if we should eliminate this parameter from
+                        // description.py.
+                        maxSegmentsPerCell = 128,
+
+                        // Initial Permanence
+                        // TODO: need better explanation
+                        initialPerm = 0.21,
+
+                        // Permanence Increment
+                        permanenceInc = 0.1,
+
+                        // Permanence Decrement
+                        // If set to None, will automatically default to tpPermanenceInc
+                        // value.
+                        permanenceDec = 0.1,
+
+                        globalDecay = 0.0,
+
+                        maxAge = 0,
+
+                        // Minimum number of active synapses for a segment to be considered
+                        // during search for the best-matching segments.
+                        // None=use default
+                        // Replaces: tpMinThreshold
+                        minThreshold = 10,
+
+                        // Segment activation threshold.
+                        // A segment is active if it has >= tpSegmentActivationThreshold
+                        // connected synapses that are active due to infActiveState
+                        // None=use default
+                        // Replaces: tpActivationThreshold
+                        activationThreshold = 13,
+
+                        outputType = "normal",
+
+                        // "Pay Attention Mode" length. This tells the TP how many new
+                        // elements to append to the end of a learned sequence at a time.
+                        // Smaller values are better for datasets with short sequences,
+                        // higher values are better for datasets with long sequences.
+                        pamLength = 3,
+                    },
+
+                    clEnable = false,
+
+                    clParams = new ClassifierParamsDescr
+                    {
+                        regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
+
+                        // Classifier diagnostic output verbosity control;
+                        // 0: silent; [1..6]: increasing levels of verbosity
+                        clVerbosity = 0,
+
+                        // This controls how fast the classifier learns/forgets. Higher values
+                        // make it adapt faster and forget older patterns faster.
+                        alpha = 0.035828933612157998,
+
+                        // This is set after the call to updateConfigFromSubConfig and is
+                        // computed from the aggregationInfo and predictAheadTime.
+                        steps = 1,
+                    },
+                    anomalyParams = new AnomalyParamsDescr
+                    {
+                        anomalyCacheRecords = null,
+                        autoDetectThreshold = null,
+                        autoDetectWaitRecords = 5030
+                    },
+                    trainSPNetOnlyIfRequested = false,
+                }
+            };
+            // end of config dictionary
+
+            // Adjust base config dictionary for any modifications if imported from a
+            // sub-experiment
+            updateConfigFromSubConfig(config);
+            modelConfig = config;
+
+            // Compute predictionSteps based on the predictAheadTime and the aggregation
+            // period, which may be permuted over.
+            if (config.predictAheadTime != null)
+            {
+                int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
+                Debug.Assert(predictionSteps >= 1);
+                config.modelParams.clParams.steps = predictionSteps;
+            }
+
+
+        }
+
+        public void updateConfigFromSubConfig(DescriptionConfigModel config)
+        {
+
+        }
+
+        public override IDescription Clone()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Network.Network BuildNetwork()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Parameters GetParameters()
+        {
+            Parameters p = Parameters.GetAllDefaultParameters();
+
+            // Spatial pooling parameters
+            SpatialParamsDescr spParams = this.modelConfig.modelParams.spParams;
+            TemporalParamsDescr tpParams = this.modelConfig.modelParams.tpParams;
+
+            Parameters.ApplyParametersFromDescription(spParams, p);
+            Parameters.ApplyParametersFromDescription(tpParams, p);
+
+            return p;
+        }
+
+        public static BestSingleMetricAnomalyParamsDescription BestSingleMetricAnomalyParams
+        {
+            get { return new BestSingleMetricAnomalyParamsDescription(); }
+        }
     }
 
     public class ModelParams
@@ -1424,8 +1822,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public double? Min { get; set; }
         public double? Max { get; set; }
         public double? MinResolution { get; set; }
-        public SensorParams SensorParams { get; set; }
+
         public Map<string, object> AnomalyLikelihoodParams { get; set; }
+        public DescriptionConfigModel ModelConfig { get; set; }
+        public Map<string, object> InferenceArgs { get; set; }
+        public Map<string, Tuple<FieldMetaType, SensorFlags>> InputSchema { get; set; }
 
         public ModelParams Clone()
         {
@@ -1435,14 +1836,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 Max = Max,
                 AnomalyLikelihoodParams = new Map<string, object>(AnomalyLikelihoodParams),
                 MinResolution = MinResolution,
-                SensorParams = SensorParams
+                ModelConfig = ModelConfig,
+                InferenceArgs = new Map<string, object>(InferenceArgs),
+                InputSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>(InputSchema)
             };
         }
-    }
-
-    public class SensorParams
-    {
-        public IDictionary<string, IEncoder> Encoders { get; set; }
     }
 
     #endregion
@@ -1562,6 +1960,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public interface IMetricRepository
     {
+        event Action<Metric> MetricAdded;
+
         Metric GetMetric(string metricId);
         int GetMetricDataCount(string metricId);
         /// <summary>
@@ -1570,6 +1970,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="metricId"></param>
         /// <param name="update">fields with values to update</param>
         void UpdateMetricColumns(string metricId, Map<string, object> update);
+        void UpdateMetricColumnsForRefStatus(string uid, MetricStatus refStatus, Map<string, object> objects);
 
         MetricStatistic GetMetricStats(string metricId);
         Metric GetCustomMetricByName(string metricName);
@@ -1601,7 +2002,29 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         int GetProcessedMetricDataCount(string metricId);
         List<MetricData> GetMetricDataWithRawAnomalyScoresTail(string metricId, int limit);
-        void SetMetricStatus(string metricId, MetricStatus pendingData, MetricStatus refStatus);
+        /// <summary>
+        /// Set metric status
+        /// </summary>
+        /// <param name="metricId">Metric uid</param>
+        /// <param name="status">metric status value to set</param>
+        /// <param name="message">message to set; clears message field by default</param>
+        /// <param name="refStatus">reference status; if None (default), the requested values
+        /// will be set regardless of the current value of the row's status field;
+        /// otherwise, the status will be updated only if the metric row's current
+        /// status is refStatus(checked automically). If the current value was not
+        /// refStatus, then upon return, the reloaded metric dao's `status`
+        /// attribute will reflect the status value that was in the metric row at
+        /// the time the update was attempted instead of the requested status value.</param>
+        void SetMetricStatus(string metricId, MetricStatus status, string message = null, MetricStatus? refStatus = null);
+
+        List<MetricData> GetMetricData(string metricId);
+
+        /// <summary>
+        /// Add Metric Data
+        /// </summary>
+        /// <param name="metricId">Metric uid</param>
+        /// <param name="data"></param>
+        List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data);
     }
 
     /// <summary>
@@ -1609,6 +2032,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// </summary>
     public class MetricSqlRepository : IMetricRepository
     {
+        public event Action<Metric> MetricAdded;
+
         public Metric GetMetric(string metricId)
         {
             // sel = select(fields).where(schema.metric.c.uid == metricId).First()
@@ -1627,6 +2052,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="metricId"></param>
         /// <param name="update">fields with values to update</param>
         public void UpdateMetricColumns(string metricId, Map<string, object> update)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void UpdateMetricColumnsForRefStatus(string uid, MetricStatus refStatus, Map<string, object> objects)
         {
             throw new NotImplementedException();
         }
@@ -1696,7 +2126,22 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             throw new NotImplementedException();
         }
 
-        public void SetMetricStatus(string metricId, MetricStatus pendingData, MetricStatus refStatus)
+        public void SetMetricStatus(string metricId, MetricStatus status, string message = null, MetricStatus? refStatus = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<MetricData> GetMetricData(string metricId)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Add Metric Data
+        /// </summary>
+        /// <param name="metricId">Metric uid</param>
+        /// <param name="data"></param>
+        public List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data)
         {
             throw new NotImplementedException();
         }
@@ -1706,11 +2151,14 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     {
         private List<Metric> _metric;
         private List<MetricData> _metricData;
+        private int _lastRowId;
+        public event Action<Metric> MetricAdded;
 
         public MetricMemRepository()
         {
             _metric = new List<Metric>();
             _metricData = new List<MetricData>();
+            _lastRowId = 0;
         }
 
         public Metric GetMetric(string metricId)
@@ -1721,15 +2169,26 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public int GetMetricDataCount(string metricId)
         {
             //sel = (select([func.count()], from_obj=schema.metric_data).where(schema.metric_data.c.uid == metricId)).first()[0]
-            return _metricData.Count(md => md.Uid == metricId);
+            return _metricData.Count(md => md.MetricId == metricId);
         }
 
-        public void UpdateMetricColumns(string metricId, Map<string, object> update)
+        public void UpdateMetricColumns(string metricId, Map<string, object> fields)
         {
             var metric = _metric.Single(m => m.Uid == metricId);
 
             var bu = BeanUtil.GetInstance();
-            foreach (KeyValuePair<string, object> pair in update)
+            foreach (KeyValuePair<string, object> pair in fields)
+            {
+                bu.SetSimpleProperty(metric, pair.Key, pair.Value);
+            }
+        }
+
+        public void UpdateMetricColumnsForRefStatus(string metricId, MetricStatus refStatus, Map<string, object> fields)
+        {
+            var metric = _metric.Single(m => m.Uid == metricId && m.Status == refStatus);
+
+            var bu = BeanUtil.GetInstance();
+            foreach (KeyValuePair<string, object> pair in fields)
             {
                 bu.SetSimpleProperty(metric, pair.Key, pair.Value);
             }
@@ -1779,8 +2238,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             _metric.Add(newMetric);
 
+            MetricAdded?.Invoke(newMetric);
+
             return newMetric;
         }
+
         /// <summary>
         /// Get count of processed MetricData for the given metricId.
         /// </summary>
@@ -1788,8 +2250,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns></returns>
         public int GetProcessedMetricDataCount(string metricId)
         {
-            return _metricData.Count(md => md.Uid == metricId && md.RawAnomalyScore != null);
+            return _metricData.Count(md => md.MetricId == metricId && md.RawAnomalyScore != null);
         }
+
         /// <summary>
         /// Get MetricData ordered by timestamp, descending
         /// </summary>
@@ -1805,10 +2268,46 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 .ToList();
         }
 
-        public void SetMetricStatus(string metricId, MetricStatus status, MetricStatus refStatus)
+        public void SetMetricStatus(string metricId, MetricStatus status, string message = null, MetricStatus? refStatus = null)
         {
-            var metric = _metric.Single(m => m.Uid == metricId && m.Status == refStatus);
+            Metric metric;
+            if (refStatus != null)
+            {
+                // Add refStatus match to the predicate
+                metric = _metric.Single(m => m.Uid == metricId && m.Status == refStatus);
+            }
+            else
+            {
+                metric = _metric.Single(m => m.Uid == metricId);
+            }
+
             metric.Status = status;
+            metric.Message = message;
+        }
+
+        public List<MetricData> GetMetricData(string metricId)
+        {
+            return _metricData.Where(md => md.MetricId == metricId).ToList();
+        }
+        /// <summary>
+        /// Add Metric Data
+        /// </summary>
+        /// <param name="metricId">Metric uid</param>
+        /// <param name="data"></param>
+        public List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data)
+        {
+            int numRows = data.Count;
+            if (numRows == 0)
+                return null;
+
+            List<MetricData> rows = new List<MetricData>();
+
+            foreach (var pair in data)
+            {
+                rows.Add(new MetricData(metricId, pair.Item2, pair.Item1, null, _lastRowId++));
+            }
+            _metricData.AddRange(rows);
+            return rows;
         }
     }
 
@@ -1861,8 +2360,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         }
         public MetricData(string metricId, DateTime timestamp, double metricValue,
-            double anomalyScore, long rowid)
+            double? anomalyScore, long rowid)
         {
+            Uid = Guid.NewGuid().ToString();
+
             MetricId = metricId;
             Timestamp = timestamp;
             MetricValue = metricValue;
@@ -1873,7 +2374,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public long Rowid { get; set; }
         public DateTime Timestamp { get; set; }
         public double MetricValue { get; set; }
-        public double AnomalyScore { get; set; }
+        public double? AnomalyScore { get; set; }
         public double? RawAnomalyScore { get; set; }
 
 
@@ -1887,6 +2388,395 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/model_swapper/model_swapper_interface.py
     // TODO:
+
+    /// <summary>
+    /// This is the interface class to connect the application layer to the Model Swapper.
+    /// </summary>
+    public class ModelSwapperInterface
+    {
+        public void DefineModel(string modelId, BestSingleMetricAnomalyParamsDescription args, Guid commandId)
+        {
+            // Sends defineModel command over the bus, for now we ignore the bus system
+            // Calls the modelRunner which is the other end of the bus system.
+
+            ModelRunner modelRunner = new ModelRunner(modelId);
+            modelRunner.DefineModel(new ModelCommand
+            {
+                Id = commandId,
+                Args = args,
+                ModelId = modelId
+            });
+        }
+
+        public List<object> SubmitRequests(string modelId, List<ModelInputRow> input)
+        {
+            List<object> results = new List<object>();
+            ModelRunner modelRunner = new ModelRunner(modelId);
+            foreach (ModelInputRow row in input)
+            {
+                results.Add(modelRunner.ProcessInputRow(row, null));
+            }
+            return results;
+        }
+    }
+
+    public class ModelInputRow
+    {
+        public long RowId { get; set; }
+        public List<string> Data { get; set; }
+
+        public ModelInputRow(long rowId, List<string> data)
+        {
+            RowId = rowId;
+            Data = data;
+        }
+    }
+
+    public class ModelRunner
+    {
+        private readonly string _modelId;
+        public CheckPointManager _checkpointMgr;
+        private opf.Model _model;
+        private bool _hasCheckpoint;
+        private InputRowEncoder _inputRowEncoder;
+
+        public ModelRunner(string modelId)
+        {
+            _modelId = modelId;
+            _checkpointMgr = new CheckPointManager();
+            _inputRowEncoder = null;
+        }
+
+        /// <summary>
+        /// Handle the "defineModel" command
+        /// </summary>
+        public void DefineModel(ModelCommand command)
+        {
+            // Save the model to persistent storage (the parameters)
+
+            ModelDefinition newModelDefinition = new ModelDefinition
+            {
+                ModelParams = new ModelParams()
+                {
+                    ModelConfig = command.Args.modelConfig,
+                    InferenceArgs = command.Args.inferenceArgs,
+                    InputSchema = command.Args.inputRecordSchema
+                }
+            };
+
+            _checkpointMgr.Define(modelId: _modelId, definition: command.Args);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="row">ModelInputRow instance</param>
+        /// <param name="currentRunInputSamples">a list; the input row's data will be appended
+        /// to this list if the row is processed successfully</param>
+        /// <returns>a ModelInferenceResult instance</returns>
+        public object ProcessInputRow(ModelInputRow row, List<object> currentRunInputSamples)
+        {
+            if (_model == null)
+            {
+                LoadModel();
+            }
+            // Convert a flat input row into a format that is consumable by an OPF model
+            _inputRowEncoder.AppendRecord(row.Data);
+            Map<string, object> inputRecord = _inputRowEncoder.GetNextRecordDict();
+            // Infer
+            ModelResult r = _model.run(inputRecord);
+
+            currentRunInputSamples?.Add(row.Data);
+
+            return new ModelInferenceResult(rowId: row.RowId, status: 0, anomalyScore: (double)r.inferences[InferenceElement.AnomalyScore]);
+        }
+
+        /// <summary>
+        /// Load the model and construct the input row encoder
+        /// Side-effect: self._model and self._inputRowEncoder are loaded; 
+        ///     self._modelLoadSec is set if profiling is turned on
+        /// </summary>
+        private void LoadModel()
+        {
+            if (_model == null)
+            {
+                DescriptionBase modelDefinition = null;
+                try
+                {
+                    _model = _checkpointMgr.Load(_modelId);
+                    _hasCheckpoint = true;
+                }
+                catch (ModelNotFound)
+                {
+                    // So, we didn't have a checkpoint... try to create our model from model
+                    // definition params
+                    _hasCheckpoint = false;
+                    modelDefinition = _checkpointMgr.LoadModelDefinition(_modelId);
+                    //ModelParams modelParams = modelDefinition.modelParams;
+                    _model = ModelFactory.Create(modelConfig: modelDefinition);
+                    _model.enableLearning();
+                    _model.enableInference(modelDefinition.inferenceArgs);
+                }
+
+                // Construct the object for converting a flat input row into a format
+                // that is consumable by an OPF model
+                if (modelDefinition == null)
+                {
+                    modelDefinition = _checkpointMgr.LoadModelDefinition(_modelId);
+                }
+
+                var inputSchema = modelDefinition.inputRecordSchema;
+
+                var inputFieldsMeta = inputSchema;
+                _inputRowEncoder = new InputRowEncoder(inputFieldsMeta);
+
+                // TODO: check https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/model_swapper/model_runner.py
+                // that we need some extra lines
+            }
+        }
+    }
+
+
+
+    internal class InputRowEncoder
+    {
+        private Map<string, Tuple<FieldMetaType, SensorFlags>> _fieldMeta;
+        private List<string> _fieldNames;
+        private List<string> _row;
+        private ModelRecordEncoder _modelRecordEncoder;
+
+        public InputRowEncoder(Map<string, Tuple<FieldMetaType, SensorFlags>> inputFieldsMeta)
+        {
+            _fieldMeta = inputFieldsMeta;
+            _fieldNames = inputFieldsMeta.Keys.ToList();
+            _row = null;
+        }
+
+        public void AppendRecord(List<string> record)
+        {
+            Debug.Assert(_row == null);
+
+            _row = record;
+        }
+
+        public List<string> GetFieldNames()
+        {
+            return _fieldNames;
+        }
+
+        public Map<string, Tuple<FieldMetaType, SensorFlags>> GetFields()
+        {
+            return _fieldMeta;
+        }
+
+        public List<string> GetNextRecord(bool useCache = true)
+        {
+            Debug.Assert(_row != null);
+            var row = _row;
+            _row = null;
+            return row;
+        }
+
+        public Map<string, object> GetNextRecordDict()
+        {
+            var values = GetNextRecord();
+            if (values == null) return null;
+            if (!values.Any()) return new Map<string, object>();
+            if (_modelRecordEncoder == null)
+            {
+                _modelRecordEncoder = new ModelRecordEncoder(fields: GetFields(),
+                    aggregationPeriod: GetAggregationMonthAndSeconds());
+            }
+            return _modelRecordEncoder.Encode(values);
+        }
+
+        private TimeSpan? GetAggregationMonthAndSeconds()
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Encodes metric data input rows  for consumption by OPF models. See the `ModelRecordEncoder.encode` method for more details.
+    /// </summary>
+    internal class ModelRecordEncoder
+    {
+        private Map<string, Tuple<FieldMetaType, SensorFlags>> _fields;
+        private TimeSpan? _aggregationPeriod;
+        private int _sequenceId;
+        private List<string> _fieldNames;
+        private int? _timestampFieldIndex;
+
+        public ModelRecordEncoder(Map<string, Tuple<FieldMetaType, SensorFlags>> fields, TimeSpan? aggregationPeriod = null)
+        {
+            if (fields == null || !fields.Any())
+            {
+                throw new ArgumentNullException("fields", "fields arg must be non-empty");
+            }
+            _fields = fields;
+            _aggregationPeriod = aggregationPeriod;
+            _sequenceId = -1;
+            _fieldNames = fields.Keys.ToList();
+
+            _timestampFieldIndex = GetFieldIndexBySpecial(fields, SensorFlags.Timestamp);
+        }
+
+        private int? GetFieldIndexBySpecial(Map<string, Tuple<FieldMetaType, SensorFlags>> fields, SensorFlags sensorFlags)
+        {
+            return fields.Values.Select(t=>t.Item2).ToList().IndexOf(sensorFlags);
+        }
+
+        /// <summary>
+        /// Encodes the given input row as a dict, with the
+        /// keys being the field names.This also adds in some meta fields:
+        /// '_category': The value from the category field(if any)
+        /// '_reset': True if the reset field was True(if any)
+        /// '_sequenceId': the value from the sequenceId field(if any)
+        /// </summary>
+        /// <param name="inputRow">sequence of values corresponding to a single input metric data row</param>
+        /// <returns></returns>
+        public Map<string, object> Encode(List<string> inputRow)
+        {
+            var result = new Map<string, object>(ArrayUtils.Zip(_fieldNames, inputRow).ToDictionary(k => k.Get(0) as string, v => v.Get(1)));
+
+            // TODO add the special field handling (category etc)
+            if (_timestampFieldIndex.HasValue && _timestampFieldIndex >= 0)
+            {
+                result["_timestamp"] = inputRow[_timestampFieldIndex.Value];
+                // Compute the record index based on timestamp
+                result["_timestampRecordIdx"] = ComputeTimestampRecordIdx(inputRow[_timestampFieldIndex.Value]);
+            }
+            else
+            {
+                result["_timestamp"] = null;
+            }
+
+            result["_category"] = null;
+            result["_reset"] = 0;
+            result["_sequenceId"] = null;
+            return result;
+        }
+
+        private string ComputeTimestampRecordIdx(string recordTs)
+        {
+            if (_aggregationPeriod == null)
+                return null;
+            throw new NotImplementedException("check this");
+        }
+    }
+
+    public class ModelDefinition
+    {
+        public ModelParams ModelParams { get; set; }
+
+
+    }
+
+    public class ModelCommand
+    {
+        public Guid Id { get; set; }
+        public string ModelId { get; set; }
+
+        public BestSingleMetricAnomalyParamsDescription Args { get; set; }
+    }
+
+    public class ModelInferenceResult
+    {
+        private double anomalyScore;
+        private long rowId;
+        private int status;
+
+        public ModelInferenceResult(long rowId, int status, double anomalyScore)
+        {
+            this.rowId = rowId;
+            this.status = status;
+            this.anomalyScore = anomalyScore;
+        }
+    }
+
+    public class ModelSwapperUtils
+    {
+        /// <summary>
+        /// Dispatch command to create HTM model
+        /// </summary>
+        /// <param name="modelId"> unique identifier of the metric row</param>
+        /// <param name="params">model params for creating a scalar model per ModelSwapper interface</param>
+        public static void CreateHtmModel(string modelId, BestSingleMetricAnomalyParamsDescription @params)
+        {
+            ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
+            modelSwapper.DefineModel(modelId: modelId, args: @params, commandId: Guid.NewGuid());
+        }
+    }
+
+    public class CheckPointManager
+    {
+        private static Dictionary<string, DescriptionBase> _storedDefinitions = new Dictionary<string, DescriptionBase>();
+
+        /// <summary>
+        /// Retrieve a model instance from checkpoint.
+        /// </summary>
+        /// <param name="modelId">unique model ID</param>
+        /// <returns>an OPF model instance</returns>
+        public opf.Model Load(string modelId)
+        {
+            throw new ModelNotFound();
+        }
+
+        public DescriptionBase LoadModelDefinition(string modelId)
+        {
+            var definition = _storedDefinitions
+                .Where(sd => sd.Key == modelId)
+                .Select(sd => sd.Value)
+                .FirstOrDefault();
+
+            return definition;
+        }
+
+        public void Define(string modelId, DescriptionBase definition)
+        {
+            if (!_storedDefinitions.ContainsKey(modelId))
+                _storedDefinitions.Add(modelId, definition);
+        }
+    }
+
+    public class ModelDataFeeder
+    {
+        /// <summary>
+        /// Send input rows to CLA model for processing
+        /// </summary>
+        /// <param name="modelId">unique identifier of the model</param>
+        /// <param name="inputRows">sequence of model_swapper_interface.ModelInputRow objects</param>
+        /// <param name="batchSize">max number of data records per input batch</param>
+        /// <param name="modelSwapper">model_swapper_interface.ModelSwapperInterface object</param>
+        /// <param name="logger">logger object</param>
+        /// <param name="profiling">True if profiling is enabled</param>
+        public static void SendInputRowsToModel(string modelId, List<ModelInputRow> inputRows, int batchSize,
+            ModelSwapperInterface modelSwapper, ILog logger, bool profiling)
+        {
+            logger.DebugFormat("Streaming numRecords={0} to model={1}", inputRows.Count, modelId);
+
+            // Stream data to HTM model in batches
+            // TODO: now it stream everything, chunk it
+            //foreach (var batch in inputRows)
+            var batch = inputRows;
+            {
+                DateTime startTime = DateTime.Now;
+
+                var batchId = modelSwapper.SubmitRequests(modelId, batch);
+
+                if (profiling)
+                {
+                    var headTS = batch.First().Data.First();
+                    var tailTS = batch.Last().Data.First();
+                    logger.InfoFormat(
+                        "{{TAG:STRM.DATA.TO_MODEL.DONE}} Submitted batch={0} to model={1}; numRows={2}; rows=[{3}]; ts=[{4}]; duration={5}s",
+                        batchId, modelId, batch.Count,
+                        string.Format("{0}..{1}", batch.First().RowId, batch.Last().RowId),
+                        string.Format("{0}..{1}", headTS, tailTS), DateTime.Now - startTime);
+                }
+            }
+        }
+    }
 
     #endregion
 }

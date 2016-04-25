@@ -60,24 +60,22 @@ namespace HTM.Net.Encoders
 
     public class RandomDistributedScalarEncoder : Encoder<double>
     {
-
-
-        private static readonly ILog LOG = LogManager.GetLogger(typeof(RandomDistributedScalarEncoder));
+        private static readonly ILog Log = LogManager.GetLogger(typeof(RandomDistributedScalarEncoder));
 
         public const long DEFAULT_SEED = 42;
 
         // Mersenne Twister RNG, same as used with numpy.random
-        MersenneTwister rng;
+        private IRandom _rng;
 
-        int maxOverlap;
-        int maxBuckets;
-        double? offset;
-        long seed;
-        int minIndex;
-        int maxIndex;
-        int numRetry;
+        private int _maxOverlap;
+        private int _maxBuckets;
+        private double? _offset;
+        private long _seed;
+        private int _minIndex;
+        private int _maxIndex;
+        private int _numRetry;
 
-        ConcurrentDictionary<int, List<int>> bucketMap;
+        private ConcurrentDictionary<int, List<int>> _bucketMap;
 
 
         private RandomDistributedScalarEncoder()
@@ -131,7 +129,7 @@ namespace HTM.Net.Encoders
         // TODO why are none of these parameters used..?
         public void InitEncoder(double resolution, int w, int n, double? offset, long seed)
         {
-            rng = (seed == -1) ? new MersenneTwister() : new MersenneTwister((int)seed);
+            _rng = (seed == -1) ? new MersenneTwister() : new MersenneTwister((int)seed);
 
             InitializeBucketMap(GetMaxBuckets(), GetOffset());
 
@@ -141,7 +139,7 @@ namespace HTM.Net.Encoders
             }
 
             // TODO reduce logging level?
-            LOG.Debug(this.ToString());
+            Log.Debug(this.ToString());
         }
 
         /**
@@ -178,14 +176,14 @@ namespace HTM.Net.Encoders
              * This HashMap maps a bucket index into its bit representation We
              * initialize the HashMap with a single bucket with index 0
              */
-            bucketMap = new ConcurrentDictionary<int, List<int>>();
+            _bucketMap = new ConcurrentDictionary<int, List<int>>();
             // generate the random permutation
             List<int> temp = new List<int>(GetN());
             for (int i = 0; i < GetN(); i++)
                 temp.Add(i);
-            temp.Shuffle(rng);
+            temp.Shuffle(_rng);
             //java.util.Collections.shuffle(temp, rng);
-            bucketMap.TryAdd(GetMinIndex(), temp.SubList(0, GetW()));
+            _bucketMap.TryAdd(GetMinIndex(), temp.SubList(0, GetW()));
 
             // How often we need to retry when generating valid encodings
             SetNumRetry(0);
@@ -208,26 +206,29 @@ namespace HTM.Net.Encoders
                      * Create a new representation that has exactly w-1 overlapping
                      * bits as the min representation
                      */
-                    bucketMap.TryAdd(index, NewRepresentation(GetMinIndex(), index));
+                    _bucketMap.TryAdd(index, NewRepresentation(GetMinIndex(), index));
                     SetMinIndex(index);
                 }
-                else {
+                else
+                {
                     // Recursively create all the indices above and then this index
                     CreateBucket(index + 1);
                     CreateBucket(index);
                 }
             }
-            else {
+            else
+            {
                 if (index == GetMaxIndex() + 1)
                 {
                     /*
                      * Create a new representation that has exactly w-1 overlapping
                      * bits as the max representation
                      */
-                    bucketMap.TryAdd(index, NewRepresentation(GetMaxIndex(), index));
+                    _bucketMap.TryAdd(index, NewRepresentation(GetMaxIndex(), index));
                     SetMaxIndex(index);
                 }
-                else {
+                else
+                {
                     // Recursively create all the indices below and then this index
                     CreateBucket(index - 1);
                     CreateBucket(index);
@@ -248,7 +249,7 @@ namespace HTM.Net.Encoders
         ////throws InvalidOperationException
         {
             List<int> newRepresentation = new List<int>(
-                bucketMap[index]);
+                _bucketMap[index]);
 
             /*
              * Choose the bit we will replace in this representation. We need to
@@ -260,13 +261,13 @@ namespace HTM.Net.Encoders
             int ri = newIndex % GetW();
 
             // Now we choose a bit such that the overlap rules are satisfied.
-            int newBit = rng.NextInt(GetN());
+            int newBit = _rng.NextInt(GetN());
             newRepresentation[ri] = newBit;
-            while (bucketMap[index].Contains(newBit)
+            while (_bucketMap[index].Contains(newBit)
                     || !NewRepresentationOk(newRepresentation, newIndex))
             {
                 SetNumRetry(GetNumRetry() + 1);
-                newBit = rng.NextInt(GetN());
+                newBit = _rng.NextInt(GetN());
                 newRepresentation[ri] = newBit;
             }
 
@@ -304,7 +305,7 @@ namespace HTM.Net.Encoders
             int midIdx = GetMaxBuckets() / 2;
 
             // Start by checking the overlap at minIndex
-            int runningOverlap = CountOverlap(bucketMap[GetMinIndex()], newRep);
+            int runningOverlap = CountOverlap(_bucketMap[GetMinIndex()], newRep);
             if (!OverlapOK(GetMinIndex(), newIndex, runningOverlap))
                 return false;
 
@@ -315,9 +316,9 @@ namespace HTM.Net.Encoders
                 int newBit = (i - 1) % GetW();
 
                 // Update our running overlap
-                if (newRepBinary[bucketMap[i - 1][newBit]])
+                if (newRepBinary[_bucketMap[i - 1][newBit]])
                     runningOverlap--;
-                if (newRepBinary[bucketMap[i][newBit]])
+                if (newRepBinary[_bucketMap[i][newBit]])
                     runningOverlap++;
 
                 // Verify our rules
@@ -332,9 +333,9 @@ namespace HTM.Net.Encoders
                 int newBit = i % GetW();
 
                 // Update our running overlap
-                if (newRepBinary[bucketMap[i - 1][newBit]])
+                if (newRepBinary[_bucketMap[i - 1][newBit]])
                     runningOverlap--;
-                if (newRepBinary[bucketMap[i][newBit]])
+                if (newRepBinary[_bucketMap[i][newBit]])
                     runningOverlap++;
 
                 // Verify our rules
@@ -426,12 +427,12 @@ namespace HTM.Net.Encoders
          */
         public int CountOverlapIndices(int i, int j) //throws InvalidOperationException
         {
-            bool containsI = bucketMap.ContainsKey(i);
-            bool containsJ = bucketMap.ContainsKey(j);
+            bool containsI = _bucketMap.ContainsKey(i);
+            bool containsJ = _bucketMap.ContainsKey(j);
             if (containsI && containsJ)
             {
-                List<int> rep1 = bucketMap[i];
-                List<int> rep2 = bucketMap[j];
+                List<int> rep1 = _bucketMap[i];
+                List<int> rep2 = _bucketMap[j];
                 return CountOverlap(rep1, rep2);
             }
             else if (!containsI && !containsJ)
@@ -461,15 +462,20 @@ namespace HTM.Net.Encoders
             if (index >= GetMaxBuckets())
                 index = GetMaxBuckets() - 1;
 
-            if (!bucketMap.ContainsKey(index))
+            if (!_bucketMap.ContainsKey(index))
             {
-                LOG.Debug(string.Format("Adding additional buckets to handle index={0} ", index));
+                Log.Debug(string.Format("Adding additional buckets to handle index={0} ", index));
                 CreateBucket(index);
             }
-            return bucketMap[index];
+            return _bucketMap[index];
         }
 
-        
+        public override int[] GetBucketIndices(string input)
+        {
+            var d = double.Parse((string)input, NumberFormatInfo.InvariantInfo);
+            return GetBucketIndices(d);
+        }
+
         public override int[] GetBucketIndices(double x)
         {
             if (double.IsNaN(x))
@@ -551,7 +557,7 @@ namespace HTM.Net.Encoders
          */
         public int GetMaxOverlap()
         {
-            return maxOverlap;
+            return _maxOverlap;
         }
 
         /**
@@ -559,7 +565,7 @@ namespace HTM.Net.Encoders
          */
         public int GetMaxBuckets()
         {
-            return maxBuckets;
+            return _maxBuckets;
         }
 
         /**
@@ -567,7 +573,7 @@ namespace HTM.Net.Encoders
          */
         public long GetSeed()
         {
-            return seed;
+            return _seed;
         }
 
         /**
@@ -575,17 +581,17 @@ namespace HTM.Net.Encoders
          */
         public double? GetOffset()
         {
-            return offset;
+            return _offset;
         }
 
         private int GetMinIndex()
         {
-            return minIndex;
+            return _minIndex;
         }
 
         private int GetMaxIndex()
         {
-            return maxIndex;
+            return _maxIndex;
         }
 
         /**
@@ -593,7 +599,7 @@ namespace HTM.Net.Encoders
          */
         public int GetNumRetry()
         {
-            return numRetry;
+            return _numRetry;
         }
 
         /**
@@ -601,7 +607,7 @@ namespace HTM.Net.Encoders
          */
         public void SetMaxOverlap(int maxOverlap)
         {
-            this.maxOverlap = maxOverlap;
+            this._maxOverlap = maxOverlap;
         }
 
         /**
@@ -609,7 +615,7 @@ namespace HTM.Net.Encoders
          */
         public void SetMaxBuckets(int maxBuckets)
         {
-            this.maxBuckets = maxBuckets;
+            this._maxBuckets = maxBuckets;
         }
 
         /**
@@ -617,7 +623,7 @@ namespace HTM.Net.Encoders
          */
         public void SetSeed(long seed)
         {
-            this.seed = seed;
+            this._seed = seed;
         }
 
         /**
@@ -625,17 +631,17 @@ namespace HTM.Net.Encoders
          */
         public void SetOffset(double? offset)
         {
-            this.offset = offset;
+            this._offset = offset;
         }
 
         private void SetMinIndex(int minIndex)
         {
-            this.minIndex = minIndex;
+            this._minIndex = minIndex;
         }
 
         private void SetMaxIndex(int maxIndex)
         {
-            this.maxIndex = maxIndex;
+            this._maxIndex = maxIndex;
         }
 
         /**
@@ -643,12 +649,12 @@ namespace HTM.Net.Encoders
          */
         public void SetNumRetry(int numRetry)
         {
-            this.numRetry = numRetry;
+            this._numRetry = numRetry;
         }
 
         public int GetNumBuckets()
         {
-            return bucketMap.Count;
+            return _bucketMap.Count;
         }
 
         public override string ToString()
@@ -665,10 +671,10 @@ namespace HTM.Net.Encoders
             dumpString.Append("  numTries: " + GetNumRetry() + "\n");
             dumpString.Append("  name: " + GetName() + "\n");
             dumpString.Append("  buckets : \n");
-            foreach (int index in bucketMap.Keys)
+            foreach (int index in _bucketMap.Keys)
             {
                 dumpString.Append("  [ " + index + " ]: "
-                        + Arrays.DeepToString(bucketMap[index].ToArray())
+                        + Arrays.DeepToString(_bucketMap[index].ToArray())
                         + "\n");
             }
             return dumpString.ToString();
@@ -808,7 +814,7 @@ namespace HTM.Net.Encoders
          */
         public override List<S> GetBucketValues<S>(Type returnType)
         {
-            return new List<S>((ICollection<S>)this.bucketMap.Keys);
+            return new List<S>((ICollection<S>)this._bucketMap.Keys);
         }
 
         /**

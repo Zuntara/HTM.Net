@@ -599,37 +599,37 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.IsNull(network); // for now
         }
 
-        [TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.csv")]
-        public void TestClaModelNetworkCreation()
-        {
-            SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
+        //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.csv")]
+        //public void TestClaModelNetworkCreation()
+        //{
+        //    SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
 
-            CLAModel model = new CLAModel(file);
+        //    CLAModel model = new CLAModel(file);
             
-            Assert.IsNotNull(model);
-        }
+        //    Assert.IsNotNull(model);
+        //}
 
-        [TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.csv")]
-        public void TestClaModelNetworkRun()
-        {
-            SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
+        //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.csv")]
+        //public void TestClaModelNetworkRun()
+        //{
+        //    SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
 
-            CLAModel model = new CLAModel(file);
+        //    CLAModel model = new CLAModel(file);
 
-            Assert.IsNotNull(model);
+        //    Assert.IsNotNull(model);
 
-            model.enableInference(new Map<string, object> { {"predictedField", "consumption" } });
+        //    model.enableInference(new Map<string, object> { {"predictedField", "consumption" } });
 
-            model.run(new Map<string, object>
-            {
-                {"address", "home" },
-                {"consumption", 23.0},
-                {"gym", "gym1" },
-                {"timestamp", DateTime.Parse("01/01/2016 13:00:00") },
-            });
-        }
+        //    model.run(new Map<string, object>
+        //    {
+        //        {"address", "home" },
+        //        {"consumption", 23.0},
+        //        {"gym", "gym1" },
+        //        {"timestamp", DateTime.Parse("01/01/2016 13:00:00") },
+        //    });
+        //}
 
         [TestMethod]
         public void TestPermutationSerialization()

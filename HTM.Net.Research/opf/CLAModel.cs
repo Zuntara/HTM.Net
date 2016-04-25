@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
@@ -8,6 +9,7 @@ using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Taurus.HtmEngine.runtime;
 using HTM.Net.Util;
 using log4net;
 
@@ -131,20 +133,20 @@ namespace HTM.Net.Research.opf
             this._hasTP = tpEnable;
             this._hasCL = clEnable;
 
-            //var anomalyParams = description.modelConfig.modelParams
+            var anomalyParams = description.modelConfig.modelParams.anomalyParams;
 
             //this._classifierInputEncoder = null;
             this._predictedFieldIdx = null;
             this._predictedFieldName = null;
             this._numFields = null;
             // init anomaly
-            int? windowSize = null;// anomalyParams.get("slidingWindowSize", null);
-            Anomaly.Mode mode = Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
-            int? anomalyThreshold = null;// anomalyParams.get("autoDetectThreshold", null);
+            int? windowSize = anomalyParams.slidingWindowSize;// anomalyParams.get("slidingWindowSize", null);
+            Anomaly.Mode mode = anomalyParams.mode ?? Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
+            int? anomalyThreshold = anomalyParams.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
 
             parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, windowSize);
             parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, mode);
-            //parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_autoDetectThreshold, windowSize);
+            //parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_autoDetectThreshold, anomalyThreshold);
 
             this._anomalyInst = Anomaly.Create(parameters);
 
@@ -190,6 +192,118 @@ namespace HTM.Net.Research.opf
 
             this._input = null;
         }
+
+        //public CLAModel(IDescription description)
+        //    : base(description.modelConfig.modelParams.inferenceType)
+        //{
+        //    _description = description;
+
+        //    var parameters = description.GetParameters();
+
+        //    InferenceType inferenceType = description.modelConfig.modelParams.inferenceType;
+
+        //    if (!__supportedInferenceKindSet.Contains(inferenceType))
+        //    {
+        //        throw new ArgumentException(string.Format("{0} received incompatible inference type: {1}", GetType().Name, inferenceType));
+        //    }
+
+        //    // Call super class constructor
+        //    //super(CLAModel, self).__init__(inferenceType);
+
+        //    // this.__restoringFromState is set to True by our __setstate__ method
+        //    // and back to False at completion of our _deSerializeExtraData() method.
+        //    this.__restoringFromState = false;
+        //    this.__restoringFromV1 = false;
+
+        //    // Intitialize logging
+        //    this.__logger = LogManager.GetLogger(typeof(CLAModel));
+        //    this.__logger.Debug(string.Format("Instantiating {0}.", GetType().Name));
+
+        //    var minLikelihoodThreshold = DEFAULT_LIKELIHOOD_THRESHOLD;
+        //    var maxPredictionsPerStep = DEFAULT_MAX_PREDICTIONS_PER_STEP;
+
+        //    this._minLikelihoodThreshold = minLikelihoodThreshold;
+        //    this._maxPredictionsPerStep = maxPredictionsPerStep;
+
+        //    // set up learning parameters (note: these may be replaced via
+        //    // enable/disable//SP/TP//Learning methods)
+        //    this.__spLearningEnabled = description.modelConfig.modelParams.spEnable;
+        //    this.__tpLearningEnabled = description.modelConfig.modelParams.tpEnable;
+        //    var spEnable = __spLearningEnabled;
+        //    var tpEnable = __tpLearningEnabled;
+        //    var clEnable = description.modelConfig.modelParams.clEnable;
+
+        //    // Explicitly exclude the TP if this type of inference doesn't require it
+        //    if (!__temporalInferenceKindSet.Contains(inferenceType)
+        //        || this.getInferenceType() == InferenceType.NontemporalMultiStep)
+        //    {
+        //        tpEnable = false;
+        //    }
+
+        //    this._netInfo = null;
+        //    this._hasSP = spEnable;
+        //    this._hasTP = tpEnable;
+        //    this._hasCL = clEnable;
+
+        //    //var anomalyParams = description.modelConfig.modelParams
+
+        //    //this._classifierInputEncoder = null;
+        //    this._predictedFieldIdx = null;
+        //    this._predictedFieldName = null;
+        //    this._numFields = null;
+        //    // init anomaly
+        //    int? windowSize = null;// anomalyParams.get("slidingWindowSize", null);
+        //    Anomaly.Mode mode = Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
+        //    int? anomalyThreshold = null;// anomalyParams.get("autoDetectThreshold", null);
+
+        //    parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, windowSize);
+        //    parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, mode);
+        //    //parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_autoDetectThreshold, windowSize);
+
+        //    this._anomalyInst = Anomaly.Create(parameters);
+
+        //    ////this._anomalyInst = new Anomaly(slidingWindowSize = windowSize, mode = mode,
+        //    ////                            binaryAnomalyThreshold = anomalyThreshold);
+
+        //    // -----------------------------------------------------------------------
+        //    //if (network != null)
+        //    //{
+        //    //    this._netInfo = new NetworkInfo(net: network, statsCollectors:[]);
+        //    //}
+        //    //else
+        //    //{
+        //    // Create the network
+        //    this._netInfo = this.CreateClaNetwork(parameters);
+        //    //}
+
+
+        //    // Initialize Spatial Anomaly detection parameters
+        //    if (this.getInferenceType() == InferenceType.NontemporalAnomaly)
+        //    {
+        //        //this._getSPRegion().setParameter("anomalyMode", true);
+        //    }
+
+        //    // Initialize Temporal Anomaly detection parameters
+        //    if (this.getInferenceType() == InferenceType.TemporalAnomaly)
+        //    {
+        //        //this._getTPRegion().setParameter("anomalyMode", true);
+        //        this._prevPredictedColumns = new int[0];
+        //    }
+
+        //    // -----------------------------------------------------------------------
+        //    // This flag, if present tells us not to train the SP network unless
+        //    //  the user specifically asks for the SP inference metric
+        //    this.__trainSPNetOnlyIfRequested = description.modelConfig.modelParams.trainSPNetOnlyIfRequested;
+
+        //    this.__numRunCalls = 0;
+
+        //    // Tracks whether finishedLearning() has been called
+        //    this.__finishedLearning = false;
+
+        //    this.__logger.Debug("Instantiated " + GetType().Name);
+
+        //    this._input = null;
+        //}
 
         /// <summary>
         /// run one iteration of this model.
@@ -247,6 +361,7 @@ namespace HTM.Net.Research.opf
 
             //results.inferences.Update(inferences);
             inferences.AddAll(this._anomalyCompute());
+            results.inferences.AddAll(inferences);
             //inferences = this._anomalyCompute();
             //results.inferences.Update(inferences);
 
@@ -278,7 +393,7 @@ namespace HTM.Net.Research.opf
             try
             {
                 // Push record into the sensor
-                _inputProvider.OnNext(string.Join(",", inputRecord.Values.Select(v => v.ToString()).ToArray()));
+                _inputProvider.OnNext(string.Join(",", inputRecord.Values.Select(v => v?.ToString()).ToArray()));
                 this._currentInferenceOutput = _netInfo.net.ComputeImmediate(inputRecord);
             }
             catch (Exception e)
@@ -441,7 +556,17 @@ namespace HTM.Net.Research.opf
                 }
                 // Calculate the anomaly score using the active columns
                 // and previous predicted columns.
-                score = _anomalyInst.Compute(activeColumns, _prevPredictedColumns, (double)_input[_predictedFieldName],
+                double anomalyInputValue;
+                if (_input[_predictedFieldName] is string)
+                {
+                    anomalyInputValue = double.Parse(_input[_predictedFieldName] as string,
+                        NumberFormatInfo.InvariantInfo);
+                }
+                else
+                {
+                    anomalyInputValue = (double) _input[_predictedFieldName];
+                }
+                score = _anomalyInst.Compute(activeColumns, _prevPredictedColumns, anomalyInputValue,
                     this.__numRunCalls);
                 //score = this._anomalyInst.compute(
                 //                             activeColumns,
@@ -1009,14 +1134,19 @@ namespace HTM.Net.Research.opf
             //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
             //sensor = n.regions['sensor'].getSelf();
 
+            var fieldNames =_description.inputRecordSchema.Keys.ToList();
+            var dataTypes = _description.inputRecordSchema.Values.Select(v => v.Item1).ToList();
+            var sensorFlags = _description.inputRecordSchema.Values.Select(v => v.Item2).ToList();
             var pubBuilder = Publisher.GetBuilder()
-                .AddHeader("address, consumption, gym, timestamp")
-                .AddHeader("string, float, string, datetime")
-                .AddHeader("")
+                .AddHeader(string.Join(", ", fieldNames))
+                //.AddHeader("address, consumption, gym, timestamp")
+                //.AddHeader("string, float, string, datetime")
+                .AddHeader(string.Join(", ", dataTypes))
+                .AddHeader(string.Join(", ", sensorFlags))
                 .Build();
             _inputProvider = pubBuilder;
 
-            string dataFilePath = (string)((Map<string, object>)_description.control.dataset["streams"])["source"];
+            //string dataFilePath = (string)((Map<string, object>)_description.control.dataset["streams"])["source"];
             SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, "name", pubBuilder);
             IHTMSensor sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(ObservableSensor<string[]>.Create, parms);
 

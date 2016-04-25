@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using HTM.Net.Network.Sensor;
+using HTM.Net.Util;
 using Newtonsoft.Json;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -13,7 +15,8 @@ namespace HTM.Net.Research.Swarming.Descriptions
 
         DescriptionConfigModel modelConfig { get; set; }
         DescriptionControlModel control { get; set; }
-
+        Map<string, object> inferenceArgs { get; set; }
+        Map<string, Tuple<FieldMetaType, SensorFlags>> inputRecordSchema { get; set; }
         IDescription Clone();
 
         Network.Network BuildNetwork();
@@ -144,6 +147,8 @@ namespace HTM.Net.Research.Swarming.Descriptions
 
         public DescriptionConfigModel modelConfig { get; set; }
         public DescriptionControlModel control { get; set; }
+        public Map<string, object> inferenceArgs { get; set; }
+        public Map<string, Tuple<FieldMetaType, SensorFlags>> inputRecordSchema { get; set; }
     }
 
     

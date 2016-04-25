@@ -452,8 +452,11 @@ namespace HTM.Net.Encoders
                 LOGGER.Debug("");
                 LOGGER.Debug("input: " + input);
                 LOGGER.Debug("range: " + GetMinVal() + " - " + GetMaxVal());
-                LOGGER.Debug("n:" + GetN() + "w:" + GetW() + "resolution:" + GetResolution() +
-                    "radius:" + GetRadius() + "periodic:" + IsPeriodic());
+                LOGGER.Debug("n:" + GetN());
+                LOGGER.Debug("w:" + GetW());
+                LOGGER.Debug("resolution:" + GetResolution());
+                LOGGER.Debug("radius:" + GetRadius());
+                LOGGER.Debug("periodic:" + IsPeriodic());
                 LOGGER.Debug("output: " + Arrays.ToString(output));
                 LOGGER.Debug("input desc: " + Decode(output, ""));
             }

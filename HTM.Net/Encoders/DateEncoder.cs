@@ -472,8 +472,17 @@ namespace HTM.Net.Encoders
         {
             if (o is string)
             {
-                DateTime parsed = DateTime.Parse((string)o, DateTimeFormatInfo.InvariantInfo);
-                EncodeIntoArray(parsed, tempArray);
+                DateTime t;
+                if (DateTime.TryParse((string) o, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None, out t))
+                {
+                    DateTime parsed = DateTime.Parse((string) o, DateTimeFormatInfo.InvariantInfo);
+                    EncodeIntoArray(parsed, tempArray);
+                }
+                else
+                {
+                    DateTime parsed = DateTime.Parse((string)o);
+                    EncodeIntoArray(parsed, tempArray);
+                }
             }
             else
             {
@@ -630,6 +639,21 @@ namespace HTM.Net.Encoders
         public override List<S> GetBucketValues<S>(Type returnType)
         {
             return null;
+        }
+
+        public override int[] GetBucketIndices(string input)
+        {
+            DateTime t;
+            if (DateTime.TryParse((string)input, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None, out t))
+            {
+                DateTime parsed = DateTime.Parse((string)input, DateTimeFormatInfo.InvariantInfo);
+                return GetBucketIndices(parsed);
+            }
+            else
+            {
+                DateTime parsed = DateTime.Parse((string)input);
+                return GetBucketIndices(parsed);
+            }
         }
 
         /**

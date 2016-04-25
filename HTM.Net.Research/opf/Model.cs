@@ -14,9 +14,9 @@ namespace HTM.Net.Research.opf
     {
         protected int? _numPredictions;
         protected InferenceType __inferenceType;
-        private bool __learningEnabled;
-        private bool __inferenceEnabled;
-        private Map<string, object> __inferenceArgs;
+        private bool _learningEnabled;
+        private bool _inferenceEnabled;
+        private Map<string, object> _inferenceArgs;
 
         /// <summary>
         /// Model constructor
@@ -26,9 +26,9 @@ namespace HTM.Net.Research.opf
         {
             this._numPredictions = 0;
             this.__inferenceType = inferenceType;
-            this.__learningEnabled = true;
-            this.__inferenceEnabled = true;
-            this.__inferenceArgs = new Map<string, object>();
+            this._learningEnabled = true;
+            this._inferenceEnabled = true;
+            this._inferenceArgs = new Map<string, object>();
         }
 
         public virtual ModelResult run(Map<string, object> inputRecord)
@@ -63,33 +63,33 @@ namespace HTM.Net.Research.opf
 
         public void enableLearning()
         {
-            __learningEnabled = true;
+            _learningEnabled = true;
         }
         public void disableLearning()
         {
-            __learningEnabled = false;
+            _learningEnabled = false;
         }
         public bool isLearningEnabled()
         {
-            return __learningEnabled;
+            return _learningEnabled;
         }
 
         public void enableInference(Map<string, object> inferenceArgs = null)
         {
-            __inferenceEnabled = true;
-            __inferenceArgs = inferenceArgs;
+            _inferenceEnabled = true;
+            _inferenceArgs = inferenceArgs;
         }
         public Map<string, object> getInferenceArgs()
         {
-            return __inferenceArgs;
+            return _inferenceArgs;
         }
         public void disableInference()
         {
-            __inferenceEnabled = false;
+            _inferenceEnabled = false;
         }
         public bool isInferenceEnabled()
         {
-            return __inferenceEnabled;
+            return _inferenceEnabled;
         }
 
 
