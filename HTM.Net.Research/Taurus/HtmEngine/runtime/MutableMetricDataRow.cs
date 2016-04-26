@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
@@ -664,7 +665,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// <summary>
     /// Agent for calling metric operations on the API server.
     /// </summary>
-    public class MetricUtils
+    public static class MetricUtils
     {
         public static MetricsConfiguration GetMetricsConfiguration()
         {
@@ -694,6 +695,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns>model info dictionary from the result of the _models POST request on success.</returns>
         public static Map<string, object> CreateHtmModel(string host, string apiKey, CreateModelRequest modelParams)
         {
+            // fillsup the data section that will trigger an import (?)
             throw new InvalidOperationException("posts to /_models endpoint webapi");
         }
 
@@ -753,149 +755,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public string[] ScreenNames { get; set; }
     }
 
-    public class ModelsControllerApi
-    {
-
-        /// <summary>
-        /// POST /_models
-        /// 
-        /// Data: Use the metric as returned by the datasource metric list.
-        /// For example, create a custom model, include the following data in the
-        /// POST request (uid is the same for the metric and model):
-        /// 
-        /// ::
-        ///  {
-        ///      "uid": "2a123bb1dd4d46e7a806d62efc29cbb9",
-        ///      "datasource": "custom",
-        ///      "min": 0.0,
-        ///      "max": 5000.0
-        ///  }
-        /// 
-        /// The "min" and "max" options are optional.
-        /// </summary>
-        /// <param name="modelId"></param>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        public object Put(string modelId, CreateModelRequest[] model)
-        {
-            if (modelId != null)
-            {
-                // ModelHandler is overloaded to handle both single-model requests, and
-                // multiple-model requests.  As a result, if a user makes a POST, or PUT
-                // request, it's possible that the request can be routed to this handler
-                // if the url pattern matches.  This specific POST handler is not meant
-                // to operate on a known model, therefore, raise an exception, and return
-                // a `405 Method Not Allowed` response.
-                //throw new NotAllowedResponse(new { result = "Not supported" });
-                throw new NotSupportedException();
-            }
-            List<Metric> response = new List<Metric>();
-            if (model != null)
-            {
-                var request = model;
-
-                foreach (var nativeMetric in request)
-                {
-                    try
-                    {
-                        //Validate(nativeMetric);
-                    }
-                    catch (Exception)
-                    {
-
-                        throw;
-                    }
-
-
-                }
-            }
-            else
-            {
-                // Metric data is missing
-                throw new NotImplementedException("bad request");
-            }
-
-            try
-            {
-                // AddStandardHeaders() // TODO: check what this does.
-                var metricRowList = CreateModels(model);
-                List<Metric> metricDictList = metricRowList.Select(FormatMetricRowProxy).ToList();
-                response = metricDictList;
-
-                // return Created(response);
-                return response;
-            }
-            catch (Exception)
-            {
-                // TODO: log as error
-                throw;
-            }
-        }
-
-        private Metric FormatMetricRowProxy(Metric metricObj)
-        {
-            string displayName;
-            if (metricObj.TagName != null && metricObj.TagName.Length > 0)
-            {
-                displayName = string.Format("{0} ({1})", metricObj.TagName, metricObj.Server);
-            }
-            else
-            {
-                displayName = metricObj.Server;
-            }
-            var parameters = metricObj.Parameters;
-
-            string[] allowedKeys = GetMetricDisplayFields();
-
-            Metric metricDict = metricObj.Clone(allowedKeys);
-            metricDict.Parameters = parameters;
-            metricDict.DisplayName = displayName;
-
-            return metricDict;
-        }
-
-        public string[] GetMetricDisplayFields()
-        {
-            return new[]
-            {
-                "uid", "datasource", "name",
-                "description",
-                "server",
-                "location",
-                "parameters",
-                "status",
-                "message",
-                "lastTimestamp",
-                "pollInterval",
-                "tagName",
-                "lastRowid"
-            };
-        }
-
-        private static List<Metric> CreateModels(CreateModelRequest[] request = null)
-        {
-            if (request != null)
-            {
-                List<Metric> response = new List<Metric>();
-                foreach (var nativeMetric in request)
-                {
-                    try
-                    {
-                        response.Add(ModelHandler.CreateModel(nativeMetric));
-                    }
-                    catch (Exception)
-                    {
-                        // response.append("Model failed during creation. Please try again.")
-                        throw;
-                    }
-                }
-                return response;
-            }
-            throw new NotImplementedException("bad request");
-        }
-    }
-
-    internal class ModelHandler
+    public class ModelHandler
     {
         public static Metric CreateModel(CreateModelRequest modelSpec = null)
         {
@@ -948,11 +808,16 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <returns></returns>
         public static IDataSourceAdapter CreateDatasourceAdapter(string dataSource)
         {
-            if (dataSource == "custom")
+            var adapter = _adapterRegistry.SingleOrDefault(a => a.Datasource.Equals(dataSource, StringComparison.InvariantCultureIgnoreCase));
+            if (adapter == null && dataSource == "custom")
             {
                 return new CustomDatasourceAdapter();
             }
-            throw new NotImplementedException();
+            if (adapter == null)
+            {
+                throw new InvalidOperationException("Adapter not found");
+            }
+            return adapter;
         }
 
         public static void RegisterDatasourceAdapter(IDataSourceAdapter clientCls)
@@ -962,12 +827,20 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 _adapterRegistry.Add(clientCls);
             }
         }
+
+        public static void ClearRegistrations()
+        {
+            _adapterRegistry.Clear();
+        }
     }
 
     public interface IDataSourceAdapter
     {
         string ImportModel(ModelSpec modelSpec);
         string MonitorMetric(ModelSpec modelSpec);
+        void UnmonitorMetric(string metricId);
+
+        string Datasource { get; }
     }
 
     // https://github.com/numenta/numenta-apps/blob/master/htmengine/htmengine/adapters/datasource/custom/__init__.py
@@ -1097,6 +970,26 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             return metricId;
         }
+
+        public string ActivateModel()
+        {
+            throw new NotImplementedException("Needed when we receive data");
+        }
+
+        /// <summary>
+        /// Unmonitor a metric
+        /// </summary>
+        /// <param name="metricId">unique identifier of the metric row</param>
+        public void UnmonitorMetric(string metricId)
+        {
+            RepositoryFactory.Metric.DeleteModel(metricId);
+
+            ModelSwapperUtils.DeleteHtmModel(metricId);
+
+            _log.InfoFormat("HTM Metric unmonitored: metric={0}", metricId);
+        }
+
+        public string Datasource { get { return "custom"; } }
 
         /// <summary>
         /// Perform the start-monitoring operation atomically/reliably
@@ -1828,6 +1721,17 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public Map<string, object> InferenceArgs { get; set; }
         public Map<string, Tuple<FieldMetaType, SensorFlags>> InputSchema { get; set; }
 
+        public static ModelParams FromDict(IDictionary<string, object> dict)
+        {
+            ModelParams pars = new ModelParams();
+            var bu = BeanUtil.GetInstance();
+            foreach (string key in dict.Keys)
+            {
+                bu.SetSimpleProperty(pars, key, dict[key]);
+            }
+            return pars;
+        }
+
         public ModelParams Clone()
         {
             return new ModelParams
@@ -1916,7 +1820,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <summary>
         /// Optional custom user info.
         /// </summary>
-        public string UserInfo { get; set; }
+        public object UserInfo { get; set; }
 
         public override object Clone()
         {
@@ -1948,14 +1852,12 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public static class RepositoryFactory
     {
-        private static IMetricRepository _metricRepository;
-
         static RepositoryFactory()
         {
-            _metricRepository = new MetricMemRepository();
+            Metric = new MetricMemRepository();
         }
 
-        public static IMetricRepository Metric { get { return _metricRepository; } }
+        public static IMetricRepository Metric { get; set; }
     }
 
     public interface IMetricRepository
@@ -2016,8 +1918,25 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// attribute will reflect the status value that was in the metric row at
         /// the time the update was attempted instead of the requested status value.</param>
         void SetMetricStatus(string metricId, MetricStatus status, string message = null, MetricStatus? refStatus = null);
-
-        List<MetricData> GetMetricData(string metricId);
+        /// <summary>
+        /// Get Metric Data
+        /// The parameters {rowid}, {fromTimestamp ad toTimestamp}, and {start and stop}
+        /// are to be used independently for different queries.
+        /// </summary>
+        /// <param name="metricId">Metric uid</param>
+        /// <param name="rowId">Specific MetricData row id</param>
+        /// <param name="start">Starting MetricData row id; inclusive</param>
+        /// <param name="stop">Max MetricData row id; inclusive</param>
+        /// <param name="limit">Limit on number of results to return</param>
+        /// <param name="fromTimestamp">Starting timestamp</param>
+        /// <param name="toTimestamp">Ending timestamp</param>
+        /// <param name="score">Return only rows with scores above this threshold (all non-null scores for score=0)</param>
+        /// <param name="sort">Sort by this column</param>
+        /// <param name="sortAsc">true when ascending, false otherwise (descending)</param>
+        /// <returns>Metric data</returns>
+        List<MetricData> GetMetricData(string metricId = null, long? rowId = null, long? start = null, long? stop = null,
+            int? limit = null, DateTime? fromTimestamp = null, DateTime? toTimestamp = null,
+            double? score = null, Expression<Func<MetricData, object>> sort = null, bool? sortAsc = null);
 
         /// <summary>
         /// Add Metric Data
@@ -2025,6 +1944,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="metricId">Metric uid</param>
         /// <param name="data"></param>
         List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data);
+
+        List<Metric> GetAllModels();
+        void DeleteModel(string metricId);
     }
 
     /// <summary>
@@ -2131,7 +2053,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             throw new NotImplementedException();
         }
 
-        public List<MetricData> GetMetricData(string metricId)
+        public List<MetricData> GetMetricData(string metricId = null, long? rowId = null, long? start = null, long? stop = null,
+            int? limit = null, DateTime? fromTimestamp = null, DateTime? toTimestamp = null,
+            double? score = null, Expression<Func<MetricData, object>> sort = null, bool? sortAsc = null)
         {
             throw new NotImplementedException();
         }
@@ -2142,6 +2066,16 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="metricId">Metric uid</param>
         /// <param name="data"></param>
         public List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<Metric> GetAllModels()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteModel(string metricId)
         {
             throw new NotImplementedException();
         }
@@ -2163,7 +2097,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         public Metric GetMetric(string metricId)
         {
-            return _metric.First(m => m.Uid == metricId);
+            if (_metric.Any(m => m.Uid == metricId))
+                return _metric.First(m => m.Uid == metricId);
+            throw new MetricNotFound();
         }
 
         public int GetMetricDataCount(string metricId)
@@ -2285,10 +2221,79 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             metric.Message = message;
         }
 
-        public List<MetricData> GetMetricData(string metricId)
+        public List<MetricData> GetMetricData(string metricId = null, long? rowId = null, long? start = null, long? stop = null, int? limit = null, DateTime? fromTimestamp = null, DateTime? toTimestamp = null,
+            double? score = null, Expression<Func<MetricData, object>> sort = null, bool? sortAsc = null)
         {
-            return _metricData.Where(md => md.MetricId == metricId).ToList();
+            var sel = _metricData.AsQueryable();
+
+            if (sort == null)
+            {
+                if (sortAsc.GetValueOrDefault())
+                {
+                    sel = sel.OrderBy(md => md.Rowid);
+                }
+                else
+                {
+                    sel = sel.OrderByDescending(md => md.Rowid);
+                }
+            }
+            else
+            {
+                if (sortAsc.GetValueOrDefault())
+                {
+                    sel = sel.OrderBy(sort);
+                }
+                else
+                {
+                    sel = sel.OrderByDescending(sort);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(metricId))
+            {
+                sel = sel.Where(md => md.Uid == metricId);
+            }
+            if (rowId.HasValue)
+            {
+                sel = sel.Where(md => md.Rowid == rowId.Value);
+            }
+            else if (fromTimestamp.HasValue || toTimestamp.HasValue)
+            {
+                if (fromTimestamp.HasValue)
+                {
+                    sel = sel.Where(md => md.Timestamp >= fromTimestamp.Value);
+                }
+                if (toTimestamp.HasValue)
+                {
+                    sel = sel.Where(md => md.Timestamp <= toTimestamp.Value);
+                }
+            }
+            else
+            {
+                if (start.HasValue)
+                {
+                    sel = sel.Where(md => md.Rowid >= start.Value);
+                }
+                if (stop.HasValue)
+                {
+                    sel = sel.Where(md => md.Rowid <= stop.Value);
+                }
+            }
+            if (limit.HasValue)
+            {
+                sel = sel.Take(limit.Value);
+            }
+            if (score.HasValue && score.Value > 0)
+            {
+                sel = sel.Where(md => md.AnomalyScore >= score);
+            }
+            else if (score.HasValue && score.Value == 0.0)
+            {
+                sel = sel.Where(md => md.AnomalyScore.HasValue);
+            }
+            return sel.ToList();
         }
+
         /// <summary>
         /// Add Metric Data
         /// </summary>
@@ -2308,6 +2313,17 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             }
             _metricData.AddRange(rows);
             return rows;
+        }
+
+        public List<Metric> GetAllModels()
+        {
+            return _metric;
+        }
+
+        public void DeleteModel(string metricId)
+        {
+            var metric = _metric.Single(m => m.Uid == metricId);
+            _metric.Remove(metric);
         }
     }
 
@@ -2408,15 +2424,25 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             });
         }
 
-        public List<object> SubmitRequests(string modelId, List<ModelInputRow> input)
+        public List<ModelInferenceResult> SubmitRequests(string modelId, List<ModelInputRow> input)
         {
-            List<object> results = new List<object>();
+            List<ModelInferenceResult> results = new List<ModelInferenceResult>();
             ModelRunner modelRunner = new ModelRunner(modelId);
             foreach (ModelInputRow row in input)
             {
                 results.Add(modelRunner.ProcessInputRow(row, null));
             }
             return results;
+        }
+
+        public void DeleteModel(string modelId, Guid commandId)
+        {
+            ModelRunner modelRunner = new ModelRunner(modelId);
+            modelRunner.DeleteModel(new ModelCommand
+            {
+                ModelId = modelId,
+                Id = commandId
+            });
         }
     }
 
@@ -2474,7 +2500,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="currentRunInputSamples">a list; the input row's data will be appended
         /// to this list if the row is processed successfully</param>
         /// <returns>a ModelInferenceResult instance</returns>
-        public object ProcessInputRow(ModelInputRow row, List<object> currentRunInputSamples)
+        public ModelInferenceResult ProcessInputRow(ModelInputRow row, List<object> currentRunInputSamples)
         {
             if (_model == null)
             {
@@ -2488,7 +2514,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             currentRunInputSamples?.Add(row.Data);
 
-            return new ModelInferenceResult(rowId: row.RowId, status: 0, anomalyScore: (double)r.inferences[InferenceElement.AnomalyScore]);
+            return new ModelInferenceResult(commandId: null, rowId: row.RowId, status: 0, anomalyScore: (double)r.inferences[InferenceElement.AnomalyScore]);
         }
 
         /// <summary>
@@ -2533,6 +2559,16 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 // TODO: check https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/model_swapper/model_runner.py
                 // that we need some extra lines
             }
+        }
+        /// <summary>
+        /// Handle the "deleteModel" command
+        /// </summary>
+        /// <param name="command">ModelCommand instance for the "deleteModel" command</param>
+        public ModelInferenceResult DeleteModel(ModelCommand command)
+        {
+            _checkpointMgr.Remove(modelId: _modelId);
+
+            return new ModelInferenceResult(commandId: command.Id, status: 0);
         }
     }
 
@@ -2623,7 +2659,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         private int? GetFieldIndexBySpecial(Map<string, Tuple<FieldMetaType, SensorFlags>> fields, SensorFlags sensorFlags)
         {
-            return fields.Values.Select(t=>t.Item2).ToList().IndexOf(sensorFlags);
+            return fields.Values.Select(t => t.Item2).ToList().IndexOf(sensorFlags);
         }
 
         /// <summary>
@@ -2682,12 +2718,14 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public class ModelInferenceResult
     {
-        private double anomalyScore;
-        private long rowId;
-        private int status;
+        private double? anomalyScore;
+        private long? rowId;
+        private int? status;
+        private Guid? commandId;
 
-        public ModelInferenceResult(long rowId, int status, double anomalyScore)
+        public ModelInferenceResult(Guid? commandId = null, long? rowId = null, int? status = null, double? anomalyScore = null)
         {
+            this.commandId = commandId;
             this.rowId = rowId;
             this.status = status;
             this.anomalyScore = anomalyScore;
@@ -2705,6 +2743,12 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
             modelSwapper.DefineModel(modelId: modelId, args: @params, commandId: Guid.NewGuid());
+        }
+
+        public static void DeleteHtmModel(string modelId)
+        {
+            ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
+            modelSwapper.DeleteModel(modelId: modelId, commandId: Guid.NewGuid());
         }
     }
 
@@ -2736,6 +2780,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             if (!_storedDefinitions.ContainsKey(modelId))
                 _storedDefinitions.Add(modelId, definition);
+        }
+
+        /// <summary>
+        /// Remove the model entry with the given model ID from storage
+        /// </summary>
+        /// <param name="modelId">model ID to remove</param>
+        public void Remove(string modelId)
+        {
+            _storedDefinitions.Remove(modelId);
         }
     }
 
