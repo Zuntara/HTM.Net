@@ -18,7 +18,7 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
     /// <summary>
     /// Implement https://github.com/numenta/numenta-apps/blob/master/htmengine/htmengine/runtime/metric_listener.py
     /// metriclistener to have the other side that fills up the datasamples
-    /// goes to metric_streamer through metric storer > database
+    /// goes to metric_streamer through metric_storer > database
     /// </summary>
     [TestClass]
     public class ModelsControllerApiTest
@@ -31,15 +31,15 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
             RepositoryFactory.Metric.MetricAdded += m =>
             {
                 // Add some data for this metric
-                RepositoryFactory.Metric.AddMetricData(m.Uid, new List<Tuple<double, DateTime>>
+                RepositoryFactory.Metric.AddMetricData(m.Uid, new List<Tuple<DateTime, double>>
                 {
-                    new Tuple<double, DateTime>(100, DateTime.Now.AddMinutes(-30)),
-                    new Tuple<double, DateTime>(101, DateTime.Now.AddMinutes(-25)),
-                    new Tuple<double, DateTime>(102, DateTime.Now.AddMinutes(-20)),
-                    new Tuple<double, DateTime>(101, DateTime.Now.AddMinutes(-15)),
-                    new Tuple<double, DateTime>(80, DateTime.Now.AddMinutes(-10)),
-                    new Tuple<double, DateTime>(120, DateTime.Now.AddMinutes(-5)),
-                    new Tuple<double, DateTime>(110, DateTime.Now.AddMinutes(0)),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-30), 100),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-25), 101),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-20), 102),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-15), 101),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-10), 80),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-5), 120),
+                    new Tuple<DateTime, double>(DateTime.Now.AddMinutes(0), 110),
                 });
             };
             // Add some metric data first
@@ -149,7 +149,7 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
                     };
                     createRequest.ModelParams = ModelParams.FromDict(metricVal.ModelParams);
 
-                    var result = app.Put(null, new[] {createRequest});
+                    var result = app.Put(null, new[] { createRequest });
                     Assert.IsNotNull(result);
                     Assert.IsInstanceOfType(result, typeof(CreatedNegotiatedContentResult<List<Metric>>));
                     CreatedNegotiatedContentResult<List<Metric>> created = (CreatedNegotiatedContentResult<List<Metric>>)result;
@@ -173,8 +173,8 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
 
                 }
             }
-           
-            
+
+
         }
 
         [TestMethod]
@@ -183,7 +183,7 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
             Mock<IDataSourceAdapter> mockDs = new Mock<IDataSourceAdapter>();
             mockDs.Setup(ds => ds.Datasource).Returns("custom");
             mockDs.Setup(ds => ds.UnmonitorMetric(It.IsAny<string>())).Verifiable();
-            
+
             Mock<IMetricRepository> mockRepo = new Mock<IMetricRepository>();
             mockRepo.Setup(mr => mr.GetMetric(It.IsAny<string>())).Returns(new Metric
             {
@@ -204,7 +204,7 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
             Assert.IsInstanceOfType(result, typeof(OkResult));
 
             mockDs.Verify(ds => ds.UnmonitorMetric(It.IsAny<string>()));
-            
+
         }
     }
 }

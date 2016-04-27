@@ -49,41 +49,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public string Uid { get; set; }
     }
 
-    /// <summary>
-    /// Anomaly Service for processing CLA model results, calculating Anomaly
-    ///     Likelihood scores, and updating the associated metric data records
-    ///     Records are processed in batches from
-    /// ``ModelSwapperInterface().consumeResults()`` and the associated
-    /// ``MetricData`` rows are updated with the results of applying
-    /// ``AnomalyLikelihoodHelper().updateModelAnomalyScores()`` and finally the
-    /// results are packaged up as as objects complient with
-    /// ``model_inference_results_msg_schema.json`` and published to the model
-    /// results exchange, as identified by the ``results_exchange_name``
-    /// configuration directive from the ``metric_streamer`` section of
-    /// ``config``.
-    /// Other services may be subscribed to the model results fanout exchange for
-    /// subsequent(and parallel) processing.For example,
-    /// ``htmengine.runtime.notification_service.NotificationService`` is one example
-    /// of a use-case for that exchange.Consumers must deserialize inbound messages
-    /// with ``AnomalyService.deserializeModelResult()``.
-    /// </summary>
-    public class AnomalyService
-    {
-        private readonly ILog _log = LogManager.GetLogger(typeof(AnomalyService));
-        private bool _profiling;
-        private int _statisticsSampleSize;
-        private string _modelResultsExchange;
-        private AnomalyLikelihoodHelper _likelihoodHelper;
-
-        public AnomalyService()
-        {
-            _profiling = _log.IsDebugEnabled;
-            _modelResultsExchange = ""; // from config
-            _statisticsSampleSize = 10; // from config
-            _likelihoodHelper = new AnomalyLikelihoodHelper(_log);
-
-        }
-    }
+    
 
     // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/().py
 
@@ -837,30 +803,91 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     public interface IDataSourceAdapter
     {
         string ImportModel(ModelSpec modelSpec);
+        /// <summary>
+        /// Start monitoring a metric; perform model creation logic specific to custom metrics.
+        /// Start the model if possible: this will happen if modelParams includes both
+        /// "min" and "max" or there is enough data to estimate them.
+        /// </summary>
+        /// <param name="modelSpec">model specification for HTM model; per ``model_spec_schema.json`` 
+        /// with the ``metricSpec`` property per ``custom_metric_spec_schema.json``</param>
+        /// <remarks>
+        /// 1st variant: `uid` is the unique id of an existing metric;
+        /// # TODO: it would be preferable to punt on this variant, and refer
+        /// #  to custom metric by name in modelSpec for consistency with
+        /// # import/export. Web GUI uses metric name; some tests use this variant,
+        /// # though.
+        /// {
+        ///     "datasource": "custom",
+        ///     "metricSpec": {
+        ///         "uid": "4a833e2294494b4fbc5004e03bad45b6",
+        ///         "unit": "Count",  # optional
+        ///         "resource": "prod.web1",  # optional
+        ///         "userInfo": {"symbol": "<TICKER_SYMBOL>"} # optional
+        ///     },
+        ///     # Optional model params
+        ///     "modelParams": {
+        ///         "min": min-value,  # optional
+        ///         "max": max-value  # optional
+        ///     }
+        /// }
+        ///  ::
+        ///  2nd variant: `metric` is the unique name of the metric; a new custom
+        ///  metric row will be created with this name, if it doesn't exit
+        ///    {
+        ///      "datasource": "custom",
+        ///      "metricSpec": {
+        ///        "metric": "prod.web.14.memory",
+        ///        "unit": "Count",  # optional
+        ///        "resource": "prod.web1",  # optional
+        ///        "userInfo": {"symbol": "<TICKER_SYMBOL>"} # optional
+        ///      },
+        ///      # Optional model params
+        ///      "modelParams": {
+        ///        "min": min-value,  # optional
+        ///        "max": max-value  # optional
+        ///      }
+        ///    }
+        /// </remarks>
+        /// <returns>datasource-specific unique model identifier</returns>
         string MonitorMetric(ModelSpec modelSpec);
+        /// <summary>
+        /// Unmonitor a metric
+        /// </summary>
+        /// <param name="metricId">unique identifier of the metric row</param>
         void UnmonitorMetric(string metricId);
 
+        /// <summary>
+        /// Start a model that is PENDING_DATA, creating the OPF/CLA model
+        /// NOTE: used by MetricStreamer when model is in PENDING_DATA state and
+        /// sufficient data samples are available to get statistics and complete model
+        /// creation.
+        /// </summary>
+        /// <param name="metricId">unique identifier of the metric row</param>
+        void ActivateModel(string metricId);
         string Datasource { get; }
+        /// <summary>
+        /// Create scalar HTM metric if it doesn't exist
+        /// </summary>
+        /// <param name="metricId"></param>
+        /// <returns></returns>
+        string CreateMetric(string metricId);
     }
 
-    // https://github.com/numenta/numenta-apps/blob/master/htmengine/htmengine/adapters/datasource/custom/__init__.py
+    /// <summary>
+    /// https://github.com/numenta/numenta-apps/blob/master/htmengine/htmengine/adapters/datasource/custom/__init__.py
+    /// </summary>
     public class CustomDatasourceAdapter : IDataSourceAdapter
     {
         private readonly ILog _log = LogManager.GetLogger(typeof(CustomDatasourceAdapter));
         /// <summary>
         /// Minimum records needed before creating a model; assumes 24 hours worth of 5-minute data samples
         /// </summary>
-        private const int MODEL_CREATION_RECORD_THRESHOLD = (60 / 5) * 24;
+        public const int MODEL_CREATION_RECORD_THRESHOLD = (60 / 5) * 24;
 
         // Default metric period value to use when it's unknown
         // TODO: Should we use 0 since it's unknown "unknown" or default to 5 min?
         // Consider potential impact on web charts, htm-it-mobile
         public const int DEFAULT_METRIC_PERIOD = 300;  // 300 sec = 5 min
-
-        public CustomDatasourceAdapter()
-        {
-
-        }
 
         public string ImportModel(ModelSpec modelSpec)
         {
@@ -971,9 +998,24 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return metricId;
         }
 
-        public string ActivateModel()
+        /// <summary>
+        /// Start a model that is PENDING_DATA, creating the OPF/CLA model
+        /// NOTE: used by MetricStreamer when model is in PENDING_DATA state and
+        /// sufficient data samples are available to get statistics and complete model
+        /// creation.
+        /// </summary>
+        /// <param name="metricId">unique identifier of the metric row</param>
+        public void ActivateModel(string metricId)
         {
-            throw new NotImplementedException("Needed when we receive data");
+            var metricObj = RepositoryFactory.Metric.GetMetric(metricId);
+            if (metricObj.DataSource != Datasource)
+            {
+                throw new InvalidOperationException(string.Format("activateModel: not an HTM metric={0}; datasource={1}",
+                    metricId, metricObj.DataSource));
+            }
+            var stats = GetMetricStatistics(metricId);
+            var swarmParams = ScalarMetricUtils.GenerateSwarmParams(stats);
+            ScalarMetricUtils.StartModel(metricId, swarmParams: swarmParams, logger: _log);
         }
 
         /// <summary>
@@ -1080,7 +1122,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="metricName">name of the HTM metric</param>
         /// <returns>unique metric identifier</returns>
-        private string CreateMetric(string metricName)
+        public string CreateMetric(string metricName)
         {
             var resource = MakeDefaultResourceName(metricName);
 
@@ -1105,286 +1147,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             return metricName;
         }
-    }
 
-    /// <summary>
-    /// https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/runtime/scalar_metric_utils.py
-    /// </summary>
-    public class ScalarMetricUtils
-    {
-        /// <summary>
-        /// Generate parameters for creating a model
-        /// </summary>
-        /// <param name="stats">dict with "min", "max" and optional "minResolution"; values must be integer, float or null.</param>
-        /// <returns>if either minVal or maxVal is None, returns None; otherwise returns
-        /// swarmParams object that is suitable for passing to startMonitoring and
-        /// startModel</returns>
-        public static BestSingleMetricAnomalyParamsDescription GenerateSwarmParams(MetricStatistic stats)
-        {
-            var minVal = stats.Min;
-            var maxVal = stats.Max;
-            var minResolution = stats.MinResolution;
-            if (minVal == null || maxVal == null)
-            {
-                return null;
-            }
-            // Create possible swarm parameters based on metric data
-            BestSingleMetricAnomalyParamsDescription swarmParams =
-                GetScalarMetricWithTimeOfDayAnomalyParams(metricData: new[] { 0 }, minVal: minVal, maxVal: maxVal, minResolution: minResolution);
-
-            // 
-            swarmParams.inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
-            {
-                {"c0", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp )} ,
-                {"c1", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank ) },
-            };
-            /*
-             swarmParams["inputRecordSchema"] = (
-                fieldmeta.FieldMetaInfo("c0", fieldmeta.FieldMetaType.datetime,
-                                        fieldmeta.FieldMetaSpecial.timestamp),
-                fieldmeta.FieldMetaInfo("c1", fieldmeta.FieldMetaType.float,
-                                        fieldmeta.FieldMetaSpecial.none),
-              )
-             */
-            return swarmParams;
-        }
-
-        // https://github.com/numenta/nupic/blob/a5a7f52e39e30c5356c561547fc6ac3ffd99588c/src/nupic/frameworks/opf/common_models/cluster_params.py
-
-        /// <summary>
-        /// Return a dict that can be used to create an anomaly model via OPF's ModelFactory.
-        /// </summary>
-        /// <param name="metricData">numpy array of metric data. Used to calculate minVal and maxVal if either is unspecified</param>
-        /// <param name="minVal">Minimum value of metric. Used to set up encoders. If null will be derived from metricData.</param>
-        /// <param name="maxVal">Maximum value of metric. Used to set up input encoders. If null will be derived from metricData</param>
-        /// <param name="minResolution">minimum resolution of metric. Used to set up encoders.If None, will use default value of 0.001.</param>
-        /// <returns>
-        /// a dict containing "modelConfig" and "inferenceArgs" top-level properties.
-        /// The value of the "modelConfig" property is for passing to the OPF `ModelFactory.create()` method as the `modelConfig` parameter.
-        /// The "inferenceArgs" property is for passing to the resulting model's `enableInference()` method as the inferenceArgs parameter.
-        /// 
-        /// NOTE: the timestamp field corresponds to input "c0"; 
-        /// the predicted field corresponds to input "c1".
-        /// </returns>
-        /// <remarks>
-        /// Example:
-        ///    from nupic.frameworks.opf.modelfactory import ModelFactory
-        /// 
-        ///    from nupic.frameworks.opf.common_models.cluster_params import (
-        /// 
-        ///      getScalarMetricWithTimeOfDayAnomalyParams)
-        ///  params = getScalarMetricWithTimeOfDayAnomalyParams(
-        ///    metricData=[0],
-        ///    minVal= 0.0,
-        ///    maxVal= 100.0)
-        ///  model = ModelFactory.create(modelConfig=params["modelConfig"])
-        ///  model.enableLearning()
-        ///  model.enableInference(params["inferenceArgs"])
-        /// </remarks>
-        private static BestSingleMetricAnomalyParamsDescription GetScalarMetricWithTimeOfDayAnomalyParams(int[] metricData, double? minVal, double? maxVal, double? minResolution)
-        {
-            // Default values
-            if (!minResolution.HasValue) minResolution = 0.001;
-            // Compute min and/or max from the data if not specified
-            if (!minVal.HasValue || !maxVal.HasValue)
-            {
-                var rangeGen = RangeGen(metricData);
-                if (!minVal.HasValue)
-                {
-                    minVal = (double?)rangeGen.Get(0);
-                }
-                if (!maxVal.HasValue)
-                {
-                    maxVal = (double?)rangeGen.Get(1);
-                }
-            }
-            //  Handle the corner case where the incoming min and max are the same
-            if (minVal == maxVal)
-            {
-                maxVal = minVal + 1;
-            }
-            // Load model parameters and update encoder params
-            var paramSet = BestSingleMetricAnomalyParamsDescription.BestSingleMetricAnomalyParams;
-            FixupRandomEncoderParams(paramSet, minVal, maxVal, minResolution);
-            return paramSet;
-        }
-
-        /// <summary>
-        /// Return reasonable min/max values to use given the data.
-        /// </summary>
-        /// <returns></returns>
-        private static Tuple RangeGen(int[] data, int std = 1)
-        {
-            double average = data.Average();
-            double sumOfSquaresOfDifferences = data.Select(val => (val - average) * (val - average)).Sum();
-            double dataStd = Math.Sqrt(sumOfSquaresOfDifferences / data.Length);
-
-            if (Math.Abs(dataStd) < double.Epsilon)
-            {
-                dataStd = 1;
-            }
-            double minval = ArrayUtils.Min(data) - std * dataStd;
-            double maxval = ArrayUtils.Max(data) + std * dataStd;
-            return new Tuple(minval, maxval);
-        }
-
-        /// <summary>
-        /// Given model params, figure out the correct parameters for the RandomDistributed encoder.
-        /// Modifies params in place.
-        /// </summary>
-        /// <param name="paramSet"></param>
-        /// <param name="minVal"></param>
-        /// <param name="maxVal"></param>
-        /// <param name="minResolution"></param>
-        private static void FixupRandomEncoderParams(BestSingleMetricAnomalyParamsDescription paramSet, double? minVal, double? maxVal,
-            double? minResolution)
-        {
-            Map<string, Map<string, object>> encodersDict = paramSet.modelConfig.modelParams.sensorParams.encoders;
-            foreach (var encoder in encodersDict.Values)
-            {
-                if (encoder != null)
-                {
-                    if (encoder["type"] == "RandomDistributedScalarEncoder")
-                    {
-                        var resolution = Math.Max(minResolution.Value,
-                            (maxVal.Value - minVal.Value) / (double)encoder["numBuckets"]);
-                        encoder.Remove("numBuckets");
-                        encodersDict["c1"]["resolution"] = resolution;
-                    }
-                }
-            }
-        }
-        /// <summary>
-        /// Start monitoring an UNMONITORED metric.
-        /// NOTE: typically called either inside a transaction and/or with locked tables
-        /// Starts the CLA model if provided non-None swarmParams; otherwise defers model
-        /// creation to a later time and places the metric in MetricStatus.PENDING_DATA state.
-        /// </summary>
-        /// <param name="metricId">unique identifier of the metric row</param>
-        /// <param name="swarmParams">swarmParams generated via scalar_metric_utils.generateSwarmParams() or None.</param>
-        /// <param name="logger">logger object</param>
-        /// <returns> True if model was started; False if not</returns>
-        public static bool StartMonitoring(string metricId, BestSingleMetricAnomalyParamsDescription swarmParams, ILog logger)
-        {
-            bool modelStarted = false;
-            DateTime startTime = DateTime.Now;
-            Metric metricObj = RepositoryFactory.Metric.GetMetric(metricId);
-            Debug.Assert(metricObj.Status == MetricStatus.Unmonitored);
-
-            if (swarmParams != null)
-            {
-                // We have swarmParams, so start the model
-                modelStarted = StartModelHelper(metricObj, swarmParams, logger);
-            }
-            else
-            {
-                // Put the metric into the PENDING_DATA state until enough data arrives for
-                // stats
-                MetricStatus refStatus = metricObj.Status;
-                RepositoryFactory.Metric.SetMetricStatus(metricId, MetricStatus.PendingData, refStatus: refStatus);
-                // refresh
-                var metricStatus = RepositoryFactory.Metric.GetMetric(metricId).Status;
-                if (metricStatus == MetricStatus.PendingData)
-                {
-                    logger.InfoFormat(
-                        "startMonitoring: promoted metric to model in PENDING_DATA; metric={0}; duration={1}",
-                        metricId, DateTime.Now - startTime);
-                }
-                else
-                {
-                    throw new InvalidOperationException("metric status change failed");
-                }
-            }
-            return modelStarted;
-        }
-        /// <summary>
-        /// Start the model
-        /// </summary>
-        /// <param name="metricObj">metric, freshly-loaded</param>
-        /// <param name="swarmParams">non-None swarmParams generated via GenerateSwarmParams().</param>
-        /// <param name="logger">logger object</param>
-        /// <returns>True if model was started; False if not</returns>
-        private static bool StartModelHelper(Metric metricObj, BestSingleMetricAnomalyParamsDescription swarmParams, ILog logger)
-        {
-            if (swarmParams == null)
-                throw new ArgumentNullException("swarmParams", "startModel: 'swarmParams' must be non-None: metric=" + metricObj.Uid);
-
-            string metricName = metricObj.Name;
-
-            if (!new[] { MetricStatus.Unmonitored, MetricStatus.PendingData, }.Contains(metricObj.Status))
-            {
-                if (new[] { MetricStatus.CreatePending, MetricStatus.Active, }.Contains(metricObj.Status))
-                {
-                    return false;
-                }
-                logger.ErrorFormat("Unexpected metric status; metric={0}", metricObj.Uid);
-                throw new InvalidOperationException(string.Format("startModel: unexpected metric status; metric={0}", metricObj.Uid));
-            }
-
-            var startTime = DateTime.Now;
-
-            // Save swarm parameters and update metric status
-            MetricStatus refStatus = metricObj.Status;
-            RepositoryFactory.Metric.UpdateMetricColumnsForRefStatus(metricObj.Uid, refStatus,
-                new Map<string, object>
-                {
-                    {"status", MetricStatus.CreatePending},
-                    {"modelParams", JsonConvert.SerializeObject(swarmParams)}
-                });
-
-            metricObj = RepositoryFactory.Metric.GetMetric(metricObj.Uid);
-
-            if (metricObj.Status != MetricStatus.CreatePending)
-            {
-                throw new MetricsChangeError("startModel: unable to start model={0}; metric status morphed from {1} to {2}",
-                    metricObj.Uid, refStatus, metricObj.Status);
-            }
-
-            // Request to create the CLA Model
-            try
-            {
-                ModelSwapperUtils.CreateHtmModel(metricObj.Uid, swarmParams);
-            }
-            catch (Exception e)
-            {
-                logger.ErrorFormat("startModel: createHTMModel failed. -> {0}", e);
-                RepositoryFactory.Metric.SetMetricStatus(metricObj.Uid, MetricStatus.Error, message: e.ToString());
-                throw;
-            }
-
-            logger.InfoFormat("startModel: started model uid={0}, name={1}; duration={2}",
-                metricObj.Uid, metricName, DateTime.Now - startTime);
-
-            return true;
-        }
-
-        /// <summary>
-        /// Send backlog data to OPF/CLA model. Do not call this before starting the  model.
-        /// </summary>
-        /// <param name="metricId">unique identifier of the metric row</param>
-        /// <param name="logger">logger object</param>
-        public static void SendBacklogDataToModel(string metricId, ILog logger)
-        {
-            List<ModelInputRow> backlogData = RepositoryFactory.Metric.GetMetricData(metricId)
-                .Select(md => new ModelInputRow(rowId: md.Rowid,
-                    data: new List<string>
-                    {
-                        md.Timestamp.ToString("G"),
-                        md.MetricValue.ToString(NumberFormatInfo.InvariantInfo)
-                    }))
-                .ToList();
-
-            if (backlogData != null && backlogData.Any())
-            {
-                ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
-
-                ModelDataFeeder.SendInputRowsToModel(modelId: metricId, inputRows: backlogData, batchSize: 100,
-                    modelSwapper: modelSwapper, logger: logger, profiling: logger.IsDebugEnabled);
-            }
-
-            logger.InfoFormat("sendBacklogDataToModel: sent {0} backlog data rows to model={1}",
-                backlogData.Count, metricId);
-        }
     }
 
     #region Swarming model stuff
@@ -1943,10 +1706,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="metricId">Metric uid</param>
         /// <param name="data"></param>
-        List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data);
+        List<MetricData> AddMetricData(string metricId, List<Tuple<DateTime, double>> data);
 
         List<Metric> GetAllModels();
         void DeleteModel(string metricId);
+        List<Metric> GetCustomMetrics();
     }
 
     /// <summary>
@@ -2065,7 +1829,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="metricId">Metric uid</param>
         /// <param name="data"></param>
-        public List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data)
+        public List<MetricData> AddMetricData(string metricId, List<Tuple<DateTime, double>> data)
         {
             throw new NotImplementedException();
         }
@@ -2076,6 +1840,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         }
 
         public void DeleteModel(string metricId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<Metric> GetCustomMetrics()
         {
             throw new NotImplementedException();
         }
@@ -2299,7 +2068,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="metricId">Metric uid</param>
         /// <param name="data"></param>
-        public List<MetricData> AddMetricData(string metricId, List<Tuple<double, DateTime>> data)
+        public List<MetricData> AddMetricData(string metricId, List<Tuple<DateTime, double>> data)
         {
             int numRows = data.Count;
             if (numRows == 0)
@@ -2309,7 +2078,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             foreach (var pair in data)
             {
-                rows.Add(new MetricData(metricId, pair.Item2, pair.Item1, null, _lastRowId++));
+                rows.Add(new MetricData(metricId, pair.Item1, pair.Item2, null, _lastRowId++));
             }
             _metricData.AddRange(rows);
             return rows;
@@ -2324,6 +2093,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             var metric = _metric.Single(m => m.Uid == metricId);
             _metric.Remove(metric);
+        }
+
+        public List<Metric> GetCustomMetrics()
+        {
+            return _metric.Where(m => m.DataSource == "custom").ToList();
         }
     }
 
@@ -2410,7 +2184,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// </summary>
     public class ModelSwapperInterface
     {
-        public void DefineModel(string modelId, BestSingleMetricAnomalyParamsDescription args, Guid commandId)
+        public void DefineModel(string modelId, IDescription args, Guid commandId)
         {
             // Sends defineModel command over the bus, for now we ignore the bus system
             // Calls the modelRunner which is the other end of the bus system.
@@ -2526,7 +2300,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         {
             if (_model == null)
             {
-                DescriptionBase modelDefinition = null;
+                IDescription modelDefinition = null;
                 try
                 {
                     _model = _checkpointMgr.Load(_modelId);
@@ -2713,7 +2487,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public Guid Id { get; set; }
         public string ModelId { get; set; }
 
-        public BestSingleMetricAnomalyParamsDescription Args { get; set; }
+        public IDescription Args { get; set; }
     }
 
     public class ModelInferenceResult
@@ -2739,7 +2513,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="modelId"> unique identifier of the metric row</param>
         /// <param name="params">model params for creating a scalar model per ModelSwapper interface</param>
-        public static void CreateHtmModel(string modelId, BestSingleMetricAnomalyParamsDescription @params)
+        public static void CreateHtmModel(string modelId, IDescription @params)
         {
             ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
             modelSwapper.DefineModel(modelId: modelId, args: @params, commandId: Guid.NewGuid());
@@ -2754,7 +2528,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public class CheckPointManager
     {
-        private static Dictionary<string, DescriptionBase> _storedDefinitions = new Dictionary<string, DescriptionBase>();
+        private static Dictionary<string, IDescription> _storedDefinitions = new Dictionary<string, IDescription>();
 
         /// <summary>
         /// Retrieve a model instance from checkpoint.
@@ -2766,7 +2540,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             throw new ModelNotFound();
         }
 
-        public DescriptionBase LoadModelDefinition(string modelId)
+        public IDescription LoadModelDefinition(string modelId)
         {
             var definition = _storedDefinitions
                 .Where(sd => sd.Key == modelId)
@@ -2776,7 +2550,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return definition;
         }
 
-        public void Define(string modelId, DescriptionBase definition)
+        public void Define(string modelId, IDescription definition)
         {
             if (!_storedDefinitions.ContainsKey(modelId))
                 _storedDefinitions.Add(modelId, definition);
@@ -2789,45 +2563,6 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public void Remove(string modelId)
         {
             _storedDefinitions.Remove(modelId);
-        }
-    }
-
-    public class ModelDataFeeder
-    {
-        /// <summary>
-        /// Send input rows to CLA model for processing
-        /// </summary>
-        /// <param name="modelId">unique identifier of the model</param>
-        /// <param name="inputRows">sequence of model_swapper_interface.ModelInputRow objects</param>
-        /// <param name="batchSize">max number of data records per input batch</param>
-        /// <param name="modelSwapper">model_swapper_interface.ModelSwapperInterface object</param>
-        /// <param name="logger">logger object</param>
-        /// <param name="profiling">True if profiling is enabled</param>
-        public static void SendInputRowsToModel(string modelId, List<ModelInputRow> inputRows, int batchSize,
-            ModelSwapperInterface modelSwapper, ILog logger, bool profiling)
-        {
-            logger.DebugFormat("Streaming numRecords={0} to model={1}", inputRows.Count, modelId);
-
-            // Stream data to HTM model in batches
-            // TODO: now it stream everything, chunk it
-            //foreach (var batch in inputRows)
-            var batch = inputRows;
-            {
-                DateTime startTime = DateTime.Now;
-
-                var batchId = modelSwapper.SubmitRequests(modelId, batch);
-
-                if (profiling)
-                {
-                    var headTS = batch.First().Data.First();
-                    var tailTS = batch.Last().Data.First();
-                    logger.InfoFormat(
-                        "{{TAG:STRM.DATA.TO_MODEL.DONE}} Submitted batch={0} to model={1}; numRows={2}; rows=[{3}]; ts=[{4}]; duration={5}s",
-                        batchId, modelId, batch.Count,
-                        string.Format("{0}..{1}", batch.First().RowId, batch.Last().RowId),
-                        string.Format("{0}..{1}", headTS, tailTS), DateTime.Now - startTime);
-                }
-            }
         }
     }
 

@@ -102,6 +102,7 @@
     <Compile Include="Swarming\PermutationHelpers.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />
+    <Compile Include="Taurus\HtmEngine\runtime\MetricStorer.cs" />
     <Compile Include="Taurus\HtmEngine\runtime\MutableMetricDataRow.cs" />
     <Compile Include="Vision\BitmapExtentions.cs" />
     <Compile Include="Vision\DatasetReader.cs" />
