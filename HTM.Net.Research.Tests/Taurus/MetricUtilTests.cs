@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using HTM.Net.Research.Taurus.MetricCollectors;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Research.Tests.Taurus

@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Taurus.HtmEngine.Adapters;
+using HTM.Net.Research.Taurus.HtmEngine.Repository;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -272,7 +274,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="logger">logger object</param>
         public static void SendBacklogDataToModel(string metricId, ILog logger)
         {
-            List<ModelInputRow> backlogData = RepositoryFactory.Metric.GetMetricData(metricId)
+            List<ModelInputRow> backlogData = RepositoryFactory.MetricData.GetMetricData(metricId)
                 .Select(md => new ModelInputRow(rowId: md.Rowid,
                     data: new List<string>
                     {
@@ -431,7 +433,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             timestamp = _tailInputMetricDataTimestamps.Get(metricId, null);
             if (timestamp == null)
             {
-                var rows = RepositoryFactory.Metric.GetMetricData(metricId, rowId: lastDataRowId);
+                var rows = RepositoryFactory.MetricData.GetMetricData(metricId, rowId: lastDataRowId);
                 if (rows.Count > 0 && rows.Any())
                 {
                     timestamp = rows.First().Timestamp;
@@ -455,7 +457,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 // repository.AddMetricData expects samples as pairs of (value, timestamp)
                 var rowData = data.Select(d => new Tuple<DateTime, double>(d.Timestamp, d.MetricValue)).ToList();
                 // Save new metric data in metric table
-                var rows = RepositoryFactory.Metric.AddMetricData(metricId, rowData);
+                var rows = RepositoryFactory.MetricData.AddMetricData(metricId, rowData);
                 // Update tail metric data timestamp cache for metrics stored by us
                 _tailInputMetricDataTimestamps[metricId] = rows.Last().Timestamp;
                 // Add newly-stored records to batch for sending to CLA model
@@ -498,7 +500,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
             Func<Tuple<List<ModelInputRow>, string, MetricStatus>> storeDataWithRetries = () =>
             {
-                List<ModelInputRow> modelInputRowsResult = null;
+                List<ModelInputRow> modelInputRowsResult;
                 var metricObj = RepositoryFactory.Metric.GetMetric(metricId);
 
                 if (metricObj.Status != MetricStatus.Unmonitored &&

@@ -102,8 +102,22 @@
     <Compile Include="Swarming\PermutationHelpers.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />
-    <Compile Include="Taurus\HtmEngine\runtime\MetricStorer.cs" />
-    <Compile Include="Taurus\HtmEngine\runtime\MutableMetricDataRow.cs" />
+    <Compile Include="Taurus\HtmEngine\Adapters\CustomDatasourceAdapter.cs" />
+    <Compile Include="Taurus\HtmEngine\Adapters\DataAdapterFactory.cs" />
+    <Compile Include="Taurus\HtmEngine\Adapters\IDataSourceAdapter.cs" />
+    <Compile Include="Taurus\HtmEngine\AnomalyLikelihoodHelper.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\IMetricDataRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\IMetricRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\Metric.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\MetricData.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\MetricDataMemRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\MetricMemRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\MetricSqlRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\RepositoryFactory.cs" />
+    <Compile Include="Taurus\HtmEngine\Runtime\MetricStorer.cs" />
+    <Compile Include="Taurus\HtmEngine\Runtime\MutableMetricDataRow.cs" />
+    <Compile Include="Taurus\MetricCollectors\MetricUtils.cs" />
+    <Compile Include="Taurus\MetricCollectors\Repository.cs" />
     <Compile Include="Vision\BitmapExtentions.cs" />
     <Compile Include="Vision\DatasetReader.cs" />
     <Compile Include="Vision\ExactMatch.cs" />
@@ -141,7 +155,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Taurus\HtmEngine\runtime\Readme.txt" />
+    <Content Include="Taurus\HtmEngine\Runtime\Readme.txt" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">

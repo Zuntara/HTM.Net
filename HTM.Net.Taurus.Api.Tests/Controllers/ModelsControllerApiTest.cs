@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Web.Http;
 using System.Web.Http.Results;
+using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using HTM.Net.Taurus.Api;
+using HTM.Net.Research.Taurus.HtmEngine.Repository;
+using HTM.Net.Research.Taurus.MetricCollectors;
 using HTM.Net.Taurus.Api.Controllers;
 using log4net;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 
@@ -31,7 +30,7 @@ namespace HTM.Net.Taurus.Api.Tests.Controllers
             RepositoryFactory.Metric.MetricAdded += m =>
             {
                 // Add some data for this metric
-                RepositoryFactory.Metric.AddMetricData(m.Uid, new List<Tuple<DateTime, double>>
+                RepositoryFactory.MetricData.AddMetricData(m.Uid, new List<Tuple<DateTime, double>>
                 {
                     new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-30), 100),
                     new Tuple<DateTime, double>(DateTime.Now.AddMinutes(-25), 101),

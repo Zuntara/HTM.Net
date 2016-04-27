@@ -4,7 +4,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
 using System.Web.Http;
+using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using HTM.Net.Research.Taurus.HtmEngine.Repository;
+using HTM.Net.Research.Taurus.MetricCollectors;
 
 namespace HTM.Net.Taurus.Api.Controllers
 {
@@ -260,7 +263,7 @@ namespace HTM.Net.Taurus.Api.Controllers
             Expression<Func<MetricData, object>> sort = metricData => metricData.Timestamp;
             var sortAsc = @from.HasValue;
 
-            var result = RepositoryFactory.Metric.GetMetricData(metricId: id, fromTimestamp:from, toTimestamp: to, 
+            var result = RepositoryFactory.MetricData.GetMetricData(metricId: id, fromTimestamp:from, toTimestamp: to, 
                 score: anomaly, limit: limit, sort: sort, sortAsc: sortAsc);
 
 

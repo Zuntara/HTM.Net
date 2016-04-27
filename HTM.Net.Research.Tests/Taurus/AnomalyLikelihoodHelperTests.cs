@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Algorithms;
+using HTM.Net.Research.Taurus.HtmEngine;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using HTM.Net.Research.Taurus.HtmEngine.Repository;
 using HTM.Net.Util;
 using log4net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
