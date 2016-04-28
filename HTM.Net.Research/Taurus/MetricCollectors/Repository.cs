@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Threading;
+using System.Threading.Tasks;
+using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using log4net;
 using Newtonsoft.Json;
 
 namespace HTM.Net.Research.Taurus.MetricCollectors
@@ -180,6 +184,114 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
         public string msg_uid { get; set; }
         public DateTime agg_ts { get; set; }
         public DateTime? stored_at { get; set; }
+    }
+
+    // TODO: foresee an extra task for storing the picked up data (and manipulate if needed)
+    /// <summary>
+    /// Base class for agents who collect metrics
+    /// </summary>
+    public abstract class MetricCollectorAgent
+    {
+        protected readonly ILog Log = LogManager.GetLogger(typeof(CustomDatasourceAdapter));
+
+        protected MetricCollectorAgent()
+        {
+            CancellationTokenSource = new CancellationTokenSource();
+            CollectionTask = new Task(ExecuteCollectionTask, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
+            GarbageCollectionTask = new Task(ExecuteGarbageCollectionTask, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
+            ForwarderTask = new Task(ExecuteForwarderTask, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
+        }
+
+        protected abstract void ExecuteCollectionTask();
+        protected abstract void ExecuteGarbageCollectionTask();
+        protected abstract void ExecuteForwarderTask();
+
+        public void StartCollector()
+        {
+            Log.InfoFormat("Starting up the agent...");
+            IsCanceled = false;
+            CollectionTask.Start();
+            GarbageCollectionTask.Start();
+            ForwarderTask.Start();
+
+            CollectionTask.ContinueWith(DoTaskCompletionJob);
+            GarbageCollectionTask.ContinueWith(DoTaskCompletionJob);
+            ForwarderTask.ContinueWith(DoTaskCompletionJob);
+        }
+
+        protected virtual void DoTaskCompletionJob(Task parentTask)
+        {
+            if (parentTask.Status == TaskStatus.Faulted)
+            {
+                Log.ErrorFormat("Task failed with exception: {0}", parentTask.Exception);
+            }
+            else
+            {
+                Log.InfoFormat("Task ended with status {0}", parentTask.Status);
+            }
+        }
+
+        public void StopCollector()
+        {
+            Log.InfoFormat("Shutting down the agent...");
+            IsCanceled = true;
+            CancellationTokenSource.Cancel();
+            try
+            {
+                Task.WaitAll(CollectionTask, GarbageCollectionTask, ForwarderTask);
+            }
+            catch
+            {
+                // We may suppress this
+            }
+        }
+
+        public bool IsCanceled { get; protected set; }
+        public Task CollectionTask { get;  }
+        protected CancellationTokenSource CancellationTokenSource { get; }
+        public Task GarbageCollectionTask { get; }
+        public Task ForwarderTask { get;  }
+    }
+
+    public class TwitterCollectorAgent : MetricCollectorAgent
+    {
+        protected override void ExecuteCollectionTask()
+        {
+            while (!CancellationTokenSource.IsCancellationRequested)
+            {
+                // TODO: monitor twitter and send data to internal queue to be picked up
+                // by storer and then by forwarder
+                Thread.Sleep(1);
+            }
+            if (CancellationTokenSource.IsCancellationRequested)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            }
+        }
+
+        protected override void ExecuteGarbageCollectionTask()
+        {
+            while (!CancellationTokenSource.IsCancellationRequested)
+            {
+                Thread.Sleep(1);
+            }
+            if (CancellationTokenSource.IsCancellationRequested)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            }
+        }
+
+        protected override void ExecuteForwarderTask()
+        {
+            while (!CancellationTokenSource.IsCancellationRequested)
+            {
+                Thread.Sleep(1);
+            }
+            if (CancellationTokenSource.IsCancellationRequested)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            }
+        }
     }
 
     // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/taurus.metric_collectors/taurus/metric_collectors/twitterdirect/twitter_direct_agent.py
