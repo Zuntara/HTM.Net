@@ -9,6 +9,7 @@ using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 using HTM.Net.Research.Taurus.HtmEngine.Repository;
+using HTM.Net.Research.Taurus.MetricCollectors;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -373,15 +374,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     // TODO: unit-test
                     rejectedDataTimestamps.Add(timestamp);
                     _log.ErrorFormat("Rejected input sample older than previous ts={0} ({1}): metric={2}; rejectedTs={3} ({4}); rejectedValue={5}",
-                       prevSampleTimestamp, EpochFromNaiveUTCDatetime(prevSampleTimestamp), metricId,
-                       timestamp, EpochFromNaiveUTCDatetime(timestamp), metricValue);
+                       prevSampleTimestamp, MetricUtils.EpochFromNaiveUTCDatetime(prevSampleTimestamp), metricId,
+                       timestamp, MetricUtils.EpochFromNaiveUTCDatetime(timestamp), metricValue);
                 }
                 else if (timestamp == prevSampleTimestamp)
                 {
                     // Reject it; this could be the result of guaranteed delivery via message
                     // publish retry following transient connection loss with the message bus
                     _log.ErrorFormat("Rejected input sample with duplicate ts={0} ({1}): metric={2}; rejectedValue={3}",
-                        prevSampleTimestamp, EpochFromNaiveUTCDatetime(prevSampleTimestamp), metricId,
+                        prevSampleTimestamp, MetricUtils.EpochFromNaiveUTCDatetime(prevSampleTimestamp), metricId,
                         metricValue);
                     rejectedDataTimestamps.Add(timestamp);
                 }
@@ -402,10 +403,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return passingSamples;
         }
 
-        private object EpochFromNaiveUTCDatetime(DateTime? dt)
-        {
-            return (dt.GetValueOrDefault() - new DateTime(0, DateTimeKind.Utc)).TotalSeconds;
-        }
+
 
         /// <summary>
         /// TODO: unit-test
@@ -760,7 +758,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 }
                 else
                 {
-                    data.Add(m.MetricName, new List<MetricDataSample> {sample});
+                    data.Add(m.MetricName, new List<MetricDataSample> { sample });
                 }
             }
             AddMetricData(data, metricStreamer, modelSwapper);
@@ -785,7 +783,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     _customMetrics[metric.Key][1] = DateTime.Now;
                 }
                 // Add the data
-                var metricData = metric.Value.Select(ds => new MetricDataSample {MetricValue = ds.MetricValue, Timestamp = ds.Timestamp}).ToList();
+                var metricData = metric.Value.Select(ds => new MetricDataSample { MetricValue = ds.MetricValue, Timestamp = ds.Timestamp }).ToList();
                 metricStreamer.StreamMetricData(metricData, ((Metric)_customMetrics[metric.Key][0]).Uid, modelSwapper);
             }
         }
@@ -799,13 +797,13 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             string metricId = null;
             if (_customMetrics.ContainsKey(metricName))
             {
-                metricId = ((Metric) _customMetrics[metricName][0]).Uid;
+                metricId = ((Metric)_customMetrics[metricName][0]).Uid;
                 _customMetrics[metricName][0] = RepositoryFactory.Metric.GetMetric(metricId);
                 return;
             }
             metricId = DataAdapterFactory.CreateDatasourceAdapter("custom").CreateMetric(metricName);
             var metric = RepositoryFactory.Metric.GetMetric(metricId);
-            _customMetrics[metricName] = new List<object> {metric, DateTime.Now};
+            _customMetrics[metricName] = new List<object> { metric, DateTime.Now };
             //TrimMetricCache(); // TODO
         }
 

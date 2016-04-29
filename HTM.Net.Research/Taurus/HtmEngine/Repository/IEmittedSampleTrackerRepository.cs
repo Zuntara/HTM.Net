@@ -6,5 +6,6 @@ namespace HTM.Net.Research.Taurus.HtmEngine.Repository
     {
         void Insert(string key, DateTime sampleTs);
         DateTime? GetSampleTsFromKey(string key);
+        void UpdateSampleTsWithKey(string key, DateTime sampleDatetime);
     }
 }

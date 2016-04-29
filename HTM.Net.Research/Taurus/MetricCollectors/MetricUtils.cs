@@ -94,5 +94,58 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
         {
             return RepositoryFactory.EmittedSampleTracker.GetSampleTsFromKey(key);
         }
+
+        /// <summary>
+        /// Compute aggregation timestamp from the sample's timestamp as the lower
+        /// aggregation boundary relative to the given reference.
+        /// </summary>
+        /// <param name="sampleDatetime">offset-naive UTC timestamp of the sample (e.g., create_at property of a tweet)</param>
+        /// <param name="aggRefDatetime">offset-naive UTC reference aggregation
+        /// timestamp belonging to the sample stream; may precede, follow, or be equal
+        /// to sampleDatetime</param>
+        /// <param name="aggSec">the corresponding metric's aggregation period in seconds</param>
+        /// <returns>
+        /// offset=naive UTC timestamp of aggregation period that the sample
+        /// belongs to, which is the bottom boundary of its aggregation window. E.g.,
+        ///   sample="2015-02-20 2:14:00", ref="2015-02-20 2:00:00", aggSec=300 (5min)
+        ///     would return "2015-02-20 2:10:00"
+        ///   sample="2015-02-20 2:14:00", ref="2015-02-20 2:20:00", aggSec=300 (5min)
+        ///     would return "2015-02-20 2:10:00"
+        ///   sample="2015-02-20 2:15:00", ref="2015-02-20 2:15:00", aggSec=300 (5min)
+        ///     would return "2015-02-20 2:15:00"
+        /// </returns>
+        public static DateTime AggTimestampFromSampleTimestamp(DateTime sampleDatetime, DateTime aggRefDatetime, int aggSec)
+        {
+            double sampleEpoch = EpochFromNaiveUTCDatetime(sampleDatetime);
+            double aggRefEpoch = EpochFromNaiveUTCDatetime(aggRefDatetime);
+            double deltaSec = sampleEpoch - aggRefEpoch;
+
+            double deltaAggIntervalSec;
+            double aggEpoch;
+            if (deltaSec > 0)
+            {
+                // Sample timestamp equals or follows reference
+                deltaAggIntervalSec = Math.Floor(deltaSec/aggSec)*aggSec;
+                aggEpoch = aggRefEpoch + deltaAggIntervalSec;
+            }
+            else
+            {
+                // Sample timestamp precedes reference
+                // Back up to beginning of aggregation window
+                deltaAggIntervalSec = Math.Floor((Math.Abs(deltaSec) + (aggSec - 1))/aggSec)*aggSec;
+                aggEpoch = aggRefEpoch - deltaAggIntervalSec;
+            }
+            return new DateTime(0, DateTimeKind.Utc) + TimeSpan.FromSeconds(aggEpoch);
+        }
+
+        public static double EpochFromNaiveUTCDatetime(DateTime? dt)
+        {
+            return (dt.GetValueOrDefault() - new DateTime(0, DateTimeKind.Utc)).TotalSeconds;
+        }
+
+        public static void UpdateLastEmittedSampleDatetime(string key, DateTime sampleDatetime)
+        {
+            RepositoryFactory.EmittedSampleTracker.UpdateSampleTsWithKey(key, sampleDatetime);
+        }
     }
 }

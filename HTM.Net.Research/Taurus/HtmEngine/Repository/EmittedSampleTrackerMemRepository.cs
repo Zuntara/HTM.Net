@@ -27,5 +27,14 @@ namespace HTM.Net.Research.Taurus.HtmEngine.Repository
             var found = _sampleData.FirstOrDefault(sd => sd.Key == key);
             return found?.SampleTs;
         }
+
+        public void UpdateSampleTsWithKey(string key, DateTime sampleDatetime)
+        {
+            var found = _sampleData.FirstOrDefault(sd => sd.Key == key);
+            if (found != null)
+            {
+                found.SampleTs = sampleDatetime;
+            }
+        }
     }
 }

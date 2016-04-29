@@ -15,13 +15,18 @@ namespace HTM.Net.Research.Tests.Taurus
         [TestMethod]
         public void TestStartAndStopOfCollector()
         {
-            TwitterCollectorAgent agent = new TwitterCollectorAgent(new TwitterStorerArguments
-            {
-                AggSec = 100
-            });
+            TwitterCollectorAgent agent = new TwitterCollectorAgent(
+                new TwitterCollectorArguments
+                {
+                    MetricSpecs = null // will be populated in the collector through config
+                },
+                new TwitterStorerArguments
+                {
+                    AggSec = 100
+                });
             agent.StartCollector();
 
-            Thread.Sleep(1000);
+            Thread.Sleep(5000);
 
             agent.StopCollector(); // Waits on the tasks to stop
 
