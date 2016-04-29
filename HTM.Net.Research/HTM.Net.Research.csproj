@@ -106,6 +106,9 @@
     <Compile Include="Taurus\HtmEngine\Adapters\DataAdapterFactory.cs" />
     <Compile Include="Taurus\HtmEngine\Adapters\IDataSourceAdapter.cs" />
     <Compile Include="Taurus\HtmEngine\AnomalyLikelihoodHelper.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\EmittedSampleTracker.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\EmittedSampleTrackerMemRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\IEmittedSampleTrackerRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\IMetricDataRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\IMetricRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\Metric.cs" />

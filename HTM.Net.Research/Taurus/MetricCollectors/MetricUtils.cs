@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using HTM.Net.Research.Taurus.HtmEngine.Repository;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 
@@ -66,6 +67,32 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
             };
             mParams.ModelParams = modelParams;
             return CreateHtmModel(host, apiKey, mParams);
+        }
+
+        /// <summary>
+        /// Query UTC timestamp of the last emitted sample batch; if one hasn't been
+        /// saved yet, then synthesize one, using negative aggregation period offset
+        /// from current time
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="aggSec">aggregation period in seconds</param>
+        /// <returns>(possibly synthesized) UTC timestamp of the last successfully-emitted sample batch</returns>
+        public static DateTime EstablishLastEmittedSampleDateTime(string key, int aggSec)
+        {
+            DateTime? lastEmittedTimestamp = QueryLastEmittedSampleDatetime(key);
+            if (lastEmittedTimestamp.HasValue)
+                return lastEmittedTimestamp.Value;
+            // Start at the present to avoid re-sending metric data that we may have
+            // already sent to Taurus.
+            lastEmittedTimestamp = DateTime.UtcNow - TimeSpan.FromSeconds(aggSec);
+            RepositoryFactory.EmittedSampleTracker.Insert(key: key, sampleTs: lastEmittedTimestamp.Value);
+
+            return QueryLastEmittedSampleDatetime(key).GetValueOrDefault();
+        }
+
+        private static DateTime? QueryLastEmittedSampleDatetime(string key)
+        {
+            return RepositoryFactory.EmittedSampleTracker.GetSampleTsFromKey(key);
         }
     }
 }

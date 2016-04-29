@@ -15,7 +15,10 @@ namespace HTM.Net.Research.Tests.Taurus
         [TestMethod]
         public void TestStartAndStopOfCollector()
         {
-            TwitterCollectorAgent agent = new TwitterCollectorAgent();
+            TwitterCollectorAgent agent = new TwitterCollectorAgent(new TwitterStorerArguments
+            {
+                AggSec = 100
+            });
             agent.StartCollector();
 
             Thread.Sleep(1000);
@@ -60,6 +63,11 @@ namespace HTM.Net.Research.Tests.Taurus
         protected override void ExecuteCollectionTask()
         {
             throw new System.NotImplementedException(); // this should give a faulted result
+        }
+
+        protected override void ExecuteStoringTask()
+        {
+            throw new NotImplementedException();
         }
 
         protected override void ExecuteGarbageCollectionTask()

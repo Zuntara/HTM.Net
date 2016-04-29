@@ -11,6 +11,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.Repository
         {
 
         }
+
         public MetricData(string metricId, DateTime timestamp, double metricValue,
             double? anomalyScore, long rowid)
         {

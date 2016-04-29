@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Research.Taurus.HtmEngine.Adapters;
@@ -197,12 +199,15 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
         protected MetricCollectorAgent()
         {
             CancellationTokenSource = new CancellationTokenSource();
-            CollectionTask = new Task(ExecuteCollectionTask, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
-            GarbageCollectionTask = new Task(ExecuteGarbageCollectionTask, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
-            ForwarderTask = new Task(ExecuteForwarderTask, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
+            CancelToken = CancellationTokenSource.Token;
+            CollectionTask = new Task(ExecuteCollectionTask, CancelToken, TaskCreationOptions.LongRunning);
+            StoringTask = new Task(ExecuteStoringTask, CancelToken, TaskCreationOptions.LongRunning);
+            GarbageCollectionTask = new Task(ExecuteGarbageCollectionTask, CancelToken, TaskCreationOptions.LongRunning);
+            ForwarderTask = new Task(ExecuteForwarderTask, CancelToken, TaskCreationOptions.LongRunning);
         }
 
         protected abstract void ExecuteCollectionTask();
+        protected abstract void ExecuteStoringTask();
         protected abstract void ExecuteGarbageCollectionTask();
         protected abstract void ExecuteForwarderTask();
 
@@ -211,10 +216,12 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
             Log.InfoFormat("Starting up the agent...");
             IsCanceled = false;
             CollectionTask.Start();
+            StoringTask.Start();
             GarbageCollectionTask.Start();
             ForwarderTask.Start();
 
             CollectionTask.ContinueWith(DoTaskCompletionJob);
+            StoringTask.ContinueWith(DoTaskCompletionJob);
             GarbageCollectionTask.ContinueWith(DoTaskCompletionJob);
             ForwarderTask.ContinueWith(DoTaskCompletionJob);
         }
@@ -238,7 +245,7 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
             CancellationTokenSource.Cancel();
             try
             {
-                Task.WaitAll(CollectionTask, GarbageCollectionTask, ForwarderTask);
+                Task.WaitAll(CollectionTask, GarbageCollectionTask, ForwarderTask, StoringTask);
             }
             catch
             {
@@ -246,52 +253,195 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
             }
         }
 
+        private CancellationTokenSource CancellationTokenSource { get; }
+        protected CancellationToken CancelToken { get; }
+
         public bool IsCanceled { get; protected set; }
-        public Task CollectionTask { get;  }
-        protected CancellationTokenSource CancellationTokenSource { get; }
+        public Task CollectionTask { get; }
+        public Task StoringTask { get; }
         public Task GarbageCollectionTask { get; }
-        public Task ForwarderTask { get;  }
+        public Task ForwarderTask { get; }
+    }
+
+    public class TwitterStorerArguments
+    {
+        /// <summary>
+        /// Metric aggregation period in seconds
+        /// </summary>
+        public int AggSec { get; set; }
+        /// <summary>
+        /// Wheter we should log incoming messages
+        /// </summary>
+        public bool EchoData { get; set; }
+        /// <summary>
+        /// Tweet tagging map as returned by`buildTaggingMapAndStreamFilterParams()`
+        /// </summary>
+        public object TaggingMap { get; set; }
+    }
+
+    public class TwitterMessage
+    {
+        
     }
 
     public class TwitterCollectorAgent : MetricCollectorAgent
     {
+        private readonly TwitterStorerArguments _storerArgs;
+        private readonly ConcurrentQueue<TwitterMessage> _messageQueue;
+
+        private const string EMITTED_TWEET_VOLUME_SAMPLE_TRACKER_KEY = "twitter-tweets-volume";
+
         protected override void ExecuteCollectionTask()
         {
-            while (!CancellationTokenSource.IsCancellationRequested)
+            while (!CancelToken.IsCancellationRequested)
             {
                 // TODO: monitor twitter and send data to internal queue to be picked up
                 // by storer and then by forwarder
                 Thread.Sleep(1);
             }
-            if (CancellationTokenSource.IsCancellationRequested)
+            if (CancelToken.IsCancellationRequested)
             {
-                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                CancelToken.ThrowIfCancellationRequested();
+            }
+        }
+
+        public TwitterCollectorAgent(TwitterStorerArguments storerArgs)
+        {
+            _messageQueue = new ConcurrentQueue<TwitterMessage>();
+            _storerArgs = storerArgs;
+        }
+
+        /// <summary>
+        /// Thread function; preprocess and store incoming tweets deposited by
+        /// twitter streamer into self._msgQ
+        /// </summary>
+        protected override void ExecuteStoringTask()
+        {
+            DateTime aggRefDateTime = MetricUtils.EstablishLastEmittedSampleDateTime(
+                    key: EMITTED_TWEET_VOLUME_SAMPLE_TRACKER_KEY, aggSec: _storerArgs.AggSec);
+            int statsIntervalSec = 600;
+            DateTime nextStatsUpdateEpoch = DateTime.Now;
+            int maxBatchSize = 100;
+
+            while (!CancelToken.IsCancellationRequested)
+            {
+                // Accumulate batch of incoming messages for SQL insert performance
+                List<TwitterMessage> messages = new List<TwitterMessage>();
+                while (messages.Count < maxBatchSize)
+                {
+                    // Get the next incoming message
+                    //var timeout = messages.Any() ? 500 : 0;
+                    if (_messageQueue.IsEmpty)
+                    {
+                        break;
+                    }
+                    TwitterMessage msg;
+                    if (_messageQueue.TryDequeue(out msg))
+                    {
+                        messages.Add(msg);
+                    }
+                }
+                // Process the batch
+                var reapStats = ReapMessages(messages);
+                var tweets = reapStats.Item1;
+                var deletes = reapStats.Item2;
+                // Save (re)tweets
+                if (tweets != null)
+                {
+                    SaveTweets(messages: tweets, affRefDatetime: aggRefDateTime);
+                }
+                // Save deletion requests
+                if (deletes != null)
+                {
+                    SaveTweetDeletionRequests(messages: deletes);
+                }
+                // Echo messages to stdout if requested
+                if (_storerArgs.EchoData)
+                {
+                    foreach (var message in messages)
+                    {
+                        Console.WriteLine(message);
+                    }
+                }
+                // Print stats
+                DateTime now = DateTime.Now;
+                if (now >= nextStatsUpdateEpoch)
+                {
+                    nextStatsUpdateEpoch = now.AddSeconds(statsIntervalSec);
+                    LogStreamStats();
+                }
+                Thread.Sleep(1);
+            }
+            if (CancelToken.IsCancellationRequested)
+            {
+                CancelToken.ThrowIfCancellationRequested();
             }
         }
 
         protected override void ExecuteGarbageCollectionTask()
         {
-            while (!CancellationTokenSource.IsCancellationRequested)
+            while (!CancelToken.IsCancellationRequested)
             {
                 Thread.Sleep(1);
             }
-            if (CancellationTokenSource.IsCancellationRequested)
+            if (CancelToken.IsCancellationRequested)
             {
-                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                CancelToken.ThrowIfCancellationRequested();
             }
         }
 
         protected override void ExecuteForwarderTask()
         {
-            while (!CancellationTokenSource.IsCancellationRequested)
+            while (!CancelToken.IsCancellationRequested)
             {
                 Thread.Sleep(1);
             }
-            if (CancellationTokenSource.IsCancellationRequested)
+            if (CancelToken.IsCancellationRequested)
             {
-                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                CancelToken.ThrowIfCancellationRequested();
             }
         }
+
+        #region Storer Methods
+
+        /// <summary>
+        /// Process the messages from TwitterStreamListener and update stats; they
+        /// could be(re)tweets or notifications, such as "limit", "delete", "warning",
+        /// etc., or other meta information, such as ConnectionMarker that indicates a
+        /// newly-created Streaming API connection.
+        /// 
+        /// See https://dev.twitter.com/streaming/overview/messages-types
+        /// 
+        /// Tweets that match one or more metrics and delete notifications are returned
+        /// to caller. Other notifications of interest are logged.
+        /// </summary>
+        /// <param name="messages">messages received from our TwitterStreamListener</param>
+        /// <returns>a pair (tweets, deletes), where `tweets` is a possibly empty 
+        /// sequence of tweet status dicts each matching at least one metric and 
+        /// tagged via `TweetStorer._tagMessage()`; and `deletes` is a possibly empty
+        /// sequence of "delete" notification dicts representing tweet statuses to be
+        /// deleted.</returns>
+        private Tuple<List<TwitterMessage>, List<TwitterMessage>> ReapMessages(List<TwitterMessage> messages)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SaveTweets(List<TwitterMessage> messages, DateTime affRefDatetime)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SaveTweetDeletionRequests(List<TwitterMessage> messages)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void LogStreamStats()
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 
     // https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/taurus.metric_collectors/taurus/metric_collectors/twitterdirect/twitter_direct_agent.py
