@@ -141,12 +141,14 @@
     <Compile Include="Taurus\HtmEngine\Repository\IEmittedSampleTrackerRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\IMetricDataRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\IMetricRepository.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\ITwitterTweetSamplesRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\Metric.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\MetricData.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\MetricDataMemRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\MetricMemRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\MetricSqlRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Repository\RepositoryFactory.cs" />
+    <Compile Include="Taurus\HtmEngine\Repository\TwitterTweetSamplesMemRepository.cs" />
     <Compile Include="Taurus\HtmEngine\Runtime\MetricStorer.cs" />
     <Compile Include="Taurus\HtmEngine\Runtime\MutableMetricDataRow.cs" />
     <Compile Include="Taurus\MetricCollectors\MetricUtils.cs" />

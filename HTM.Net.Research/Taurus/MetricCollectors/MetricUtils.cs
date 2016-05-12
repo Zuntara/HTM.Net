@@ -143,6 +143,11 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
             return (dt.GetValueOrDefault() - new DateTime(0, DateTimeKind.Utc)).TotalSeconds;
         }
 
+        public static DateTime DatetimeFromEpoch(double epoch)
+        {
+            return new DateTime(0, DateTimeKind.Utc) + TimeSpan.FromSeconds(epoch);
+        }
+
         public static void UpdateLastEmittedSampleDatetime(string key, DateTime sampleDatetime)
         {
             RepositoryFactory.EmittedSampleTracker.UpdateSampleTsWithKey(key, sampleDatetime);

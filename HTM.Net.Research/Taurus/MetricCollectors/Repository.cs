@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using HTM.Net.Research.Taurus.HtmEngine.Repository;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -616,11 +617,99 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
         /// <summary>
         /// Aggregate tweet volume metrics in the given datetime range and forward them to Taurus Engine.
         /// </summary>
-        /// <param name="aggStartDatetime"></param>
-        /// <param name="stopDatetime"></param>
-        private void AggregateAndForward(DateTime aggStartDatetime, DateTime stopDatetime)
+        /// <param name="aggStartDatetime">UTC datetime of first aggregation to be performed and emitted</param>
+        /// <param name="stopDatetime">non-inclusive upper bound UTC datetime for forwarding</param>
+        /// <param name="metrics">optional sequence of metric names; if specified (non-None), 
+        /// the operation will be limited to the given metric names</param>
+        private void AggregateAndForward(DateTime aggStartDatetime, DateTime stopDatetime, string[] metrics = null)
         {
-            throw new NotImplementedException("todo AggregateAndForward");
+            // Emit samples to Taurus Engine
+            // with metric_utils.metricDataBatchWrite(log=g_log) as putSample:
+            foreach (var sample in GetSamples(aggStartDatetime, stopDatetime, metrics))
+            {
+                try
+                {
+                    DataBatchWritePutSample(sample);
+                }
+                catch (Exception e)
+                {
+                    Log.ErrorFormat("Failure while emiiting metric data sample={0} : {1}", sample, e);
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Retrieve and yield metric data samples of interest
+        /// </summary>
+        /// <param name="aStartDatetime"></param>
+        /// <returns></returns>
+        private IEnumerable<TwitterMetricSample> GetSamples(DateTime aStartDatetime, DateTime stopDatetime, string[] metrics = null)
+        {
+            TimeSpan periodTimedelta = TimeSpan.FromSeconds(_storerArgs.AggSec);
+            while (aStartDatetime < stopDatetime)
+            {
+                // Query Tweet Volume metrics for one aggregation interval
+                IDictionary<string, int> metricToVolumeMap = QueryTweetVolumes(aStartDatetime, metrics);
+                // Generate metric samples
+                var epochTimestamp = MetricUtils.EpochFromNaiveUTCDatetime(aStartDatetime);
+                var samples = _collectorArgs.MetricSpecs.Where(
+                    spec => metrics == null || metrics.Any(m => m == spec.Metric))
+                    .Select(spec => new TwitterMetricSample
+                    {
+                        MetricName = spec.Metric,
+                        Value = metricToVolumeMap[spec.Metric],
+                        EpochTimestamp = epochTimestamp
+                    })
+                    .ToList();
+                if (Log.IsDebugEnabled)
+                {
+                    Log.DebugFormat("Samples={0}", Arrays.ToString(samples));
+                }
+                foreach (var sample in samples)
+                {
+                    yield return sample;
+                }
+                Log.InfoFormat("Yielded numSamples={0} for agg={1}", samples.Count, aStartDatetime);
+                // Set up for next iteration
+                aStartDatetime += periodTimedelta;
+            }
+        }
+
+        /// <summary>
+        /// Query the database for the counts of tweet metric volumes for the specified aggregation.
+        /// </summary>
+        /// <param name="aggDatetime">aggregation timestamp</param>
+        /// <param name="metrics">optional sequence of metric names; if specified (non-None),
+        /// the operation will be limited to the given metric names</param>
+        /// <returns>a sparse sequence of two-tuples: (metric_name, count); metrics
+        /// that have no tweets in the given aggregation period will be absent from
+        /// the result.</returns>
+        private IDictionary<string, int> QueryTweetVolumes(DateTime aggDatetime, string[] metrics = null)
+        {
+            return RepositoryFactory.TwitterTweetSamples.QueryVolumesAggWithMetricFilter(aggDatetime, metrics);
+        }
+
+        private void DataBatchWritePutSample(TwitterMetricSample sample)
+        {
+            // This normmaly makes batches and then sends it to the taurus engine, we
+            // send it at this moment one by one.
+            // destination on queue is in original version: taurus.metric.custom.data
+            // metric listener just forwards and drops to the same queue
+            MetricStorer.Instance.AddToQueue(new MetricMessage
+            {
+                MetricName = sample.MetricName,
+                Timestamp = MetricUtils.DatetimeFromEpoch(sample.EpochTimestamp),
+                Value = sample.Value
+            });
+            throw new NotImplementedException("ends up in the metric storer through the queue");
+        }
+
+        private class TwitterMetricSample
+        {
+            public string MetricName { get; set; }
+            public int Value { get; set; }
+            public double EpochTimestamp { get; set; }
         }
 
         #endregion
@@ -880,10 +969,11 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
                 tweetRows.Add(tweet);
                 referenceRows.AddRange(references);
             }
-            // TODO: twitterTweets insert tweetrows
-            // TODO: twitterTweetSamples insert referenceRows
-            // NOTE: some tweets may match multiple metrics
-            throw new NotImplementedException("todo");
+
+            // Save twitter message
+            RepositoryFactory.TwitterTweets.InsertRows(tweetRows);
+            // Save corresponding references
+            RepositoryFactory.TwitterTweetSamples.InsertRows(referenceRows);
         }
 
         /// <summary>
@@ -970,7 +1060,7 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
         /// <summary>
         /// Save tweet deletion request in database
         /// </summary>
-        /// <param name="messages"></param>
+        /// <param name="messages">sequence of Twitter "delete" status dicts https://dev.twitter.com/streaming/overview/messages-types</param>
         private void SaveTweetDeletionRequests(List<TwitterMessage> messages)
         {
             throw new NotImplementedException();

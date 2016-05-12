@@ -636,6 +636,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// <summary>
     /// Listens on a UDP or TCP port for metric data to write to a queue. > to be replaced by WCF service
     /// https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/runtime/metric_listener.py
+    /// uses port 2003 in the configs
+    /// > accepts messages over tcp and forwards to the metric data queue > ends up in metric storer
     /// </summary>
     public class MetricListener
     {
@@ -676,14 +678,23 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public const int CACHED_METRICS_TO_KEEP = 10000;
         public const int MAX_CACHED_METRICS = 15000;
 
-        public MetricStorer()
+        private static readonly MetricStorer _instance = new MetricStorer();
+
+        public static MetricStorer Instance
         {
+            get { return _instance; }
+        }
+
+        private MetricStorer()
+        {
+            _log.InfoFormat("Metric Storer constructed");
             Queue = new ConcurrentQueue<MetricMessage>();
             _profiling = _log.IsDebugEnabled;
         }
 
         public void RunServer()
         {
+            _log.InfoFormat("Metric Storer started");
             DateTime now = DateTime.Now;
             _customMetrics = RepositoryFactory.Metric.GetCustomMetrics().ToDictionary(k => k.Name, v => new List<object>
             {
@@ -721,6 +732,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     }
                 }
             }
+            _log.InfoFormat("Metric Storer stopped");
         }
 
         /// <summary>
@@ -809,7 +821,17 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
         public void StopServer()
         {
+            _log.InfoFormat("Metric Storer stop requested");
             _stopProcessing = true;
+        }
+
+        /// <summary>
+        /// Method to add a message to the memory queue, TODO: replace by real queues?
+        /// </summary>
+        /// <param name="message"></param>
+        public void AddToQueue(MetricMessage message)
+        {
+            Queue.Enqueue(message);
         }
     }
 
