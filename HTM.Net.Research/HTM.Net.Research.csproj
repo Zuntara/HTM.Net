@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>HTM.Net.Research</RootNamespace>
     <AssemblyName>HTM.Net.Research</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
     <SccLocalPath>SAK</SccLocalPath>
@@ -181,7 +181,7 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="Resources\metrics - Copy.json" />
-    <None Include="Resources\metrics.json" />
+    <EmbeddedResource Include="Resources\metrics.json" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HTM.Net\HTM.Net.csproj">
