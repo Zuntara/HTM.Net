@@ -90,6 +90,7 @@
     <Compile Include="Algorithms\BitHistory.cs" />
     <Compile Include="Algorithms\CLAClassifier.cs" />
     <Compile Include="Algorithms\ClassifierResult.cs" />
+    <Compile Include="Model\Connections.cs" />
     <Compile Include="Monitor\MonitoredTemporalMemory.cs" />
     <Compile Include="Network\BaseLayer.cs" />
     <Compile Include="Network\BaseRxLayer.cs" />
