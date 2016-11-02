@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using HTM.Net.Model;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Tests.Util
 {
@@ -264,6 +266,53 @@ namespace HTM.Net.Tests.Util
             foreach (Tuple<DistalDendrite, Column> p in grouper)
             {
                 Assert.AreEqual(expected[i++], p);
+            }
+        }
+    }
+
+    [TestClass]
+    public class GroupBy2Tests
+    {
+        private List<GroupBy2<int>.Slot<int>> none = new List<GroupBy2<int>.Slot<int>> { GroupBy2<int>.Slot<int>.Empty() };
+
+        public List<int> list(int i)
+        {
+            return new List<int> { i };
+        }
+
+        public List<int> list(int i, int j)
+        {
+            return new List<int> { i, j };
+        }
+
+        [TestMethod]
+        public void TestOneSequence()
+        {
+            List<int> sequence0 = new List<int> { 7, 12, 12, 16 };
+
+            Func<object, int> identity = ig => (int)ig;
+
+            //@SuppressWarnings({ "unchecked", "rawtypes" })
+            GroupBy2<int> m = GroupBy2<int>.Of(new Tuple<ICollection, Func<object, int>>(sequence0, identity));
+
+            List<Tuple> expectedValues = new List<Tuple>
+            {
+                new Tuple(7, list(7)),
+                new Tuple(12, list(12, 12)),
+                new Tuple(16, list(16))
+            };
+
+            int i = 0;
+            foreach (Tuple t in m)
+            {
+                int j = 0;
+                foreach (Object o in t.All())
+                {
+                    Assert.AreEqual(o.GetHashCode(), expectedValues[i].Get(j).GetHashCode());
+                    Assert.AreEqual(o, expectedValues[i].Get(j));
+                    j++;
+                }
+                i++;
             }
         }
     }
