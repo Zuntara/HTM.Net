@@ -1428,6 +1428,33 @@ namespace HTM.Net.Util
          * @param random     a random number generator
          * @return a sample of numbers of the specified size
          */
+        public static int[] Sample(int[] choices, int[] selectedIndices, IRandom random)
+        {
+            List<int> choiceSupply = new List<int>(choices);
+            int upperBound = choices.Length;
+            for (int i = 0; i < selectedIndices.Length; i++)
+            {
+                int randomIdx = random.NextInt(upperBound);
+                int removedVal = choiceSupply[randomIdx];
+                choiceSupply.RemoveAt(randomIdx);
+                selectedIndices[i] = removedVal;
+                upperBound--;
+            }
+            //Arrays.Sort(selectedIndices);
+            Array.Sort(selectedIndices);
+            //System.out.println("sample: " + Arrays.toString(selectedIndices));
+            return selectedIndices;
+        }
+
+        /**
+         * Returns a random, sorted, and  unique array of the specified sample size of
+         * selections from the specified list of choices.
+         *
+         * @param sampleSize the number of selections in the returned sample
+         * @param choices    the list of choices to select from
+         * @param random     a random number generator
+         * @return a sample of numbers of the specified size
+         */
         public static int[] Sample(int sampleSize, List<int> choices, IRandom random)
         {
             HashSet<int> temp = new HashSet<int>();
@@ -1561,6 +1588,20 @@ namespace HTM.Net.Util
             for (int i = 0; i < array.Length; i++)
             {
                 if (array[i] > compare)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public static int ValueGreaterOrEqualCount(double compare, double[] array)
+        {
+            int count = 0;
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (array[i] >= compare)
                 {
                     count++;
                 }
@@ -1897,6 +1938,22 @@ namespace HTM.Net.Util
             for (int i = 0; i < array.Length; i++)
             {
                 if (array[i] > x) array[i] = y;
+            }
+        }
+
+        /**
+         * Sets value to "y" in "targetB" if the value in the same index in "sourceA" is bigger than "x".
+         * @param sourceA array to compare elements with X
+         * @param targetB array to set elements to Y
+         * @param x     the comparison
+         * @param y     the value to set if the comparison fails
+         */
+        public static void GreaterThanXThanSetToYInB(int[] sourceA, double[] targetB, int x, double y)
+        {
+            for (int i = 0; i < sourceA.Length; i++)
+            {
+                if (sourceA[i] > x)
+                    targetB[i] = y;
             }
         }
 

@@ -1,4 +1,6 @@
-﻿using HTM.Net.Util;
+﻿using System;
+using HTM.Net.Model;
+using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
 {
@@ -26,12 +28,13 @@ namespace HTM.Net.Algorithms
      */
     public override int[] CalculateOverlap(Connections c, int[] inputVector)
     {
-        int[] overlaps = new int[c.GetNumColumns()];
-        c.GetConnectedCounts().RightVecSumAtNZ(inputVector, overlaps);
-        int[] paOverlaps = ArrayUtils.ToIntArray(c.GetPAOverlaps());
-        overlaps = ArrayUtils.Add(paOverlaps, overlaps);
-        ArrayUtils.LessThanXThanSetToY(overlaps, (int)c.GetStimulusThreshold(), 0);
-        return overlaps;
+        throw new NotImplementedException("Code needs to be reviewed");
+        //int[] overlaps = new int[c.GetNumColumns()];
+        //c.GetConnectedCounts().RightVecSumAtNZ(inputVector, overlaps);
+        //int[] paOverlaps = ArrayUtils.ToIntArray(c.GetPAOverlaps());
+        //overlaps = ArrayUtils.Add(paOverlaps, overlaps);
+        //ArrayUtils.LessThanXThanSetToY(overlaps, (int)c.GetStimulusThreshold(), 0);
+        //return overlaps;
     }
 
 }

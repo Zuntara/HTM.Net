@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using HTM.Net.Algorithms;
+using HTM.Net.Model;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.Vision

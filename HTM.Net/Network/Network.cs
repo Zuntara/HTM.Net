@@ -200,11 +200,11 @@ namespace HTM.Net.Network
             return new Layer<IInference>(name, null, p);
         }
 
-        public static PALayer<T> CreatePALayer<T>(string name, Parameters p)
-        {
-            CheckName(name);
-            return new PALayer<T>(name, null, p);
-        }
+        //public static PALayer<T> CreatePALayer<T>(string name, Parameters p)
+        //{
+        //    CheckName(name);
+        //    return new PALayer<T>(name, null, p);
+        //}
 
         /**
          * Returns the String identifier for this {@code Network}

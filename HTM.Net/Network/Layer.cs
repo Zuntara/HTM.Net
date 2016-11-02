@@ -118,6 +118,8 @@ namespace HTM.Net.Network
     {
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
 
+        protected int numColumns;
+
         private readonly FunctionFactory _factory;
 
         /// <summary>
@@ -341,7 +343,12 @@ namespace HTM.Net.Network
             }
 
             // Let the TemporalMemory initialize the matrix with its requirements
-            TemporalMemory?.Init(Connections);
+            if (TemporalMemory != null)
+            {
+                TemporalMemory.Init(Connections);
+            }
+
+            this.numColumns = Connections.GetNumColumns();
 
             FeedForwardActiveColumns = new int[Connections.GetNumColumns()];
 
@@ -1374,9 +1381,11 @@ namespace HTM.Net.Network
                 Logger.Info("Layer " + GetName() + " received zero length bit vector");
                 return input;
             }
-            SpatialPooler.Compute(Connections, input, FeedForwardActiveColumns, Sensor == null || Sensor.GetMetaInfo().IsLearn(), IsLearn);
 
-            return FeedForwardActiveColumns;
+            int[] activeColumns = new int[numColumns];
+            SpatialPooler.Compute(Connections, input, activeColumns, IsLearn || (Sensor != null && Sensor.GetMetaInfo().IsLearn()));
+
+            return activeColumns;
         }
 
         /// <summary>

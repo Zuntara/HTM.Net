@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 namespace HTM.Net.Model
@@ -14,15 +15,11 @@ namespace HTM.Net.Model
      * 				For ProximalDendrites, there are many synapses within a pool, and in
      * 				that case, the index specifies the synapse's sequence order within
      * 				the pool object, and may be referenced by that index.
-     *    
-     * 
-     * @author Chetan Surpur
-     * @author David Ray
      * 
      * @see DistalDendrite
      * @see Connections
      */
-    public class Synapse
+    public class Synapse : IComparable<Synapse>
     {
         private readonly Cell _sourceCell;
         private readonly Segment _segment;
@@ -30,45 +27,49 @@ namespace HTM.Net.Model
         private readonly int _synapseIndex;
         private readonly int _inputIndex;
         private double _permanence;
-
+        private bool _destroyed;
 
         /// <summary>
         /// Constructor used when setting parameters later.
         /// </summary>
         public Synapse() { }
 
-        /**
-         * Constructs a new {@code Synapse}
-         * 
-         * @param c             the connections state of the temporal memory
-         * @param sourceCell    the <see cref="Cell"/> which will activate this {@code Synapse};
-         *                      Null if this Synapse is proximal
-         * @param segment       the owning dendritic segment
-         * @param pool		    this {@link Pool} of which this synapse is a member
-         * @param index         this {@code Synapse}'s index
-         * @param inputIndex	the index of this {@link Synapse}'s input; be it a Cell or InputVector bit.
-         */
+
+        /// <summary>
+        /// Constructs a new <see cref="Synapse"/> for a <see cref="DistalDendrite"/>
+        /// </summary>
+        /// <param name="presynapticCell">the <see cref="Cell"/> which will activate this <see cref="Synapse"/>;
+        /// null if this Synapse is proximal</param>
+        /// <param name="segment">the owning dendritic segment</param>
+        /// <param name="index">The <see cref="Synapse"/>'s index</param>
+        /// <param name="permanence"></param>
+        public Synapse(Cell presynapticCell, Segment segment, int index, double permanence)
+        {
+            _sourceCell = presynapticCell;
+            _segment = segment;
+            _synapseIndex = index;
+            _inputIndex = presynapticCell.GetIndex();
+            _permanence = permanence;
+        }
+
 
         /// <summary>
         /// Constructs a new <see cref="Synapse"/>
         /// </summary>
         /// <param name="c">the connections state of the temporal memory</param>
-        /// <param name="sourceCell">the <see cref="Cell"/> which will activate this <see cref="Synapse"/>;
-        /// null if this Synapse is proximal</param>
+        /// <param name="sourceCell">the <see cref="Cell"/> which will activate this <see cref="Synapse"/>
+        /// Null if this Synapse is proximal</param>
         /// <param name="segment">the owning dendritic segment</param>
-        /// <param name="pool"></param>
-        /// <param name="index"></param>
-        /// <param name="inputIndex"></param>
-        public Synapse(Connections c, Cell sourceCell, DistalDendrite segment, Pool pool, int index, int inputIndex)
+        /// <param name="pool"> this {@link Pool} of which this synapse is a member</param>
+        /// <param name="index">this {@code Synapse}'s index</param>
+        /// <param name="inputIndex">the index of this {@link Synapse}'s input; be it a Cell or InputVector bit.</param>
+        public Synapse(Connections c, Cell sourceCell, Segment segment, Pool pool, int index, int inputIndex)
         {
             _sourceCell = sourceCell;
             _segment = segment;
             _pool = pool;
             _synapseIndex = index;
             _inputIndex = inputIndex;
-
-            // If this isn't a synapse on a proximal dendrite
-            sourceCell?.AddReceptorSynapse(c, this);
         }
 
         /// <summary>
@@ -117,8 +118,17 @@ namespace HTM.Net.Model
         /// Returns the owning dendritic segment
         /// </summary>
         /// <returns></returns>
+        public Segment GetSegment()
+        {
+            return _segment;
+        }
+
+        /// <summary>
+        /// Returns the owning dendritic segment
+        /// </summary>
+        /// <returns></returns>
         public TSegment GetSegment<TSegment>()
-            where TSegment: Segment
+            where TSegment : Segment
         {
             return _segment as TSegment;
         }
@@ -132,22 +142,46 @@ namespace HTM.Net.Model
             return _sourceCell;
         }
 
-        /// <summary>
-        /// Removes the references to this Synapse in its associated
-        /// <see cref="Pool"/> and its upstream presynapticCell's reference.
-        /// </summary>
-        /// <param name="c"></param>
-        public void Destroy(Connections c)
+        /**
+         * Returns the flag indicating whether this segment has been destroyed.
+         * @return  the flag indicating whether this segment has been destroyed.
+         */
+        public bool IsDestroyed()
         {
-            _pool.DestroySynapse(this);
-            if (_sourceCell != null)
-            {
-                c.GetSynapses((DistalDendrite)_segment).Remove(this);
-                _sourceCell.RemoveReceptorSynapse(c, this);
-            }
-            else {
-                c.GetSynapses((ProximalDendrite)_segment).Remove(this);
-            }
+            return _destroyed;
+        }
+
+        /**
+         * Sets the flag indicating whether this segment has been destroyed.
+         * @param b the flag indicating whether this segment has been destroyed.
+         */
+        public void SetDestroyed(bool b)
+        {
+            _destroyed = b;
+        }
+
+        ///// <summary>
+        ///// Removes the references to this Synapse in its associated
+        ///// <see cref="Pool"/> and its upstream presynapticCell's reference.
+        ///// </summary>
+        ///// <param name="c"></param>
+        //public void Destroy(Connections c)
+        //{
+        //    _pool.DestroySynapse(this);
+        //    if (_sourceCell != null)
+        //    {
+        //        c.GetSynapses((DistalDendrite)_segment).Remove(this);
+        //        _sourceCell.RemoveReceptorSynapse(c, this);
+        //    }
+        //    else
+        //    {
+        //        c.GetSynapses((ProximalDendrite)_segment).Remove(this);
+        //    }
+        //}
+
+        public int CompareTo(Synapse other)
+        {
+            return _synapseIndex.CompareTo(other._synapseIndex);
         }
 
         /// <summary>
@@ -168,5 +202,50 @@ namespace HTM.Net.Model
             sb.Append(" ]");
             return sb.ToString();
         }
+
+        #region Overrides of Object
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + _inputIndex;
+            result = prime * result + (_segment?.GetHashCode() ?? 0);
+            result = prime * result + (_sourceCell?.GetHashCode() ?? 0);
+            result = prime * result + _synapseIndex;
+            return result;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            Synapse other = (Synapse)obj;
+            if (_inputIndex != other._inputIndex)
+                return false;
+            if (_segment == null)
+            {
+                if (other._segment != null)
+                    return false;
+            }
+            else if (!_segment.Equals(other._segment))
+                return false;
+            if (_sourceCell == null)
+            {
+                if (other._sourceCell != null)
+                    return false;
+            }
+            else if (!_sourceCell.Equals(other._sourceCell))
+                return false;
+            if (_synapseIndex != other._synapseIndex)
+                return false;
+            return true;
+        }
+
+        #endregion
     }
 }

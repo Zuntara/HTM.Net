@@ -8,6 +8,7 @@ using System.Threading;
 using HTM.Net.Algorithms;
 using HTM.Net.Datagen;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Tests.Properties;

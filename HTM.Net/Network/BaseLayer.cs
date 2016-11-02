@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
 
@@ -144,7 +145,7 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
-        /// Returns the<see cref="Net.Connections"/> object being used as the structural matrix and state.
+        /// Returns the<see cref="Model.Connections"/> object being used as the structural matrix and state.
         /// </summary>
         /// <returns></returns>
         public Connections GetMemory()
@@ -304,9 +305,9 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
-        /// Returns the <see cref="Net.Connections"/> object being used by this <see cref="ILayer"/>
+        /// Returns the <see cref="Model.Connections"/> object being used by this <see cref="ILayer"/>
         /// </summary>
-        /// <returns>this <see cref="ILayer"/>'s <see cref="Net.Connections"/></returns>
+        /// <returns>this <see cref="ILayer"/>'s <see cref="Model.Connections"/></returns>
         public Connections GetConnections()
         {
             return Connections;

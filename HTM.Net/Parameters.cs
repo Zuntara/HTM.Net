@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using HTM.Net.Algorithms;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -42,6 +43,8 @@ namespace HTM.Net
             defaultTemporalParams.Add(KEY.LEARNING_RADIUS, 2048);
             defaultTemporalParams.Add(KEY.MIN_THRESHOLD, 10);
             defaultTemporalParams.Add(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
+            defaultTemporalParams.Add(KEY.MAX_SYNAPSES_PER_SEGMENT, 255);
+            defaultTemporalParams.Add(KEY.MAX_SEGMENTS_PER_CELL, 255);
             defaultTemporalParams.Add(KEY.INITIAL_PERMANENCE, 0.21);
             defaultTemporalParams.Add(KEY.CONNECTED_PERMANENCE, 0.5);
             defaultTemporalParams.Add(KEY.PERMANENCE_INCREMENT, 0.10);
@@ -67,10 +70,11 @@ namespace HTM.Net
             defaultSpatialParams.Add(KEY.SYN_PERM_CONNECTED, 0.10);
             defaultSpatialParams.Add(KEY.SYN_PERM_BELOW_STIMULUS_INC, 0.01);
             defaultSpatialParams.Add(KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
-            defaultSpatialParams.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, 0.001);
-            defaultSpatialParams.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, 0.001);
+            defaultSpatialParams.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.001);
+            defaultSpatialParams.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.001);
             defaultSpatialParams.Add(KEY.DUTY_CYCLE_PERIOD, 1000);
             defaultSpatialParams.Add(KEY.MAX_BOOST, 10.0);
+            defaultSpatialParams.Add(KEY.WRAP_AROUND, true);
             defaultSpatialParams.Add(KEY.SP_VERBOSITY, 0);
             defaultSpatialParams.Add(KEY.LEARN, true);
             defaultSpatialParams.Add(KEY.SP_PARALLELMODE, false);   // default off
@@ -171,6 +175,14 @@ namespace HTM.Net
              */
             public static readonly KEY MAX_NEW_SYNAPSE_COUNT = new KEY("maxNewSynapseCount", typeof(int));
             /**
+             * The maximum number of synapses that can be added to a segment.
+             */
+            public static readonly KEY MAX_SYNAPSES_PER_SEGMENT = new KEY("maxSynapsesPerSegment", typeof(int));
+            /**
+             * The maximum number of {@link Segment}s a {@link Cell} can have.
+             */
+            public static readonly KEY MAX_SEGMENTS_PER_CELL = new KEY("maxSegmentsPerCell", typeof (int));
+            /**
              * Initial permanence of a new synapse
              */
             public static readonly KEY INITIAL_PERMANENCE = new KEY("initialPermanence", typeof(double), 0.0, 1.0);
@@ -213,10 +225,11 @@ namespace HTM.Net
             public static readonly KEY SYN_PERM_CONNECTED = new KEY("synPermConnected", typeof(double), 0.0, 1.0);
             public static readonly KEY SYN_PERM_BELOW_STIMULUS_INC = new KEY("synPermBelowStimulusInc", typeof(double), 0.0, 1.0);
             public static readonly KEY SYN_PERM_TRIM_THRESHOLD = new KEY("synPermTrimThreshold", typeof(double), 0.0, 1.0);
-            public static readonly KEY MIN_PCT_OVERLAP_DUTY_CYCLE = new KEY("minPctOverlapDutyCycles", typeof(double));//TODO add range here?
-            public static readonly KEY MIN_PCT_ACTIVE_DUTY_CYCLE = new KEY("minPctActiveDutyCycles", typeof(double));//TODO add range here?
+            public static readonly KEY MIN_PCT_OVERLAP_DUTY_CYCLES = new KEY("minPctOverlapDutyCycles", typeof(double));//TODO add range here?
+            public static readonly KEY MIN_PCT_ACTIVE_DUTY_CYCLES = new KEY("minPctActiveDutyCycles", typeof(double));//TODO add range here?
             public static readonly KEY DUTY_CYCLE_PERIOD = new KEY("dutyCyclePeriod", typeof(int));//TODO add range here?
             public static readonly KEY MAX_BOOST = new KEY("maxBoost", typeof(double)); //TODO add range here?
+            public static readonly KEY WRAP_AROUND = new KEY("wrapAround", typeof(bool));
             public static readonly KEY SP_VERBOSITY = new KEY("spVerbosity", typeof(int), 0, 10);
             /// <summary>
             /// If defined this will initialize and run the spatial pooler multithreaded, this will 
@@ -888,6 +901,26 @@ namespace HTM.Net
         /**
          * The maximum number of synapses added to a segment during learning.
          *
+         * @param maxSynapsesPerSegment
+         */
+        public void SetMaxSynapsesPerSegment(int maxSynapsesPerSegment)
+        {
+            paramMap.Add(KEY.MAX_SYNAPSES_PER_SEGMENT, maxSynapsesPerSegment);
+        }
+
+        /**
+         * The maximum number of {@link Segment}s a {@link Cell} can have.
+         *
+         * @param maxSegmentsPerCell
+         */
+        public void SetMaxSegmentsPerCell(int maxSegmentsPerCell)
+        {
+            paramMap.Add(KEY.MAX_SEGMENTS_PER_CELL, maxSegmentsPerCell);
+        }
+
+        /**
+         * The maximum number of synapses added to a segment during learning.
+         *
          * @param maxNewSynapseCount
          */
         public void SetMaxNewSynapseCount(int maxNewSynapseCount)
@@ -1167,9 +1200,9 @@ namespace HTM.Net
          *
          * @param minPctOverlapDutyCycles
          */
-        public void SetMinPctOverlapDutyCycle(double minPctOverlapDutyCycles)
+        public void SetMinPctOverlapDutyCycles(double minPctOverlapDutyCycles)
         {
-            paramMap.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, minPctOverlapDutyCycles);
+            paramMap.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, minPctOverlapDutyCycles);
         }
 
         /**
@@ -1187,9 +1220,9 @@ namespace HTM.Net
          *
          * @param minPctActiveDutyCycles
          */
-        public void SetMinPctActiveDutyCycle(double minPctActiveDutyCycles)
+        public void SetMinPctActiveDutyCycles(double minPctActiveDutyCycles)
         {
-            paramMap.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, minPctActiveDutyCycles);
+            paramMap.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, minPctActiveDutyCycles);
         }
 
         /**

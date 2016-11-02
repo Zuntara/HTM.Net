@@ -102,6 +102,8 @@
     <Compile Include="Network\Sensor\YieldingFileReader.cs" />
     <Compile Include="Network\Transformer.cs" />
     <Compile Include="Util\ArrayExtentions.cs" />
+    <Compile Include="Util\GroupBy.cs" />
+    <Compile Include="Util\GroupBy2.cs" />
     <Compile Include="Util\ListExtentions.cs" />
     <Compile Include="Network\Sensor\BatchedCsvStream.cs" />
     <Compile Include="Network\Sensor\FileSensor.cs" />
@@ -113,7 +115,7 @@
     <Compile Include="Algorithms\SpatialPooler.cs" />
     <Compile Include="Algorithms\Statistic.cs" />
     <Compile Include="Algorithms\TemporalMemory.cs" />
-    <Compile Include="ComputeCycle.cs" />
+    <Compile Include="Model\ComputeCycle.cs" />
     <Compile Include="Connections.cs" />
     <Compile Include="Encoders\CategoryEncoder.cs" />
     <Compile Include="Encoders\CoordinateEncoder.cs" />
@@ -135,6 +137,7 @@
     <Compile Include="Encoders\SDRPassThroughEncoder.cs" />
     <Compile Include="Encoders\SparsePassThroughEncoder.cs" />
     <Compile Include="Util\SparseByteArray.cs" />
+    <Compile Include="Util\Topology.cs" />
     <Compile Include="Util\TypeConverter.cs" />
     <Compile Include="Monitor\ComputeDecorator.cs" />
     <Compile Include="Network\ManualInput.cs" />

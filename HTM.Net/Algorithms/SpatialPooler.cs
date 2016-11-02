@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using HTM.Net.Model;
 using HTM.Net.Util;
-using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
-using MathNet.Numerics.Providers.LinearAlgebra.Mkl;
 
 namespace HTM.Net.Algorithms
 {
@@ -31,6 +26,14 @@ namespace HTM.Net.Algorithms
      */
     public class SpatialPooler
     {
+        /** Default Serial Version  */
+        private const long serialVersionUID = 1L;
+
+        /// <summary>
+        /// Constructs a new <see cref="SpatialPooler"/>
+        /// </summary>
+        public SpatialPooler() { }
+
         /**
          * Initializes the specified {@link Connections} object which contains
          * the memory and structural anatomy this spatial pooler uses to implement
@@ -40,6 +43,14 @@ namespace HTM.Net.Algorithms
          */
         public void Init(Connections c)
         {
+            if (c.GetNumActiveColumnsPerInhArea() == 0 && (c.GetLocalAreaDensity() == 0 ||
+                                                           c.GetLocalAreaDensity() > 0.5))
+            {
+                throw new InvalidSpatialPoolerParamValueException("Inhibition parameters are invalid");
+            }
+
+            c.DoSpatialPoolerPostInit();
+
             InitMatrices(c);
             ConnectAndConfigureInputs(c);
         }
@@ -49,53 +60,38 @@ namespace HTM.Net.Algorithms
         /// prepare the anatomical entities for activation.
         /// </summary>
         /// <param name="c"></param>
+
         public void InitMatrices(Connections c)
         {
-            bool runInParallel = c.IsSpatialInParallelMode();
-            if (runInParallel)
-            {
-                Control.UseMultiThreading();
-            }
-            else
-            {
-                Control.TryUseNativeMKL();
-            }
-
-            if (c == null) throw new ArgumentNullException(nameof(c));
-            SparseObjectMatrix<Column> mem = c.GetMemory() ?? new SparseObjectMatrix<Column>(c.GetColumnDimensions());
-            c.SetMemory(mem);
+            SparseObjectMatrix<Column> mem = c.GetMemory();
+            c.SetMemory(mem == null ? mem = new SparseObjectMatrix<Column>(c.GetColumnDimensions()) : mem);
 
             c.SetInputMatrix(new SparseBinaryMatrix(c.GetInputDimensions()));
+
+            // Initiate the topologies
+            c.SetColumnTopology(new Topology(c.GetColumnDimensions()));
+            c.SetInputTopology(new Topology(c.GetInputDimensions()));
 
             //Calculate numInputs and numColumns
             int numInputs = c.GetInputMatrix().GetMaxIndex() + 1;
             int numColumns = c.GetMemory().GetMaxIndex() + 1;
+            if (numColumns <= 0)
+            {
+                throw new InvalidSpatialPoolerParamValueException("Invalid number of columns: " + numColumns);
+            }
+            if (numInputs <= 0)
+            {
+                throw new InvalidSpatialPoolerParamValueException("Invalid number of inputs: " + numInputs);
+            }
             c.SetNumInputs(numInputs);
             c.SetNumColumns(numColumns);
 
             //Fill the sparse matrix with column objects
-            for (int i = 0; i < numColumns; i++)
-            {
-                mem.Set(i, new Column(c.GetCellsPerColumn(), i));
-            }
+            for (int i = 0; i < numColumns; i++) { mem.Set(i, new Column(c.GetCellsPerColumn(), i)); }
 
             c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
 
-            if (runInParallel)
-            {
-                c.SetConnectedMatrix(new DenseMatrix(numColumns, numInputs));
-            }
-            else
-            {
-                c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
-            }
-
-            double[] tieBreaker = new double[numColumns];
-            for (int i = 0; i < numColumns; i++)
-            {
-                tieBreaker[i] = 0.01 * c.GetRandom().NextDouble();
-            }
-            c.SetTieBreaker(tieBreaker);
+            c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
 
             //Initialize state meta-management statistics
             c.SetOverlapDutyCycles(new double[numColumns]);
@@ -105,6 +101,63 @@ namespace HTM.Net.Algorithms
             c.SetBoostFactors(new double[numColumns]);
             Arrays.Fill(c.GetBoostFactors(), 1);
         }
+
+        //public void InitMatrices_Old(Connections c)
+        //{
+        //    bool runInParallel = c.IsSpatialInParallelMode();
+        //    if (runInParallel)
+        //    {
+        //        Control.UseMultiThreading();
+        //    }
+        //    else
+        //    {
+        //        Control.TryUseNativeMKL();
+        //    }
+
+        //    if (c == null) throw new ArgumentNullException(nameof(c));
+        //    SparseObjectMatrix<Column> mem = c.GetMemory() ?? new SparseObjectMatrix<Column>(c.GetColumnDimensions());
+        //    c.SetMemory(mem);
+
+        //    c.SetInputMatrix(new SparseBinaryMatrix(c.GetInputDimensions()));
+
+        //    //Calculate numInputs and numColumns
+        //    int numInputs = c.GetInputMatrix().GetMaxIndex() + 1;
+        //    int numColumns = c.GetMemory().GetMaxIndex() + 1;
+        //    c.SetNumInputs(numInputs);
+        //    c.SetNumColumns(numColumns);
+
+        //    //Fill the sparse matrix with column objects
+        //    for (int i = 0; i < numColumns; i++)
+        //    {
+        //        mem.Set(i, new Column(c.GetCellsPerColumn(), i));
+        //    }
+
+        //    c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
+
+        //    if (runInParallel)
+        //    {
+        //        c.SetConnectedMatrix(new DenseMatrix(numColumns, numInputs));
+        //    }
+        //    else
+        //    {
+        //        c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
+        //    }
+
+        //    double[] tieBreaker = new double[numColumns];
+        //    for (int i = 0; i < numColumns; i++)
+        //    {
+        //        tieBreaker[i] = 0.01 * c.GetRandom().NextDouble();
+        //    }
+        //    c.SetTieBreaker(tieBreaker);
+
+        //    //Initialize state meta-management statistics
+        //    c.SetOverlapDutyCycles(new double[numColumns]);
+        //    c.SetActiveDutyCycles(new double[numColumns]);
+        //    c.SetMinOverlapDutyCycles(new double[numColumns]);
+        //    c.SetMinActiveDutyCycles(new double[numColumns]);
+        //    c.SetBoostFactors(new double[numColumns]);
+        //    Arrays.Fill(c.GetBoostFactors(), 1);
+        //}
 
         /**
          * Step two of pooler initialization kept separate from initialization
@@ -121,47 +174,21 @@ namespace HTM.Net.Algorithms
             // Initialize the set of permanence values for each column. Ensure that
             // each column is connected to enough input bits to allow it to be
             // activated.
-            bool runInParallel = c.IsSpatialInParallelMode();
-
             int numColumns = c.GetNumColumns();
-
-            Action<int> columnInit = i =>
+            for (int i = 0; i < numColumns; i++)
             {
-                int[] potential = MapPotential(c, i, true);
+                int[] potential = MapPotential(c, i, c.IsWrapAround());
                 Column column = c.GetColumn(i);
                 c.GetPotentialPools().Set(i, column.CreatePotentialPool(c, potential));
                 double[] perm = InitPermanence(c, potential, i, c.GetInitConnectedPct());
                 UpdatePermanencesForColumn(c, perm, column, potential, true);
-            };
-
-            if (!runInParallel)
-            {
-                for (int i = 0; i < numColumns; i++)
-                {
-                    columnInit(i);
-                }
-            }
-            else
-            {
-                // Initialize in parallel (random deterministic is lost here)
-                Parallel.For(0, numColumns, columnInit);
-
-                //Matrix<double> matrix = c.GetConnectedCounts();
-                //SparseMatrix sparse = new SparseMatrix(matrix.RowCount, matrix.ColumnCount);
-                //ConcurrentDictionary<int, Vector<double>> map = new ConcurrentDictionary<int, Vector<double>>();
-                //// Convert the dense matrix to a sparse one
-                //Parallel.For(0, numColumns, i =>
-                //{
-                //    // Take a row from the dense matrix and convert it to a sparse one
-                //    map.TryAdd(i, SparseVector.OfVector(matrix.Row(i)));
-                //});
-                //foreach (var pair in map)
-                //{
-                //    sparse.SetRow(pair.Key,pair.Value);
-                //}
-                //c.SetConnectedMatrix(sparse);
             }
 
+            // The inhibition radius determines the size of a column's local
+            // neighborhood.  A cortical column must overcome the overlap score of
+            // columns in its neighborhood in order to become active. This radius is
+            // updated every learning round. It grows and shrinks with the average
+            // number of connected synapses per column.
             UpdateInhibitionRadius(c);
         }
 
@@ -190,8 +217,7 @@ namespace HTM.Net.Algorithms
         /// Setting learning to 'off' freezes the SP and has many uses.
         /// For example, you might want to feed in various inputs and examine the resulting SDR's.
         /// </param>
-        /// <param name="stripNeverLearned"></param>
-        public void Compute(Connections c, int[] inputVector, int[] activeArray, bool learn, bool stripNeverLearned)
+        public void Compute(Connections c, int[] inputVector, int[] activeArray, bool learn)
         {
             if (inputVector.Length != c.GetNumInputs())
             {
@@ -201,18 +227,19 @@ namespace HTM.Net.Algorithms
             }
 
             UpdateBookeepingVars(c, learn);
-            int[] overlaps = CalculateOverlap(c, inputVector);
+            int[] overlaps = c.SetOverlaps(CalculateOverlap(c, inputVector));
 
             double[] boostedOverlaps;
             if (learn)
             {
                 boostedOverlaps = ArrayUtils.Multiply(c.GetBoostFactors(), overlaps);
             }
-            else {
+            else
+            {
                 boostedOverlaps = ArrayUtils.ToDoubleArray(overlaps);
             }
 
-            int[] activeColumns = InhibitColumns(c, boostedOverlaps);
+            int[] activeColumns = InhibitColumns(c, c.SetBoostedOverlaps(boostedOverlaps));
 
             if (learn)
             {
@@ -225,10 +252,6 @@ namespace HTM.Net.Algorithms
                     UpdateInhibitionRadius(c);
                     UpdateMinDutyCycles(c);
                 }
-            }
-            else if (stripNeverLearned)
-            {
-                activeColumns = StripUnlearnedColumns(c, activeColumns).ToArray();
             }
 
             Arrays.Fill(activeArray, 0);
@@ -248,10 +271,10 @@ namespace HTM.Net.Algorithms
          * @param activeColumns	An array containing the indices of the active columns
          * @return	a list of columns with a chance of activation
          */
-        public List<int> StripUnlearnedColumns(Connections c, int[] activeColumns)
+        public int[] StripUnlearnedColumns(Connections c, int[] activeColumns)
         {
-            List<int> active = new List<int>(activeColumns);
-            List<int> aboveZero = new List<int>();
+            HashSet<int> active = new HashSet<int>(activeColumns);
+            HashSet<int> aboveZero = new HashSet<int>();
             int numCols = c.GetNumColumns();
             double[] colDutyCycles = c.GetActiveDutyCycles();
             for (int i = 0; i < numCols; i++)
@@ -261,10 +284,12 @@ namespace HTM.Net.Algorithms
                     aboveZero.Add(i);
                 }
             }
-            active.RemoveAll(aboveZero.Contains);
+            active.ExceptWith(aboveZero);
             List<int> l = new List<int>(active);
             l.Sort();
-            return l;
+
+            return activeColumns.Where(i => c.GetActiveDutyCycles()[i] > 0).ToArray();
+            //return Arrays.stream(activeColumns).filter(i->c.getActiveDutyCycles()[i] > 0).toArray();
         }
 
         /**
@@ -312,16 +337,25 @@ namespace HTM.Net.Algorithms
         public void UpdateMinDutyCyclesLocal(Connections c)
         {
             int len = c.GetNumColumns();
-            for (int i = 0; i < len; i++)
-            {
-                int[] maskNeighbors = GetNeighborsND(c, i, c.GetMemory(), c.GetInhibitionRadius(), true).ToArray();
-                c.GetMinOverlapDutyCycles()[i] = ArrayUtils.Max(
-                        ArrayUtils.Sub(c.GetOverlapDutyCycles(), maskNeighbors)) *
-                        c.GetMinPctOverlapDutyCycles();
-                c.GetMinActiveDutyCycles()[i] = ArrayUtils.Max(
-                        ArrayUtils.Sub(c.GetActiveDutyCycles(), maskNeighbors)) *
-                        c.GetMinPctActiveDutyCycles();
-            }
+            int inhibitionRadius = c.GetInhibitionRadius();
+            double[] activeDutyCycles = c.GetActiveDutyCycles();
+            double minPctActiveDutyCycles = c.GetMinPctActiveDutyCycles();
+            double[] overlapDutyCycles = c.GetOverlapDutyCycles();
+            double minPctOverlapDutyCycles = c.GetMinPctOverlapDutyCycles();
+
+            // Parallelize for speed up
+            Array.ForEach(ArrayUtils.Range(0,len), i=> {
+                int[] neighborhood = GetColumnNeighborhood(c, i, inhibitionRadius);
+
+                double maxActiveDuty = ArrayUtils.Max(
+                    ArrayUtils.Sub(activeDutyCycles, neighborhood));
+                double maxOverlapDuty = ArrayUtils.Max(
+                    ArrayUtils.Sub(overlapDutyCycles, neighborhood));
+
+                c.GetMinActiveDutyCycles()[i] = maxActiveDuty * minPctActiveDutyCycles;
+
+                c.GetMinOverlapDutyCycles()[i] = maxOverlapDuty * minPctOverlapDutyCycles;
+            });
         }
 
         /**
@@ -342,7 +376,7 @@ namespace HTM.Net.Algorithms
         {
             double[] overlapArray = new double[c.GetNumColumns()];
             double[] activeArray = new double[c.GetNumColumns()];
-            ArrayUtils.GreaterThanXThanSetToY(overlaps, 0, 1);
+            ArrayUtils.GreaterThanXThanSetToYInB(overlaps, overlapArray, 0, 1);
             if (activeColumns.Length > 0)
             {
                 ArrayUtils.SetIndexesTo(activeArray, activeColumns, 1);
@@ -385,6 +419,58 @@ namespace HTM.Net.Algorithms
         {
             return ArrayUtils.Divide(ArrayUtils.Add(ArrayUtils.Multiply(dutyCycles, period - 1), newInput), period);
         }
+        
+        /**
+         * Update the inhibition radius. The inhibition radius is a measure of the
+         * square (or hypersquare) of columns that each a column is "connected to"
+         * on average. Since columns are are not connected to each other directly, we
+         * determine this quantity by first figuring out how many *inputs* a column is
+         * connected to, and then multiplying it by the total number of columns that
+         * exist for each input. For multiple dimension the aforementioned
+         * calculations are averaged over all dimensions of inputs and columns. This
+         * value is meaningless if global inhibition is enabled.
+         * 
+         * @param c     the {@link Connections} (spatial pooler memory)
+         */
+        public void UpdateInhibitionRadius(Connections c)
+        {
+            if (c.GetGlobalInhibition())
+            {
+                c.SetInhibitionRadius(ArrayUtils.Max(c.GetColumnDimensions()));
+                return;
+            }
+
+            List<double> avgCollected = new List<double>();
+            int len = c.GetNumColumns();
+            for (int i = 0; i < len; i++)
+            {
+                avgCollected.Add(AvgConnectedSpanForColumnND(c, i));
+            }
+            double avgConnectedSpan = ArrayUtils.Average(avgCollected.ToArray());
+            double diameter = avgConnectedSpan * AvgColumnsPerInput(c);
+            double radius = (diameter - 1) / 2.0d;
+            radius = Math.Max(1, radius);
+            c.SetInhibitionRadius((int)(radius + 0.5));
+        }
+
+        /**
+         * The average number of columns per input, taking into account the topology
+         * of the inputs and columns. This value is used to calculate the inhibition
+         * radius. This function supports an arbitrary number of dimensions. If the
+         * number of column dimensions does not match the number of input dimensions,
+         * we treat the missing, or phantom dimensions as 'ones'.
+         *  
+         * @param c		the {@link Connections} (spatial pooler memory)
+         * @return
+         */
+        public virtual double AvgColumnsPerInput(Connections c)
+        {
+            int[] colDim = Arrays.CopyOf(c.GetColumnDimensions(), c.GetColumnDimensions().Length);
+            int[] inputDim = Arrays.CopyOf(c.GetInputDimensions(), c.GetInputDimensions().Length);
+            double[] columnsPerInput = ArrayUtils.Divide(
+                    ArrayUtils.ToDoubleArray(colDim), ArrayUtils.ToDoubleArray(inputDim), 0, 0);
+            return ArrayUtils.Average(columnsPerInput);
+        }
 
         /**
          * The range of connectedSynapses per column, averaged for each dimension.
@@ -415,70 +501,18 @@ namespace HTM.Net.Algorithms
         }
 
         /**
-         * Update the inhibition radius. The inhibition radius is a measure of the
-         * square (or hypersquare) of columns that each a column is "connected to"
-         * on average. Since columns are are not connected to each other directly, we
-         * determine this quantity by first figuring out how many *inputs* a column is
-         * connected to, and then multiplying it by the total number of columns that
-         * exist for each input. For multiple dimension the aforementioned
-         * calculations are averaged over all dimensions of inputs and columns. This
-         * value is meaningless if global inhibition is enabled.
-         * 
-         * @param c		the {@link Connections} (spatial pooler memory)
-         */
-        public void UpdateInhibitionRadius(Connections c)
-        {
-            if (c.GetGlobalInhibition())
-            {
-                c.SetInhibitionRadius(ArrayUtils.Max(c.GetColumnDimensions()));
-                return;
-            }
-
-            List<double> avgCollected = new List<double>();
-            int len = c.GetNumColumns();
-            for (int i = 0; i < len; i++)
-            {
-                avgCollected.Add(AvgConnectedSpanForColumnND(c, i));
-            }
-            double avgConnectedSpan = ArrayUtils.Average(avgCollected.ToArray());
-            double diameter = avgConnectedSpan * AvgColumnsPerInput(c);
-            double radius = (diameter - 1) / 2.0d;
-            radius = Math.Max(1, radius);
-            c.SetInhibitionRadius((int)Math.Round(radius));
-        }
-
-        /**
-         * The average number of columns per input, taking into account the topology
-         * of the inputs and columns. This value is used to calculate the inhibition
-         * radius. This function supports an arbitrary number of dimensions. If the
-         * number of column dimensions does not match the number of input dimensions,
-         * we treat the missing, or phantom dimensions as 'ones'.
-         *  
-         * @param c		the {@link Connections} (spatial pooler memory)
-         * @return
-         */
-        public virtual double AvgColumnsPerInput(Connections c)
-        {
-            int[] colDim = Arrays.CopyOf(c.GetColumnDimensions(), c.GetColumnDimensions().Length);
-            int[] inputDim = Arrays.CopyOf(c.GetInputDimensions(), c.GetInputDimensions().Length);
-            double[] columnsPerInput = ArrayUtils.Divide(
-                    ArrayUtils.ToDoubleArray(colDim), ArrayUtils.ToDoubleArray(inputDim), 0, 0);
-            return ArrayUtils.Average(columnsPerInput);
-        }
-
-        /**
          * The primary method in charge of learning. Adapts the permanence values of
          * the synapses based on the input vector, and the chosen columns after
          * inhibition round. Permanence values are increased for synapses connected to
          * input bits that are turned on, and decreased for synapses connected to
          * inputs bits that are turned off.
          * 
-         * @param c					the {@link Connections} (spatial pooler memory)
-         * @param inputVector		a integer array that comprises the input to
-         *               			the spatial pooler. There exists an entry in the array
-         *              			for every input bit.
-         * @param activeColumns		an array containing the indices of the columns that
-         *              			survived inhibition.
+         * @param c                 the {@link Connections} (spatial pooler memory)
+         * @param inputVector       a integer array that comprises the input to
+         *                          the spatial pooler. There exists an entry in the array
+         *                          for every input bit.
+         * @param activeColumns     an array containing the indices of the columns that
+         *                          survived inhibition.
          */
         public void AdaptSynapses(Connections c, int[] inputVector, int[] activeColumns)
         {
@@ -491,7 +525,7 @@ namespace HTM.Net.Algorithms
             {
                 Pool pool = c.GetPotentialPools().Get(activeColumns[i]);
                 double[] perm = pool.GetDensePermanences(c);
-                int[] indexes = pool.GetSparseConnections();
+                int[] indexes = pool.GetSparsePotential();
                 ArrayUtils.RaiseValuesBy(permChanges, perm);
                 Column col = c.GetColumn(activeColumns[i]);
                 UpdatePermanencesForColumn(c, perm, col, indexes, true);
@@ -521,7 +555,7 @@ namespace HTM.Net.Algorithms
                 Pool pool = c.GetPotentialPools().Get(weakColumns[i]);
                 double[] perm = pool.GetSparsePermanences();
                 ArrayUtils.RaiseValuesBy(c.GetSynPermBelowStimulusInc(), perm);
-                int[] indexes = pool.GetSparseConnections();
+                int[] indexes = pool.GetSparsePotential();
                 Column col = c.GetColumn(weakColumns[i]);
                 UpdatePermanencesForColumnSparse(c, perm, col, indexes, true);
             }
@@ -540,13 +574,20 @@ namespace HTM.Net.Algorithms
          * @param perm				the permanence values
          * @param maskPotential			
          */
-        public void RaisePermanenceToThreshold(Connections c, double[] perm, int[] maskPotential)
+        public virtual void RaisePermanenceToThreshold(Connections c, double[] perm, int[] maskPotential)
         {
+            if (maskPotential.Length < c.GetStimulusThreshold())
+            {
+                throw new InvalidOperationException("This is likely due to a " +
+                    "value of stimulusThreshold that is too large relative " +
+                    "to the input size. [len(mask) < self._stimulusThreshold]");
+            }
+
             ArrayUtils.Clip(perm, c.GetSynPermMin(), c.GetSynPermMax());
             while (true)
             {
                 int numConnected = ArrayUtils.ValueGreaterCountAtIndex(c.GetSynPermConnected(), perm, maskPotential);
-                if (numConnected >= c.GetStimulusThreshold()) return;
+                if (numConnected >= c.GetStimulusThreshold()) break;
                 //Skipping version of "raiseValuesBy" that uses the maskPotential until bug #1322 is fixed
                 //in NuPIC - for now increment all bits until numConnected >= stimulusThreshold
                 ArrayUtils.RaiseValuesBy(c.GetSynPermBelowStimulusInc(), perm, maskPotential);
@@ -573,7 +614,7 @@ namespace HTM.Net.Algorithms
             while (true)
             {
                 int numConnected = ArrayUtils.ValueGreaterCount(c.GetSynPermConnected(), perm);
-                if (numConnected >= c.GetStimulusThreshold()) return;
+                if (numConnected >= c.GetStimulusThreshold()) break;
                 ArrayUtils.RaiseValuesBy(c.GetSynPermBelowStimulusInc(), perm);
             }
         }
@@ -654,7 +695,7 @@ namespace HTM.Net.Algorithms
          */
         public static double InitPermConnected(Connections c)
         {
-            double p = c.GetSynPermConnected() + c.GetRandom().NextDouble() * c.GetSynPermActiveInc() / 4.0;
+            double p = c.GetSynPermConnected() + (c.GetSynPermMax() - c.GetSynPermConnected()) * c.random.NextDouble();
 
             // Note from Python implementation on conditioning below:
             // Ensure we don't have too much unnecessary precision. A full 64 bits of
@@ -693,33 +734,22 @@ namespace HTM.Net.Algorithms
          *                          Permanence values will only be generated for input bits
          *                          corresponding to indices for which the mask value is 1.
          *                          WARNING: potentialPool is sparse, not an array of "1's"
-         * @param index				the index of the column being initialized
+         * @param index             the index of the column being initialized
          * @param connectedPct      A value between 0 or 1 specifying the percent of the input
          *                          bits that will start off in a connected state.
          * @return
          */
         public double[] InitPermanence(Connections c, int[] potentialPool, int index, double connectedPct)
         {
-            int count = (int)Math.Round((double)potentialPool.Length * connectedPct, MidpointRounding.AwayFromZero);
-            ArrayList pick = new ArrayList();
-            IRandom random = c.GetRandom();
-            while (pick.Count < count)
-            {
-                int randIdx = random.NextInt(potentialPool.Length);
-
-                int resolvedPoolIdx = potentialPool[randIdx];
-                if (!pick.Contains(resolvedPoolIdx))
-                    pick.Add(potentialPool[randIdx]);
-            }
-
             double[] perm = new double[c.GetNumInputs()];
             foreach (int idx in potentialPool)
             {
-                if (pick.Contains(idx))
+                if (c.random.NextDouble() <= connectedPct)
                 {
                     perm[idx] = InitPermConnected(c);
                 }
-                else {
+                else
+                {
                     perm[idx] = InitPermNonConnected(c);
                 }
 
@@ -753,13 +783,16 @@ namespace HTM.Net.Algorithms
             int[] columnCoords = c.GetMemory().ComputeCoordinates(columnIndex);
             double[] colCoords = ArrayUtils.ToDoubleArray(columnCoords);
             double[] ratios = ArrayUtils.Divide(
-                    colCoords, ArrayUtils.ToDoubleArray(c.GetColumnDimensions()), 0, 0);
+                colCoords, ArrayUtils.ToDoubleArray(c.GetColumnDimensions()), 0, 0);
             double[] inputCoords = ArrayUtils.Multiply(
-                    ArrayUtils.ToDoubleArray(c.GetInputDimensions()), ratios, 0, 0);
-            inputCoords = ArrayUtils.Add(inputCoords,
-                    ArrayUtils.Multiply(ArrayUtils.Divide(
-                            ArrayUtils.ToDoubleArray(c.GetInputDimensions()), ArrayUtils.ToDoubleArray(c.GetColumnDimensions()), 0, 0),
-                            0.5));
+                ArrayUtils.ToDoubleArray(c.GetInputDimensions()), ratios, 0, 0);
+            inputCoords = ArrayUtils.Add(
+                inputCoords,
+                ArrayUtils.Multiply(
+                    ArrayUtils.Divide(
+                        ArrayUtils.ToDoubleArray(c.GetInputDimensions()),
+                        ArrayUtils.ToDoubleArray(c.GetColumnDimensions()), 0, 0),
+                    0.5));
             int[] inputCoordInts = ArrayUtils.Clip(ArrayUtils.ToIntArray(inputCoords), c.GetInputDimensions(), -1);
             return c.GetInputMatrix().ComputeIndex(inputCoordInts);
         }
@@ -793,152 +826,14 @@ namespace HTM.Net.Algorithms
          */
         public int[] MapPotential(Connections c, int columnIndex, bool wrapAround)
         {
-            int inputIndex = MapColumn(c, columnIndex);
+            int centerInput = MapColumn(c, columnIndex);
+            int[] columnInputs = GetInputNeighborhood(c, centerInput, c.GetPotentialRadius());
 
-            List<int> indices = GetNeighborsND(c, inputIndex, c.GetInputMatrix(), c.GetPotentialRadius(), wrapAround);
-            indices.Add(inputIndex);
-            //TODO: See https://github.com/numenta/nupic.core/issues/128
-            indices.Sort();
-
-            return ArrayUtils.Sample((int)Math.Round(indices.Count * c.GetPotentialPct(), MidpointRounding.AwayFromZero), indices, c.GetRandom());
-        }
-
-        /**
-         * Similar to _getNeighbors1D and _getNeighbors2D (Not included in this implementation), 
-         * this function Returns a list of indices corresponding to the neighbors of a given column. 
-         * Since the permanence values are stored in such a way that information about topology
-         * is lost. This method allows for reconstructing the topology of the inputs,
-         * which are flattened to one array. Given a column's index, its neighbors are
-         * defined as those columns that are 'radius' indices away from it in each
-         * dimension. The method returns a list of the flat indices of these columns.
-         * 
-         * @param c     		        matrix configured to this {@code SpatialPooler}'s dimensions
-         *                      		for transformation work.
-         * @param columnIndex   		The index identifying a column in the permanence, potential
-         *                      		and connectivity matrices.
-         * @param topology    			A {@link SparseMatrix} with dimensionality info.
-         * @param inhibitionRadius      Indicates how far away from a given column are other
-         *                      		columns to be considered its neighbors. In the previous 2x3
-         *                      		example, each column with coordinates:
-         *                      		[2+/-radius, 3+/-radius] is considered a neighbor.
-         * @param wrapAround    		A boolean value indicating whether to consider columns at
-         *                      		the border of a dimensions to be adjacent to columns at the
-         *                      		other end of the dimension. For example, if the columns are
-         *                      		laid out in one dimension, columns 1 and 10 will be
-         *                      		considered adjacent if wrapAround is set to true:
-         *                      		[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-         *               
-         * @return              a list of the flat indices of these columns
-         */
-        public virtual List<int> GetNeighborsND(Connections c, int columnIndex, ISparseMatrix topology, int inhibitionRadius, bool wrapAround)
-        {
-            int[] dimensions = (int[])topology.GetDimensions().Clone();
-            int[] columnCoords = topology.ComputeCoordinates(columnIndex);
-            List<int[]> dimensionCoords = new List<int[]>();
-
-            for (int i = 0; i < dimensions.Length; i++)
-            {
-                int[] range = ArrayUtils.Range(columnCoords[i] - inhibitionRadius, columnCoords[i] + inhibitionRadius + 1);
-                int[] curRange = new int[range.Length];
-
-                if (wrapAround)
-                {
-                    for (int j = 0; j < curRange.Length; j++)
-                    {
-                        curRange[j] = (int)ArrayUtils.PositiveRemainder(range[j], dimensions[i]);
-                    }
-                }
-                else {
-                    int idx = i;
-                    //curRange = ArrayUtils.RetainLogicalAnd(range,
-                    //    new ICondition[] { ArrayUtils.GREATER_OR_EQUAL_0,
-                    //    new ICondition.Adapter<Integer>() {
-                    //        @Override public boolean eval(int n) { return n < dimensions[idx]; }
-                    //        }
-                    //    }
-                    //    );
-                    curRange = ArrayUtils.RetainLogicalAnd(range,
-                        new[]
-                        {
-                            ArrayUtils.GREATER_OR_EQUAL_0
-                            , n => n < dimensions[idx]
-                        }
-                        );
-                    //curRange = range.Where(n => n >= 0 && n < dimensions[idx]).ToArray();
-                }
-                dimensionCoords.Add(ArrayUtils.Unique(curRange));
-            }
-
-            List<int[]> neighborList = ArrayUtils.DimensionsToCoordinateList(dimensionCoords);
-            List<int> neighbors = new List<int>(neighborList.Count);
-            int size = neighborList.Count;
-            for (int i = 0; i < size; i++)
-            {
-                int flatIndex = topology.ComputeIndex(neighborList[i], false);
-                if (flatIndex == columnIndex) continue;
-                neighbors.Add(flatIndex);
-            }
-            return neighbors;
-        }
-
-        /**
-         * Returns true if enough rounds have passed to warrant updates of
-         * duty cycles
-         * 
-         * @param c	the {@link Connections} memory encapsulation
-         * @return
-         */
-        public bool IsUpdateRound(Connections c)
-        {
-            return c.GetIterationNum() % c.GetUpdatePeriod() == 0;
-        }
-
-        /**
-         * Updates counter instance variables each cycle.
-         *  
-         * @param c         the {@link Connections} memory encapsulation
-         * @param learn     a boolean value indicating whether learning should be
-         *                  performed. Learning entails updating the  permanence
-         *                  values of the synapses, and hence modifying the 'state'
-         *                  of the model. setting learning to 'off' might be useful
-         *                  for indicating separate training vs. testing sets.
-         */
-        public void UpdateBookeepingVars(Connections c, bool learn)
-        {
-            c.iterationNum += 1;
-            if (learn) c.iterationLearnNum += 1;
-        }
-
-        /**
-         * This function determines each column's overlap with the current input
-         * vector. The overlap of a column is the number of synapses for that column
-         * that are connected (permanence value is greater than '_synPermConnected')
-         * to input bits which are turned on. Overlap values that are lower than
-         * the 'stimulusThreshold' are ignored. The implementation takes advantage of
-         * the SpraseBinaryMatrix class to perform this calculation efficiently.
-         *  
-         * @param c				the {@link Connections} memory encapsulation
-         * @param inputVector   an input array of 0's and 1's that comprises the input to
-         *                      the spatial pooler.
-         * @return
-         */
-        public virtual int[] CalculateOverlap(Connections c, int[] inputVector)
-        {
-            int[] overlaps = new int[c.GetNumColumns()];
-            c.GetConnectedCounts().RightVecSumAtNZ(inputVector, overlaps, c.GetStimulusThreshold());
-            return overlaps;
-        }
-
-        /**
-         * Return the overlap to connected counts ratio for a given column
-         * @param c
-         * @param overlaps
-         * @return
-         */
-        public double[] CalculateOverlapPct(Connections c, int[] overlaps)
-        {
-            int[] trueCounts = c.GetConnectedCounts().RowSums().ToArray().Select(i => (int)i).ToArray(); // c.GetConnectedCounts().GetTrueCounts()
-            return ArrayUtils.Divide(overlaps, trueCounts);
+            // Select a subset of the receptive field to serve as the
+            // the potential pool
+            int numPotential = (int)(columnInputs.Length * c.GetPotentialPct() + 0.5);
+            int[] retVal = new int[numPotential];
+            return ArrayUtils.Sample(columnInputs, retVal, c.GetRandom());
         }
 
         /**
@@ -946,11 +841,11 @@ namespace HTM.Net.Algorithms
          * actually perform inhibition and then delegates the task of picking the
          * active columns to helper functions.
          * 
-         * @param c				the {@link Connections} matrix
-         * @param overlaps		an array containing the overlap score for each  column.
-         *              		The overlap score for a column is defined as the number
-         *              		of synapses in a "connected state" (connected synapses)
-         *              		that are connected to input bits which are turned on.
+         * @param c             the {@link Connections} matrix
+         * @param overlaps      an array containing the overlap score for each  column.
+         *                      The overlap score for a column is defined as the number
+         *                      of synapses in a "connected state" (connected synapses)
+         *                      that are connected to input bits which are turned on.
          * @return
          */
         public virtual int[] InhibitColumns(Connections c, double[] overlaps)
@@ -968,7 +863,7 @@ namespace HTM.Net.Algorithms
             }
 
             //Add our fixed little bit of random noise to the scores to help break ties.
-            ArrayUtils.Add(overlaps, c.GetTieBreaker());
+            //ArrayUtils.d_add(overlaps, c.getTieBreaker());
 
             if (c.GetGlobalInhibition() || c.GetInhibitionRadius() > ArrayUtils.Max(c.GetColumnDimensions()))
             {
@@ -984,12 +879,12 @@ namespace HTM.Net.Algorithms
          * region. At most half of the columns in a local neighborhood are allowed to
          * be active.
          * 
-         * @param c				the {@link Connections} matrix
-         * @param overlaps		an array containing the overlap score for each  column.
-         *              		The overlap score for a column is defined as the number
-         *              		of synapses in a "connected state" (connected synapses)
-         *              		that are connected to input bits which are turned on.
-         * @param density		The fraction of columns to survive inhibition.
+         * @param c             the {@link Connections} matrix
+         * @param overlaps      an array containing the overlap score for each  column.
+         *                      The overlap score for a column is defined as the number
+         *                      of synapses in a "connected state" (connected synapses)
+         *                      that are connected to input bits which are turned on.
+         * @param density       The fraction of columns to survive inhibition.
          * 
          * @return
          */
@@ -998,31 +893,23 @@ namespace HTM.Net.Algorithms
             int numCols = c.GetNumColumns();
             int numActive = (int)(density * numCols);
 
-            int[] range = ArrayUtils.Range(0, overlaps.Length);
-
-            //var rangeOverlapDict = range.ToDictionary(index => index, index => overlaps[index]);
-            //var limitedOverlapDict = rangeOverlapDict.OrderByDescending(kvp => kvp.Value).Take(numActive).Select(kvp => kvp.Key).ToList();
-            //var result = limitedOverlapDict.OrderBy(k => k).ToArray();
-
-            return range
-                .ToDictionary(index => index, index => overlaps[index])
-                .OrderByDescending(kvp => kvp.Value)
-                .Take(numActive)
-                .Select(kvp => kvp.Key)
-                .OrderBy(k => k)
+            int[] sortedWinnerIndices = ArrayUtils.Range(0, overlaps.Length)
+                .Select(i=> new KeyValuePair<int,double>(i, overlaps[i]))
+                .OrderBy(k => c.inhibitionComparator)
+                .Select(p=> p.Key)
                 .ToArray();
 
-            //return IntStream.range(0, overlaps.Length)
-            //    .boxed()
-            //    .collect(Collectors.toMap(index->index, index->overlaps[index]))
-            //    .entrySet()
-            //    .stream()
-            //    .sorted(Map.Entry.<Integer,Double> comparingByValue().reversed())
-            //    .limit(numActive)
-            //    .map(Entry::getKey)
-            //    .sorted()
-            //    .mapToInt(Integer::intValue)
-            //    .toArray();
+            // Enforce the stimulus threshold
+            double stimulusThreshold = c.GetStimulusThreshold();
+            int start = sortedWinnerIndices.Length - numActive;
+            while (start < sortedWinnerIndices.Length)
+            {
+                int i = sortedWinnerIndices[start];
+                if (overlaps[i] >= stimulusThreshold) break;
+                ++start;
+            }
+
+            return sortedWinnerIndices.Skip(start).ToArray();
         }
 
         /**
@@ -1039,22 +926,38 @@ namespace HTM.Net.Algorithms
          */
         public virtual int[] InhibitColumnsLocal(Connections c, double[] overlaps, double density)
         {
-            int numCols = c.GetNumColumns();
-            int[] activeColumns = new int[numCols];
-            double addToWinners = ArrayUtils.Max(overlaps) / 1000.0;
-            for (int i = 0; i < numCols; i++)
+            double addToWinners = ArrayUtils.Max(overlaps) / 1000.0d;
+            if (addToWinners == 0)
             {
-                List<int> maskNeighbors = GetNeighborsND(c, i, c.GetMemory(), c.GetInhibitionRadius(), false);
-                double[] overlapSlice = ArrayUtils.Sub(overlaps, maskNeighbors.ToArray());
-                int numActive = (int)(0.5 + density * (maskNeighbors.Count + 1));
-                int numBigger = ArrayUtils.ValueGreaterCount(overlaps[i], overlapSlice);
-                if (numBigger < numActive)
+                addToWinners = 0.001;
+            }
+            double[] tieBrokenOverlaps = Arrays.CopyOf(overlaps, overlaps.Length);
+
+            List<int> winners = new List<int>();
+            double stimulusThreshold = c.GetStimulusThreshold();
+            int inhibitionRadius = c.GetInhibitionRadius();
+            for (int i = 0; i < overlaps.Length; i++)
+            {
+                int column = i;
+                if (overlaps[column] >= stimulusThreshold)
                 {
-                    activeColumns[i] = 1;
-                    overlaps[i] += addToWinners;
+                    int[] neighborhood = GetColumnNeighborhood(c, column, inhibitionRadius);
+                    double[] neighborhoodOverlaps = ArrayUtils.Sub(tieBrokenOverlaps, neighborhood);
+
+                    long numBigger = neighborhoodOverlaps
+                        .AsParallel()
+                        .Count(d => d > overlaps[column]);
+
+                    int numActive = (int)(0.5 + density * neighborhood.Length);
+                    if (numBigger < numActive)
+                    {
+                        winners.Add(column);
+                        tieBrokenOverlaps[column] += addToWinners;
+                    }
                 }
             }
-            return ArrayUtils.Where(activeColumns, ArrayUtils.INT_GREATER_THAN_0);
+
+            return winners.ToArray();
         }
 
         /**
@@ -1088,14 +991,14 @@ namespace HTM.Net.Algorithms
 
             //Indexes of values > 0
             int[] mask = ArrayUtils.Where(minActiveDutyCycles, ArrayUtils.GREATER_THAN_0);
-            //int[] mask = minActiveDutyCycles.Where(n => n > 0).Cast<int>().ToArray();
 
             double[] boostInterim;
             if (mask.Length < 1)
             {
                 boostInterim = c.GetBoostFactors();
             }
-            else {
+            else
+            {
                 double[] numerator = new double[c.GetNumColumns()];
                 Arrays.Fill(numerator, 1 - c.GetMaxBoost());
                 boostInterim = ArrayUtils.Divide(numerator, minActiveDutyCycles, 0, 0);
@@ -1111,9 +1014,113 @@ namespace HTM.Net.Algorithms
             int i = 0;
             ArrayUtils.SetIndexesTo(boostInterim, ArrayUtils.Where(activeDutyCycles, d => d > minActiveDutyCycles[i++]), 1.0d);
 
-            //int[] aDutyCycles = activeDutyCycles.Where(d => d > minActiveDutyCycles[i++]).Select(d => (int)d).ToArray();
-
             c.SetBoostFactors(boostInterim);
+        }
+
+        /**
+         * This function determines each column's overlap with the current input
+         * vector. The overlap of a column is the number of synapses for that column
+         * that are connected (permanence value is greater than '_synPermConnected')
+         * to input bits which are turned on. Overlap values that are lower than
+         * the 'stimulusThreshold' are ignored. The implementation takes advantage of
+         * the SpraseBinaryMatrix class to perform this calculation efficiently.
+         *  
+         * @param c             the {@link Connections} memory encapsulation
+         * @param inputVector   an input array of 0's and 1's that comprises the input to
+         *                      the spatial pooler.
+         * @return
+         */
+        public virtual int[] CalculateOverlap(Connections c, int[] inputVector)
+        {
+            int[] overlaps = new int[c.GetNumColumns()];
+            c.GetConnectedCounts().RightVecSumAtNZ(inputVector, overlaps, c.GetStimulusThreshold());
+            return overlaps;
+        }
+
+        /**
+         * Return the overlap to connected counts ratio for a given column
+         * @param c
+         * @param overlaps
+         * @return
+         */
+        public double[] CalculateOverlapPct(Connections c, int[] overlaps)
+        {
+            return ArrayUtils.Divide(overlaps, c.GetConnectedCounts().GetTrueCounts());
+        }
+
+        /**
+         * Returns true if enough rounds have passed to warrant updates of
+         * duty cycles
+         * 
+         * @param c	the {@link Connections} memory encapsulation
+         * @return
+         */
+        public bool IsUpdateRound(Connections c)
+        {
+            return c.GetIterationNum() % c.GetUpdatePeriod() == 0;
+        }
+
+        /**
+        * Updates counter instance variables each cycle.
+        *  
+        * @param c         the {@link Connections} memory encapsulation
+        * @param learn     a boolean value indicating whether learning should be
+        *                  performed. Learning entails updating the  permanence
+        *                  values of the synapses, and hence modifying the 'state'
+        *                  of the model. setting learning to 'off' might be useful
+        *                  for indicating separate training vs. testing sets.
+        */
+        public void UpdateBookeepingVars(Connections c, bool learn)
+        {
+            c.spIterationNum += 1;
+            if (learn) c.spIterationLearnNum += 1;
+        }
+
+        /**
+         * Gets a neighborhood of columns.
+         * 
+         * Simply calls topology.neighborhood or topology.wrappingNeighborhood
+         * 
+         * A subclass can insert different topology behavior by overriding this method.
+         * 
+         * @param c                     the {@link Connections} memory encapsulation
+         * @param centerColumn          The center of the neighborhood.
+         * @param inhibitionRadius      Span of columns included in each neighborhood
+         * @return                      The columns in the neighborhood (1D)
+         */
+        public int[] GetColumnNeighborhood(Connections c, int centerColumn, int inhibitionRadius)
+        {
+            return c.IsWrapAround() ?
+                c.GetColumnTopology().WrappingNeighborhood(centerColumn, inhibitionRadius) :
+                    c.GetColumnTopology().Neighborhood(centerColumn, inhibitionRadius);
+        }
+
+        /**
+         * Gets a neighborhood of inputs.
+         * 
+         * Simply calls topology.wrappingNeighborhood or topology.neighborhood.
+         * 
+         * A subclass can insert different topology behavior by overriding this method.
+         * 
+         * @param c                     the {@link Connections} memory encapsulation
+         * @param centerInput           The center of the neighborhood.
+         * @param potentialRadius       Span of the input field included in each neighborhood
+         * @return                      The input's in the neighborhood. (1D)
+         */
+        public int[] GetInputNeighborhood(Connections c, int centerInput, int potentialRadius)
+        {
+            return c.IsWrapAround() ?
+                c.GetInputTopology().WrappingNeighborhood(centerInput, potentialRadius) :
+                    c.GetInputTopology().Neighborhood(centerInput, potentialRadius);
+        }
+
+        public class InvalidSpatialPoolerParamValueException : Exception
+        {
+            public InvalidSpatialPoolerParamValueException(string message)
+                : base(message)
+            {
+
+            }
         }
     }
 }

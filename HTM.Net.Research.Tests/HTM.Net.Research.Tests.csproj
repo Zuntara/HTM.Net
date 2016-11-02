@@ -92,9 +92,6 @@
     <Compile Include="Examples\HotGym\NetworkAPIDemo.cs" />
     <Compile Include="Examples\HotGym\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\HotGym\NetworkDemoHarness.cs" />
-    <Compile Include="Examples\PaHotGym\NetworkAPIDemo.cs" />
-    <Compile Include="Examples\PaHotGym\NetworkApiDemoTests.cs" />
-    <Compile Include="Examples\PaHotGym\NetworkDemoHarness.cs" />
     <Compile Include="Examples\Sine\NetworkAPIDemo.cs" />
     <Compile Include="Examples\Sine\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\Sine\NetworkDemoHarness.cs" />

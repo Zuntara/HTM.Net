@@ -38,8 +38,8 @@ namespace HTM.Net.Tests.Network
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
@@ -92,7 +92,7 @@ namespace HTM.Net.Tests.Network
             Connections con = new Connections();
             p.Apply(con);
             TemporalMemory tm = new TemporalMemory();
-            tm.Init(con);
+            TemporalMemory.Init(con);
 
             ComputeCycle cc = null;
             for (int x = 0; x < 602; x++)
@@ -240,24 +240,24 @@ namespace HTM.Net.Tests.Network
             //Test Segment equality
             Column column1 = new Column(2, 0);
             Cell cell1 = new Cell(column1, 0);
-            Segment s1 = new DistalDendrite(cell1, 0);
+            Segment s1 = new DistalDendrite(cell1, 0, 1, 0);
             Assert.IsTrue(s1.Equals(s1)); // test ==
             Assert.IsFalse(s1.Equals(null));
 
-            Segment s2 = new DistalDendrite(cell1, 0);
+            Segment s2 = new DistalDendrite(cell1, 0, 1, 0);
             Assert.IsTrue(s1.Equals(s2));
 
             Cell cell2 = new Cell(column1, 0);
-            Segment s3 = new DistalDendrite(cell2, 0);
+            Segment s3 = new DistalDendrite(cell2, 0, 1, 0);
             Assert.IsTrue(s1.Equals(s3));
 
             //Segment's Cell has different index
             Cell cell3 = new Cell(column1, 1);
-            Segment s4 = new DistalDendrite(cell3, 0);
+            Segment s4 = new DistalDendrite(cell3, 0, 1, 0);
             Assert.IsFalse(s1.Equals(s4));
 
             //Segment has different index
-            Segment s5 = new DistalDendrite(cell3, 1);
+            Segment s5 = new DistalDendrite(cell3, 1, 1, 0);
             Assert.IsFalse(s4.Equals(s5));
             Assert.IsTrue(s5.ToString().Equals("1"));
             Assert.AreEqual(-1, s4.CompareTo(s5));

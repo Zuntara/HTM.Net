@@ -1,4 +1,6 @@
-﻿namespace HTM.Net.Monitor
+﻿using HTM.Net.Model;
+
+namespace HTM.Net.Monitor
 {
     /// <summary>
     /// Decorator interface for main algorithms 

@@ -121,6 +121,14 @@ namespace HTM.Net.Util
             return result;
         }
 
+        public static void Fill<T>(T[] array, T i)
+        {
+            for (int j = 0; j < array.Length; j++)
+            {
+                array[j] = i;
+            }
+        }
+
         public static void Fill(byte[] array, byte i)
         {
             MemsetUtil.Memset(array, i, array.Length);
@@ -212,6 +220,18 @@ namespace HTM.Net.Util
         public static List<int[]> AsList(params int[][] args)
         {
             return new List<int[]>(args);
+        }
+
+        public static int GetHashCode<T>(T[] o)
+        {
+            if (o == null)
+                return 0;
+
+            int result = 1;
+            foreach (T element in o)
+                result = 31 * result + element.GetHashCode();
+
+            return result;
         }
     }
 

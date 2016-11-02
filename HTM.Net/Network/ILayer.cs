@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
 

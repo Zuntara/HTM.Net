@@ -124,6 +124,7 @@
     <Compile Include="SDRTests.cs" />
     <Compile Include="Util\ArrayTests.cs" />
     <Compile Include="Util\ArrayUtilTest.cs" />
+    <Compile Include="Util\GroupByTests.cs" />
     <Compile Include="Util\MersenneTwisterTest.cs" />
     <Compile Include="Util\NearestNeighborTest.cs" />
     <Compile Include="Util\SparseByteArrayTests.cs" />
