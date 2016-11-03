@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reactive;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using log4net;
 
@@ -32,7 +33,8 @@ namespace HTM.Net.Network
      * @author cogmission
      *
      */
-    public class Region
+     [Serializable]
+    public class Region : Persistable<Region>
     {
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Region));
 

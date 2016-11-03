@@ -18,7 +18,8 @@ namespace HTM.Net
     /// <see cref="Connections"/>
     /// <see cref="ComputeCycle"/>
     /// </summary>
-    public class Parameters
+    [Serializable]
+    public class Parameters : Persistable<Parameters>
     {
         private static readonly ParametersMap DEFAULTS_ALL;
         private static readonly ParametersMap DEFAULTS_TEMPORAL;

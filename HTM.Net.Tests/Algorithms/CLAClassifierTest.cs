@@ -24,7 +24,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             SetUp();
 
-            ClassifierResult<double> retVal = null;
+            Classification<double> retVal = null;
             for (int recordNum = 0; recordNum < 10; recordNum++)
             {
                 retVal = Compute<double>(classifier, recordNum, new[] { 1, 5 }, 0, 10);
@@ -43,7 +43,7 @@ namespace HTM.Net.Tests.Algorithms
             classifier = new CLAClassifier(new[] { 0 }, 0.001, 0.3, 0);
 
             // Enough times to perform Inference and learn associations
-            ClassifierResult<double> retVal = null;
+            Classification<double> retVal = null;
             for (int recordNum = 0; recordNum < 10; recordNum++)
             {
                 retVal = Compute<double>(classifier, recordNum, new[] { 1, 5 }, 0, 10);
@@ -64,7 +64,7 @@ namespace HTM.Net.Tests.Algorithms
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
-            ClassifierResult<double> result = classifier.Compute<double>(0, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double> result = classifier.Compute<double>(0, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual(1, result.GetActualValueCount());
@@ -78,7 +78,7 @@ namespace HTM.Net.Tests.Algorithms
             Dictionary<string, object> classification = new Dictionary<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
-            ClassifierResult<double> result = classifier.Compute<double>(0, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double> result = classifier.Compute<double>(0, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual(1, result.GetActualValueCount());
@@ -94,7 +94,7 @@ namespace HTM.Net.Tests.Algorithms
             classification.Add("actValue", 34.7);
             classifier.Compute<double>(0, classification, new[] { 1, 5, 9 }, true, true);
 
-            ClassifierResult<double> result = classifier.Compute<double>(1, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double> result = classifier.Compute<double>(1, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual(5, result.GetActualValueCount());
@@ -109,7 +109,7 @@ namespace HTM.Net.Tests.Algorithms
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
-            ClassifierResult<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
             recordNum += 1;
 
             classification.Add("bucketIdx", 5);
@@ -151,7 +151,7 @@ namespace HTM.Net.Tests.Algorithms
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", null);
             classification.Add("actValue", null);
-            ClassifierResult<double?> result = classifier.Compute<double?>(0, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double?> result = classifier.Compute<double?>(0, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual(1, result.GetActualValueCount());
@@ -166,7 +166,7 @@ namespace HTM.Net.Tests.Algorithms
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", "D");
             classifier.Compute<string>(0, classification, new[] { 1, 5, 9 }, true, true);
-            ClassifierResult<string> result = classifier.Compute<string>(0, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<string> result = classifier.Compute<string>(0, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual("D", result.GetActualValue(4));
@@ -181,7 +181,7 @@ namespace HTM.Net.Tests.Algorithms
             classification.Add("actValue", "D");
             classifier.Compute<string>(0, classification, new[] { 1, 5, 9 }, true, true);
             classification.Add("actValue", "E");
-            ClassifierResult<string> result = classifier.Compute<string>(0, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<string> result = classifier.Compute<string>(0, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual("D", result.GetActualValue(4));
@@ -195,7 +195,7 @@ namespace HTM.Net.Tests.Algorithms
             Map<string, object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
-            ClassifierResult<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
             recordNum += 1;
 
             classification.Add("bucketIdx", 5);
@@ -240,7 +240,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             SetUp();
 
-            ClassifierResult<double> result = Compute<double>(classifier, 0, new[] { 1, 5 }, 9, 9);
+            Classification<double> result = Compute<double>(classifier, 0, new[] { 1, 5 }, 9, 9);
             result = Compute<double>(classifier, 1, new[] { 1, 5 }, 9, 9);
             result = Compute<double>(classifier, 1, new[] { 1, 5 }, 9, 9);
             result = Compute<double>(classifier, 2, new[] { 3, 5 }, 2, 2);
@@ -279,7 +279,7 @@ namespace HTM.Net.Tests.Algorithms
             classifier = new CLAClassifier(new[] { 1,2 });
 
             // Only should return one actual value bucket.
-            ClassifierResult<double> result = null;
+            Classification<double> result = null;
             int recordNum = 0;
             for (int i = 0; i < 10; i++, recordNum++)
             {
@@ -297,7 +297,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             classifier = new CLAClassifier(new[] { 1, 2 }, 0.001, 0.3, 0);
 
-            ClassifierResult<double> result = null;
+            Classification<double> result = null;
             int recordNum = 0;
             for (int i = 0; i < 100; i++, recordNum++)
             {
@@ -356,7 +356,7 @@ namespace HTM.Net.Tests.Algorithms
             //                                       [2, 4, 6] => bucket 2
             classification.Add("bucketIdx", 2);
             classification.Add("actValue", 2);
-            ClassifierResult<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 3, 5 }, true, true);
+            Classification<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 3, 5 }, true, true);
             recordNum += 1;
             Assert.AreEqual(0.0, result.GetStat(1, 0), 0.00001);
             Assert.AreEqual(1.0, result.GetStat(1, 1), 0.00001);
@@ -427,20 +427,20 @@ namespace HTM.Net.Tests.Algorithms
             classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
 
             recordNum = 2;
-            ClassifierResult<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
+            Classification<double> result = classifier.Compute<double>(recordNum, classification, new[] { 1, 5, 9 }, true, true);
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 2 }, result.StepSet()));
             Assert.AreEqual(1, result.GetActualValueCount());
             Assert.AreEqual(34.7, result.GetActualValue(0), 0.01);
         }
 
-        public void CheckValue<T>(ClassifierResult<T> retVal, int index, object value, double probability)
+        public void CheckValue<T>(Classification<T> retVal, int index, object value, double probability)
         {
             Assert.AreEqual(retVal.GetActualValue(index), value);
             Assert.AreEqual(probability, retVal.GetStat(1, index), 0.01);
         }
 
-        public  ClassifierResult<T> Compute<T>(CLAClassifier classifier, int recordNum, int[] pattern,
+        public  Classification<T> Compute<T>(CLAClassifier classifier, int recordNum, int[] pattern,
             int bucket, object value)
         {
 

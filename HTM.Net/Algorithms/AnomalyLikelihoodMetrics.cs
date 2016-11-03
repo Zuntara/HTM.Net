@@ -1,4 +1,6 @@
-﻿using HTM.Net.Util;
+﻿using System;
+using HTM.Net.Model;
+using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
 {
@@ -10,7 +12,8 @@ namespace HTM.Net.Algorithms
  * @see AnomalyLikelihood
  * @see AnomalyLikelihoodTest
  */
-    public class AnomalyLikelihoodMetrics
+    [Serializable]
+    public class AnomalyLikelihoodMetrics : Persistable<AnomalyLikelihoodMetrics>
     {
         private AnomalyLikelihood.AnomalyParams @params;
         private Anomaly.AveragedAnomalyRecordList aggRecordList;
@@ -113,11 +116,13 @@ namespace HTM.Net.Algorithms
                 return false;
             if (!Arrays.AreEqual(likelihoods, other.likelihoods))
                 return false;
-            if (@params == null) {
+            if (@params == null)
+            {
                 if (other.@params != null)
+                    return false;
+            }
+            else if (!@params.Equals(other.@params))
                 return false;
-            } else if (!@params.Equals(other.@params))
-            return false;
             return true;
         }
     }

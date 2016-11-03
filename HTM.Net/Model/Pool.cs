@@ -12,7 +12,7 @@ namespace HTM.Net.Model
     /// which will update the Synapse's internal reference.
     /// </summary>
     [Serializable]
-    public class Pool
+    public class Pool : Persistable<Pool>
     {
         /** keep it simple */
         private const long serialVersionUID = 1L;

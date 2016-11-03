@@ -162,7 +162,7 @@ namespace HTM.Net.Algorithms
             // This is used for serialization/deserialization 
         }
 
-        public ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
+        public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
             bool learn, bool infer)
         {
             if (learn == false && infer == false) throw new InvalidOperationException("learn and infer cannot be both false");
@@ -191,7 +191,7 @@ namespace HTM.Net.Algorithms
             // To allow multi-class classification, we need to be able to run learning
             // without inference being on. So initialize retval outside
             // of the inference block.
-            ClassifierResult<T> retVal = null;
+            Classification<T> retVal = null;
 
             // Update maxInputIdx and augment weight matrix with zero padding
             if (patternNZ.Max() > _maxInputIdx)
@@ -340,7 +340,7 @@ namespace HTM.Net.Algorithms
         ///            4 : [0.2, 0.4, 0.3, 0.5]
         ///         }
         /// </returns>
-        public ClassifierResult<T> Infer<T>(int[] patternNz, IDictionary<string, object> classification)
+        public Classification<T> Infer<T>(int[] patternNz, IDictionary<string, object> classification)
         {
             // Return value dict. For buckets which we don't have an actual value
             // for yet, just plug in any valid actual value. It doesn't matter what
@@ -358,7 +358,7 @@ namespace HTM.Net.Algorithms
                 defaultValue = classification["actValue"];
             }
             var actValues = _actualValues.Select(x => (T)(x ?? TypeConverter.Convert<T>(defaultValue))).ToArray();
-            ClassifierResult<T> retVal = new ClassifierResult<T>();
+            Classification<T> retVal = new Classification<T>();
             retVal.SetActualValues(actValues);
            //NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
 

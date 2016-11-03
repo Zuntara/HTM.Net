@@ -114,6 +114,7 @@ namespace HTM.Net.Network
     /// 
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Serializable]
     public class Layer<T> : BaseRxLayer
     {
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
@@ -879,10 +880,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             return c?.GetActualValues().Select(av => av != null ? (TV)av : default(TV)).ToArray();
@@ -907,10 +908,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             return c?.GetStats(step);
@@ -929,10 +930,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             return (TK)c?.GetMostProbableValue(step);
@@ -950,10 +951,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             Debug.Assert(c != null, "c != null");
@@ -1828,7 +1829,7 @@ namespace HTM.Net.Network
                         actValue = inputs.Get("inputValue");
 
                         IClassifier c = (IClassifier)t1.GetClassifiers().Get(key);
-                        ClassifierResult<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
+                        Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
 
                         t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);
                     }
@@ -1861,7 +1862,7 @@ namespace HTM.Net.Network
                 //          actValue = inputs.Get("inputValue");
 
                 //         CLAClassifier c = (CLAClassifier)t1.GetClassifiers().Get(key);
-                //         ClassifierResult<Object> result = c.Compute(recordNum, inputMap, t1.GetSDR(), isLearn, true);
+                //         Classification<Object> result = c.Compute(recordNum, inputMap, t1.GetSDR(), isLearn, true);
 
                 //         t1.recordNum(recordNum).storeClassification((String)inputs.Get("name"), result);
                 //       }

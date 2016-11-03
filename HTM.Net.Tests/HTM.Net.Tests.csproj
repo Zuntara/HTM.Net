@@ -122,6 +122,7 @@
     </Compile>
     <Compile Include="PytonEmbrace\LogicalLine.cs" />
     <Compile Include="SDRTests.cs" />
+    <Compile Include="Serialize\SerializerCoreTest.cs" />
     <Compile Include="Util\ArrayTests.cs" />
     <Compile Include="Util\ArrayUtilTest.cs" />
     <Compile Include="Util\GroupByTests.cs" />

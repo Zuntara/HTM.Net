@@ -39,7 +39,7 @@ namespace HTM.Net.Tests.Network
             HashSet<Cell> activeCells = new HashSet<Cell>(); activeCells.Add(new Cell(new Column(4, 0), 1));
             HashSet<Cell> previousPrediction = new HashSet<Cell>(); previousPrediction.Add(new Cell(new Column(4, 0), 2));
             HashSet<Cell> currentPrediction = new HashSet<Cell>(); currentPrediction.Add(new Cell(new Column(4, 0), 3));
-            ClassifierResult<object> classification = new ClassifierResult<object>();
+            Classification<object> classification = new Classification<object>();
             double anomalyScore = 0.48d;
             object customObject = new Net.Network.Network("", NetworkTestHarness.GetNetworkDemoTestEncoderParams());
 

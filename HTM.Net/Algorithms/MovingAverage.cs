@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using HTM.Net.Model;
 
 namespace HTM.Net.Algorithms
 {
@@ -10,7 +11,8 @@ namespace HTM.Net.Algorithms
  * @author Numenta
  * @author David Ray
  */
-    public class MovingAverage
+    [Serializable]
+    public class MovingAverage : Persistable<MovingAverage>
     {
         private Calculation calc;
 
@@ -25,7 +27,7 @@ namespace HTM.Net.Algorithms
         public MovingAverage(List<double> historicalValues, int windowSize)
             : this(historicalValues, -1, windowSize)
         {
-            
+
         }
 
         /**

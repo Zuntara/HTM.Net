@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using HTM.Net.Model;
 using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
@@ -7,7 +9,8 @@ namespace HTM.Net.Algorithms
     /// Container for the results of a classification computation by the <see cref="CLAClassifier"/> and <see cref="SDRClassifier"/>
     /// </summary>
     /// <typeparam name="T">Type of actual value output</typeparam>
-    public class ClassifierResult<T>
+    [Serializable]
+    public class Classification<T> : Persistable<Classification<T>>
     {
         /// <summary>
         /// Array of actual values
@@ -20,14 +23,14 @@ namespace HTM.Net.Algorithms
         private Map<int, double[]> _probabilities = new Map<int, double[]>();
 
         /**
-         * Utility method to copy the contents of a ClassifierResult.
+         * Utility method to copy the contents of a Classification.
          * 
-         * @return  a copy of this {@code ClassifierResult} which will not be affected
+         * @return  a copy of this {@code Classification} which will not be affected
          * by changes to the original.
          */
-        public ClassifierResult<T> Copy()
+        public Classification<T> Copy()
         {
-            ClassifierResult<T> retVal = new ClassifierResult<T>();
+            Classification<T> retVal = new Classification<T>();
             retVal._actualValues = Arrays.CopyOf(_actualValues, _actualValues.Length);
             retVal._probabilities = new Map<int, double[]>(_probabilities);
             return retVal;
@@ -197,7 +200,7 @@ namespace HTM.Net.Algorithms
             if (GetType() != obj.GetType())
                 return false;
 
-            ClassifierResult<T> other = (ClassifierResult<T>)obj;
+            Classification<T> other = (Classification<T>)obj;
             if (!_actualValues.SequenceEqual(other._actualValues))
                 return false;
             if (_probabilities == null)

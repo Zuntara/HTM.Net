@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace HTM.Net.Model
@@ -11,7 +12,8 @@ namespace HTM.Net.Model
      * this state container is necessary.
      * 
      */
-    public class ComputeCycle
+    [Serializable]
+    public class ComputeCycle : Persistable<ComputeCycle>
     {
         private const long serialVersionUID = 1L;
 

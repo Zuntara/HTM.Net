@@ -1,9 +1,10 @@
 ﻿using System;
+using HTM.Net.Model;
 
 // https://github.com/numenta/htm.java/
 namespace HTM.Net.Util
 {
-    public abstract class AbstractFlatMatrix<T> : IFlatMatrix<T>
+    public abstract class AbstractFlatMatrix<T> : Persistable<AbstractFlatMatrix<T>>, IFlatMatrix<T>
     {
         protected int[] _dimensions;
         protected int[] dimensionMultiples;

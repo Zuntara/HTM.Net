@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 
@@ -12,7 +13,8 @@ namespace HTM.Net.Algorithms
  * @author David Ray
  * @see CLAClassifier
  */
-    public class BitHistory
+ [Serializable]
+    public class BitHistory : Persistable<BitHistory>
     {
         /** Store reference to the classifier */
         [JsonIgnore]

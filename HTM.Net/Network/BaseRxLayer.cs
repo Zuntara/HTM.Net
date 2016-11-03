@@ -11,6 +11,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network
 {
+    [Serializable]
     public abstract class BaseRxLayer : BaseLayer
     {
         private IDisposable _subscription; //Subscription 

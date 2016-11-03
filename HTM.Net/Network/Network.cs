@@ -127,7 +127,7 @@ namespace HTM.Net.Network
     /// @see NetworkAPIDemo
     /// </remarks>
     [Serializable]
-    public class Network
+    public class Network : Persistable<Network>
     {
         public readonly static ILog Logger = LogManager.GetLogger(typeof(Network));
         public enum Mode { MANUAL, AUTO, REACTIVE };
@@ -215,51 +215,51 @@ namespace HTM.Net.Network
             return new Layer<IInference>(name, null, p);
         }
 
-        ///// <summary>
-        ///// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
-        ///// </summary>
-        ///// <returns></returns>
-        //public Network PreSerialize()
-        //{
-        //    if (_shouldDoHalt && _isThreadRunning)
-        //    {
-        //        Halt();
-        //    }
-        //    else // Make sure "close()" has been called on the Network
-        //    {
-        //        if (_regions.Count == 1)
-        //        {
-        //            this._tail = _regions.First();
-        //        }
-        //        _tail.Close();
-        //    }
-        //    _regions.ForEach(r=> r.PreSerialize());
-        //    return this;
-        //}
+        /// <summary>
+        /// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
+        /// </summary>
+        /// <returns></returns>
+        public override Network PreSerialize()
+        {
+            if (_shouldDoHalt && _isThreadRunning)
+            {
+                Halt();
+            }
+            else // Make sure "close()" has been called on the Network
+            {
+                if (_regions.Count == 1)
+                {
+                    this._tail = _regions.First();
+                }
+                _tail.Close();
+            }
+            _regions.ForEach(r => r.PreSerialize());
+            return this;
+        }
 
-        ///// <summary>
-        ///// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
-        ///// </summary>
-        ///// <returns></returns>
-        //public Network PostDeSerialize()
-        //{
-        //    _regions.ForEach(r=>r.SetNetwork(this));
-        //    _regions.ForEach(r=>r.PostDeSerialize());
+        /// <summary>
+        /// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
+        /// </summary>
+        /// <returns></returns>
+        public override Network PostDeSerialize()
+        {
+            _regions.ForEach(r => r.SetNetwork(this));
+            _regions.ForEach(r => r.PostDeSerialize());
 
-        //    // Connect Layer Observable chains (which are transient so we must 
-        //    // rebuild them and their subscribers)
-        //    if (IsMultiRegion())
-        //    {
-        //        Region curr = _head;
-        //        Region nxt = curr.GetUpstreamRegion();
-        //        do
-        //        {
-        //            curr.Connect(nxt);
-        //        } while ((curr = nxt) != null && (nxt = nxt.GetUpstreamRegion()) != null);
-        //    }
+            // Connect Layer Observable chains (which are transient so we must 
+            // rebuild them and their subscribers)
+            if (IsMultiRegion())
+            {
+                Region curr = _head;
+                Region nxt = curr.GetUpstreamRegion();
+                do
+                {
+                    curr.Connect(nxt);
+                } while ((curr = nxt) != null && (nxt = nxt.GetUpstreamRegion()) != null);
+            }
 
-        //    return this;
-        //}
+            return this;
+        }
 
         ///**
         // * INTERNAL METHOD: DO NOT CALL
@@ -281,7 +281,7 @@ namespace HTM.Net.Network
         // * Sets the reference to the check point function.
         // * @param f function which executes check point logic.
         // */
-        //public void SetCheckPointFunction<T,R>(Func<T, R> f)
+        //public void SetCheckPointFunction<T, R>(Func<T, R> f)
         //{
         //    this._checkPointFunction = f;
         //}

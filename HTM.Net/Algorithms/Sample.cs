@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using HTM.Net.Model;
 
 namespace HTM.Net.Algorithms
 {
@@ -8,7 +9,8 @@ namespace HTM.Net.Algorithms
  * This class is used as an input value to methods in the {@link AnomalyLikelihood}
  * class.
  */
-    public class Sample
+ [Serializable]
+    public class Sample : Persistable<Sample>
     {
         public readonly DateTime date;
         /** Same thing as average */

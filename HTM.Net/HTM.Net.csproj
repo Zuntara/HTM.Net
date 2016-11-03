@@ -89,8 +89,9 @@
     <Compile Include="Algorithms\AnomalyLikelihoodMetrics.cs" />
     <Compile Include="Algorithms\BitHistory.cs" />
     <Compile Include="Algorithms\CLAClassifier.cs" />
-    <Compile Include="Algorithms\ClassifierResult.cs" />
+    <Compile Include="Algorithms\Classification.cs" />
     <Compile Include="Model\Connections.cs" />
+    <Compile Include="Model\Persistable.cs" />
     <Compile Include="Monitor\MonitoredTemporalMemory.cs" />
     <Compile Include="Network\BaseLayer.cs" />
     <Compile Include="Network\BaseRxLayer.cs" />
@@ -101,6 +102,8 @@
     <Compile Include="Network\Sensor\Optional.cs" />
     <Compile Include="Network\Sensor\YieldingFileReader.cs" />
     <Compile Include="Network\Transformer.cs" />
+    <Compile Include="Serialize\SerialConfig.cs" />
+    <Compile Include="Serialize\SerializerCore.cs" />
     <Compile Include="Util\ArrayExtentions.cs" />
     <Compile Include="Util\GroupBy.cs" />
     <Compile Include="Util\GroupBy2.cs" />

@@ -11,6 +11,7 @@ namespace HTM.Net.Util
  * 
  * @author David Ray
  */
+    [Serializable]
     public class NamedTuple : Tuple
     {
         private readonly Bucket[] _entries;
@@ -321,7 +322,8 @@ namespace HTM.Net.Util
                 {
                     _last = e;
                 }
-                else {
+                else
+                {
                     e.Prev = _last;
                     _last = e;
                 }

@@ -13,7 +13,8 @@ namespace HTM.Net.Network
     /// <summary>
     /// Contains the Base properties of a layer
     /// </summary>
-    public abstract class BaseLayer : ILayer
+    [Serializable]
+    public abstract class BaseLayer : Persistable<BaseLayer>, ILayer
     {
         /// <summary>
         /// Gets or sets the layer's current thread

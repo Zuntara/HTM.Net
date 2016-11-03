@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HTM.Net.Model;
 using Newtonsoft.Json;
 
 namespace HTM.Net.Util
 {
-    public class Tuple
+    [Serializable]
+    public class Tuple : Persistable<Tuple>
     {
         /** The internal container array */
         private object[] container;

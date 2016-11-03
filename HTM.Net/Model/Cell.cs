@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace HTM.Net.Model
 {
     [Serializable]
-    public class Cell : IComparable<Cell>
+    public class Cell : Persistable<Cell>, IComparable<Cell>
     {
         /** keep it simple */
         private const long serialVersionUID = 1L;

@@ -163,9 +163,9 @@ namespace HTM.Net.Algorithms
         /// 	'actualValues': [1.5, 3,5, 5,5, 7.6],
         /// }
         /// </returns>
-        public ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
+        public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
         {
-            ClassifierResult<T> retVal = new ClassifierResult<T>();
+            Classification<T> retVal = new Classification<T>();
             //List<T> actualValues = this.actualValues.Select(av => av == null ? default(T) : (T)av).ToList();
 
             // Save the offset between recordNum and learnIteration if this is the first

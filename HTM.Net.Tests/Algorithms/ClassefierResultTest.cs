@@ -17,13 +17,13 @@ namespace HTM.Net.Tests.Algorithms
             double tueVal = 0.80d;
             double wedVal = 0.30d;
 
-            ClassifierResult<string> result = new ClassifierResult<string>();
+            Classification<string> result = new Classification<string>();
             result.SetActualValues(new[] { mon, tue, wed });
             result.SetStats(1, new[] { monVal, tueVal, wedVal });
             Assert.IsTrue(result.GetMostProbableValue(1).Equals(tue));
             Assert.IsNull(result.GetMostProbableValue(2));
 
-            ClassifierResult<string> result2 = result.Copy();
+            Classification<string> result2 = result.Copy();
             Assert.AreEqual(result, result2);
 
             result2.SetStats(1, new[] { monVal, tueVal, 0.5d });
@@ -41,7 +41,7 @@ namespace HTM.Net.Tests.Algorithms
             double tueVal = 0.80d;
             double wedVal = 0.30d;
 
-            ClassifierResult<string> result = new ClassifierResult<string>();
+            Classification<string> result = new Classification<string>();
             result.SetActualValues(new[] { mon, tue, wed });
             result.SetStats(1, new[] { monVal, tueVal, wedVal });
             Assert.IsTrue(result.GetMostProbableValue(1).Equals(tue));
@@ -66,7 +66,7 @@ namespace HTM.Net.Tests.Algorithms
             double tueVal = 0.80d;
             double wedVal = 0.30d;
 
-            ClassifierResult<string> result = new ClassifierResult<string>();
+            Classification<string> result = new Classification<string>();
             result.SetActualValues(new[] { mon, tue, wed });
             result.SetStats(1, new[] { monVal, tueVal, wedVal });
             Assert.IsTrue(result.GetMostProbableBucketIndex(1) == 1);
@@ -91,7 +91,7 @@ namespace HTM.Net.Tests.Algorithms
             double tueVal = 0.80d;
             double wedVal = 0.30d;
 
-            ClassifierResult<string> result = new ClassifierResult<string>();
+            Classification<string> result = new Classification<string>();
             result.SetActualValues(new[] { mon, tue, wed });
             result.SetStats(1, new[] { monVal, tueVal, wedVal });
             Assert.IsTrue(result.GetMostProbableBucketIndex(1) == 1);
