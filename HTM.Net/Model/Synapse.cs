@@ -19,6 +19,7 @@ namespace HTM.Net.Model
      * @see DistalDendrite
      * @see Connections
      */
+    [Serializable]
     public class Synapse : IComparable<Synapse>
     {
         private readonly Cell _sourceCell;

@@ -7,31 +7,31 @@ using log4net;
 namespace HTM.Net.Network
 {
     /**
- * <p>
- * Regions are collections of {@link Layer}s, which are in turn collections
- * of algorithmic components. Regions can be connected to each other to establish
- * a hierarchy of processing. To connect one Region to another, typically one 
- * would do the following:
- * </p><p>
- * <pre>
- *      Parameters p = Parameters.getDefaultParameters(); // May be altered as needed
- *      Network n = Network.create("Test Network", p);
- *      Region region1 = n.createRegion("r1"); // would typically add Layers to the Region after this
- *      Region region2 = n.createRegion("r2"); 
- *      region1.connect(region2);
- * </pre>
- * <b>--OR--</b>
- * <pre>
- *      n.connect(region1, region2);
- * </pre>
- * <b>--OR--</b>
- * <pre>
- *      Network.lookup("r1").connect(Network.lookup("r2"));
- * </pre>    
- * 
- * @author cogmission
- *
- */
+     * <p>
+     * Regions are collections of {@link Layer}s, which are in turn collections
+     * of algorithmic components. Regions can be connected to each other to establish
+     * a hierarchy of processing. To connect one Region to another, typically one 
+     * would do the following:
+     * </p><p>
+     * <pre>
+     *      Parameters p = Parameters.getDefaultParameters(); // May be altered as needed
+     *      Network n = Network.create("Test Network", p);
+     *      Region region1 = n.createRegion("r1"); // would typically add Layers to the Region after this
+     *      Region region2 = n.createRegion("r2"); 
+     *      region1.connect(region2);
+     * </pre>
+     * <b>--OR--</b>
+     * <pre>
+     *      n.connect(region1, region2);
+     * </pre>
+     * <b>--OR--</b>
+     * <pre>
+     *      Network.lookup("r1").connect(Network.lookup("r2"));
+     * </pre>    
+     * 
+     * @author cogmission
+     *
+     */
     public class Region
     {
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Region));
@@ -75,9 +75,10 @@ namespace HTM.Net.Network
          */
         public Region(string name, Network network)
         {
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrWhiteSpace(name))
             {
-                throw new InvalidOperationException("name may not be null or empty");
+                throw new InvalidOperationException("Name may not be null or empty. " +
+                                                    "...not that anyone here advocates name calling!");
             }
 
             this.name = name;
@@ -105,6 +106,17 @@ namespace HTM.Net.Network
                     network.SetEncoder(l.GetEncoder());
                 }
             }
+        }
+
+        /**
+         * Returns a flag indicating whether this {@code Region} contain multiple
+         * {@link Layer}s.
+         * 
+         * @return  true if so, false if not.
+         */
+        public bool IsMultiLayer()
+        {
+            return layers.Count > 1;
         }
 
         /**
@@ -281,8 +293,43 @@ namespace HTM.Net.Network
                 tail.Start();
                 return true;
             }
-            else {
+            else
+            {
                 LOGGER.Warn("Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
+            }
+
+            return false;
+        }
+
+        /**
+         * Calls {@link Layer#restart(boolean)} on this Region's input {@link Layer} if
+         * that layer contains a {@link Sensor}. If not, this method has no effect. If
+         * "startAtIndex" is true, the Network will start at the last saved index as 
+         * obtained from the serialized "recordNum" field; if false then the Network
+         * will restart from 0.
+         * 
+         * @param startAtIndex      flag indicating whether to start from the previous save
+         *                          point or not. If true, this region's Network will start
+         *                          at the previously stored index, if false then it will 
+         *                          start with a recordNum of zero.
+         * @return  flag indicating whether the call to restart had an effect or not.
+         */
+        public bool Restart(bool startAtIndex)
+        {
+            if (!assemblyClosed)
+            {
+                return Start();
+            }
+
+            if (tail.HasSensor())
+            {
+                LOGGER.Info("Re-Starting Region [" + GetName() + "] input Layer thread.");
+                tail.Restart(startAtIndex);
+                return true;
+            }
+            else
+            {
+                LOGGER.Warn("Re-Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
             }
 
             return false;
@@ -586,9 +633,10 @@ namespace HTM.Net.Network
             {
                 if (layersDistinct)
                 {
-                                @in.Compute(i);
+                    @in.Compute(i);
                 }
-                else {
+                else
+                {
                     localInf.SetSdr(i.GetSdr()).SetRecordNum(i.GetRecordNum()).SetLayerInput(i.GetSdr());
                     @in.Compute(localInf);
                 }

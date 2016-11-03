@@ -4,6 +4,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Model
 {
+    [Serializable]
     public class DistalDendrite : Segment
     {
         /** keep it simple */

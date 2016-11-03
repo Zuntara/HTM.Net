@@ -21,8 +21,10 @@ namespace HTM.Net.Network
         protected Task LayerThread;
 
         protected LayerMask AlgoContentMask = 0;
-
-        private int _recordNum = -1;
+        /** Used to track and document the # of records processed */
+        protected int _recordNum = -1;
+        /** Keeps track of number of records to skip on restart */
+        protected int _skip = -1;
         protected string Name;
         protected bool IsLearn = true;
         protected bool _isClosed;
@@ -38,6 +40,8 @@ namespace HTM.Net.Network
         protected TemporalMemory TemporalMemory;
         protected bool? AutoCreateClassifiers;
         protected Anomaly AnomalyComputer;
+
+        protected bool _isPostSerialized;
 
         /**
         * Creates a new {@code Layer} using the specified {@link Parameters}
@@ -108,12 +112,30 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
+        /// Returns the parent network
+        /// </summary>
+        /// <returns></returns>
+        public Network GetNetwork()
+        {
+            return ParentNetwork;
+        }
+
+        /// <summary>
         /// Sets the parent region which contains this <see cref="Layer{T}"/>
         /// </summary>
         /// <param name="r"></param>
         public void SetRegion(Region r)
         {
             ParentRegion = r;
+        }
+
+        /// <summary>
+        /// Returns the parent region
+        /// </summary>
+        /// <returns></returns>
+        public Region GetRegion()
+        {
+            return ParentRegion;
         }
 
         /// <summary>
@@ -178,6 +200,9 @@ namespace HTM.Net.Network
         /// cannot be accessed again.
         /// </summary>
         public abstract void Start();
+
+        public abstract void Restart(bool startAtIndex);
+
         /// <summary>
         /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
         /// </summary>

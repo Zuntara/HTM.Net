@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
+using log4net;
+using log4net.Repository.Hierarchy;
 
 namespace HTM.Net.Network
 {
@@ -123,8 +126,10 @@ namespace HTM.Net.Network
     /// @see ManualInput
     /// @see NetworkAPIDemo
     /// </remarks>
+    [Serializable]
     public class Network
     {
+        public readonly static ILog Logger = LogManager.GetLogger(typeof(Network));
         public enum Mode { MANUAL, AUTO, REACTIVE };
 
         private readonly string _name;
@@ -134,11 +139,16 @@ namespace HTM.Net.Network
         private Region _head;
         private Region _tail;
         private Region _sensorRegion;
+        private volatile Publisher _publisher;
 
         private bool _isLearn = true;
         private bool _isThreadRunning;
 
-        private List<Region> regions = new List<Region>();
+        private readonly List<Region> _regions = new List<Region>();
+
+        //private Func<T, R> _checkPointFunction;
+
+        private bool _shouldDoHalt = true;
 
         /// <summary>
         /// Creates a new <see cref="Network"/>
@@ -147,6 +157,11 @@ namespace HTM.Net.Network
         /// <param name="parameters"></param>
         public Network(string name, Parameters parameters)
         {
+            if (name == null || string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException("All Networks must have a name. " +
+                    "Increases digestion, and overall happiness!");
+            }
             _name = name;
             _parameters = parameters;
             if (parameters == null)
@@ -200,11 +215,160 @@ namespace HTM.Net.Network
             return new Layer<IInference>(name, null, p);
         }
 
-        //public static PALayer<T> CreatePALayer<T>(string name, Parameters p)
+        ///// <summary>
+        ///// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
+        ///// </summary>
+        ///// <returns></returns>
+        //public Network PreSerialize()
         //{
-        //    CheckName(name);
-        //    return new PALayer<T>(name, null, p);
+        //    if (_shouldDoHalt && _isThreadRunning)
+        //    {
+        //        Halt();
+        //    }
+        //    else // Make sure "close()" has been called on the Network
+        //    {
+        //        if (_regions.Count == 1)
+        //        {
+        //            this._tail = _regions.First();
+        //        }
+        //        _tail.Close();
+        //    }
+        //    _regions.ForEach(r=> r.PreSerialize());
+        //    return this;
         //}
+
+        ///// <summary>
+        ///// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
+        ///// </summary>
+        ///// <returns></returns>
+        //public Network PostDeSerialize()
+        //{
+        //    _regions.ForEach(r=>r.SetNetwork(this));
+        //    _regions.ForEach(r=>r.PostDeSerialize());
+
+        //    // Connect Layer Observable chains (which are transient so we must 
+        //    // rebuild them and their subscribers)
+        //    if (IsMultiRegion())
+        //    {
+        //        Region curr = _head;
+        //        Region nxt = curr.GetUpstreamRegion();
+        //        do
+        //        {
+        //            curr.Connect(nxt);
+        //        } while ((curr = nxt) != null && (nxt = nxt.GetUpstreamRegion()) != null);
+        //    }
+
+        //    return this;
+        //}
+
+        ///**
+        // * INTERNAL METHOD: DO NOT CALL
+        // * 
+        // * Called from {@link Layer} to execute a check point from within the scope of 
+        // * this {@link Network}
+        // * checkPointFunction
+        // * @return  the serialized {@code Network} in byte array form.
+        // */
+        //byte[] InternalCheckPointOp()
+        //{
+        //    _shouldDoHalt = false;
+        //    byte[] serializedBytes = (byte[])_checkPointFunction(this);
+        //    _shouldDoHalt = true;
+        //    return serializedBytes;
+        //}
+
+        ///**
+        // * Sets the reference to the check point function.
+        // * @param f function which executes check point logic.
+        // */
+        //public void SetCheckPointFunction<T,R>(Func<T, R> f)
+        //{
+        //    this._checkPointFunction = f;
+        //}
+
+        /**
+         * Restarts this {@code Network}. The network will run from the previous save point
+         * of the stored Network.
+         * 
+         * @see {@link #restart(boolean)} for a start at "saved-index" behavior explanation. 
+         */
+        public void Restart()
+        {
+            Restart(true);
+        }
+
+        /**
+         * Restarts this {@code Network}. If the "startAtIndex" flag is true, the Network
+         * will start from the last record number (plus 1) at which the Network was saved -
+         * continuing on from where it left off. The Network will achieve this by rebuilding
+         * the underlying Stream (if necessary, i.e. not for {@link ObservableSensor}s) and skipping 
+         * the number of records equal to the stored record number plus one, continuing from where it left off.
+         * 
+         * @param startAtIndex  flag indicating whether to start this {@code Network} from
+         *                      its previous save point.
+         */
+        public void Restart(bool startAtIndex)
+        {
+            if (_regions.Count < 1)
+            {
+                throw new InvalidOperationException("Nothing to start - 0 regions");
+            }
+
+            Region tail = _regions.First();
+            Region upstream = tail;
+            while ((upstream = upstream.GetUpstreamRegion()) != null)
+            {
+                tail = upstream;
+            }
+
+            // Record thread start
+            this._isThreadRunning = tail.Restart(startAtIndex);
+        }
+
+        /**
+         * <p>
+         * DO NOT CALL THIS METHOD!
+         * </p><p>
+         * Called internally by an {@link ObservableSensor}'s factory method's creation of a new 
+         * {@code ObservableSensor}. This would usually happen following a halt or
+         * deserialization.
+         * </p>
+         * @param p  the new Publisher created upon reconstitution of a new ObservableSensor  
+         */
+
+        internal void SetPublisher(Publisher p)
+        {
+            this._publisher = p;
+            _publisher.SetNetwork(this);
+        }
+
+        /**
+         * Returns the new {@link Publisher} created after halt or deserialization
+         * of this {@code Network}, when a new Publisher must be created.
+         * 
+         * @return      the new Publisher created after deserialization or halt.
+         * @see #getPublisherSupplier()
+         */
+        public Publisher GetPublisher()
+        {
+            if (_publisher == null)
+            {
+                throw new NullReferenceException("A Supplier must be built first. " +
+                    "please see Network.getPublisherSupplier()");
+            }
+            return _publisher;
+        }
+
+        /**
+        * Returns a flag indicating whether this {@code Network} contain multiple
+        * {@link Region}s.
+        * 
+        * @return  true if so, false if not.
+        */
+        public bool IsMultiRegion()
+        {
+            return _regions.Count > 1;
+        }
 
         /**
          * Returns the String identifier for this {@code Network}
@@ -226,12 +390,12 @@ namespace HTM.Net.Network
          */
         public void Start()
         {
-            if (regions.Count < 1)
+            if (_regions.Count < 1)
             {
                 throw new InvalidOperationException("Nothing to start - 0 regions");
             }
 
-            Region tail = regions[0];
+            Region tail = _regions[0];
             Region upstream = tail;
             while ((upstream = upstream.GetUpstreamRegion()) != null)
             {
@@ -248,7 +412,7 @@ namespace HTM.Net.Network
         /// <returns></returns>
         public Network Close()
         {
-            regions.ForEach(r => r.Close());
+            _regions.ForEach(r => r.Close());
             return this;
         }
 
@@ -270,9 +434,9 @@ namespace HTM.Net.Network
          */
         public void Halt()
         {
-            if (regions.Count == 1)
+            if (_regions.Count == 1)
             {
-                _tail = regions[0];
+                _tail = _regions[0];
             }
             _tail.Halt();
         }
@@ -295,7 +459,7 @@ namespace HTM.Net.Network
         public void SetLearn(bool isLearn)
         {
             _isLearn = isLearn;
-            foreach (Region r in regions)
+            foreach (Region r in _regions)
             {
                 r.SetLearn(isLearn);
             }
@@ -328,7 +492,7 @@ namespace HTM.Net.Network
          */
         public void Reset()
         {
-            foreach (Region r in regions)
+            foreach (Region r in _regions)
             {
                 r.Reset();
             }
@@ -339,7 +503,7 @@ namespace HTM.Net.Network
          */
         public void ResetRecordNum()
         {
-            foreach (Region r in regions)
+            foreach (Region r in _regions)
             {
                 r.ResetRecordNum();
             }
@@ -352,9 +516,9 @@ namespace HTM.Net.Network
          */
         public IObservable<IInference> Observe()
         {
-            if (regions.Count == 1)
+            if (_regions.Count == 1)
             {
-                _head = regions[0];
+                _head = _regions[0];
             }
             return _head.Observe();
         }
@@ -365,9 +529,9 @@ namespace HTM.Net.Network
         /// <returns></returns>
         public Region GetHead()
         {
-            if (regions.Count == 1)
+            if (_regions.Count == 1)
             {
-                _head = regions[0];
+                _head = _regions[0];
             }
             return _head;
         }
@@ -380,9 +544,9 @@ namespace HTM.Net.Network
          */
         public Region GetTail()
         {
-            if (regions.Count == 1)
+            if (_regions.Count == 1)
             {
-                _tail = regions[0];
+                _tail = _regions[0];
             }
             return _tail;
         }
@@ -410,9 +574,9 @@ namespace HTM.Net.Network
          */
         public void Compute<T>(T input)
         {
-            if (_tail == null && regions.Count == 1)
+            if (_tail == null && _regions.Count == 1)
             {
-                _tail = regions[0];
+                _tail = _regions[0];
             }
 
             if (_head == null)
@@ -439,9 +603,9 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Cannot call computeImmediate() when Network has been started.");
             }
 
-            if (_tail == null && regions.Count == 1)
+            if (_tail == null && _regions.Count == 1)
             {
-                _tail = regions[0];
+                _tail = _regions[0];
             }
 
             if (_head == null)
@@ -519,7 +683,7 @@ namespace HTM.Net.Network
          */
         public Network Add(Region region)
         {
-            regions.Add(region);
+            _regions.Add(region);
             region.SetNetwork(this);
             return this;
         }
@@ -530,7 +694,7 @@ namespace HTM.Net.Network
          */
         public List<Region> GetRegions()
         {
-            return new List<Region>(regions);
+            return new List<Region>(_regions);
         }
 
         /**
@@ -562,7 +726,7 @@ namespace HTM.Net.Network
          */
         public Region Lookup(string regionName)
         {
-            return regions.FirstOrDefault(r => r.GetName().Equals(regionName));
+            return _regions.FirstOrDefault(r => r.GetName().Equals(regionName));
         }
 
         /**

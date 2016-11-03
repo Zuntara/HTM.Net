@@ -5,6 +5,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Model
 {
+    [Serializable]
     public class Column : IComparable<Column>
     {
         /// <summary>

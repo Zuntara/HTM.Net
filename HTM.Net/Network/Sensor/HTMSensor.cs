@@ -178,9 +178,9 @@ namespace HTM.Net.Network.Sensor
          * 
          * @return a {@link SensorParams} object.
          */
-        public override SensorParams GetParams()
+        public override SensorParams GetSensorParams()
         {
-            return @delegate.GetParams();
+            return @delegate.GetSensorParams();
         }
 
         /**

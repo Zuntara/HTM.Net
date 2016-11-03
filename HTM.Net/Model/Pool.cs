@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Util;
@@ -10,6 +11,7 @@ namespace HTM.Net.Model
     /// to a {@code Pool} to retrieve relevant values.In addition, that same pool can be referenced from the Connections object externally 
     /// which will update the Synapse's internal reference.
     /// </summary>
+    [Serializable]
     public class Pool
     {
         /** keep it simple */

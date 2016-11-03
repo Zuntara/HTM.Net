@@ -203,6 +203,19 @@ namespace HTM.Net.Util
             return true;
         }
 
+        public static bool AreEqualList(IList arr1, IList arr2)
+        {
+            if (arr1 == null || arr2 == null) return false;
+
+            if (arr1.Count != arr2.Count) return false;
+
+            for (int i = 0; i < arr1.Count; i++)
+            {
+                if (!arr1[i].Equals(arr2[i])) return false;
+            }
+            return true;
+        }
+
         public static string DeepToString(int[] toArray)
         {
             return ToString(toArray);

@@ -108,16 +108,14 @@ namespace HTM.Net.Algorithms
                 .Select(i => conn.GetColumn(i))
                 .ToList();
 
-            Func<object, Column> identity = c => (Column)c;
-            Func<object, Column> segToCol = segment => ((DistalDendrite)segment).GetParentCell().GetColumn();
+            Func<Column, Column> identity = c => c;
+            Func<DistalDendrite, Column> segToCol = segment => segment.GetParentCell().GetColumn();
 
             //@SuppressWarnings({ "rawtypes" })
             GroupBy2<Column> grouper = GroupBy2<Column>.Of(
-                new Tuple<ICollection, Func<object, Column>>(activeColumns, identity),
-                new Tuple<ICollection, Func<object, Column>>(
-                    new List<DistalDendrite>(conn.GetActiveSegments()), segToCol),
-                new Tuple<ICollection, Func<object, Column>>(
-                    new List<DistalDendrite>(conn.GetMatchingSegments()), segToCol));
+                new Tuple<List<object>, Func<object, Column>>(activeColumns.Cast<object>().ToList(), x=> identity((Column) x)),
+                new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetActiveSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)),
+                new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetMatchingSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)));
 
             double permanenceIncrement = conn.GetPermanenceIncrement();
             double permanenceDecrement = conn.GetPermanenceDecrement();
@@ -139,11 +137,11 @@ namespace HTM.Net.Algorithms
                     }
                     else
                     {
-                        Tuple cellsXwinnerCell = BurstColumn(conn, columnData.column(), columnData.MatchingSegments(),
+                        Tuple cellsXwinnerCell = BurstColumn(conn, columnData.Column(), columnData.MatchingSegments(),
                             prevActiveCells, prevWinnerCells, permanenceIncrement, permanenceDecrement, conn.GetRandom(),
                                learn);
 
-                        cycle.ActiveCells().UnionWith((List<Cell>)cellsXwinnerCell.Get(0));
+                        cycle.ActiveCells().UnionWith((IEnumerable<Cell>)cellsXwinnerCell.Get(0));
                         cycle.WinnerCells().Add((Cell)cellsXwinnerCell.Get(1));
                     }
                 }
@@ -572,21 +570,23 @@ namespace HTM.Net.Algorithms
                 this.t = t;
             }
 
-            public Column column() { return (Column)t.Get(0); }
-            public List<Column> activeColumns() { return (List<Column>)t.Get(1); }
+            public Column Column() { return (Column)t.Get(0); }
+            public List<Column> ActiveColumns() { return (List<Column>)t.Get(1); }
 
             public List<DistalDendrite> ActiveSegments()
             {
-                return ((List<DistalDendrite>)t.Get(2))[0].Equals(GroupBy2<DistalDendrite>.Slot<DistalDendrite>.Empty()) ?
+                var list = (IList) t.Get(2);
+                return list[0].Equals(GroupBy2<Column>.Slot<Tuple<object,Column>>.Empty()) ?
                      new List<DistalDendrite>() :
-                         (List<DistalDendrite>)t.Get(2);
+                         list.Cast<DistalDendrite>().ToList();
             }
 
             public List<DistalDendrite> MatchingSegments()
             {
-                return ((List<DistalDendrite>)t.Get(3))[0].Equals(GroupBy2<DistalDendrite>.Slot<DistalDendrite>.Empty()) ?
-                     new List<DistalDendrite>() : 
-                         (List<DistalDendrite>)t.Get(3);
+                var list = (IList) t.Get(3);
+                return list[0].Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.Empty()) ?
+                     new List<DistalDendrite>() :
+                         list.Cast<DistalDendrite>().ToList();
             }
 
             public ColumnData Set(Tuple t) { this.t = t; return this; }
@@ -601,7 +601,11 @@ namespace HTM.Net.Algorithms
              */
             public bool IsNotNone(int memberIndex)
             {
-                return !((List <DistalDendrite>)t.Get(memberIndex))[0].Equals(GroupBy2<DistalDendrite>.Slot<DistalDendrite>.NONE);
+                // return !((List<?>)t.get(memberIndex)).get(0).equals(NONE);
+                var list = (IList)t.Get(memberIndex);
+                var element = list[0];
+
+                return !((IList)t.Get(memberIndex))[0].Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.NONE);
             }
         }
     }

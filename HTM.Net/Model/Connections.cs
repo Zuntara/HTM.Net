@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -18,6 +19,7 @@ namespace HTM.Net.Model
     /// 
     /// In the separation of data from logic, this class represents the data/state.
     /// </summary>
+    [Serializable]
     public class Connections
     {
         /** keep it simple */
@@ -39,7 +41,7 @@ namespace HTM.Net.Model
         private double synPermInactiveDec = 0.008;
         private double synPermActiveInc = 0.05;
         private double synPermConnected = 0.10;
-        private double synPermBelowStimulusInc = 0.10/10.0; //synPermConnected / 10.0;
+        private double synPermBelowStimulusInc = 0.10 / 10.0; //synPermConnected / 10.0;
         private double minPctOverlapDutyCycles = 0.001;
         private double minPctActiveDutyCycles = 0.001;
         private double predictedSegmentDecrement = 0.0;
@@ -53,7 +55,7 @@ namespace HTM.Net.Model
         //Extra parameter settings
         private double synPermMin = 0.0;
         private double synPermMax = 1.0;
-        private double synPermTrimThreshold = 0.05/2.0;//synPermActiveInc / 2.0;
+        private double synPermTrimThreshold = 0.05 / 2.0;//synPermActiveInc / 2.0;
         private int updatePeriod = 50;
         private double initConnectedPct = 0.5;
 
@@ -698,15 +700,23 @@ namespace HTM.Net.Model
 
         /**
          * Sets the indexed count of synapses connected at the columns in each index.
-         * @param counts
+         * @param counts : rowsums
          */
-        //public void SetConnectedCounts(int[] counts)
-        //{
-        //    for (int i = 0; i < counts.Length; i++)
-        //    {
-        //        connectedCounts.SetTrueCount(i, counts[i]);
-        //    }
-        //}
+        public void SetConnectedCounts(int[] counts)
+        {
+            for (int row = 0; row < counts.Length; row++)
+            {
+                for (int i = 0; i < counts[row]; i++)
+                {
+                    // fill in dummy value to let the counts match
+                    connectedCounts.Row(row).At(i, 1);
+                }
+            }
+            //for (int i = 0; i < counts.Length; i++)
+            //{
+            //    connectedCounts.SetTrueCount(i, counts[i]);
+            //}
+        }
 
         /**
          * Sets the connected count {@link AbstractSparseBinaryMatrix}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace HTM.Net.Model
 {
+    [Serializable]
     public class Cell : IComparable<Cell>
     {
         /** keep it simple */

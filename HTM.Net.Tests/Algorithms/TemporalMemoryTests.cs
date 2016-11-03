@@ -485,7 +485,7 @@ namespace HTM.Net.Tests.Algorithms
             cn.CreateSynapse(activeSegment, cn.GetCell(2), 0.2);
 
             ComputeCycle cc = tm.Compute(cn, previousActiveColumns, true);
-            Assert.AreEqual(prevWinnerCells, cc.WinnerCells());
+            Assert.IsTrue(prevWinnerCells.SetEquals(cc.WinnerCells()));
             cc = tm.Compute(cn, activeColumns, true);
 
             HashSet<Cell> presynapticCells = new HashSet<Cell>(cn.GetSynapses(activeSegment)
@@ -582,7 +582,7 @@ namespace HTM.Net.Tests.Algorithms
             cn.CreateSynapse(matchingSegment, cn.GetCell(0), 0.11);
 
             ComputeCycle cc = tm.Compute(cn, prevActiveColumns, true);
-            Assert.AreEqual(prevWinnerCells, cc.winnerCells);
+            Assert.IsTrue(prevWinnerCells.SetEquals(cc.winnerCells));
             tm.Compute(cn, activeColumns, true);
 
             List<Synapse> synapses = cn.GetSynapses(matchingSegment);
@@ -723,6 +723,7 @@ namespace HTM.Net.Tests.Algorithms
                 Parameters p = GetDefaultParameters(null, Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 4);
                 p = GetDefaultParameters(p, Parameters.KEY.PREDICTED_SEGMENT_DECREMENT, 0.02);
                 p = GetDefaultParameters(p, Parameters.KEY.SEED, seed);
+                p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(seed));
                 p.Apply(cn);
                 TemporalMemory.Init(cn);
 

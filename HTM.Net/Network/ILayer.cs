@@ -27,7 +27,9 @@ namespace HTM.Net.Network
         ISensor GetSensor();
         ILayer SetName(string layerName);
         void SetRegion(Region region);
+        Region GetRegion();
         void SetNetwork(Network network);
+        Network GetNetwork();
         bool HasTemporalMemory();
         bool HasSpatialPooler();
         SpatialPooler GetSpatialPooler();
@@ -47,6 +49,9 @@ namespace HTM.Net.Network
         /// cannot be accessed again.
         /// </summary>
         void Start();
+
+        void Restart(bool startAtIndex);
+
         /// <summary>
         /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
         /// </summary>

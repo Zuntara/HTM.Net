@@ -38,7 +38,7 @@ namespace HTM.Net.Util
 
         public virtual bool MoveNext()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Implement in deriving class");
         }
 
         public virtual void Reset()

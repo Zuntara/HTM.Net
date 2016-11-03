@@ -221,7 +221,7 @@ namespace HTM.Net.Algorithms
         {
             if (inputVector.Length != c.GetNumInputs())
             {
-                throw new ArgumentException(
+                throw new InvalidSpatialPoolerParamValueException(
                         "Input array must be same size as the defined number of inputs: From Params: " + c.GetNumInputs() +
                         ", From Input Vector: " + inputVector.Length);
             }
@@ -893,11 +893,18 @@ namespace HTM.Net.Algorithms
             int numCols = c.GetNumColumns();
             int numActive = (int)(density * numCols);
 
-            int[] sortedWinnerIndices = ArrayUtils.Range(0, overlaps.Length)
-                .Select(i=> new KeyValuePair<int,double>(i, overlaps[i]))
-                .OrderBy(k => c.inhibitionComparator)
-                .Select(p=> p.Key)
-                .ToArray();
+            var winnersBeforeSort = ArrayUtils.Range(0, overlaps.Length)
+                .Select(i => new Tuple<int, double>(i, overlaps[i]))
+                .ToList();
+            winnersBeforeSort.Sort(c.inhibitionComparator);
+
+            int[] sortedWinnerIndices = winnersBeforeSort.Select(p => p.Item1).ToArray();
+
+            //int[] sortedWinnerIndices = ArrayUtils.Range(0, overlaps.Length)
+            //    .Select(i=> new Tuple<int,double>(i, overlaps[i]))
+            //    .OrderBy(k => c.inhibitionComparator)
+            //    .Select(p=> p.Item1)
+            //    .ToArray();
 
             // Enforce the stimulus threshold
             double stimulusThreshold = c.GetStimulusThreshold();

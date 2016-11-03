@@ -91,7 +91,7 @@ namespace HTM.Net.Network.Sensor
             return fs;
         }
 
-        public override SensorParams GetParams()
+        public override SensorParams GetSensorParams()
         {
             return @params;
         }

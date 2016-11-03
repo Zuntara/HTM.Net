@@ -71,7 +71,7 @@ namespace HTM.Net.Util
                 T t = iter[range.Current];
                 //next = new Pair<T, R>(t, fn.apply(t));
                 //T t = (T) Convert.ChangeType(range.Current, typeof(T));
-                next = new Tuple<T,R>(t, fn(t));
+                next = new Tuple<T, R>(t, fn(t));
             }
         }
 
@@ -80,19 +80,29 @@ namespace HTM.Net.Util
          */
         public Tuple<T, R> Peek()
         {
-            return Current;// next;
+            return next;
         }
 
         #region Overrides of Generator<Tuple<T,R>>
 
+        internal bool HasNextInternal()
+        {
+            return next != null;
+        }
+
+        internal Tuple<T, R> NextInternal()
+        {
+            object tObj = range.MoveNext() ? (object) iter[range.Current] : null;
+            Tuple<T, R> ret = next;
+            next = tObj != null ? new Tuple<T, R>((T)tObj, fn((T)tObj)) : null;
+            return ret;
+        }
+
         public override bool MoveNext()
         {
-            if (next != null)
+            if (HasNextInternal())
             {
-                object t = range.MoveNext() ? (object) iter[range.Current] : null;
-                Tuple<T, R> ret = next;
-                next = t != null ? new Tuple<T, R>((T)t, fn((T)t)) : null;
-                Current = ret;
+                Current = NextInternal();
                 return true;
             }
             return false;

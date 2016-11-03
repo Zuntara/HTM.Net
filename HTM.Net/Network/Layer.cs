@@ -248,6 +248,12 @@ namespace HTM.Net.Network
                 if (ParentNetwork != null && ParentRegion != null)
                 {
                     ParentNetwork.SetSensorRegion(ParentRegion);
+                    object supplier;
+                    if ((supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
+                    {
+                        ((Publisher)supplier).SetNetwork(ParentNetwork);
+                        ParentNetwork.SetPublisher(((Publisher) supplier));
+                    }
                 }
             }
 
@@ -680,6 +686,12 @@ namespace HTM.Net.Network
         /// </summary>
         public override void Start()
         {
+            if (_isHalted)
+            {
+                Restart(true);
+                return;
+            }
+
             // Save boilerplate setup steps by automatically closing when start is
             // called.
             if (!_isClosed)
@@ -708,170 +720,58 @@ namespace HTM.Net.Network
                 NotifyError(e);
             }
 
-            LayerThread = new Task(() =>
+            StartLayerThread();
+        }
+
+        public override void Restart(bool startAtIndex)
+        {
+            _isHalted = false;
+
+            if (!_isClosed)
             {
-                Logger.Debug("Layer [" + GetName() + "] started Sensor output stream processing.");
-
-                //////////////////////////
-
-                var outputStream = Sensor.GetOutputStream();
-
-                int[] intArray;
-                while (!outputStream.EndOfStream)
+                Start();
+            }
+            else
+            {
+                if (Sensor == null)
                 {
-                    intArray = outputStream.Read();
-                    bool doComputation = false;
-                    bool computed = false;
-                    try
-                    {
-                        if (_isHalted)
-                        {
-                            NotifyComplete();
-                            if (_next != null)
-                            {
-                                _next.Halt();
-                            }
-                        }
-                        else
-                        {
-                            doComputation = true;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
-                        throw;
-                    }
-
-                    if (!doComputation) continue;
-
-                    try
-                    {
-
-                        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                        _factory.Inference.SetEncoding(intArray);
-
-                        Compute(intArray);
-                        computed = true;
-
-                        // Notify all downstream observers that the stream is closed
-                        if (!Sensor.EndOfStream())
-                        {
-                            NotifyComplete();
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        if (Debugger.IsAttached) Debugger.Break();
-                        NotifyError(e);
-                    }
-
-                    if (!computed)
-                    {
-                        // Wait a little while, because new work can come
-                        Thread.Sleep(5000);
-                    }
+                    throw new InvalidOperationException("A sensor must be added when the mode is not Network.Mode.MANUAL");
                 }
 
-                Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
-                //////////////////////////
+                // Re-init the Sensor only if we're halted and haven't already been initialized
+                // following a deserialization.
+                if (!_isPostSerialized)
+                {
+                    // Recreate the Sensor and its underlying Stream
+                    RecreateSensors();
+                }
 
-                // Applies "terminal" function, at this point the input stream
-                // is "sealed".
-                //sensor.GetOutputStream().Filter(i =>
-                //{
-                //    try
-                //    {
-                //        if (isHalted)
-                //        {
-                //            NotifyComplete();
-                //            if (next != null)
-                //            {
-                //                next.Halt();
-                //            }
-                //            return false;
-                //        }
-                //        return true;
-                //    }
-                //    catch (Exception e)
-                //    {
-                //        Console.WriteLine(e);
-                //        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
-                //        throw;
-                //    }
-                //}).ForEach(intArray =>
-                //{
-                //    try
-                //    {
+                if (ParentNetwork != null)
+                {
+                    ParentNetwork.SetSensor(Sensor);
+                }
 
-                //        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                //        factory.inference.Encoding(intArray);
+                ObservableDispatch = CreateDispatchMap();
+                
+                this.Encoder = Encoder ?? Sensor.GetEncoder();
 
-                //        //T computeInput = (T)Convert.ChangeType(intArray, typeof(int[]));
+                _skip = startAtIndex ?
+                    (Sensor.GetSensorParams().Get("ONSUB")) != null ? -1 : _recordNum :
+                        (_recordNum = -1);
 
-                //        Compute(intArray);
+                try
+                {
+                    CompleteDispatch(new int[] { });
+                }
+                catch (Exception e)
+                {
+                    NotifyError(e);
+                }
 
-                //        // Notify all downstream observers that the stream is closed
-                //        if (!sensor.HasNext())
-                //        {
-                //            NotifyComplete();
-                //        }
-                //    }
-                //    catch (Exception e)
-                //    {
-                //        Console.WriteLine(e);
-                //        if (Debugger.IsAttached) Debugger.Break();
-                //        NotifyError(e);
-                //    }
+                StartLayerThread();
 
-                //});
-            }, TaskCreationOptions.LongRunning);
-
-            //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
-            LayerThread.Start();
-            //        (LAYER_THREAD = new Thread("Sensor Layer [" + getName() + "] Thread")
-            //        {
-
-            //            public void run()
-            //          {
-            //    LOGGER.debug("Layer [" + getName() + "] started Sensor output stream processing.");
-
-            //    // Applies "terminal" function, at this point the input stream
-            //    // is "sealed".
-            //    sensor.GetOutputStream().filter(i-> {
-            //        if (isHalted)
-            //        {
-            //            notifyComplete();
-            //            if (next != null)
-            //            {
-            //                next.halt();
-            //            }
-            //            return false;
-            //        }
-
-            //        if (Thread.currentThread().isInterrupted())
-            //        {
-            //            notifyError(new RuntimeException("Unknown Exception while filtering input"));
-            //        }
-
-            //        return true;
-            //    }).forEach(intArray-> {
-            //        ((ManualInput)Layer.this.factory.inference).encoding(intArray);
-
-            //        Layer.this.compute((T)intArray);
-
-            //        // Notify all downstream observers that the stream is closed
-            //        if (!sensor.hasNext())
-            //        {
-            //            notifyComplete();
-            //        }
-            //    });
-            //}
-            //        }).start();
-
-            Logger.Debug(string.Format("Start called on Layer thread {0}", LayerThread));
+                Logger.Debug($"Re-Start called on Layer thread {LayerThread}");
+            }
         }
 
         /// <summary>
@@ -1421,6 +1321,134 @@ namespace HTM.Net.Network
             return SDR.AsCellIndices(ActiveCells = cc.ActiveCells());
         }
 
+        protected void StartLayerThread()
+        {
+            LayerThread = new Task(() =>
+            {
+                Logger.Debug("Layer [" + GetName() + "] started Sensor output stream processing.");
+
+                //////////////////////////
+
+                var outputStream = Sensor.GetOutputStream();
+
+                int[] intArray;
+                while (!outputStream.EndOfStream)
+                {
+                    intArray = outputStream.Read();
+                    bool doComputation = false;
+                    bool computed = false;
+                    try
+                    {
+                        if (_isHalted)
+                        {
+                            NotifyComplete();
+                            if (_next != null)
+                            {
+                                _next.Halt();
+                            }
+                        }
+                        else
+                        {
+                            doComputation = true;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
+                        throw;
+                    }
+
+                    if (!doComputation) continue;
+
+                    try
+                    {
+
+                        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
+                        _factory.Inference.SetEncoding(intArray);
+
+                        Compute(intArray);
+                        computed = true;
+
+                        // Notify all downstream observers that the stream is closed
+                        if (!Sensor.EndOfStream())
+                        {
+                            NotifyComplete();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        if (Debugger.IsAttached) Debugger.Break();
+                        NotifyError(e);
+                    }
+
+                    if (!computed)
+                    {
+                        // Wait a little while, because new work can come
+                        Thread.Sleep(5000);
+                    }
+                }
+
+                Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
+                //////////////////////////
+
+                // Applies "terminal" function, at this point the input stream
+                // is "sealed".
+                //sensor.GetOutputStream().Filter(i =>
+                //{
+                //    try
+                //    {
+                //        if (isHalted)
+                //        {
+                //            NotifyComplete();
+                //            if (next != null)
+                //            {
+                //                next.Halt();
+                //            }
+                //            return false;
+                //        }
+                //        return true;
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        Console.WriteLine(e);
+                //        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
+                //        throw;
+                //    }
+                //}).ForEach(intArray =>
+                //{
+                //    try
+                //    {
+
+                //        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
+                //        factory.inference.Encoding(intArray);
+
+                //        //T computeInput = (T)Convert.ChangeType(intArray, typeof(int[]));
+
+                //        Compute(intArray);
+
+                //        // Notify all downstream observers that the stream is closed
+                //        if (!sensor.HasNext())
+                //        {
+                //            NotifyComplete();
+                //        }
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        Console.WriteLine(e);
+                //        if (Debugger.IsAttached) Debugger.Break();
+                //        NotifyError(e);
+                //    }
+
+                //});
+            }, TaskCreationOptions.LongRunning);
+
+            //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
+            LayerThread.Start();
+            Logger.Debug($"Start called on Layer thread {LayerThread}");
+        }
+
         //////////////////////////////////////////////////////////////
         //        Inner Class Definition Transformer Example        //
         //////////////////////////////////////////////////////////////
@@ -1873,6 +1901,36 @@ namespace HTM.Net.Network
 
         }
 
+        /**
+         * Re-initializes the {@link HTMSensor} following deserialization or restart
+         * after halt.
+         */
+        private void RecreateSensors()
+        {
+            if (Sensor != null)
+            {
+                // Recreate the Sensor and its underlying Stream
+                Type sensorKlass = Sensor.GetType();
+                if (sensorKlass.FullName.IndexOf("File") != -1)
+                {
+                    Object path = Sensor.GetSensorParams().Get("PATH");
+                    Sensor = (IHTMSensor)Sensor<FileSensor>.Create(
+                         FileSensor.Create, SensorParams.Create(SensorParams.Keys.Path, "", path));
+                }
+                else if (sensorKlass.FullName.IndexOf("Observ") != -1)
+                {
+                    Object supplierOfObservable = Sensor.GetSensorParams().Get("ONSUB");
+                    Sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(
+                         ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, "", supplierOfObservable));
+                }
+                //else if (sensorKlass.FullName.IndexOf("URI") != -1)
+                //{
+                //    Object url = Sensor.GetSensorParams().Get("URI");
+                //    Sensor = (IHTMSensor)Sensor.Create(
+                //         UriSensor.Create, SensorParams.Create(SensorParams.Keys.Uri, "", url));
+                //}
+            }
+        }
 
         public override int GetHashCode()
         {

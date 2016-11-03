@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace HTM.Net.Model
 {
+    [Serializable]
     public abstract class Segment : IComparable<Segment>
     {
         /** keep it simple */

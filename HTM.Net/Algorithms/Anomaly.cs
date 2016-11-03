@@ -52,6 +52,7 @@ namespace HTM.Net.Algorithms
     /// 
     /// For more information please see: <see cref="AnomalyTest"/> and <see cref="AnomalyLikelihoodTest"/>
     /// </summary>
+    [Serializable]
     public class Anomaly
     {
         private readonly Func<Anomaly, int[], int[], double, long, double> _computeFunc;

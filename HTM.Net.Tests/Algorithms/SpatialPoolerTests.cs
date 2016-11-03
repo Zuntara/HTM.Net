@@ -408,9 +408,9 @@ namespace HTM.Net.Tests.Algorithms
             int[] real = ArrayUtils.Where(activeArray, n => n > 0);
 
             int[] expected = new int[] {
-             74, 203, 237, 270, 288, 317, 479, 529, 530, 622, 659, 720, 757, 790, 924, 956, 1033,
-             1041, 1112, 1332, 1386, 1430, 1500, 1517, 1578, 1584, 1651, 1664, 1717, 1735, 1747,
-             1748, 1775, 1779, 1788, 1813, 1888, 1911, 1938, 1958 };
+                26, 113, 138, 175, 179, 211, 220, 231, 475, 500, 666, 950, 1146, 1192, 1282, 1306,
+                1464, 1594, 1605, 1606, 1607, 1634, 1685, 1702, 1717, 1732, 1746, 1771, 1783, 1788,
+                1815, 1823, 1836, 1873, 1885, 1901, 1918, 2027, 2031, 2045 };
 
             Assert.IsTrue(Arrays.AreEqual(expected, real));
         }
@@ -1336,7 +1336,7 @@ namespace HTM.Net.Tests.Algorithms
             //      syns.Set(4, new int[] { 0, 0, 0, 0, 0 });
 
             // TODO: review this, an error will occur probably in the test!!
-            //mem.SetConnectedCounts(new int[] { 1, 3, 2, 2, 0 });
+            mem.SetConnectedCounts(new int[] { 1, 3, 2, 2, 0 });
 
             double[][] truePermanences = new double[][]
             {
@@ -1350,7 +1350,7 @@ namespace HTM.Net.Tests.Algorithms
             int[] indices = mem.GetMemory().GetSparseIndices();
             for (int i = 0; i < mem.GetNumColumns(); i++)
             {
-                double[] perm = mem.GetPotentialPools().Get(i).GetSparsePermanences();
+                double[] perm = mem.GetPotentialPools().Get(i).GetSparsePermanences().Reverse().ToArray();
                 sp.RaisePermanenceToThreshold(mem, perm, indices);
 
                 for (int j = 0; j < perm.Length; j++)

@@ -56,6 +56,8 @@ namespace HTM.Net.Network.Sensor
 
         private ReplaySubject<string> subject;
 
+        private Network parentNetwork;
+
         public class Builder<T>
         {
             private ReplaySubject<string> _subject;
@@ -110,6 +112,24 @@ namespace HTM.Net.Network.Sensor
         public static Builder<Subject<string>> GetBuilder()
         {
             return new Builder<Subject<string>>();
+        }
+
+        /**
+            * Sets the parent {@link Network} on this {@code Publisher} for use as a convenience. 
+            * @param n     the Network to which the {@code Publisher} is connected.
+            */
+        public void SetNetwork(Network n)
+        {
+            this.parentNetwork = n;
+        }
+
+        /**
+         * Returns the parent {@link Network} connected to this {@code Publisher} for use as a convenience. 
+         * @return  this {@code Publisher}'s parent {@link Network}
+         */
+        public Network GetNetwork()
+        {
+            return parentNetwork;
         }
 
         /**

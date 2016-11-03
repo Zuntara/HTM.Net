@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using HTM.Net.Util;
 
 namespace HTM.Net.Model
 {
+    [Serializable]
     public class ProximalDendrite : Segment
     {
         /** keep it simple */

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using HTM.Net.Model;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -273,27 +274,33 @@ namespace HTM.Net.Tests.Util
     [TestClass]
     public class GroupBy2Tests
     {
-        private List<GroupBy2<int>.Slot<int>> none = new List<GroupBy2<int>.Slot<int>> { GroupBy2<int>.Slot<int>.Empty() };
+        //private List<GroupBy2<int>.Slot<int>> none = new List<GroupBy2<int>.Slot<int>> { GroupBy2<int>.Slot<int>.Empty() };
 
-        public List<int> list(int i)
+        public List<object> list(int i)
         {
-            return new List<int> { i };
+            return new List<object> { i };
         }
 
-        public List<int> list(int i, int j)
+        public List<object> list(int i, int j)
         {
-            return new List<int> { i, j };
+            return new List<object> { i, j };
         }
+
+        private List<GroupBy2<int>.Slot<Tuple<object, int>>> none = new List<GroupBy2<int>.Slot<Tuple<object, int>>>
+        {
+            GroupBy2<int>.Slot<Tuple<object, int>>.Empty()
+        };
 
         [TestMethod]
         public void TestOneSequence()
         {
             List<int> sequence0 = new List<int> { 7, 12, 12, 16 };
 
-            Func<object, int> identity = ig => (int)ig;
+            Func<int, int> identity = ig => (int)ig;
 
             //@SuppressWarnings({ "unchecked", "rawtypes" })
-            GroupBy2<int> m = GroupBy2<int>.Of(new Tuple<ICollection, Func<object, int>>(sequence0, identity));
+            GroupBy2<int> m = GroupBy2<int>.Of(
+                new Tuple<List<object>, Func<object, int>>(sequence0.Cast<object>().ToList(), x => identity((int)x)));
 
             List<Tuple> expectedValues = new List<Tuple>
             {
@@ -306,14 +313,217 @@ namespace HTM.Net.Tests.Util
             foreach (Tuple t in m)
             {
                 int j = 0;
-                foreach (Object o in t.All())
+                foreach (object o in t.All())
                 {
-                    Assert.AreEqual(o.GetHashCode(), expectedValues[i].Get(j).GetHashCode());
-                    Assert.AreEqual(o, expectedValues[i].Get(j));
+                    if (o is IList)
+                    {
+                        Assert.IsTrue(Arrays.AreEqualList((IList)o , (IList)expectedValues[i].Get(j)), "grouped list has a problem");
+                    }
+                    else
+                    {
+                        Assert.AreEqual(o, expectedValues[i].Get(j));
+                    }
                     j++;
                 }
                 i++;
             }
         }
+
+        [TestMethod]
+        public void TestTwoSequences()
+        {
+            List<int> sequence0 = new List<int> { 7, 12, 16 };
+            List<int> sequence1 = new List<int> { 3, 4, 5 };
+
+            Func<object, int> identity = ig => (int)ig;
+            Func<object, int> times3 = x => (int)x * 3;
+
+            //@SuppressWarnings({ "unchecked", "rawtypes" })
+            GroupBy2<int> m = GroupBy2<int>.Of(
+                new Tuple<List<object>, Func<object, int>>(sequence0.Cast<object>().ToList(), identity),
+                new Tuple<List<object>, Func<object, int>>(sequence1.Cast<object>().ToList(), times3));
+
+            List<Tuple> expectedValues = new List<Tuple>
+            {
+                new Tuple(7, list(7), none),
+                new Tuple(9, none, list(3)),
+                new Tuple(12, list(12), list(4)),
+                new Tuple(15, none, list(5)),
+                new Tuple(16, list(16), none)
+            };
+
+            int i = 0;
+            foreach (Tuple t in m)
+            {
+                int j = 0;
+                foreach (object o in t.All())
+                {
+                    if (o is IList)
+                    {
+                        Assert.IsTrue(Arrays.AreEqualList((IList)o, (IList)expectedValues[i].Get(j)), "grouped list has a problem");
+                    }
+                    else
+                    {
+                        Assert.AreEqual(o, expectedValues[i].Get(j));
+                    }
+                    j++;
+                }
+                i++;
+            }
+        }
+
+        [TestMethod]
+        public void testThreeSequences()
+        {
+            List<int> sequence0 = new List<int> { 7, 12, 16 };
+            List<int> sequence1 = new List<int> { 3, 4, 5 };
+            List<int> sequence2 = new List<int> { 3, 3, 4, 5 };
+
+            Func<object, int> identity = ig => (int)ig;//Function.identity();
+            Func<object, int> times3 = x => (int)x * 3;
+            Func<object, int> times4 = x => (int)x * 4;
+
+            //@SuppressWarnings({ "unchecked", "rawtypes" })
+            GroupBy2<int> m = GroupBy2<int>.Of(
+                new Tuple<List<object>, Func<object, int>>(sequence0.Cast<object>().ToList(), identity),
+                new Tuple<List<object>, Func<object, int>>(sequence1.Cast<object>().ToList(), times3),
+                new Tuple<List<object>, Func<object, int>>(sequence2.Cast<object>().ToList(), times4));
+
+            List<Tuple> expectedValues = new List<Tuple>
+            {
+                new Tuple(7, list(7), none, none),
+                new Tuple(9, none, list(3), none),
+                new Tuple(12, list(12), list(4), list(3, 3)),
+                new Tuple(15, none, list(5), none),
+                new Tuple(16, list(16), none, list(4)),
+                new Tuple(20, none, none, list(5))
+            };
+
+            int i = 0;
+            foreach (Tuple t in m)
+            {
+                int j = 0;
+                foreach (Object o in t.All())
+                {
+                    if (o is IList)
+                    {
+                        Assert.IsTrue(Arrays.AreEqualList((IList)o, (IList)expectedValues[i].Get(j)), "grouped list has a problem");
+                    }
+                    else
+                    {
+                        Assert.AreEqual(o, expectedValues[i].Get(j));
+                    }
+                    j++;
+                }
+                i++;
+            }
+        }
+
+        [TestMethod]
+        public void testFourSequences()
+        {
+            List<int> sequence0 = new List<int> { 7, 12, 16 };
+            List<int> sequence1 = new List<int> { 3, 4, 5 };
+            List<int> sequence2 = new List<int> { 3, 3, 4, 5 };
+            List<int> sequence3 = new List<int> { 3, 3, 4, 5 };
+
+            Func<object, int> identity = ig => (int)ig;
+            Func<object, int> times3 = x => (int)x * 3;
+            Func<object, int> times4 = x => (int)x * 4;
+            Func<object, int> times5 = x => (int)x * 5;
+
+            //@SuppressWarnings({ "unchecked", "rawtypes" })
+            GroupBy2<int> m = GroupBy2<int>.Of(
+                new Tuple<List<object>, Func<object, int>>(sequence0.Cast<object>().ToList(), identity),
+                new Tuple<List<object>, Func<object, int>>(sequence1.Cast<object>().ToList(), times3),
+                new Tuple<List<object>, Func<object, int>>(sequence2.Cast<object>().ToList(), times4),
+                new Tuple<List<object>, Func<object, int>>(sequence3.Cast<object>().ToList(), times5));
+
+            List<Tuple> expectedValues = new List<Tuple>
+            {
+                new Tuple(7, list(7), none, none, none),
+                new Tuple(9, none, list(3), none, none),
+                new Tuple(12, list(12), list(4), list(3, 3), none),
+                new Tuple(15, none, list(5), none, list(3, 3)),
+                new Tuple(16, list(16), none, list(4), none),
+                new Tuple(20, none, none, list(5), list(4)),
+                new Tuple(25, none, none, none, list(5))
+            };
+
+            int i = 0;
+            foreach (Tuple t in m)
+            {
+                int j = 0;
+                foreach (Object o in t.All())
+                {
+                    if (o is IList)
+                    {
+                        Assert.IsTrue(Arrays.AreEqualList((IList)o, (IList)expectedValues[i].Get(j)), "grouped list has a problem");
+                    }
+                    else
+                    {
+                        Assert.AreEqual(o, expectedValues[i].Get(j));
+                    }
+                    j++;
+                }
+                i++;
+            }
+        }
+
+        [TestMethod]
+        public void testFiveSequences()
+        {
+            List<int> sequence0 = new List<int> { 7, 12, 16 };
+            List<int> sequence1 = new List<int> { 3, 4, 5 };
+            List<int> sequence2 = new List<int> { 3, 3, 4, 5 };
+            List<int> sequence3 = new List<int> { 3, 3, 4, 5 };
+            List<int> sequence4 = new List<int> { 2, 2, 3 };
+
+            Func<object, int> identity = ig => (int)ig;
+            Func<object, int> times3 = x => (int)x * 3;
+            Func<object, int> times4 = x => (int)x * 4;
+            Func<object, int> times5 = x => (int)x * 5;
+            Func<object, int> times6 = x => (int)x * 6;
+
+            //@SuppressWarnings({ "unchecked", "rawtypes" })
+            GroupBy2<int> m = GroupBy2<int>.Of(
+                new Tuple<List<object>, Func<object, int>>(sequence0.Cast<object>().ToList(), identity),
+                new Tuple<List<object>, Func<object, int>>(sequence1.Cast<object>().ToList(), times3),
+                new Tuple<List<object>, Func<object, int>>(sequence2.Cast<object>().ToList(), times4),
+                new Tuple<List<object>, Func<object, int>>(sequence3.Cast<object>().ToList(), times5),
+                new Tuple<List<object>, Func<object, int>>(sequence4.Cast<object>().ToList(), times6));
+
+            List<Tuple> expectedValues = new List<Tuple>
+            {
+                new Tuple(7, list(7), none, none, none, none),
+                new Tuple(9, none, list(3), none, none, none),
+                new Tuple(12, list(12), list(4), list(3, 3), none, list(2, 2)),
+                new Tuple(15, none, list(5), none, list(3, 3), none),
+                new Tuple(16, list(16), none, list(4), none, none),
+                new Tuple(18, none, none, none, none, list(3)),
+                new Tuple(20, none, none, list(5), list(4), none),
+                new Tuple(25, none, none, none, list(5), none)
+            };
+
+            int i = 0;
+            foreach (Tuple t in m)
+            {
+                int j = 0;
+                foreach (Object o in t.All())
+                {
+                    if (o is IList)
+                    {
+                        Assert.IsTrue(Arrays.AreEqualList((IList)o, (IList)expectedValues[i].Get(j)), "grouped list has a problem");
+                    }
+                    else
+                    {
+                        Assert.AreEqual(o, expectedValues[i].Get(j));
+                    }
+                    j++;
+                }
+                i++;
+            }
+        }
+
     }
 }

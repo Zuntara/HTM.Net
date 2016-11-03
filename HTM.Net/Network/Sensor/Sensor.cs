@@ -45,7 +45,7 @@ namespace HTM.Net.Network.Sensor
          * 
          * @return a {@link SensorParams} object.
          */
-        public abstract SensorParams GetParams();
+        public abstract SensorParams GetSensorParams();
 
         /**
          * Returns the configured {@link Stream} if this is of
@@ -69,7 +69,7 @@ namespace HTM.Net.Network.Sensor
 
     public interface ISensor
     {
-        SensorParams GetParams();
+        SensorParams GetSensorParams();
         IMetaStream GetInputStream();
         IValueList GetMetaInfo();
         void InitEncoder(Parameters parameters);
