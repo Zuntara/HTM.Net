@@ -328,7 +328,7 @@ namespace HTM.Net.Tests.Network
         [TestMethod]
         public void TestSerializeObservableSensor()
         {
-            Publisher supplier = Publisher.GetBuilder()
+            PublisherSupplier supplier = PublisherSupplier.GetBuilder()
                 .AddHeader("dayOfWeek")
                 .AddHeader("darr")
                 .AddHeader("B").Build();

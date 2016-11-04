@@ -199,7 +199,7 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
@@ -716,8 +716,8 @@ namespace HTM.Net.Tests.Network
             inputs[5] = new int[] { 0, 0, 0, 0, 1, 1, 1, 0 };
             inputs[6] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1 };
 
-            int[] expected0 = new int[] { 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 };
-            int[] expected1 = new int[] { 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 };
+            int[] expected0 = new int[] { 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0 };
+            int[] expected1 = new int[] { 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 };
 
             Func<ManualInput, ManualInput> addedFunc = mi =>
             {
@@ -743,14 +743,14 @@ namespace HTM.Net.Tests.Network
                         Debug.WriteLine(Arrays.ToString(expected0));
                         Debug.WriteLine(Arrays.ToString(output.GetSdr()));
                         Assert.IsTrue(Arrays.AreEqual(expected0, output.GetSdr()));
-                        Assert.AreEqual("Interposed: [1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0]", output.GetCustomObject());
+                        Assert.AreEqual("Interposed: [1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0]", output.GetCustomObject());
                     }
                     if (test == 1)
                     {
                         Debug.WriteLine(Arrays.ToString(expected1));
                         Debug.WriteLine(Arrays.ToString(output.GetSdr()));
                         Assert.IsTrue(Arrays.AreEqual(expected1, output.GetSdr()));
-                        Assert.AreEqual("Interposed: [0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1]", output.GetCustomObject());
+                        Assert.AreEqual("Interposed: [1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1]", output.GetCustomObject());
                     }
                     ++test;
                 },
@@ -1019,8 +1019,8 @@ namespace HTM.Net.Tests.Network
             inputs[5] = new int[] { 0, 0, 0, 0, 1, 1, 1, 0 };
             inputs[6] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1 };
 
-            int[] expected0 = new int[] { 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 };
-            int[] expected1 = new int[] { 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 };
+            int[] expected0 = new int[] { 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0 };
+            int[] expected1 = new int[] { 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 };
 
             Layer<int[]> l = new Layer<int[]>(p, null, new SpatialPooler(), null, null, null);
 
@@ -1321,8 +1321,8 @@ namespace HTM.Net.Tests.Network
             inputs[5] = new int[] { 0, 0, 0, 0, 1, 1, 1, 0 };
             inputs[6] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1 };
 
-            int[] expected0 = new int[] { 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 };
-            int[] expected1 = new int[] { 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 };
+            int[] expected0 = new int[] { 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0 };
+            int[] expected1 = new int[] { 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 };
 
             // First test without prime directive :-P
             Layer<int[]> l = new Layer<int[]>(p, null, new SpatialPooler(), null, null, null);
@@ -1433,7 +1433,7 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);

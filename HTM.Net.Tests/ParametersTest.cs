@@ -140,7 +140,7 @@ namespace HTM.Net.Tests
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ArgumentException), e.GetType());
-                Assert.AreEqual("Can not set Parameters Property 'synPermActiveInc' because of value '2,00' not in range. Range[0,00-1,00]", e.Message);
+                Assert.AreEqual("Can not set Parameters Property 'synPermActiveInc' because of value '2.00' not in range. Range[0.00-1.00]", e.Message);
             }
 
             try

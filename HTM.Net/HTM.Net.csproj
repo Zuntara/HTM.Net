@@ -103,6 +103,7 @@
     <Compile Include="Network\ILayer.cs" />
     <Compile Include="Network\LayerMask.cs" />
     <Compile Include="Network\PersistenceApi.cs" />
+    <Compile Include="Network\PublisherSupplier.cs" />
     <Compile Include="Network\Sensor\CustomFileSensor.cs" />
     <Compile Include="Network\Sensor\Optional.cs" />
     <Compile Include="Network\Sensor\YieldingFileReader.cs" />

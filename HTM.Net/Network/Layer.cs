@@ -252,8 +252,10 @@ namespace HTM.Net.Network
                     object supplier;
                     if ((supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
                     {
-                        ((Publisher)supplier).SetNetwork(ParentNetwork);
-                        ParentNetwork.SetPublisher(((Publisher) supplier));
+                        if (supplier is PublisherSupplier) {
+                            ((PublisherSupplier)supplier).SetNetwork(ParentNetwork);
+                            ParentNetwork.SetPublisher(((PublisherSupplier)supplier).Get());
+                        }
                     }
                 }
             }
@@ -654,6 +656,14 @@ namespace HTM.Net.Network
         /// </summary>
         public override void Halt()
         {
+            object supplier = null;
+            if (Sensor != null && (supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
+            {
+                if (supplier is PublisherSupplier) {
+                    ((PublisherSupplier)supplier).ClearSuppliedInstance();
+                }
+            }
+
             // Signal the Observer chain to complete
             if (LayerThread == null)
             {

@@ -412,7 +412,7 @@ namespace HTM.Net.Tests.Network
                     int cycle = dayOfWeekPrintout(inf, cellsPerCol);
                     if (cycle == 284)
                     {
-                        Console.WriteLine("halting publisher = "/* + network.GetPublisher()*/);
+                        Console.WriteLine("halting publisher = " + network.GetPublisher());
                         network.Halt();
                     }
                 },

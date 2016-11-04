@@ -51,9 +51,9 @@ namespace HTM.Net.Network.Sensor
  * </pre>
  *
  */
- [Serializable]
+    [Serializable]
     public class Publisher : Persistable
- {
+    {
         private static int HEADER_SIZE = 3;
 
         [NonSerialized]
@@ -67,6 +67,27 @@ namespace HTM.Net.Network.Sensor
 
             string[] _lines = new string[3];
             int _cursor = 0;
+            private Action<Publisher> notifier;
+
+            public Builder() 
+                : this(null)
+            {
+
+            }
+
+            /**
+             * Instantiates a new {@code Builder} with the specified
+             * {@link Consumer} used to propagate "build" events using a
+             * plugged in function.
+             * 
+             * @param c     Consumer used to notify the {@link Network} of new
+             *              builds of a {@link Publisher}
+             */
+            public Builder(Action<Publisher> c)
+            {
+                this.notifier = c;
+            }
+
             /**
              * Adds a header line which in the case of a multi column input 
              * is a comma separated string.
@@ -102,6 +123,11 @@ namespace HTM.Net.Network.Sensor
                 Publisher p = new Publisher();
                 p.subject = _subject;
 
+                if (notifier != null)
+                {
+                    notifier(p);
+                }
+
                 return p;
             }
         }
@@ -115,6 +141,16 @@ namespace HTM.Net.Network.Sensor
         public static Builder<Subject<string>> GetBuilder()
         {
             return new Builder<Subject<string>>();
+        }
+
+        /**
+        * Builder that notifies a Network on every build of a new {@link Publisher}
+        * @param c     Consumer which consumes a Publisher and executes an Network notification.
+        * @return      a new Builder
+        */
+        public static Builder<Subject<string>> GetBuilder(Action<Publisher> c)
+        {
+            return new Builder<Subject<string>>(c);
         }
 
         /**

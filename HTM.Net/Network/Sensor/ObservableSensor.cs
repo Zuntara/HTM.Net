@@ -47,6 +47,9 @@ namespace HTM.Net.Network.Sensor
             {
                 obs = ((Publisher)publisher).Observable();
             }
+            else if (publisher is PublisherSupplier) {
+                obs = ((PublisherSupplier)publisher).Get().Observable();
+            }
             else
             {
                 obs = (IObservable<string>)@params.Get("ONSUB");
