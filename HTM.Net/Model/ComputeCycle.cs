@@ -13,7 +13,7 @@ namespace HTM.Net.Model
      * 
      */
     [Serializable]
-    public class ComputeCycle : Persistable<ComputeCycle>
+    public class ComputeCycle : Persistable
     {
         private const long serialVersionUID = 1L;
 

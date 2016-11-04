@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection;
+using System.Runtime.Serialization;
 using MathNet.Numerics.Random;
 
 namespace HTM.Net.Util
@@ -605,7 +607,7 @@ namespace HTM.Net.Util
     //}
 
     [Serializable]
-    public class MersenneTwister : MathNet.Numerics.Random.MersenneTwister, IRandom
+    public class MersenneTwister : MathNet.Numerics.Random.MersenneTwister, IRandom, ISerializable
     {
         public MersenneTwister()
             : base(42)
@@ -629,6 +631,13 @@ namespace HTM.Net.Util
             : base(seed, threadSafe)
         {
 
+        }
+
+        public MersenneTwister(SerializationInfo info, StreamingContext context)
+            :base()
+        {
+            SetPrivateFieldValue("_mt", info.GetValue("_mt", typeof(uint[])));
+            SetPrivateFieldValue("_mti", info.GetInt32("_mti"));
         }
 
         public int NextInt(int maxValue)
@@ -695,10 +704,42 @@ namespace HTM.Net.Util
         {
             return array[Next(0, array.Length)];
         }
+
+        #region Implementation of ISerializable
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("_mt", GetPrivateFieldValue("_mt"));
+            info.AddValue("_mti", GetPrivateFieldValue("_mti"));
+        }
+
+        private object GetPrivateFieldValue(string name)
+        {
+            var value = this.GetType().BaseType?.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(this);
+            return value;
+        }
+
+        private void SetPrivateFieldValue(string name, object value)
+        {
+            GetType().BaseType?.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(this, value);
+        }
+
+        #endregion
     }
 
-    public class XorshiftRandom : Xorshift, IRandom
+    [Serializable]
+    public class XorshiftRandom : Xorshift, IRandom, ISerializable
     {
+        public XorshiftRandom(SerializationInfo info, StreamingContext context)
+            :base((int)info.GetUInt64("_x"))
+        {
+            SetPrivateFieldValue("_a", info.GetUInt64("_a"));
+            SetPrivateFieldValue("_c", info.GetUInt64("_c"));
+            SetPrivateFieldValue("_x", info.GetUInt64("_x"));
+            SetPrivateFieldValue("_y", info.GetUInt64("_y"));
+            SetPrivateFieldValue("_z", info.GetUInt64("_z"));
+        }
+
         public XorshiftRandom(int seed)
             : base(seed)
         {
@@ -709,8 +750,33 @@ namespace HTM.Net.Util
         {
             return Next(maxValue);
         }
+
+        #region Implementation of ISerializable
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("_a", GetPrivateFieldValue("_a"));
+            info.AddValue("_c", GetPrivateFieldValue("_c"));
+            info.AddValue("_x", GetPrivateFieldValue("_x"));
+            info.AddValue("_y", GetPrivateFieldValue("_y"));
+            info.AddValue("_z", GetPrivateFieldValue("_z"));
+        }
+
+        private object GetPrivateFieldValue(string name)
+        {
+            var value = this.GetType().BaseType?.GetField(name, BindingFlags.NonPublic| BindingFlags.Instance)?.GetValue(this);
+            return value;
+        }
+
+        private void SetPrivateFieldValue(string name, object value)
+        {
+            GetType().BaseType?.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(this,value);
+        }
+
+        #endregion
     }
 
+    [Serializable]
     public static class TimeUtils
     {
         private static readonly DateTime Jan1st1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);

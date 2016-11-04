@@ -17,6 +17,7 @@ namespace HTM.Net.Encoders
  *
  * @author wilsondy (from Python original)
  */
+ [Serializable]
     public class SparsePassThroughEncoder : PassThroughEncoder<int[]>
     {
         private SparsePassThroughEncoder()

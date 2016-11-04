@@ -25,6 +25,7 @@ namespace HTM.Net.Encoders
  * data set, and therefore does not reflect the statistical distribution of
  * the input data and may not be used to calculate the median, mean etc.
  */
+ [Serializable]
     public class AdaptiveScalarEncoder : ScalarEncoder
     {
 

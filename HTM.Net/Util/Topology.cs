@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 
 namespace HTM.Net.Util
 {
+    [Serializable]
     public abstract class Generator<T> : IEnumerator<T>, IEnumerable<T>
     {
         /**
@@ -214,6 +215,7 @@ namespace HTM.Net.Util
     //    }
     //}
 
+    [Serializable]
     public class IntGenerator : Generator<int>
     {
         private const long serialVersionUID = 1L;
@@ -271,6 +273,7 @@ namespace HTM.Net.Util
         }
     }
 
+    [Serializable]
     public class Coordinator
     {
         /** keep it simple */
@@ -384,6 +387,7 @@ namespace HTM.Net.Util
         }
     }
 
+    [Serializable]
     public class Topology : Coordinator
     {
         /** keep it simple */

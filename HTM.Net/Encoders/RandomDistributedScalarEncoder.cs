@@ -58,6 +58,7 @@ namespace HTM.Net.Encoders
  * @author Anubhav Chaturvedi
  */
 
+ [Serializable]
     public class RandomDistributedScalarEncoder : Encoder<double>
     {
 

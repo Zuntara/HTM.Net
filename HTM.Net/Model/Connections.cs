@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
+using HTM.Net.Network;
+using HTM.Net.Serialize;
 using HTM.Net.Util;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
@@ -20,7 +22,7 @@ namespace HTM.Net.Model
     /// In the separation of data from logic, this class represents the data/state.
     /// </summary>
     [Serializable]
-    public class Connections
+    public class Connections : Persistable
     {
         /** keep it simple */
         private const long serialVersionUID = 1L;
@@ -203,7 +205,10 @@ namespace HTM.Net.Model
         /** The default random number seed */
         protected int seed = 42;
         /** The random number generator */
+        //[NonSerialized]
         public IRandom random = new MersenneTwister(42);
+
+        //private Type randomGeneratorType;
 
         /** Sorting Lambda used for sorting active and matching segments */
         public Comparison<DistalDendrite> segmentPositionSortKey;
@@ -246,16 +251,29 @@ namespace HTM.Net.Model
             };
         }
 
+        //public override Connections PreSerialize()
+        //{
+        //    // Take some values from the random generator
+        //    randomGeneratorType = random.GetType();
+        //    return this;
+        //}
+
+        //public override Connections PostDeSerialize()
+        //{
+        //    // Put random generator in again
+        //    random = (IRandom)Activator.CreateInstance(randomGeneratorType, seed);
+        //    return this;
+        //}
+
         /**
          * Returns a deep copy of this {@code Connections} object.
          * @return a deep copy of this {@code Connections}
          */
         public Connections Copy()
         {
-            throw new NotImplementedException();
-            //PersistenceAPI api = Persistence.Get(new SerialConfig());
-            //byte[] myBytes = api.serializer().serialize(this);
-            //return api.serializer().deSerialize(myBytes);
+            IPersistenceAPI api = Persistence.Get(new SerialConfig());
+            byte[] myBytes = api.Serializer().Serialize(this);
+            return api.Serializer().Deserialize<Connections>(myBytes);
         }
 
         /**
@@ -2579,17 +2597,17 @@ namespace HTM.Net.Model
                 if (other.activeCells != null)
                     return false;
             }
-            else if (!activeCells.Equals(other.activeCells))
+            else if (!Arrays.AreEqual(activeCells,other.activeCells,true))
                 return false;
-            if (!Arrays.AreEqual(activeDutyCycles, other.activeDutyCycles))
+            if (!Arrays.AreEqual(activeDutyCycles, other.activeDutyCycles, true))
                 return false;
-            if (!Arrays.AreEqual(boostFactors, other.boostFactors))
+            if (!Arrays.AreEqual(boostFactors, other.boostFactors, true))
                 return false;
-            if (!Arrays.AreEqual(cells, other.cells))
+            if (!Arrays.AreEqual(cells, other.cells, true))
                 return false;
             if (cellsPerColumn != other.cellsPerColumn)
                 return false;
-            if (!Arrays.AreEqual(columnDimensions, other.columnDimensions))
+            if (!Arrays.AreEqual(columnDimensions, other.columnDimensions, true))
                 return false;
             if (connectedCounts == null)
             {
@@ -2610,7 +2628,7 @@ namespace HTM.Net.Model
                 return false;
             if (BitConverter.DoubleToInt64Bits(initialPermanence) != BitConverter.DoubleToInt64Bits(other.initialPermanence))
                 return false;
-            if (!Arrays.AreEqual(inputDimensions, other.inputDimensions))
+            if (!Arrays.AreEqual(inputDimensions, other.inputDimensions, true))
                 return false;
             if (inputMatrix == null)
             {
@@ -2640,9 +2658,9 @@ namespace HTM.Net.Model
             }
             else if (!memory.Equals(other.memory))
                 return false;
-            if (!Arrays.AreEqual(minActiveDutyCycles, other.minActiveDutyCycles))
+            if (!Arrays.AreEqual(minActiveDutyCycles, other.minActiveDutyCycles, true))
                 return false;
-            if (!Arrays.AreEqual(minOverlapDutyCycles, other.minOverlapDutyCycles))
+            if (!Arrays.AreEqual(minOverlapDutyCycles, other.minOverlapDutyCycles, true))
                 return false;
             if (BitConverter.DoubleToInt64Bits(minPctActiveDutyCycles) != BitConverter.DoubleToInt64Bits(other.minPctActiveDutyCycles))
                 return false;
@@ -2658,7 +2676,7 @@ namespace HTM.Net.Model
                 return false;
             if (numSynapses != other.numSynapses)
                 return false;
-            if (!Arrays.AreEqual(overlapDutyCycles, other.overlapDutyCycles))
+            if (!Arrays.AreEqual(overlapDutyCycles, other.overlapDutyCycles, true))
                 return false;
             if (BitConverter.DoubleToInt64Bits(permanenceDecrement) != BitConverter.DoubleToInt64Bits(other.permanenceDecrement))
                 return false;
@@ -2682,14 +2700,14 @@ namespace HTM.Net.Model
                 if (other.predictiveCells != null)
                     return false;
             }
-            else if (!GetPredictiveCells().Equals(other.GetPredictiveCells()))
+            else if (!GetPredictiveCells().SetEquals(other.GetPredictiveCells()))
                 return false;
             if (receptorSynapses == null)
             {
                 if (other.receptorSynapses != null)
                     return false;
             }
-            else if (!receptorSynapses.ToString().Equals(other.receptorSynapses.ToString()))
+            else if (!receptorSynapses.Equals(other.receptorSynapses))
                 return false;
             if (seed != other.seed)
                 return false;
@@ -2732,7 +2750,7 @@ namespace HTM.Net.Model
             }
             else if (!distalSynapses.Equals(other.distalSynapses))
                 return false;
-            if (!Arrays.AreEqual(tieBreaker, other.tieBreaker))
+            if (!Arrays.AreEqual(tieBreaker, other.tieBreaker, true))
                 return false;
             if (updatePeriod != other.updatePeriod)
                 return false;
@@ -2743,7 +2761,7 @@ namespace HTM.Net.Model
                 if (other.winnerCells != null)
                     return false;
             }
-            else if (!winnerCells.Equals(other.winnerCells))
+            else if (!winnerCells.SetEquals(other.winnerCells))
                 return false;
             return true;
         }

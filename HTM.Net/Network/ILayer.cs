@@ -171,6 +171,8 @@ namespace HTM.Net.Network
         /// </summary>
         /// <returns></returns>
         IClassifier GetClassifier(MultiEncoder encoder, string name);
+
+        ICheckPointOp<byte[]> GetCheckPointOperator();
     }
 
 

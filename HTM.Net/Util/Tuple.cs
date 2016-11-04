@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace HTM.Net.Util
 {
     [Serializable]
-    public class Tuple : Persistable<Tuple>
+    public class Tuple : Persistable
     {
         /** The internal container array */
         private object[] container;

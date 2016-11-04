@@ -187,9 +187,10 @@ namespace HTM.Net.Util
             //}
         }
 
-        public static bool AreEqual<T>(IEnumerable<T> arr1, IEnumerable<T> arr2)
+        public static bool AreEqual<T>(IEnumerable<T> arr1, IEnumerable<T> arr2, bool nullAlsoIsEqual = true)
             where T : IComparable<T>
         {
+            if (arr1 == null && arr2 == null && nullAlsoIsEqual) return true;
             if (arr1 == null || arr2 == null) return false;
 
             IList<T> list1 = new List<T>(arr1);

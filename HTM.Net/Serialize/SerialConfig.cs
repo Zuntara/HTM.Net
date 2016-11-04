@@ -22,7 +22,7 @@ namespace HTM.Net.Serialize
             typeof (ProximalDendrite), typeof (DistalDendrite), typeof (Segment), typeof (IInference),
             typeof (ManualInput), typeof (BitHistory), typeof (Tuple), typeof (NamedTuple), typeof (Parameters),
             typeof (ComputeCycle), typeof (Classification<>), typeof (FieldMetaType), typeof (Pool),
-            typeof (Persistable<>)
+            typeof (Persistable)
         };
 
         /** The default format for the timestamp portion of the checkpoint file name */
@@ -39,14 +39,14 @@ namespace HTM.Net.Serialize
 
         public static readonly FileMode[] PRODUCTION_OPTIONS = new FileMode[]
         {
-            FileMode.CreateNew,
-            FileMode.Create
+            FileMode.Create,
+            FileMode.CreateNew
         };
 
         public static readonly FileMode[] CHECKPOINT_OPTIONS = new FileMode[]
         {
+            FileMode.Create,
             FileMode.CreateNew,
-            FileMode.Create
         };
 
         private String fileName;
@@ -177,7 +177,7 @@ namespace HTM.Net.Serialize
          */
         public String GetAbsoluteSerialDir()
         {
-            return Environment.GetEnvironmentVariable("user.home") + "/" + fileDir;
+            return Environment.CurrentDirectory + "\\" + fileDir;
         }
 
         /**

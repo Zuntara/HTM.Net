@@ -14,12 +14,14 @@ namespace HTM.Net.Network.Sensor
      * String input.
      * @param <T>
      */
+    [Serializable]
     public class ObservableSensor<T> : Sensor<IObservable<T>>
     {
         private const int HEADER_SIZE = 3;
         private const int BATCH_SIZE = 20;
         private const bool DEFAULT_PARALLEL_MODE = false;
 
+        [NonSerialized]
         private BatchedCsvStream<string[]> stream;
         private SensorParams @params;
 
@@ -30,7 +32,7 @@ namespace HTM.Net.Network.Sensor
          * 
          * @param params
          */
-        private ObservableSensor(SensorParams @params)
+        internal ObservableSensor(SensorParams @params)
         {
             if (!@params.HasKey("ONSUB"))
             {
@@ -45,7 +47,8 @@ namespace HTM.Net.Network.Sensor
             {
                 obs = ((Publisher)publisher).Observable();
             }
-            else {
+            else
+            {
                 obs = (IObservable<string>)@params.Get("ONSUB");
             }
             //IEnumerator<string> observerator = obs.GetEnumerator();

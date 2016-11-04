@@ -23,7 +23,7 @@ namespace HTM.Net.Algorithms
  * @author David Ray
  */
  [Serializable]
-    public class Statistic : Persistable<Statistic>
+    public class Statistic : Persistable
     {
         public readonly double mean;
         public readonly double variance;

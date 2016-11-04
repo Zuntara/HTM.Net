@@ -127,7 +127,7 @@ namespace HTM.Net.Network
     /// @see NetworkAPIDemo
     /// </remarks>
     [Serializable]
-    public class Network : Persistable<Network>
+    public class Network : Persistable
     {
         public readonly static ILog Logger = LogManager.GetLogger(typeof(Network));
         public enum Mode { MANUAL, AUTO, REACTIVE };
@@ -146,7 +146,7 @@ namespace HTM.Net.Network
 
         private readonly List<Region> _regions = new List<Region>();
 
-        //private Func<T, R> _checkPointFunction;
+        private Func<Network, byte[]> _checkPointFunction;
 
         private bool _shouldDoHalt = true;
 
@@ -219,7 +219,7 @@ namespace HTM.Net.Network
         /// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
         /// </summary>
         /// <returns></returns>
-        public override Network PreSerialize()
+        public override object PreSerialize()
         {
             if (_shouldDoHalt && _isThreadRunning)
             {
@@ -241,7 +241,7 @@ namespace HTM.Net.Network
         /// DO NOT CALL THIS METHOD! FOR INTERNAL USE ONLY!
         /// </summary>
         /// <returns></returns>
-        public override Network PostDeSerialize()
+        public override object PostDeSerialize()
         {
             _regions.ForEach(r => r.SetNetwork(this));
             _regions.ForEach(r => r.PostDeSerialize());
@@ -261,30 +261,49 @@ namespace HTM.Net.Network
             return this;
         }
 
-        ///**
-        // * INTERNAL METHOD: DO NOT CALL
-        // * 
-        // * Called from {@link Layer} to execute a check point from within the scope of 
-        // * this {@link Network}
-        // * checkPointFunction
-        // * @return  the serialized {@code Network} in byte array form.
-        // */
-        //byte[] InternalCheckPointOp()
-        //{
-        //    _shouldDoHalt = false;
-        //    byte[] serializedBytes = (byte[])_checkPointFunction(this);
-        //    _shouldDoHalt = true;
-        //    return serializedBytes;
-        //}
+        /**
+         * INTERNAL METHOD: DO NOT CALL
+         * 
+         * Called from {@link Layer} to execute a check point from within the scope of 
+         * this {@link Network}
+         * checkPointFunction
+         * @return  the serialized {@code Network} in byte array form.
+         */
+        internal byte[] InternalCheckPointOp()
+        {
+            _shouldDoHalt = false;
+            byte[] serializedBytes = (byte[])_checkPointFunction(this);
+            _shouldDoHalt = true;
+            return serializedBytes;
+        }
 
-        ///**
-        // * Sets the reference to the check point function.
-        // * @param f function which executes check point logic.
-        // */
-        //public void SetCheckPointFunction<T, R>(Func<T, R> f)
-        //{
-        //    this._checkPointFunction = f;
-        //}
+        /**
+         * Sets the reference to the check point function.
+         * @param f function which executes check point logic.
+         */
+        public void SetCheckPointFunction<T>(Func<Network, byte[]> f)
+        {
+            this._checkPointFunction = f;
+        }
+
+        /**
+         * USED INTERNALLY, DO NOT CALL
+         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
+         * that stores the state of this {@code Network} while keeping the Network up and running.
+         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
+         * 
+         * @return  the {@link CheckPointOp} operator 
+         */
+        internal ICheckPointOp<byte[]> GetCheckPointOperator()
+        {
+            Logger.Debug("Network [" + GetName() + "] called checkPoint() at: " + (new DateTime()));
+
+            if (_regions.Count == 1)
+            {
+                this._tail = _regions.First();
+            }
+            return _tail.GetCheckPointOperator();
+        }
 
         /**
          * Restarts this {@code Network}. The network will run from the previous save point
@@ -790,6 +809,60 @@ namespace HTM.Net.Network
             {
                 throw new ArgumentException("\":\" is a reserved character.");
             }
+        }
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + (_isLearn ? 1231 : 1237);
+            result = prime * result + ((_name == null) ? 0 : _name.GetHashCode());
+            result = prime * result + ((_parameters == null) ? 0 : _parameters.GetHashCode());
+            result = prime * result + ((_regions == null) ? 0 : _regions.GetHashCode());
+            result = prime * result + ((_sensor == null) ? 0 : _sensor.GetHashCode());
+            return result;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            Network other = (Network)obj;
+            if (_isLearn != other._isLearn)
+                return false;
+            if (_name == null)
+            {
+                if (other._name != null)
+                    return false;
+            }
+            else if (!_name.Equals(other._name))
+                return false;
+            if (_parameters == null)
+            {
+                if (other._parameters != null)
+                    return false;
+            }
+            else if (!_parameters.Equals(other._parameters))
+                return false;
+            if (_regions == null)
+            {
+                if (other._regions != null)
+                    return false;
+            }
+            else if (! _regions.SequenceEqual(other._regions))
+                return false;
+            if (_sensor == null)
+            {
+                if (other._sensor != null)
+                    return false;
+            }
+            else if (!_sensor.Equals(other._sensor))
+                return false;
+            return true;
         }
     }
 }

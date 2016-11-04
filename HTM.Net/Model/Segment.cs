@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace HTM.Net.Model
 {
     [Serializable]
-    public abstract class Segment : Persistable<Segment>, IComparable<Segment>
+    public abstract class Segment : Persistable, IComparable<Segment>
     {
         /** keep it simple */
         private const long serialVersionUID = 1L;

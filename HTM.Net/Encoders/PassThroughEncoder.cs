@@ -13,6 +13,7 @@ namespace HTM.Net.Encoders
  *
  * @author wilsondy (from Python original)
  */
+ [Serializable]
     public class PassThroughEncoder<T> : Encoder<T>
     {
 

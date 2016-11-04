@@ -1450,6 +1450,7 @@ namespace HTM.Net.Network
             Logger.Debug($"Start called on Layer thread {LayerThread}");
         }
 
+        
         //////////////////////////////////////////////////////////////
         //        Inner Class Definition Transformer Example        //
         //////////////////////////////////////////////////////////////
@@ -1470,6 +1471,7 @@ namespace HTM.Net.Network
         /// <see cref="Layer{T}.ResolveObservableSequence{V}(V)"/>
         /// <see cref="Layer{T}.FillInSequence(System.IObservable{HTM.Net.Network.ManualInput})"/>
         /// </summary>
+        [Serializable]
         internal class FunctionFactory
         {
             internal Layer<T> Layer { get; set; }

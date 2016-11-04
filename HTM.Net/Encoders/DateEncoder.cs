@@ -51,6 +51,7 @@ namespace HTM.Net.Encoders
  * - refer to DateEncoder::Builder, which where these parameters are defined.
  * - explain customDays here and at Python version
  */
+ [Serializable]
     public class DateEncoder : Encoder<DateTime>
     {
 
@@ -83,16 +84,26 @@ namespace HTM.Net.Encoders
         protected List<Tuple> holidaysList = new List<Tuple> { new Tuple(12, 25) };
 
         //////////////// Convenience DateTime Formats ////////////////////
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_DATE_TIME_ZONE = new DateTimeFormatInfo { FullDateTimePattern = "YYYY/MM/dd HH:mm:ss.SSSz" };//.forPattern("YYYY/MM/dd HH:mm:ss.SSSz");
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_DATE_TIME = new DateTimeFormatInfo { FullDateTimePattern = "YYYY/MM/dd HH:mm:ss.SSS" };//.forPattern("YYYY/MM/dd HH:mm:ss.SSS");
+        [NonSerialized]
         public static DateTimeFormatInfo RELAXED_DATE_TIME = new DateTimeFormatInfo { FullDateTimePattern = "YYYY/MM/dd HH:mm:ss" };//.forPattern("YYYY/MM/dd HH:mm:ss");
+        [NonSerialized]
         public static DateTimeFormatInfo LOOSE_DATE_TIME = new DateTimeFormatInfo { FullDateTimePattern = "MM/dd/YY HH:mm" };//.forPattern("MM/dd/YY HH:mm");
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_DATE = new DateTimeFormatInfo { FullDateTimePattern = "YYYY/MM/dd" };//.forPattern("YYYY/MM/dd");
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_TIME_ZONE = new DateTimeFormatInfo { FullDateTimePattern = "HH:mm:ss.SSSz" };//.forPattern("HH:mm:ss.SSSz");
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_TIME_MILLIS = new DateTimeFormatInfo { FullDateTimePattern = "HH:mm:ss.SSS" };//.forPattern("HH:mm:ss.SSS");
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_TIME_SECS = new DateTimeFormatInfo { FullDateTimePattern = "HH:mm:ss" };//.forPattern("HH:mm:ss");
+        [NonSerialized]
         public static DateTimeFormatInfo FULL_TIME_MINS = new DateTimeFormatInfo { FullDateTimePattern = "HH:mm" };//.forPattern("HH:mm");
 
+        [NonSerialized]
         protected DateTimeFormatInfo customFormatter;
 
         /**

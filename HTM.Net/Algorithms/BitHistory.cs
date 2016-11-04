@@ -14,7 +14,7 @@ namespace HTM.Net.Algorithms
  * @see CLAClassifier
  */
  [Serializable]
-    public class BitHistory : Persistable<BitHistory>
+    public class BitHistory : Persistable
     {
         /** Store reference to the classifier */
         [JsonIgnore]

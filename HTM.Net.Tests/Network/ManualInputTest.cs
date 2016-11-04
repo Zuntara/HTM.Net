@@ -41,7 +41,7 @@ namespace HTM.Net.Tests.Network
             HashSet<Cell> currentPrediction = new HashSet<Cell>(); currentPrediction.Add(new Cell(new Column(4, 0), 3));
             Classification<object> classification = new Classification<object>();
             double anomalyScore = 0.48d;
-            object customObject = new Net.Network.Network("", NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            object customObject = new Net.Network.Network("MI Network", NetworkTestHarness.GetNetworkDemoTestEncoderParams());
 
             ManualInput mi = new ManualInput()
                 .SetClassifierInput(classifierInput)

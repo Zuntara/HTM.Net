@@ -2,17 +2,15 @@
 
 namespace HTM.Net.Model
 {
-    public interface IPersistable<T>
-            where T : IPersistable<T>
+    public interface IPersistable
     {
-        T PreSerialize();
-        T PostDeSerialize();
-        T PostDeSerialize(T t);
+        object PreSerialize();
+        object PostDeSerialize();
+        object PostDeSerialize(object t);
     }
 
     [Serializable]
-    public abstract class Persistable<T> : IPersistable<T>
-            where T : Persistable<T>
+    public abstract class Persistable : IPersistable
     {
         /**
          * <em>FOR INTERNAL USE ONLY</em><p>
@@ -20,9 +18,9 @@ namespace HTM.Net.Model
          * preparation required for serialization should be done
          * in this method.
          */
-        public virtual T PreSerialize()
+        public virtual object PreSerialize()
         {
-            return (T)this;
+            return this;
         }
 
         /**
@@ -31,9 +29,9 @@ namespace HTM.Net.Model
          * to "fix up" any inconsistencies within the object being
          * reified.
          */
-        public virtual T PostDeSerialize()
+        public virtual object PostDeSerialize()
         {
-            return PostDeSerialize((T)this);
+            return PostDeSerialize(this);
         }
 
         /**
@@ -45,7 +43,7 @@ namespace HTM.Net.Model
          * @return  a post serialized custom form of T
          */
 
-        public virtual T PostDeSerialize(T t)
+        public virtual object PostDeSerialize(object t)
         {
             return t;
         }

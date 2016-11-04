@@ -6,6 +6,7 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
 {
+    [Serializable]
     public class MultiEncoder : Encoder<object>
     {
         protected Map<int, string> indexToCategory = new Map<int, string>();

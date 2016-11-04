@@ -20,7 +20,7 @@ namespace HTM.Net.Model
      * @see Connections
      */
     [Serializable]
-    public class Synapse : Persistable<Synapse>, IComparable<Synapse>
+    public class Synapse : Persistable, IComparable<Synapse>
     {
         private readonly Cell _sourceCell;
         private readonly Segment _segment;

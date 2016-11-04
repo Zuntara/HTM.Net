@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using HTM.Net.Network;
 using HTM.Net.Serialize;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -10,33 +11,33 @@ namespace HTM.Net.Tests.Serialize
     public class SerializerCoreTest
     {
         [TestMethod]
-        public void testSerializeDeSerialize()
+        public void TestGetSerializer()
         {
-            List<IInference> callVerify = new List<IInference>();
+            SerializerCore serializer = Persistence.Get().Serializer();
+            Assert.IsNotNull(serializer);
 
-            SerializerCore serializer = new SerializerCore();
+            SerializerCore serializer2 = Persistence.Get().Serializer();
+            Assert.IsTrue(serializer == serializer2);
+        }
+
+        static List<IInference> callVerify = new List<IInference>();
+
+        [TestMethod]
+        public void TestSerializeDeSerialize()
+        {
+
+            SerializerCore serializer = Persistence.Get().Serializer();
 
             IInference inf = new ManualInputWithPostDeserialize();
-    //        {
-
-            //        public <T> T postDeSerialize(T i)
-            //    {
-            //        Inference retVal = (Inference)super.postDeSerialize(i);
-            //        assertNotNull(retVal);
-            //        assertTrue(retVal != i); // Ensure Objects not same
-            //        assertTrue(retVal.equals(i)); // However they are still equal!
-            //        callVerify.add(retVal);
-            //        assertTrue(callVerify.size() == 1);
-
-            //        return (T)retVal;
-            //    }
-            //};
 
             byte[] bytes = serializer.Serialize(inf);
             Assert.IsNotNull(bytes);
 
             IInference serializedInf = serializer.Deserialize<ManualInput>(bytes);
             Assert.IsNotNull(serializedInf);
+
+            Assert.IsTrue(callVerify.Count == 1);
+
         }
 
         [Serializable]
@@ -44,16 +45,17 @@ namespace HTM.Net.Tests.Serialize
         {
             #region Overrides of Persistable<ManualInput>
 
-            public override ManualInput PostDeSerialize(ManualInput i)
+            public override object PostDeSerialize(object i)
             {
                 IInference retVal = (IInference)base.PostDeSerialize(i);
                 Assert.IsNotNull(retVal);
                 Assert.IsTrue(retVal != i); // Ensure Objects not same
                 Assert.IsTrue(retVal.Equals(i)); // However they are still equal!
-                //callVerify.add(retVal);
-                //Assert.IsTrue(callVerify.size() == 1);
-
-                return (ManualInput) retVal;
+                                                 //callVerify.add(retVal);
+                                                 //Assert.IsTrue(callVerify.size() == 1);
+                callVerify.Add(retVal);
+                Assert.IsTrue(callVerify.Count == 1);
+                return (ManualInput)retVal;
             }
 
             #endregion

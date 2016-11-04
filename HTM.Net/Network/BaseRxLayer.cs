@@ -14,12 +14,23 @@ namespace HTM.Net.Network
     [Serializable]
     public abstract class BaseRxLayer : BaseLayer
     {
+        [NonSerialized]
         private IDisposable _subscription; //Subscription 
+        [NonSerialized]
         private IObservable<IInference> _userObservable;
+        [NonSerialized]
         private readonly List<IObserver<IInference>> _observers = new List<IObserver<IInference>>();
+        [NonSerialized]
         private readonly ConcurrentQueue<IObserver<IInference>> _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+        [NonSerialized]
         protected Subject<object> Publisher = null;
+        [NonSerialized]
         protected Map<Type, IObservable<ManualInput>> ObservableDispatch = new Map<Type, IObservable<ManualInput>>();// Collections.synchronizedMap(
+
+        [NonSerialized]
+        private CheckPointOperator _checkPointOp;
+        [NonSerialized]
+        private List<IObserver<byte[]>> _checkPointOpObservers = new List<IObserver<byte[]>>();
 
         protected BaseRxLayer(string name, Network n, Parameters p)
             : base(name, n, p)
@@ -301,6 +312,126 @@ namespace HTM.Net.Network
             }
 
             return sequenceStart;
+        }
+
+        /**
+         * Executes the check point logic, handles the return of the serialized byte array
+         * by delegating the call to {@link rx.Observer#onNext(byte[])} of all the currently queued
+         * Observers; then clears the list of Observers.
+         */
+        private void DoCheckPoint()
+        {
+            byte[] bytes = ParentNetwork.InternalCheckPointOp();
+
+            if (bytes != null)
+            {
+                LOGGER.Debug("Layer [" + GetName() + "] checkPointed file: " +
+                    Persistence.Get().GetLastCheckPointFileName());
+            }
+            else
+            {
+                LOGGER.Debug("Layer [" + GetName() + "] checkPoint   F A I L E D   at: " + (new DateTime()));
+            }
+
+            foreach (IObserver<byte[]> o in _checkPointOpObservers)
+            {
+                o.OnNext(bytes);
+                o.OnCompleted();
+            }
+
+            _checkPointOpObservers.Clear();
+        }
+
+        /**
+         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
+         * that stores the state of this {@code Network} while keeping the Network up and running.
+         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
+         * 
+         * @param network   the {@link Network} to check point.
+         * @return  the {@link CheckPointOp} operator 
+         */
+        public override ICheckPointOp<byte[]> GetCheckPointOperator()
+        {
+            if (_checkPointOp == null)
+            {
+                _checkPointOp = new CheckPointOperator(this);
+            }
+            return (ICheckPointOp<byte[]>)_checkPointOp;
+        }
+
+        //////////////////////////////////////////////////////////////
+        //   Inner Class Definition for CheckPointer (Observable)   //
+        //////////////////////////////////////////////////////////////
+
+        /**
+         * <p>
+         * Implementation of the CheckPointOp interface which serves to checkpoint
+         * and register a listener at the same time. The {@link rx.Observer} will be
+         * notified with the byte array of the {@link Network} being serialized.
+         * </p><p>
+         * The layer thread automatically tests for the list of observers to 
+         * contain > 0 elements, which indicates a check point operation should
+         * be executed.
+         * </p>
+         * 
+         * @param <T>       {@link rx.Observer}'s return type
+         */
+        internal class CheckPointOperator : ICheckPointOp<byte[]>
+        {
+            [NonSerialized]
+            private IObservable<byte[]> _instance;
+
+            internal CheckPointOperator(ILayer l)
+            //: this()
+            {
+                _instance = Observable.Create<byte[]>(o =>
+                {
+                    if (l.GetLayerThread() != null)
+                    {
+                        ((BaseRxLayer) l)._checkPointOpObservers.Add(o);
+                    }
+                    else
+                    {
+                        ((BaseRxLayer)l).DoCheckPoint();
+                    }
+                    return Observable.Empty<byte[]>().Subscribe();
+                });
+                //        this(new Observable.OnSubscribe<T>() {
+                //        @SuppressWarnings({ "unchecked" })
+                //            @Override public void call(Subscriber<? super T> r)
+                //    {
+                //        if (l.LAYER_THREAD != null)
+                //        {
+                //            // The layer thread automatically tests for the list of observers to 
+                //            // contain > 0 elements, which indicates a check point operation should
+                //            // be executed.
+                //            l.checkPointOpObservers.add((Observer<byte[]>)r);
+                //        }
+                //        else
+                //        {
+                //            l.doCheckPoint();
+                //        }
+                //    }
+                //});
+            }
+
+            /**
+             * Constructs this {@code CheckPointOperator}
+             * @param f     a subscriber function
+             */
+            //protected CheckPointOperator(rx.Observable.OnSubscribe<T> f)
+            //{
+            //    super(f);
+            //}
+
+            /**
+             * Queues the specified {@link rx.Observer} for notification upon
+             * completion of a check point operation.
+             */
+            public IDisposable CheckPoint(IObserver<byte[]> t)
+            {
+                return _instance.Subscribe(t);
+            }
         }
     }
 }

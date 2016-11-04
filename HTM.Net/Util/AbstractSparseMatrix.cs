@@ -12,6 +12,7 @@ namespace HTM.Net.Util
     /// at construction time and immutable - matrix fixed size data structure.
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Serializable]
     public abstract class AbstractSparseMatrix<T> : AbstractFlatMatrix<T>, ISparseMatrix<T>
     {
         /// <summary>

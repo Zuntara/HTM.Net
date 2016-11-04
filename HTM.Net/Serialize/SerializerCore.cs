@@ -8,14 +8,19 @@ using log4net;
 namespace HTM.Net.Serialize
 {
     [Serializable]
-    public class SerializerCore : Persistable<SerializerCore>
+    public class SerializerCore : Persistable
     {
         protected static readonly ILog LOGGER = LogManager.GetLogger(typeof(SerializerCore));
 
-        private Type[] classes;
+        private Type[] _classes;
+
+        public SerializerCore(params Type[] classes)
+        {
+            this._classes = classes;
+        }
 
         public byte[] Serialize<T>(T instance)
-            where T : IPersistable<T>
+            where T : IPersistable
         {
             byte[] bytes;
             try
@@ -33,12 +38,12 @@ namespace HTM.Net.Serialize
         }
 
         public T Deserialize<T>(byte[] bytes)
-            where T : IPersistable<T>
+            where T : IPersistable
         {
             BinaryFormatter formatter = new BinaryFormatter();
             MemoryStream ms = new MemoryStream(bytes);
             T obj = (T) formatter.Deserialize(ms);
-            return obj.PostDeSerialize();
+            return (T) obj.PostDeSerialize();
         }
     }
 }

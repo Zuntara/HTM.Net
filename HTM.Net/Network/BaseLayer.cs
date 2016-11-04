@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
@@ -7,6 +9,7 @@ using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
+using log4net;
 
 namespace HTM.Net.Network
 {
@@ -14,11 +17,13 @@ namespace HTM.Net.Network
     /// Contains the Base properties of a layer
     /// </summary>
     [Serializable]
-    public abstract class BaseLayer : Persistable<BaseLayer>, ILayer
+    public abstract class BaseLayer : Persistable, ILayer
     {
+        protected static ILog LOGGER = LogManager.GetLogger(typeof(BaseLayer));
         /// <summary>
         /// Gets or sets the layer's current thread
         /// </summary>
+        [NonSerialized]
         protected Task LayerThread;
 
         protected LayerMask AlgoContentMask = 0;
@@ -58,8 +63,8 @@ namespace HTM.Net.Network
             Params = p;
 
             Connections = new Connections();
-
-            AutoCreateClassifiers = (bool)p.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY);
+            
+            AutoCreateClassifiers = (bool)p.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
         }
 
         protected BaseLayer(Parameters @params, MultiEncoder e, SpatialPooler sp, TemporalMemory tm,
@@ -87,6 +92,53 @@ namespace HTM.Net.Network
             Connections = new Connections();
 
             InitializeMask();
+
+            if (LOGGER.IsDebugEnabled)
+            {
+                LOGGER.DebugFormat("Layer successfully created containing: {0}{1}{2}{3}{4}",
+                    (Encoder == null ? "" : "MultiEncoder,"),
+                    (SpatialPooler == null ? "" : "SpatialPooler,"),
+                    (TemporalMemory == null ? "" : "TemporalMemory,"),
+                    (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."),
+                    (AnomalyComputer == null ? "" : "Anomaly"));
+            }
+        }
+
+        public override object PreSerialize()
+        {
+            _isPostSerialized = false;
+            return this;
+        }
+
+        public override object PostDeSerialize()
+        {
+            //RecreateSensors();
+
+            //FunctionFactory old = factory;
+            //factory = new FunctionFactory();
+            //factory.inference = old.inference.postDeSerialize(old.inference);
+
+            //checkPointOpObservers = new ArrayList<>();
+
+            //if (sensor != null)
+            //{
+            //    sensor.setLocalParameters(params);
+            //    // Initialize encoders and recreate encoding index mapping.
+            //    sensor.postDeSerialize();
+            //}
+            //else
+            //{
+            //    // Dispatch functions (Observables) are transient & non-serializable so they must be rebuilt.
+            //    observableDispatch = createDispatchMap();
+            //    // Dispatch chain will not propagate unless it has subscribers.
+            //    parentNetwork.addDummySubscriber();
+            //}
+            //// Flag which lets us know to skip or do certain setups during initialization.
+            _isPostSerialized = true;
+
+            //observers = new ArrayList<Observer<Inference>>();
+
+            return this;
         }
 
         /// <summary>
@@ -120,6 +172,21 @@ namespace HTM.Net.Network
         {
             return ParentNetwork;
         }
+
+        /**
+         * USED INTERNALLY, DO NOT CALL.
+         * @return
+         */
+        public ICheckPointOp<byte[]> DelegateCheckPointCall()
+        {
+            if (ParentNetwork != null)
+            {
+                return ParentNetwork.GetCheckPointOperator();
+            }
+            return null;
+        }
+
+        
 
         /// <summary>
         /// Sets the parent region which contains this <see cref="Layer{T}"/>
@@ -163,7 +230,7 @@ namespace HTM.Net.Network
             {
                 return ParentNetwork.GetTail().GetTail().GetLayerThread();
             }
-            
+
             throw new InvalidOperationException("No thread found?");
         }
 
@@ -394,7 +461,7 @@ namespace HTM.Net.Network
             Name = name;
             return this;
         }
-        
+
         /// <summary>
         /// Returns the String identifier of this <see cref="ILayer"/>
         /// </summary>
@@ -544,5 +611,7 @@ namespace HTM.Net.Network
         /// of insertion within the <see cref="ILayer"/>'s declaration.</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
         public abstract ILayer Add(Func<ManualInput, ManualInput> func);
+
+        public abstract ICheckPointOp<byte[]> GetCheckPointOperator();
     }
 }

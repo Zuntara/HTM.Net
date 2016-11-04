@@ -4,7 +4,8 @@ using HTM.Net.Model;
 // https://github.com/numenta/htm.java/
 namespace HTM.Net.Util
 {
-    public abstract class AbstractFlatMatrix<T> : Persistable<AbstractFlatMatrix<T>>, IFlatMatrix<T>
+    [Serializable]
+    public abstract class AbstractFlatMatrix<T> : Persistable, IFlatMatrix<T>
     {
         protected int[] _dimensions;
         protected int[] dimensionMultiples;
@@ -234,6 +235,37 @@ namespace HTM.Net.Util
         public virtual int[] GetDimensionMultiples()
         {
             return dimensionMultiples;
+        }
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + Arrays.GetHashCode(dimensionMultiples);
+            result = prime * result + Arrays.GetHashCode(_dimensions);
+            result = prime * result + (isColumnMajor ? 1231 : 1237);
+            result = prime * result + numDimensions;
+            return result;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            AbstractFlatMatrix<T> other = (AbstractFlatMatrix<T>)obj;
+            if (!Arrays.AreEqual(dimensionMultiples, other.dimensionMultiples))
+                return false;
+            if (!Arrays.AreEqual(_dimensions, other._dimensions))
+                return false;
+            if (isColumnMajor != other.isColumnMajor)
+                return false;
+            if (numDimensions != other.numDimensions)
+                return false;
+            return true;
         }
     }
 

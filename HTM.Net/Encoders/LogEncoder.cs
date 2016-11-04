@@ -38,6 +38,7 @@ namespace HTM.Net.Encoders
      *                 than maxval will be clipped to minval/maxval
      *   forced -- (default False), if True, skip some safety checks
      */
+ [Serializable]
     public class LogEncoder : Encoder<double>
     {
         private static readonly ILog LOG = LogManager.GetLogger(typeof(LogEncoder));

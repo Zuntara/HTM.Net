@@ -13,7 +13,7 @@ namespace HTM.Net.Algorithms
  * @see AnomalyLikelihoodTest
  */
     [Serializable]
-    public class AnomalyLikelihoodMetrics : Persistable<AnomalyLikelihoodMetrics>
+    public class AnomalyLikelihoodMetrics : Persistable
     {
         private AnomalyLikelihood.AnomalyParams @params;
         private Anomaly.AveragedAnomalyRecordList aggRecordList;

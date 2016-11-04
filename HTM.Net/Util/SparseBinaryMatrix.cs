@@ -8,6 +8,7 @@ namespace HTM.Net.Util
     /// <summary>
     /// Implementation of a sparse matrix which contains binary byte values only.
     /// </summary>
+    [Serializable]
     public class SparseBinaryMatrix : AbstractSparseBinaryMatrix
     {
         protected readonly SparseByteArray _backingArray;

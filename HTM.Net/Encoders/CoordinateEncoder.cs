@@ -20,6 +20,7 @@ namespace HTM.Net.Encoders
         double OrderForCoordinate(int[] coordinate);
     }
 
+ [Serializable]
     public class CoordinateEncoder : Encoder<Util.Tuple>, ICoordinateOrder
     {
         private static IRandom random = new MersenneTwister(42);

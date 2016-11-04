@@ -42,6 +42,7 @@ namespace HTM.Net.Encoders
      * @see EncoderResult
      * @see Parameters
      */
+ [Serializable]
     public class CategoryEncoder : Encoder<string>
     {
 

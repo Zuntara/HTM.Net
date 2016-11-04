@@ -7,6 +7,7 @@ namespace HTM.Net.Util
     /// <summary>
     /// Base class for matrices containing specifically binary (0 or 1) integer values
     /// </summary>
+    [Serializable]
     public abstract class AbstractSparseBinaryMatrix : AbstractSparseMatrix<int>
     {
         private int[] trueCounts;

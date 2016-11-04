@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reactive.Subjects;
+using HTM.Net.Model;
 
 namespace HTM.Net.Network.Sensor
 {
@@ -50,10 +51,12 @@ namespace HTM.Net.Network.Sensor
  * </pre>
  *
  */
-    public class Publisher
-    {
+ [Serializable]
+    public class Publisher : Persistable
+ {
         private static int HEADER_SIZE = 3;
 
+        [NonSerialized]
         private ReplaySubject<string> subject;
 
         private Network parentNetwork;

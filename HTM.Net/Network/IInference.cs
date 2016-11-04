@@ -13,7 +13,7 @@ namespace HTM.Net.Network
  * various stages in the sequence of calculations a Layer may contain.
  * 
  */
-    public interface IInference : IPersistable<IInference>
+    public interface IInference : IPersistable
     {
         /**
          * Returns the input record sequence number associated with 

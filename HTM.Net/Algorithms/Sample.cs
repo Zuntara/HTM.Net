@@ -10,7 +10,7 @@ namespace HTM.Net.Algorithms
  * class.
  */
  [Serializable]
-    public class Sample : Persistable<Sample>
+    public class Sample : Persistable
     {
         public readonly DateTime date;
         /** Same thing as average */

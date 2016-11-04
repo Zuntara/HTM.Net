@@ -32,11 +32,13 @@ namespace HTM.Net.Util
         bool EndOfStream { get; }
     }
 
+ [Serializable]
     internal class StreamIdentifier
     {
         public static int GeneralId = 0;
     }
 
+    [Serializable]
     public class StreamState
     {
         public bool IsTerminal { get; internal set; }
@@ -52,6 +54,7 @@ namespace HTM.Net.Util
     // to avoid collection modified errors and to avoid relooping the same data again and hitting the mappings too many.
 
     // New version for streaming
+    [Serializable]
     public class Stream<TModel> : IStream<TModel>, IStream
     {
         private IStream _parentStream;
@@ -368,6 +371,7 @@ namespace HTM.Net.Util
         }
     }
 
+ [Serializable]
     public class StreamCollection<TModel> : IEnumerable<TModel>, IEnumerator<TModel>
     {
         protected readonly int _streamId;
@@ -496,6 +500,7 @@ namespace HTM.Net.Util
         }
     }
 
+ [Serializable]
     public class MappedStreamCollection<TFrom, TTo> : StreamCollection<TTo>
     {
         private readonly LinkedList<TTo> _source;

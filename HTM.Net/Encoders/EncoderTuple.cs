@@ -9,6 +9,7 @@ namespace HTM.Net.Encoders
      * 
      * @see Tuple
      */
+ [Serializable]
     public class EncoderTuple : Util.Tuple
     {
         /**

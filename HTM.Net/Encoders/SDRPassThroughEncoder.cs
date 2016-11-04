@@ -4,6 +4,7 @@ using log4net;
 
 namespace HTM.Net.Encoders
 {
+ [Serializable]
     public class SDRPassThroughEncoder : PassThroughEncoder<int[]>
     {
         protected new static readonly ILog LOGGER = LogManager.GetLogger(typeof(SDRPassThroughEncoder));

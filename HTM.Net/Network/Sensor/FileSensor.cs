@@ -20,6 +20,7 @@ namespace HTM.Net.Network.Sensor
  * @see SensorFactory
  * @see Sensor#create(SensorFactory, SensorParams)
  */
+    [Serializable]
     public class FileSensor : Sensor<FileInfo>
     {
         protected const int HEADER_SIZE = 3;
@@ -27,6 +28,7 @@ namespace HTM.Net.Network.Sensor
         // This is OFF until Encoders are made concurrency safe
         protected const bool DEFAULT_PARALLEL_MODE = false;
 
+        [NonSerialized]
         protected BatchedCsvStream<string[]> stream;
         protected readonly SensorParams @params;
 
@@ -54,7 +56,8 @@ namespace HTM.Net.Network.Sensor
                 IStream<string> stream = GetZipEntryStream(pathStr);
                 this.stream = BatchedCsvStream<string>.Batch(stream, BATCH_SIZE, DEFAULT_PARALLEL_MODE, HEADER_SIZE);
             }
-            else {
+            else
+            {
                 FileInfo f = new FileInfo(pathStr);
                 if (!f.Exists)
                 {

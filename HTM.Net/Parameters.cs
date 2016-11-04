@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
+using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
 using HTM.Net.Util;
@@ -19,7 +21,7 @@ namespace HTM.Net
     /// <see cref="ComputeCycle"/>
     /// </summary>
     [Serializable]
-    public class Parameters : Persistable<Parameters>
+    public class Parameters : Persistable
     {
         private static readonly ParametersMap DEFAULTS_ALL;
         private static readonly ParametersMap DEFAULTS_TEMPORAL;
@@ -130,6 +132,7 @@ namespace HTM.Net
         /// <summary>
         /// Constant values representing configuration parameters for the <see cref="TemporalMemory"/>
         /// </summary>
+        [Serializable]
         public sealed class KEY
         {
             /////////// Universal Parameters ///////////
@@ -182,7 +185,7 @@ namespace HTM.Net
             /**
              * The maximum number of {@link Segment}s a {@link Cell} can have.
              */
-            public static readonly KEY MAX_SEGMENTS_PER_CELL = new KEY("maxSegmentsPerCell", typeof (int));
+            public static readonly KEY MAX_SEGMENTS_PER_CELL = new KEY("maxSegmentsPerCell", typeof(int));
             /**
              * Initial permanence of a new synapse
              */
@@ -530,18 +533,76 @@ namespace HTM.Net
                 return GetFieldName();
             }
 
+
+
+            public override bool Equals(object obj)
+            {
+                if (this == obj)
+                    return true;
+                if (obj == null)
+                    return false;
+                if (GetType() != obj.GetType())
+                    return false;
+                KEY other = (KEY)obj;
+
+                return Equals(other);
+            }
+
+            #region Equality members
+
+            private bool Equals(KEY other)
+            {
+                return string.Equals(fieldName, other.fieldName) && Equals(fieldType, other.fieldType) && min.Equals(other.min) && max.Equals(other.max);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (fieldName != null ? fieldName.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (fieldType != null ? fieldType.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ min.GetHashCode();
+                    hashCode = (hashCode * 397) ^ max.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            public static bool operator ==(KEY left, KEY right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(KEY left, KEY right)
+            {
+                return !Equals(left, right);
+            }
+
+            #endregion
+
             #endregion
         }
 
         /// <summary>
         /// Save guard decorator around params map
         /// </summary>
+        [Serializable]
         public class ParametersMap : Dictionary<KEY, object>
         {
             /**
              * Default serialvers
              */
             private const long serialVersionUID = 1L;
+
+            public ParametersMap()
+            {
+
+            }
+
+            public ParametersMap(SerializationInfo info, StreamingContext context)
+                : base(info, context)
+            {
+
+            }
 
             public new void Add(KEY key, object value)
             {
@@ -1277,7 +1338,8 @@ namespace HTM.Net
                 {
                     BuildParamStr(temporalInfo, key);
                 }
-                else {
+                else
+                {
                     BuildParamStr(otherInfo, key);
                 }
             }
@@ -1306,6 +1368,88 @@ namespace HTM.Net
             spatialInfo.Append("\t\t").Append(key.GetFieldName()).Append(":").Append(value).Append("\n");
         }
 
+        public override int GetHashCode()
+        {
+            IRandom rnd = (IRandom)paramMap.Get(KEY.RANDOM);
+            paramMap.Remove(KEY.RANDOM);
+            int hc = paramMap.GetArrayHashCode();
+            paramMap.Add(KEY.RANDOM, rnd);
+
+            return hc;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            Parameters other = (Parameters)obj;
+            if (paramMap == null)
+            {
+                if (other.paramMap != null)
+                    return false;
+            }
+            else
+            {
+                Type[] classArray = new Type[] { typeof(Object) };
+                try
+                {
+                    foreach (KEY key in paramMap.Keys)
+                    {
+                        if (paramMap.Get(key) == null || other.paramMap.Get(key) == null) continue;
+
+                        Type thisValueClass = paramMap.Get(key).GetType();
+                        Type otherValueClass = other.paramMap.Get(key).GetType();
+                        bool isSpecial = IsSpecial(key, thisValueClass);
+                        if (!isSpecial && (thisValueClass.GetMethod("Equals", classArray).DeclaringType != thisValueClass ||
+                            otherValueClass.GetMethod("Equals", classArray).DeclaringType != otherValueClass))
+                        {
+                            continue;
+                        }
+                        else if (isSpecial)
+                        {
+                            if (typeof(int[]).IsAssignableFrom(thisValueClass))
+                            {
+                                if (!Arrays.AreEqual((int[])paramMap.Get(key), (int[])other.paramMap.Get(key))) return false;
+                            }
+                            else if (key == KEY.FIELD_ENCODING_MAP)
+                            {
+                                if (!paramMap.Get(key).IsDeepEqual(other.paramMap.Get(key)))
+                                {
+                                    return false;
+                                }
+                            }
+                        }
+                        else if (!other.paramMap.ContainsKey(key) || !paramMap.Get(key).Equals(other.paramMap.Get(key)))
+                        {
+                            return false;
+                        }
+                    }
+                }
+                catch (Exception e) { return false; }
+            }
+            return true;
+        }
+
+        /**
+             * Returns a flag indicating whether the type is an equality
+             * special case.
+             * @param key       the {@link KEY}
+             * @param klazz     the class of the type being considered.
+             * @return
+             */
+        private bool IsSpecial(KEY key, Type klazz)
+        {
+            if (typeof(int[]).IsAssignableFrom(klazz) || key == KEY.FIELD_ENCODING_MAP)
+            {
+
+                return true;
+            }
+            return false;
+        }
     }
 
     public class ParameterMapping : Attribute

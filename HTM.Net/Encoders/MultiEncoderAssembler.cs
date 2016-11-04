@@ -15,6 +15,7 @@ namespace HTM.Net.Encoders
  * @author cogmission
  *
  */
+ [Serializable]
     public class MultiEncoderAssembler
     {
 

@@ -12,7 +12,7 @@ namespace HTM.Net.Algorithms
  * @author David Ray
  */
     [Serializable]
-    public class MovingAverage : Persistable<MovingAverage>
+    public class MovingAverage : Persistable
     {
         private Calculation calc;
 
@@ -195,6 +195,7 @@ namespace HTM.Net.Algorithms
         /**
          * Container for calculated data
          */
+        [Serializable]
         public class Calculation
         {
             internal double average;

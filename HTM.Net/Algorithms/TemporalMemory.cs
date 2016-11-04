@@ -9,7 +9,8 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
-    public class TemporalMemory : IComputeDecorator
+    [Serializable]
+    public class TemporalMemory : Persistable, IComputeDecorator
     {
         /** simple serial version id */
         private const long serialVersionUID = 1L;

@@ -10,7 +10,7 @@ namespace HTM.Net.Algorithms
     /// </summary>
     /// <typeparam name="T">Type of actual value output</typeparam>
     [Serializable]
-    public class Classification<T> : Persistable<Classification<T>>
+    public class Classification<T> : Persistable
     {
         /// <summary>
         /// Array of actual values

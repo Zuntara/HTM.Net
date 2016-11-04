@@ -20,6 +20,7 @@ namespace HTM.Net.Encoders
  * @see Encoder
  * @see EncoderResult
  */
+ [Serializable]
     public class SDRCategoryEncoder : Encoder<string>
     {
 

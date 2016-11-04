@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Util;
 
 namespace HTM.Net.Network.Sensor
@@ -40,14 +41,18 @@ namespace HTM.Net.Network.Sensor
      *
      * @param <T>   the input type (i.e. File, URL, etc.)
      */
+     [Serializable]
     public class HTMSensor<T> : Sensor<T>, IHTMSensor
-    {
+     {
         private ISensor @delegate;
         private Header header;
         private Parameters localParameters;
         private MultiEncoder encoder;
+        [NonSerialized]
         private IStream<int[]> outputStream;
+        [NonSerialized]
         private List<int[]> output;
+        [NonSerialized]
         private InputMap inputMap;
 
         private Map<int, IEncoder> indexToEncoderMap;
@@ -373,6 +378,7 @@ namespace HTM.Net.Network.Sensor
          * optimization overrides {@link Map#get(Object)directly accesses the input arrays providing input
          * and should be extremely faster.
          */
+        [Serializable]
         public class InputMap : IDictionary<string, object>
         {
             private readonly HTMSensor<T> _parent;
@@ -847,5 +853,6 @@ namespace HTM.Net.Network.Sensor
         {
             this.encoder = encoder;
         }
-    }
+
+     }
 }

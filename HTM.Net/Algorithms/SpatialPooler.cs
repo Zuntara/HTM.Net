@@ -24,8 +24,9 @@ namespace HTM.Net.Algorithms
      * 
      *
      */
-    public class SpatialPooler
-    {
+     [Serializable]
+    public class SpatialPooler : Persistable
+     {
         /** Default Serial Version  */
         private const long serialVersionUID = 1L;
 

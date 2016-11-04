@@ -28,7 +28,7 @@ namespace HTM.Net.Network
     /// the slot containing the "Bucket Index" will be empty.
     /// </remarks>
     [Serializable]
-    public class ManualInput : Persistable<ManualInput>, IInference
+    public class ManualInput : Persistable, IInference
     {
         private int _recordNum;
         /// <summary>
@@ -445,17 +445,9 @@ namespace HTM.Net.Network
 
         #region Implementation of IPersistable<IInference>
 
-        public new IInference PreSerialize()
-        {
-            return base.PreSerialize();
-        }
+        
 
-        public new IInference PostDeSerialize()
-        {
-            return base.PostDeSerialize();
-        }
-
-        public IInference PostDeSerialize(IInference manualInput)
+        public new virtual object PostDeSerialize(object manualInput)
         {
             ManualInput mi = (ManualInput)manualInput;
 
@@ -507,51 +499,63 @@ namespace HTM.Net.Network
             if (obj == null)
                 return false;
             if (!typeof(IInference).IsAssignableFrom(obj.GetType()))
-            return false;
-        ManualInput other = (ManualInput)obj;
-        if(_activeCells == null) {
-            if(other._activeCells != null)
                 return false;
-        } else if(!_activeCells.Equals(other._activeCells))
-            return false;
-        if(BitConverter.DoubleToInt64Bits(_anomalyScore) != BitConverter.DoubleToInt64Bits(other._anomalyScore))
-            return false;
-        if(_classification == null) {
-            if(other._classification != null)
+            ManualInput other = (ManualInput)obj;
+            if (_activeCells == null)
+            {
+                if (other._activeCells != null)
+                    return false;
+            }
+            else if (!_activeCells.Equals(other._activeCells))
                 return false;
-        } else if(!_classification.Equals(other._classification))
-            return false;
-        if(_classifierInput == null) {
-            if(other._classifierInput != null)
+            if (BitConverter.DoubleToInt64Bits(_anomalyScore) != BitConverter.DoubleToInt64Bits(other._anomalyScore))
                 return false;
-        } else if(!_classifierInput.Equals(other._classifierInput))
-            return false;
-        if(_computeCycle == null) {
-            if(other._computeCycle != null)
+            if (_classification == null)
+            {
+                if (other._classification != null)
+                    return false;
+            }
+            else if (!_classification.Equals(other._classification))
                 return false;
-        } else if(!_computeCycle.Equals(other._computeCycle))
-            return false;
-        if(!Arrays.AreEqual(_encoding, other._encoding))
-            return false;
-        if(!Arrays.AreEqual(_feedForwardActiveColumns, other._feedForwardActiveColumns))
-            return false;
-        if(!Arrays.AreEqual(_feedForwardSparseActives, other._feedForwardSparseActives))
-            return false;
-        if(_predictiveCells == null) {
-            if(other._predictiveCells != null)
+            if (_classifierInput == null)
+            {
+                if (other._classifierInput != null)
+                    return false;
+            }
+            else if (!_classifierInput.Equals(other._classifierInput))
                 return false;
-        } else if(!_predictiveCells.Equals(other._predictiveCells))
-            return false;
-        if(_previousPredictiveCells == null) {
-            if(other._previousPredictiveCells != null)
+            if (_computeCycle == null)
+            {
+                if (other._computeCycle != null)
+                    return false;
+            }
+            else if (!_computeCycle.Equals(other._computeCycle))
                 return false;
-        } else if(!_previousPredictiveCells.Equals(other._previousPredictiveCells))
-            return false;
-        if(_recordNum != other._recordNum)
-            return false;
-        if(!Arrays.AreEqual(_sdr, other._sdr))
-            return false;
-        return true;
-    }
+            if (!Arrays.AreEqual(_encoding, other._encoding) && _encoding != null && other._encoding != null)
+                return false;
+            if (!Arrays.AreEqual(_feedForwardActiveColumns, other._feedForwardActiveColumns) && _feedForwardActiveColumns != null && other._feedForwardActiveColumns != null)
+                return false;
+            if (!Arrays.AreEqual(_feedForwardSparseActives, other._feedForwardSparseActives) && _feedForwardSparseActives != null && other._feedForwardSparseActives != null)
+                return false;
+            if (_predictiveCells == null)
+            {
+                if (other._predictiveCells != null)
+                    return false;
+            }
+            else if (!_predictiveCells.Equals(other._predictiveCells))
+                return false;
+            if (_previousPredictiveCells == null)
+            {
+                if (other._previousPredictiveCells != null)
+                    return false;
+            }
+            else if (!_previousPredictiveCells.Equals(other._previousPredictiveCells))
+                return false;
+            if (_recordNum != other._recordNum)
+                return false;
+            if (!Arrays.AreEqual(_sdr, other._sdr) && _sdr != null && other._sdr != null)
+                return false;
+            return true;
+        }
     }
 }

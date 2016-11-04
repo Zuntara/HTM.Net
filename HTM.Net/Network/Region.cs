@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive;
 using HTM.Net.Model;
 using HTM.Net.Util;
@@ -34,7 +35,7 @@ namespace HTM.Net.Network
      *
      */
      [Serializable]
-    public class Region : Persistable<Region>
+    public class Region : Persistable
     {
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Region));
 
@@ -42,6 +43,7 @@ namespace HTM.Net.Network
         private Region upstreamRegion;
         private Region downstreamRegion;
         private Map<string, Layer<IInference>> layers = new Map<string, Layer<IInference>>();
+        [NonSerialized]
         private IObservable<IInference> regionObservable;
         private ILayer tail;
         private ILayer head;
@@ -85,6 +87,30 @@ namespace HTM.Net.Network
 
             this.name = name;
             this.network = network;
+        }
+
+        public override object PreSerialize()
+        {
+            layers.Values.ToList().ForEach(l=>l.PreSerialize());
+            return this;
+        }
+
+        public override object PostDeSerialize()
+        {
+            layers.Values.ToList().ForEach(l => l.PostDeSerialize());
+
+            // Connect Layer Observable chains (which are transient so we must 
+            // rebuild them and their subscribers)
+            if (IsMultiLayer())
+            {
+                Layer<IInference> curr = (Layer<IInference>)head;
+                Layer<IInference> prev = (Layer<IInference>) curr.GetPrevious();
+                do
+                {
+                    Connect(curr, prev);
+                } while ((curr = prev) != null && (prev = (Layer<IInference>) prev.GetPrevious()) != null);
+            }
+            return this;
         }
 
         /**
@@ -335,6 +361,25 @@ namespace HTM.Net.Network
             }
 
             return false;
+        }
+
+        /**
+         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
+         * that stores the state of this {@code Network} while keeping the Network up and running.
+         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
+         * 
+         * @return  the {@link CheckPointOp} operator 
+         */
+        internal ICheckPointOp<byte[]> GetCheckPointOperator()
+        {
+            LOGGER.Debug("Region [" + GetName() + "] CheckPoint called at: " + (new DateTime()));
+            if (tail != null)
+            {
+                return tail.GetCheckPointOperator();
+
+            }
+            Close();
+            return tail.GetCheckPointOperator();
         }
 
         /**
@@ -666,5 +711,46 @@ namespace HTM.Net.Network
             //});
         }
 
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + (assemblyClosed ? 1231 : 1237);
+            result = prime * result + (isLearn ? 1231 : 1237);
+            result = prime * result + ((layers == null) ? 0 : layers.Count);
+            result = prime * result + ((name == null) ? 0 : name.GetHashCode());
+            return result;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            Region other = (Region)obj;
+            if (assemblyClosed != other.assemblyClosed)
+                return false;
+            if (isLearn != other.isLearn)
+                return false;
+            if (layers == null)
+            {
+                if (other.layers != null)
+                    return false;
+            }
+            else if (!layers.Equals(other.layers))
+                return false;
+            if (name == null)
+            {
+                if (other.name != null)
+                    return false;
+            }
+            else if (!name.Equals(other.name))
+                return false;
+            return true;
+        }
     }
 }
