@@ -121,7 +121,14 @@ namespace HTM.Net.Util
                 }
                 else
                 {
-                    sb.AppendFormat("{0}, ", item);
+                    if (item is double)
+                    {
+                        sb.AppendFormat("{0}, ", ((double)Convert.ToDouble(item)).ToString(NumberFormatInfo.InvariantInfo));
+                    }
+                    else
+                    {
+                        sb.AppendFormat("{0}, ", item);
+                    }
                 }
             }
             string result = sb.ToString().TrimEnd(',', ' ');

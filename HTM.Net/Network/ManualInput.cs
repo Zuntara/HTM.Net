@@ -445,9 +445,7 @@ namespace HTM.Net.Network
 
         #region Implementation of IPersistable<IInference>
 
-        
-
-        public new virtual object PostDeSerialize(object manualInput)
+        public override object PostDeSerialize(object manualInput)
         {
             ManualInput mi = (ManualInput)manualInput;
 
