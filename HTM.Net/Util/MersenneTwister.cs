@@ -9,6 +9,7 @@ namespace HTM.Net.Util
     {
         double NextDouble();
         int NextInt(int maxValue);
+        double NextGaussian();
     }
 
     // https://github.com/numenta/htm.java/blob/master/src/main/java/org/numenta/nupic/util/MersenneTwister.java
@@ -700,6 +701,11 @@ namespace HTM.Net.Util
             return NextDouble() < probability;
         }
 
+        public double NextGaussian()
+        {
+            return NextDouble();
+        }
+
         public T Choice<T>(T[] array)
         {
             return array[Next(0, array.Length)];
@@ -749,6 +755,11 @@ namespace HTM.Net.Util
         public int NextInt(int maxValue)
         {
             return Next(maxValue);
+        }
+
+        public double NextGaussian()
+        {
+            return NextDouble();
         }
 
         #region Implementation of ISerializable

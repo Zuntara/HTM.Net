@@ -10,6 +10,7 @@ using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Serialize;
+using HTM.Net.Tests.Algorithms;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Tuple = HTM.Net.Util.Tuple;
@@ -432,6 +433,77 @@ namespace HTM.Net.Tests.Network
                 Assert.AreEqual(anomalyExpected[i], score, 0.01);
             }
         }
+
+
+        [TestMethod]
+        public void TestSerializeAnomalyLikelihood()
+        {
+            Parameters @params = Parameters.Empty();
+            @params.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
+
+            AnomalyLikelihood an = (AnomalyLikelihood)Anomaly.Create(@params);
+
+            // Serialize the Anomaly Computer without errors
+            SerialConfig config = new SerialConfig("testSerializeAnomalyLikelihood", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+            byte[] bytes = api.Write(an);
+
+            // Deserialize the Anomaly Computer and make sure its usable (same tests as AnomalyTest.java)
+            Anomaly serializedAn = api.Read<Anomaly>(bytes);
+            Assert.IsNotNull(serializedAn);
+        }
+
+        //[TestMethod]
+        public void TestSerializeAnomalyLikelihoodForUpdates()
+        {
+            Parameters @params = Parameters.Empty();
+            @params.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
+
+            AnomalyLikelihood an = (AnomalyLikelihood)Anomaly.Create(@params);
+
+            // Serialize the Anomaly Computer without errors
+            SerialConfig config = new SerialConfig("testSerializeAnomalyLikelihood", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+            byte[] bytes = api.Write(an);
+
+            // Deserialize the Anomaly Computer and make sure its usable (same tests as AnomalyTest.java)
+            AnomalyLikelihood serializedAn = api.Read<AnomalyLikelihood>(bytes);
+            Assert.IsNotNull(serializedAn);
+
+            //----------------------------------------
+            // Step 1. Generate an initial estimate using fake distribution of anomaly scores.
+            List<Sample> data1 = AnomalyLikelihoodTest.GenerateSampleData(0.2, 0.2, 0.2, 0.2).Take(1000).ToList();
+            AnomalyLikelihoodMetrics metrics1 = serializedAn.EstimateAnomalyLikelihoods(data1, 5, 0);
+
+            //----------------------------------------
+            // Step 2. Generate some new data with a higher average anomaly
+            // score. Using the estimator from step 1, to compute likelihoods. Now we
+            // should see a lot more anomalies.
+            List<Sample> data2 = AnomalyLikelihoodTest.GenerateSampleData(0.6, 0.2, 0.2, 0.2).Take(300).ToList();
+            AnomalyLikelihoodMetrics metrics2 = serializedAn.UpdateAnomalyLikelihoods(data2, metrics1.GetParams());
+
+            // Serialize the Metrics too just to be sure everything can be serialized
+            SerialConfig metricsConfig = new SerialConfig("testSerializeMetrics", SerialConfig.SERIAL_TEST_DIR);
+            api = Persistence.Get(metricsConfig);
+            api.Write(metrics2);
+
+            // Deserialize the Metrics
+            AnomalyLikelihoodMetrics serializedMetrics = api.Read<AnomalyLikelihoodMetrics>();
+            Assert.IsNotNull(serializedMetrics);
+
+            Assert.AreEqual(serializedMetrics.GetLikelihoods().Length, data2.Count);
+            Assert.AreEqual(serializedMetrics.GetAvgRecordList().Count, data2.Count);
+            Assert.IsTrue(serializedAn.IsValidEstimatorParams(serializedMetrics.GetParams()));
+
+            // The new running total should be different
+            Assert.IsFalse(metrics1.GetAvgRecordList().Total == serializedMetrics.GetAvgRecordList().Total);
+
+            // We should have many more samples where likelihood is < 0.01, but not all
+            int conditionCount = ArrayUtils.Where(serializedMetrics.GetLikelihoods(), d => d < 0.1).Length;
+            Assert.IsTrue(conditionCount >= 25);
+            Assert.IsTrue(conditionCount <= 250);
+        }
+        ///////////////////////   End Serialize Anomaly //////////////////////////
 
         private Parameters GetTestEncoderParams()
         {

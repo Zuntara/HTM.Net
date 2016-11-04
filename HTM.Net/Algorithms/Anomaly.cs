@@ -214,6 +214,7 @@ namespace HTM.Net.Algorithms
         /// <summary>
         /// Container to hold interim <see cref="AnomalyLikelihood"/> calculations.
         /// </summary>
+        [Serializable]
         public class AveragedAnomalyRecordList
         {
             internal readonly List<Sample> AveragedRecords;

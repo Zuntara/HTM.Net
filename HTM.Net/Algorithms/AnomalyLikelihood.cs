@@ -67,6 +67,7 @@ namespace HTM.Net.Algorithms
  * @see Statistic
  * @see MovingAverage
  */
+    [Serializable]
     public class AnomalyLikelihood : Anomaly
     {
         private static readonly ILog LOG = LogManager.GetLogger(typeof(AnomalyLikelihood));
@@ -137,7 +138,8 @@ namespace HTM.Net.Algorithms
             {
                 likelihoodRetval = 0.5;
             }
-            else {
+            else
+            {
                 if (distribution == null || iteration % reestimationPeriod == 0)
                 {
                     this.distribution = EstimateAnomalyLikelihoods(
@@ -180,7 +182,8 @@ namespace HTM.Net.Algorithms
             {
                 distribution = NullDistribution();
             }
-            else {
+            else
+            {
                 List<double> samples = records.GetMetrics();
                 distribution = EstimateNormal(samples.Skip(skipRecords).Take(samples.Count).ToArray(), true);
 
@@ -383,11 +386,13 @@ namespace HTM.Net.Algorithms
                         // Previous value is not in redzone, so leave as-is
                         filteredLikelihoods[i + 1] = v;
                     }
-                    else {
+                    else
+                    {
                         filteredLikelihoods[i + 1] = yellowThreshold;
                     }
                 }
-                else {
+                else
+                {
                     // Value is below the redzone, so leave as-is
                     filteredLikelihoods[i + 1] = v;
                 }
@@ -627,10 +632,12 @@ namespace HTM.Net.Algorithms
         ///  @author David Ray
         ///
         /// </summary>
+        [Serializable]
         public class AnomalyParams
         {
             private readonly Parameters _parameters;
             /** Cached Json formatting. Possible because Objects of this class is immutable */
+            [NonSerialized]
             private JObject cachedNode;
 
             private readonly Statistic distribution;
