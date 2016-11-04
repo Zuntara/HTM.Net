@@ -701,9 +701,26 @@ namespace HTM.Net.Util
             return NextDouble() < probability;
         }
 
+        private bool _haveNextGaussian;
+        private double _nextGaussian;
         public double NextGaussian()
         {
-            return NextDouble();
+            if (_haveNextGaussian)
+            {
+                _haveNextGaussian = false;
+                return _nextGaussian;
+            }
+            double v1, v2, s;
+            do
+            {
+                v1 = 2*NextDouble() - 1;
+                v2 = 2*NextDouble() - 1;
+                s = v1*v1 + v2*v2;
+            } while (s >= 1 || s == 0.0);
+            double multiplier = Math.Sqrt(-2*Math.Log(s)/s);
+            _nextGaussian = v2*multiplier;
+            _haveNextGaussian = true;
+            return v1*multiplier;
         }
 
         public T Choice<T>(T[] array)
@@ -757,9 +774,26 @@ namespace HTM.Net.Util
             return Next(maxValue);
         }
 
+        private bool _haveNextGaussian;
+        private double _nextGaussian;
         public double NextGaussian()
         {
-            return NextDouble();
+            if (_haveNextGaussian)
+            {
+                _haveNextGaussian = false;
+                return _nextGaussian;
+            }
+            double v1, v2, s;
+            do
+            {
+                v1 = 2 * NextDouble() - 1;
+                v2 = 2 * NextDouble() - 1;
+                s = v1 * v1 + v2 * v2;
+            } while (s >= 1 || s == 0.0);
+            double multiplier = Math.Sqrt(-2 * Math.Log(s) / s);
+            _nextGaussian = v2 * multiplier;
+            _haveNextGaussian = true;
+            return v1 * multiplier;
         }
 
         #region Implementation of ISerializable

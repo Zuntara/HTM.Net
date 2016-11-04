@@ -453,7 +453,7 @@ namespace HTM.Net.Tests.Network
             Assert.IsNotNull(serializedAn);
         }
 
-        //[TestMethod]
+        [TestMethod]
         public void TestSerializeAnomalyLikelihoodForUpdates()
         {
             Parameters @params = Parameters.Empty();
