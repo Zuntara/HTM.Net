@@ -207,7 +207,7 @@ namespace HTM.Net.Tests.Network
             parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 6);
 
             //SpatialPooler specific
-            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 12);//3
+            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, -1);//3
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.5);//0.5
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, false);
             parameters.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0);
@@ -222,7 +222,6 @@ namespace HTM.Net.Tests.Network
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
-            parameters.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
 
             //Temporal Memory specific
             parameters.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);

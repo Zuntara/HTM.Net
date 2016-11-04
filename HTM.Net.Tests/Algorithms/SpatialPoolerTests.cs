@@ -342,11 +342,15 @@ namespace HTM.Net.Tests.Algorithms
             cn.SetBoostFactors(new double[] { 2.0, 2.0, 2.0 });
             int[] inputVector = { 1, 1, 1, 1, 1 };
             int[] activeArray = { 0, 0, 0 };
-            int[] expOutput = { 2, 1, 0 };
+            int[] expOutput = { 2, 1, 1 };
             sp.Compute(cn, inputVector, activeArray, true);
 
             double[] boostedOverlaps = cn.GetBoostedOverlaps();
             int[] overlaps = cn.GetOverlaps();
+
+            Debug.WriteLine("Exp: "+Arrays.ToString(expOutput));
+            Debug.WriteLine("Act: " +Arrays.ToString(overlaps));
+            Debug.WriteLine("Bst: " +Arrays.ToString(boostedOverlaps));
 
             for (int i = 0; i < cn.GetNumColumns(); i++)
             {
