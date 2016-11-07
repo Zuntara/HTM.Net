@@ -345,13 +345,13 @@ namespace HTM.Net.Network
             {
                 sequenceStart = sequenceStart.Skip(_recordNum + 1);
 
-                int skipCount;
-                if (((skipCount = (int)Params.GetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY)) != null)) {
+                int? skipCount;
+                if ((skipCount = (int?)Params.GetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY)) != null) {
                 // No need to "warm up" the SpatialPooler if we're deserializing an SP
                 // that has been running... However "skipCount - recordNum" is there so 
                 // we make sure the Network has run at least long enough to satisfy the 
                 // original requested "primer delay".
-                    Params.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, Math.Max(0, skipCount - _recordNum));
+                    Params.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, Math.Max(0, skipCount.GetValueOrDefault() - _recordNum));
                 }
             }
 

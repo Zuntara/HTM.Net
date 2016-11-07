@@ -83,51 +83,6 @@ namespace HTM.Net.Tests.Network
         }
 
         [TestMethod]
-        public void TestNetworkSerialisation()
-        {
-            Net.Network.Network n = new Net.Network.Network("network", Parameters.Empty());
-            IPersistenceAPI pa = Persistence.Get(new SerialConfig(null, SerialConfig.SERIAL_TEST_DIR));
-            byte[] bytes = pa.Serializer().Serialize(n);
-            Net.Network.Network n2 = pa.Serializer().Deserialize<Net.Network.Network>(bytes);
-
-            Assert.AreEqual(n, n2);
-
-            // With parameters
-            Parameters p = NetworkTestHarness.GetParameters();
-            n = new Net.Network.Network("network", p);
-            bytes = pa.Serializer().Serialize(n);
-            n2 = pa.Serializer().Deserialize<Net.Network.Network>(bytes);
-
-            Assert.AreEqual(n, n2);
-
-            // With region
-            n = Net.Network.Network.Create("test network", p)
-                .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer("1", p)
-                        .Add(Anomaly.Create())
-                        .Add(new TemporalMemory())
-                        .Add(new SpatialPooler())));
-
-            bytes = pa.Serializer().Serialize(n);
-            n2 = pa.Serializer().Deserialize<Net.Network.Network>(bytes);
-
-            Assert.AreEqual(n, n2);
-        }
-
-        [TestMethod]
-        public void TestLayerSerialisation()
-        {
-            Net.Network.Network n = new Net.Network.Network("network", Parameters.Empty());
-            BaseLayer l = new Layer<int>("layer", n, Parameters.Empty());
-
-            IPersistenceAPI pa = Persistence.Get(new SerialConfig(null, SerialConfig.SERIAL_TEST_DIR));
-            byte[] bytes = pa.Serializer().Serialize(l);
-            ILayer l2 = pa.Serializer().Deserialize<BaseLayer>(bytes);
-
-            Assert.AreEqual(l, l2);
-        }
-
-        [TestMethod]
         public void TestRegionSerialisation()
         {
             Net.Network.Network n = new Net.Network.Network("network", Parameters.Empty());

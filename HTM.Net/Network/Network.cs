@@ -538,7 +538,7 @@ namespace HTM.Net.Network
         {
             if (_regions.Count == 1)
             {
-                _head = _regions[0];
+                _head = _regions.First();
             }
             return _head.Observe();
         }
