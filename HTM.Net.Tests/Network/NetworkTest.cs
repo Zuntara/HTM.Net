@@ -984,13 +984,13 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetGeospatialTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
 
             HTMSensor<ObservableSensor<string[]>> htmSensor = (HTMSensor<ObservableSensor<string[]>>)sensor;
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
