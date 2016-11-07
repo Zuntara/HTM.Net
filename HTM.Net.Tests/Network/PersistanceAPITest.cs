@@ -661,7 +661,7 @@ namespace HTM.Net.Tests.Network
         /**
      * Test that a serialized/de-serialized {@link Network} can be run...
      */
-        //[TestMethod, DeploymentItem("Resources\\rec-center-hourly.csv")]
+        [TestMethod, DeploymentItem("Resources\\rec-center-hourly.csv")]
         public void TestSerializedUnStartedNetworkRuns()
         {
             const int NUM_CYCLES = 600;

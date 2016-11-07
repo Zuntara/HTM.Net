@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -310,6 +311,11 @@ namespace HTM.Net.Network
         {
             IObservable<ManualInput> sequenceStart = null;
 
+            if (ObservableDispatch == null)
+            {
+                ObservableDispatch = CreateDispatchMap();
+            }
+
             if (ObservableDispatch != null)
             {
                 if (t is ManualInput)
@@ -332,6 +338,32 @@ namespace HTM.Net.Network
                     }
                 }
             }
+
+            // Insert skip observable operator if initializing with an advanced record number
+            // (i.e. Serialized Network)
+            if (_recordNum > 0 && _skip != -1)
+            {
+                sequenceStart = sequenceStart.Skip(_recordNum + 1);
+
+                int skipCount;
+                if (((skipCount = (int)Params.GetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY)) != null)) {
+                // No need to "warm up" the SpatialPooler if we're deserializing an SP
+                // that has been running... However "skipCount - recordNum" is there so 
+                // we make sure the Network has run at least long enough to satisfy the 
+                // original requested "primer delay".
+                    Params.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, Math.Max(0, skipCount - _recordNum));
+                }
+            }
+
+            sequenceStart = sequenceStart.Where(m=> {
+                if (_checkPointOpObservers.Any() && ParentNetwork != null)
+                {
+                    // Execute check point logic
+                    DoCheckPoint();
+                }
+
+                return true;
+            });
 
             return sequenceStart;
         }
