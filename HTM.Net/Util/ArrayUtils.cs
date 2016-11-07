@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using MathNet.Numerics;
 
 namespace HTM.Net.Util
 {
@@ -318,13 +320,11 @@ namespace HTM.Net.Util
             return doubs.Select(d => (byte)d).ToArray();
         }
 
-        /**
-         * Returns an array with the same shape and the contents
-         * converted to doubles.
-         *
-         * @param ints an array of ints.
-         * @return
-         */
+        /// <summary>
+        /// Returns an array with the same shape and the contents converted to doubles.
+        /// </summary>
+        /// <param name="ints">Array of ints</param>
+        /// <returns></returns>
         public static double[] ToDoubleArray(int[] ints)
         {
             return ints.Select(d => (double)d).ToArray();
@@ -349,7 +349,8 @@ namespace HTM.Net.Util
                     a -= b;
                 }
             }
-            else {
+            else
+            {
                 if (a % b == 0) return 0;
 
                 while (a + b < b)
@@ -1171,7 +1172,8 @@ namespace HTM.Net.Util
             {
                 return n % divisor;
             }
-            else {
+            else
+            {
                 double val = divisor + (n % divisor);
                 return val == divisor ? 0 : val;
             }
@@ -1323,7 +1325,8 @@ namespace HTM.Net.Util
                     Array.Copy(position, 0, coordinates, 0, position.Length);
                     result.Add(coordinates);
                 }
-                else {// inductive condition
+                else
+                {// inductive condition
                     int index = dimensions.Count - level;
                     int[] currentDimension = dimensions[index];
                     for (int i = 0; i < currentDimension.Length; i++)
@@ -1428,21 +1431,25 @@ namespace HTM.Net.Util
          * @param random     a random number generator
          * @return a sample of numbers of the specified size
          */
-        public static int[] Sample(int[] choices, int[] selectedIndices, IRandom random)
+        public static int[] Sample(int[] choices, ref int[] selectedIndices, IRandom random)
         {
-            List<int> choiceSupply = new List<int>(choices);
-            int upperBound = choices.Length;
-            for (int i = 0; i < selectedIndices.Length; i++)
-            {
-                int randomIdx = random.NextInt(upperBound);
-                int removedVal = choiceSupply[randomIdx];
-                choiceSupply.RemoveAt(randomIdx);
-                selectedIndices[i] = removedVal;
-                upperBound--;
-            }
-            //Arrays.Sort(selectedIndices);
+            List<int> supply = new List<int>(choices);
+
+            int[] chosen = supply.SelectCombination(selectedIndices.Length, (Random) random).ToArray();
+
+            //List<int> choiceSupply = new List<int>(choices);
+            //int upperBound = choices.Length;
+            //for (int i = 0; i < selectedIndices.Length; i++)
+            //{
+            //    int randomIdx = random.NextInt(upperBound);
+            //    int removedVal = choiceSupply[randomIdx];
+            //    choiceSupply.RemoveAt(randomIdx);
+            //    selectedIndices[i] = removedVal;
+            //    upperBound--;
+            //}
+            selectedIndices = chosen; // use ref so we can replace this instance
             Array.Sort(selectedIndices);
-            //System.out.println("sample: " + Arrays.toString(selectedIndices));
+
             return selectedIndices;
         }
 
@@ -2671,7 +2678,8 @@ namespace HTM.Net.Util
                 }
                 return sum;
             }
-            else {
+            else
+            {
                 //for (Object agr : (Object[])array)
                 foreach (object agr in (Array)array)
                 {
@@ -2694,7 +2702,8 @@ namespace HTM.Net.Util
                 result.Append(Arrays.DeepToString((Array)array));
                 // result.Append(Arrays.deepToString((Object[])array));
             }
-            else {
+            else
+            {
                 // One dimension
                 result.Append(Arrays.ToArrayString((Array)array));
             }
@@ -2710,7 +2719,8 @@ namespace HTM.Net.Util
                 //result.Append(Arrays.DeepToString((Array)array));
                 // result.Append(Arrays.deepToString((Object[])array));
             }
-            else {
+            else
+            {
                 // One dimension
                 result.Append(Arrays.ToArrayString((Array)array.AsDense().ToArray()));
             }
@@ -3392,7 +3402,7 @@ namespace HTM.Net.Util
                 // concatinate on columns
                 double[][] newArray = CreateJaggedArray<double>(matrix.Length, matrix[0].Length + subMatrix[0].Length);
 
-                for(int rowNr = 0; rowNr < matrix.Length; rowNr++)
+                for (int rowNr = 0; rowNr < matrix.Length; rowNr++)
                 {
                     int colNr = 0;
                     for (int c = 0; c < matrix[rowNr].Length; c++)

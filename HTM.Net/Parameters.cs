@@ -610,17 +610,18 @@ namespace HTM.Net
                 {
                     if (!(value is Type) && !key.GetFieldType().IsInstanceOfType(value))
                     {
-                        throw new ArgumentException(string.Format("Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
+                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));
                     }
                     if ((value is Type) && !key.GetFieldType().IsAssignableFrom((Type)value))
                     {
-                        throw new ArgumentException(string.Format("Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
+                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));
                     }
                     if (value is double? && !key.CheckRange((double?)value))
                     {
-                        throw new ArgumentException(string.Format("Can not set Parameters Property '{0}' because of value '{1:0.00}' not in range. Range[{2:0.00}-{3:0.00}]"
+                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, 
+                            "Can not set Parameters Property '{0}' because of value '{1:0.00}' not in range. Range[{2:0.00}-{3:0.00}]"
                             , key.GetFieldName(), value, key.GetMin(), key.GetMax()));
                     }
                 }

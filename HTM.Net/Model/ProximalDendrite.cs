@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra.Single;
 
 namespace HTM.Net.Model
 {
@@ -57,6 +59,29 @@ namespace HTM.Net.Model
          */
         public void SetPermanences(Connections c, double[] perms)
         {
+            //_pool.ResetConnections();
+            //// Lock connections for the matrix, it's not thread safe
+            //c.GetConnectedCounts().ClearStatistics(index);
+            //List<Synapse> synapses = c.GetSynapses(this);
+
+            //double synPermConnected = c.GetSynPermConnected();
+
+            //float[] row = new float[perms.Length];
+            //Parallel.ForEach(synapses, s =>
+            ////foreach (Synapse s in synapses)
+            //{
+            //    int inputIndex = s.GetInputIndex();
+            //    s.SetPermanence(c, perms[inputIndex]);
+            //    if (perms[inputIndex] >= synPermConnected)
+            //    {
+            //        row[inputIndex] = 1;
+            //        //c.GetConnectedCounts().At(index, inputIndex, 1.0);
+            //    }
+            //});
+
+            //// Lock connections for the matrix, it's not thread safe
+            //c.GetConnectedCounts().SetRow(index, row);
+
             _pool.ResetConnections();
             c.GetConnectedCounts().ClearStatistics(index);
             List<Synapse> synapses = c.GetSynapses(this);

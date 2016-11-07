@@ -290,11 +290,12 @@ namespace HTM.Net.Tests.Network
             network.Observe().Subscribe(output =>
             {
                 timings.Add(sw.Elapsed);
-                //                System.out.Println(Arrays.toString(i.GetSDR()));
-                //                System.out.Println(i.GetRecordNum() + "," + 
-                //                    i.GetClassifierInput().Get("consumption").Get("inputValue") + "," + i.GetAnomalyScore());
-                lines.Add(output.GetRecordNum() + "," +
-                          output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "," + output.GetAnomalyScore());
+                string sToAdd = output.GetRecordNum() + "," +
+                                output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "," +
+                                output.GetAnomalyScore();
+                //Console.WriteLine(Arrays.ToString(output.GetSdr()));
+                //Console.WriteLine("> " + sToAdd);
+                lines.Add(sToAdd);
 
 
                 if (output.GetRecordNum() == 9)
@@ -324,12 +325,13 @@ namespace HTM.Net.Tests.Network
 
             Assert.AreEqual(10, lines.Count);
             int i = 0;
+            Console.WriteLine("Start printing...");
             foreach (string l in lines)
             {
+                Console.WriteLine(l);
                 string[] sa = Regex.Split(l, "[\\s]*\\,[\\s]*");// l.Split('|');//"[\\s]*\\,[\\s]*"
                 Assert.AreEqual(3, sa.Length);
                 Assert.AreEqual(i++, int.Parse(sa[0]));
-                Console.WriteLine(l);
             }
 
             Assert.AreEqual("On completed reached!", _onCompleteStr2);
@@ -347,8 +349,13 @@ namespace HTM.Net.Tests.Network
             network.Observe().Subscribe(
                 output =>
                 {
-                    lines.Add(output.GetRecordNum() + "," +
-                              output.GetClassifierInput().Get("consumption").Get("inputValue") + "," + output.GetAnomalyScore());
+                    //Console.WriteLine(Arrays.ToString(output.GetSdr()));
+
+                    string sToAdd = output.GetRecordNum() + "," +
+                                    output.GetClassifierInput().Get("consumption").GetAsString("inputValue") + "," +
+                                    output.GetAnomalyScore();
+                    //Console.WriteLine("2 > " + sToAdd);
+                    lines.Add(sToAdd);
 
                     if (output.GetRecordNum() == 19)
                     {
@@ -379,12 +386,13 @@ namespace HTM.Net.Tests.Network
             Assert.AreEqual(20, lines.Count);
 
             i = 0;
+            Console.WriteLine("Start printing...");
             foreach (String l in lines)
             {
+                Console.WriteLine(l);
                 String[] sa = Regex.Split(l, "[\\s]*\\,[\\s]*");
                 Assert.AreEqual(3, sa.Length);
                 Assert.AreEqual(i++, int.Parse(sa[0]));
-                Console.WriteLine(l);
             }
 
 
@@ -607,18 +615,18 @@ namespace HTM.Net.Tests.Network
         public void TestRegionHierarchies()
         {
             Parameters p = NetworkTestHarness.GetParameters();
+            p.SetPotentialRadius(16);
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, false);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("2", p)
+                    .Add(Net.Network.Network.CreateLayer("2", p)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())))
                 .Add(Net.Network.Network.CreateRegion("r2")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
@@ -887,7 +895,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
 
-            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
+            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -913,8 +921,7 @@ namespace HTM.Net.Tests.Network
             //////////////////////////////////////////////////////
             p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
-
+            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
             n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
                     .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
@@ -938,6 +945,7 @@ namespace HTM.Net.Tests.Network
             {
                 p = NetworkTestHarness.GetParameters();
                 p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+                p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
                 n = Net.Network.Network.Create("test network", p)
                     .Add(Net.Network.Network.CreateRegion("r1")
                         .Add(Net.Network.Network.CreateLayer<IInference>("1", p)

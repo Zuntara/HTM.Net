@@ -383,12 +383,12 @@ namespace HTM.Net.Tests.Util
         [TestMethod]
         public void TestCalculateOverlap()
         {
-            DoTestCalculateOverlap(new SparseMatrix(this.dimensions[0], dimensions[1]));
+            DoTestCalculateOverlap(Matrix<float>.Build.Sparse(dimensions[0], dimensions[1]));
             //doTestCalculateOverlap(new LowMemorySparseBinaryMatrix(this.dimensions));
             //doTestCalculateOverlap(new FastConnectionsMatrix(this.dimensions));
         }
 
-        private void DoTestCalculateOverlap(SparseMatrix sm)
+        private void DoTestCalculateOverlap(Matrix<float> sm)
         {
             SetupParameters();
             parameters.SetInputDimensions(new int[] { 10 });
@@ -400,13 +400,13 @@ namespace HTM.Net.Tests.Util
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 3.0);
             InitSp();
 
-            int[][] connectedSynapses =
+            float[][] connectedSynapses =
             {
-                new[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+                new float[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
             };
 
             for (int i = 0; i < sm.RowCount; i++)

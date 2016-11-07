@@ -527,7 +527,7 @@ namespace HTM.Net.Util
                 }
             }
 
-            return result.Select(tl => IndexFromCoordinates(tl.ToArray())).ToArray();
+            return result.AsParallel().Select(tl => IndexFromCoordinates(tl.ToArray())).ToArray();
         }
     }
 }

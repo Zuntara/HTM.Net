@@ -102,7 +102,7 @@ namespace HTM.Net.Model
          * information is readily available from 'connectedSynapses', it is
          * stored separately for efficiency purposes.
          */
-        private Matrix<double> connectedCounts;
+        private Matrix<float> connectedCounts;
         /**
          * The inhibition radius determines the size of a column's local
          * neighborhood. of a column. A cortical column must overcome the overlap
@@ -700,7 +700,7 @@ namespace HTM.Net.Model
          * Returns the indexed count of connected synapses per column.
          * @return
          */
-        public Matrix<double> GetConnectedCounts()
+        public Matrix<float> GetConnectedCounts()
         {
             return connectedCounts;
         }
@@ -741,7 +741,7 @@ namespace HTM.Net.Model
          * @param columnIndex
          * @param count
          */
-        public void SetConnectedMatrix(Matrix<double> matrix)
+        public void SetConnectedMatrix(Matrix<float> matrix)
         {
             this.connectedCounts = matrix;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Model;
 using HTM.Net.Util;
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 
@@ -44,8 +45,8 @@ namespace HTM.Net.Algorithms
          */
         public void Init(Connections c)
         {
-            if (c.GetNumActiveColumnsPerInhArea() == 0 && (c.GetLocalAreaDensity() == 0 ||
-                                                           c.GetLocalAreaDensity() > 0.5))
+            if (c.GetNumActiveColumnsPerInhArea() == 0 
+                && (c.GetLocalAreaDensity() == 0 || c.GetLocalAreaDensity() > 0.5))
             {
                 throw new InvalidSpatialPoolerParamValueException("Inhibition parameters are invalid");
             }
@@ -64,6 +65,11 @@ namespace HTM.Net.Algorithms
 
         public void InitMatrices(Connections c)
         {
+            Control.TryUseNativeMKL();
+            Control.ConfigureAuto();
+
+            //Control.UseMultiThreading();
+
             SparseObjectMatrix<Column> mem = c.GetMemory();
             c.SetMemory(mem == null ? mem = new SparseObjectMatrix<Column>(c.GetColumnDimensions()) : mem);
 
@@ -91,8 +97,8 @@ namespace HTM.Net.Algorithms
             for (int i = 0; i < numColumns; i++) { mem.Set(i, new Column(c.GetCellsPerColumn(), i)); }
 
             c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
-
-            c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
+            
+            c.SetConnectedMatrix(Matrix<float>.Build.Sparse(numColumns, numInputs));
 
             //Initialize state meta-management statistics
             c.SetOverlapDutyCycles(new double[numColumns]);
@@ -834,7 +840,7 @@ namespace HTM.Net.Algorithms
             // the potential pool
             int numPotential = (int)(columnInputs.Length * c.GetPotentialPct() + 0.5);
             int[] retVal = new int[numPotential];
-            return ArrayUtils.Sample(columnInputs, retVal, c.GetRandom());
+            return ArrayUtils.Sample(columnInputs, ref retVal, c.GetRandom());
         }
 
         /**

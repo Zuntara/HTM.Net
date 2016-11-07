@@ -342,15 +342,15 @@ namespace HTM.Net.Tests.Algorithms
             cn.SetBoostFactors(new double[] { 2.0, 2.0, 2.0 });
             int[] inputVector = { 1, 1, 1, 1, 1 };
             int[] activeArray = { 0, 0, 0 };
-            int[] expOutput = { 2, 1, 1 };
+            int[] expOutput = { 1, 1, 1 };
             sp.Compute(cn, inputVector, activeArray, true);
 
             double[] boostedOverlaps = cn.GetBoostedOverlaps();
             int[] overlaps = cn.GetOverlaps();
 
-            Debug.WriteLine("Exp: "+Arrays.ToString(expOutput));
-            Debug.WriteLine("Act: " +Arrays.ToString(overlaps));
-            Debug.WriteLine("Bst: " +Arrays.ToString(boostedOverlaps));
+            Debug.WriteLine("Exp: " + Arrays.ToString(expOutput));
+            Debug.WriteLine("Act: " + Arrays.ToString(overlaps));
+            Debug.WriteLine("Bst: " + Arrays.ToString(boostedOverlaps));
 
             for (int i = 0; i < cn.GetNumColumns(); i++)
             {
@@ -412,8 +412,11 @@ namespace HTM.Net.Tests.Algorithms
             int[] real = ArrayUtils.Where(activeArray, n => n > 0);
 
             int[] expected = new int[] {
-                100, 137, 140, 153, 192, 196, 208, 217, 282, 335, 395, 437, 447, 470, 521, 529, 543, 562, 617, 661, 764, 1099,
-                1110, 1191, 1214, 1248, 1330, 1395, 1478, 1761, 1762, 1823, 1828, 1878, 1902, 1909, 1934, 1980, 1999, 2033 };
+                9, 18, 31, 38, 71, 91, 123, 140, 254, 273, 367, 396, 533, 560, 640, 750, 862, 914, 921, 996, 1036, 1047, 1061,
+                1189, 1219, 1248, 1291, 1333, 1454, 1743, 1776, 1855, 1878, 1882, 1891, 1922, 1940, 1987, 2006, 2036 };
+
+            Debug.WriteLine("E: " + Arrays.ToString(expected));
+            Debug.WriteLine("A: " + Arrays.ToString(real));
 
             Assert.IsTrue(Arrays.AreEqual(expected, real));
         }
@@ -1426,15 +1429,15 @@ namespace HTM.Net.Tests.Algorithms
             InitSp();
 
             int[] dimensions = new int[] { 5, 10 };
-            int[][] connectedSynapses = new int[][]
+            float[][] connectedSynapses =
             {
-                new[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+                new float[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
             };
-            Matrix<double> sm = new SparseMatrix(dimensions[0], dimensions[1]);
+            Matrix<float> sm = Matrix<float>.Build.Sparse(dimensions[0], dimensions[1]);
             for (int i = 0; i < sm.RowCount; i++)
             {
                 for (int j = 0; j < sm.ColumnCount; j++)
@@ -1464,15 +1467,15 @@ namespace HTM.Net.Tests.Algorithms
 
             /////////////
 
-            connectedSynapses = new int[][]
+            connectedSynapses = new float[][]
             {
-                new[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+                new float[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
             };
-            sm = new SparseMatrix(dimensions[0], dimensions[1]);
+            sm = Matrix<float>.Build.Sparse(dimensions[0], dimensions[1]);
             for (int i = 0; i < sm.RowCount; i++)
             {
                 for (int j = 0; j < sm.ColumnCount; j++)
@@ -1502,15 +1505,15 @@ namespace HTM.Net.Tests.Algorithms
 
             //////////////////
 
-            connectedSynapses = new int[][]
+            connectedSynapses = new float[][]
             {
-                new[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+                new float[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
             };
-            sm = new SparseMatrix(dimensions[0], dimensions[1]);
+            sm = Matrix<float>.Build.Sparse(dimensions[0], dimensions[1]);
             for (int i = 0; i < sm.RowCount; i++)
             {
                 for (int j = 0; j < sm.ColumnCount; j++)
@@ -1541,15 +1544,15 @@ namespace HTM.Net.Tests.Algorithms
 
             ///////////////////
 
-            connectedSynapses = new int[][]
+            connectedSynapses = new float[][]
             {
-                new[] {1, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-                new[] {0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
-                new[] {0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
-                new[] {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-                new[] {0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
+                new float[] {1, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+                new float[] {0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
+                new float[] {0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
+                new float[] {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+                new float[] {0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
             };
-            sm = new SparseMatrix(dimensions[0], dimensions[1]);
+            sm = Matrix<float>.Build.Sparse(dimensions[0], dimensions[1]);
             for (int i = 0; i < sm.RowCount; i++)
             {
                 for (int j = 0; j < sm.ColumnCount; j++)

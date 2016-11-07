@@ -51,7 +51,7 @@ namespace HTM.Net.Util
             }
             else
             {
-                sparseMap.Add(index, (T)obj);
+                sparseMap.Add(index, obj);
             }
             return this;
         }
@@ -129,12 +129,13 @@ namespace HTM.Net.Util
             return result;
         }
 
-        public override bool  Equals(Object obj)
+        public override bool  Equals(object obj)
         {
             if (this == obj)
                 return true;
             if (!base.Equals(obj))
                 return false;
+            if (obj == null) return false;
             if (GetType() != obj.GetType())
                 return false;
             SparseObjectMatrix<T> other = (SparseObjectMatrix<T>)obj;

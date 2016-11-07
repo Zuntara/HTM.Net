@@ -19,7 +19,7 @@ namespace HTM.Net.Model
         private readonly int _size;
 
         /** Allows fast removal of connected synapse indexes. */
-        private HashSet<int> _synapseConnections = new HashSet<int>();
+        private List<int> _synapseConnections = new List<int>();
         /** 
          * Indexed according to the source Input Vector Bit (for ProximalDendrites),
          * and source cell (for DistalDendrites).
@@ -61,18 +61,40 @@ namespace HTM.Net.Model
         public void UpdatePool(Connections c, Synapse s, double permanence)
         {
             int inputIndex = s.GetInputIndex();
-            if (_synapsesBySourceIndex.Get(inputIndex) == null)
+            //Synapse foundSynapse;
+            lock (_synapsesBySourceIndex)
             {
-                _synapsesBySourceIndex[inputIndex] = s;
+                if (!_synapsesBySourceIndex.ContainsKey(inputIndex)) // TryGetValue(inputIndex, out foundSynapse)
+                {
+                    _synapsesBySourceIndex.Add(inputIndex, s);
+                }
             }
-            if (permanence >= c.GetSynPermConnected())
+            lock (_synapseConnections)
             {
-                _synapseConnections.Add(inputIndex);
+                if (permanence >= c.GetSynPermConnected())
+                {
+                    _synapseConnections.Add(inputIndex);
+                }
+                else
+                {
+                    if (_synapseConnections.Count > inputIndex)
+                        _synapseConnections.RemoveAt(inputIndex);
+                }
             }
-            else
-            {
-                _synapseConnections.Remove(inputIndex);
-            }
+
+            //int inputIndex = s.GetInputIndex();
+            //if (_synapsesBySourceIndex.Get(inputIndex) == null)
+            //{
+            //    _synapsesBySourceIndex[inputIndex] = s;
+            //}
+            //if (permanence >= c.GetSynPermConnected())
+            //{
+            //    _synapseConnections.Add(inputIndex);
+            //}
+            //else
+            //{
+            //    _synapseConnections.Remove(inputIndex);
+            //}
         }
 
         /**
@@ -216,8 +238,8 @@ namespace HTM.Net.Model
                 if (other._synapseConnections != null)
                     return false;
             }
-            else if ((!_synapseConnections.SetEquals(other._synapseConnections) ||
-              !other._synapseConnections.SetEquals(_synapseConnections)))
+            else if ((!_synapseConnections.SequenceEqual(other._synapseConnections) ||
+              !other._synapseConnections.SequenceEqual(_synapseConnections)))
                 return false;
             if (_synapsesBySourceIndex == null)
             {
