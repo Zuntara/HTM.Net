@@ -19,9 +19,9 @@ namespace HTM.Net.Network
         [NonSerialized]
         private IObservable<IInference> _userObservable;
         [NonSerialized]
-        private readonly List<IObserver<IInference>> _observers = new List<IObserver<IInference>>();
+        protected List<IObserver<IInference>> _observers = new List<IObserver<IInference>>();
         [NonSerialized]
-        private readonly ConcurrentQueue<IObserver<IInference>> _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+        protected ConcurrentQueue<IObserver<IInference>> _subscribers = new ConcurrentQueue<IObserver<IInference>>();
         [NonSerialized]
         protected Subject<object> Publisher = null;
         [NonSerialized]
@@ -30,7 +30,7 @@ namespace HTM.Net.Network
         [NonSerialized]
         private CheckPointOperator _checkPointOp;
         [NonSerialized]
-        private List<IObserver<byte[]>> _checkPointOpObservers = new List<IObserver<byte[]>>();
+        protected List<IObserver<byte[]>> _checkPointOpObservers = new List<IObserver<byte[]>>();
 
         protected BaseRxLayer(string name, Network n, Parameters p)
             : base(name, n, p)
@@ -63,10 +63,21 @@ namespace HTM.Net.Network
         /// <returns>this <see cref="ILayer"/>'s output <see cref="IObservable{IInference}"/></returns>
         public override IObservable<IInference> Observe()
         {
+            // This will be called again after the Network is halted so we have to prepare
+            // for rebuild of the Observer chain
+            if (IsHalted())
+            {
+                ClearSubscriberObserverLists();
+            }
+
             if (_userObservable == null)
             {
                 _userObservable = Observable.Create<IInference>(t1 =>
                 {
+                    if (_observers == null)
+                    {
+                        _observers = new List<IObserver<IInference>>();
+                    }
                     _observers.Add(t1);
                     return () => { }; // why is this?
                 });
@@ -86,13 +97,23 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="subscriber">a <see cref="IObserver{IInference}"/> to be notified as data is published.</param>
         /// <returns>A Subscription disposable</returns>
-        public IDisposable Subscribe(IObserver<IInference> subscriber)
+        public override IDisposable Subscribe(IObserver<IInference> subscriber)
         {
+            // This will be called again after the Network is halted so we have to prepare
+            // for rebuild of the Observer chain
+            if (IsHalted())
+            {
+                ClearSubscriberObserverLists();
+            }
+
             if (subscriber == null)
             {
                 throw new InvalidOperationException("Subscriber cannot be null.");
             }
-
+            if (_subscribers == null)
+            {
+                _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+            }
             _subscribers.Enqueue(subscriber);
 
             return CreateSubscription(subscriber);
@@ -207,7 +228,7 @@ namespace HTM.Net.Network
         /// the <see cref="Layer{T}"/> subsribers.
         /// </summary>
         /// <returns></returns>
-        private IObserver<IInference> GetDelegateObserver()
+        protected IObserver<IInference> GetDelegateObserver()
         {
             return Observer.Create<IInference>
                 (
@@ -249,6 +270,7 @@ namespace HTM.Net.Network
         protected void CompleteSequenceDispatch(IObservable<ManualInput> sequence)
         {
             // All subscribers and observers are notified from a single delegate.
+            if (_subscribers == null) _subscribers = new ConcurrentQueue<IObserver<IInference>>();
             _subscribers.Enqueue(GetDelegateObserver());
             _subscription = sequence.Subscribe(GetDelegateSubscriber());
 
@@ -357,6 +379,18 @@ namespace HTM.Net.Network
                 _checkPointOp = new CheckPointOperator(this);
             }
             return (ICheckPointOp<byte[]>)_checkPointOp;
+        }
+
+        /**
+        * Clears the subscriber and observer lists so they can be rebuilt
+        * during restart or deserialization.
+        */
+        private void ClearSubscriberObserverLists()
+        {
+            if (_observers == null) _observers = new List<IObserver<IInference>>();
+            /*if (_subscribers == null)*/ _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+           /* _subscribers.Clear();*/
+            _userObservable = null;
         }
 
         //////////////////////////////////////////////////////////////

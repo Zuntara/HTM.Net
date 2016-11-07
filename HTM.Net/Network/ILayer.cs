@@ -9,7 +9,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network
 {
-    public interface ILayer
+    public interface ILayer : IPersistable
     {
         /// <summary>
         /// Returns the String identifier of this <see cref="ILayer"/>
@@ -35,6 +35,7 @@ namespace HTM.Net.Network
         SpatialPooler GetSpatialPooler();
         TemporalMemory GetTemporalMemory();
         int GetRecordNum();
+        ILayer ResetRecordNum();
         Task GetLayerThread();
         LayerMask GetMask();
         /// <summary>
@@ -56,7 +57,13 @@ namespace HTM.Net.Network
         /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
         /// </summary>
         void Halt();
+
+        /// <summary>
+        /// Returns a flag indicating whether this layer's processing thread has been halted or not.
+        /// </summary>
+        bool IsHalted();
         IObservable<IInference> Observe();
+        IDisposable Subscribe(IObserver<IInference> subscriber);
         ILayer Close();
 
         /// <summary>

@@ -25,6 +25,7 @@ namespace HTM.Net.Encoders
             
         }
 
+        [NonSerialized]
         private new static readonly ILog LOGGER = LogManager.GetLogger(typeof(SparsePassThroughEncoder));
 
         public SparsePassThroughEncoder(int outputWidth, int outputBitsOnCount)

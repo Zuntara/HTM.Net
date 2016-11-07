@@ -24,6 +24,7 @@ namespace HTM.Net.Encoders
     public class SDRCategoryEncoder : Encoder<string>
     {
 
+        [NonSerialized]
         private static readonly ILog LOG = LogManager.GetLogger(typeof(SDRCategoryEncoder));
 
         private MathNet.Numerics.Random.RandomSource _random;

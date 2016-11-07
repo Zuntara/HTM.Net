@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -117,11 +118,12 @@ namespace HTM.Net.Network
     [Serializable]
     public class Layer<T> : BaseRxLayer
     {
+        [NonSerialized]
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
 
         protected int numColumns;
 
-        private readonly FunctionFactory _factory;
+        private FunctionFactory _factory;
 
         /// <summary>
         /// Active columns in the <see cref="SpatialPooler"/> at time "t"
@@ -223,6 +225,37 @@ namespace HTM.Net.Network
                 Logger.Debug(string.Format("Layer successfully created containing: {0}{1}{2}{3}{4}", (Encoder == null ? "" : "MultiEncoder,"), (SpatialPooler == null ? "" : "SpatialPooler,"), (TemporalMemory == null ? ""
                                 : "TemporalMemory,"), (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."), (AnomalyComputer == null ? "" : "Anomaly")));
             }
+        }
+
+        public override object PostDeSerialize()
+        {
+            RecreateSensors();
+
+            FunctionFactory old = _factory;
+            _factory = new FunctionFactory(this);
+            _factory.Inference = (ManualInput) old.Inference.PostDeSerialize(old.Inference);
+
+            _checkPointOpObservers = new List<IObserver<byte[]>>();
+
+            if (Sensor != null)
+            {
+                Sensor.SetLocalParameters(this.Params);
+                // Initialize encoders and recreate encoding index mapping.
+                Sensor.PostDeSerialize();
+            }
+            else
+            {
+                // Dispatch functions (Observables) are transient & non-serializable so they must be rebuilt.
+                ObservableDispatch = CreateDispatchMap();
+                // Dispatch chain will not propagate unless it has subscribers.
+                ParentNetwork.AddDummySubscriber();
+            }
+            // Flag which lets us know to skip or do certain setups during initialization.
+            _isPostSerialized = true;
+            
+            _observers = new List<IObserver<IInference>>();
+
+            return this;
         }
 
         /// <summary>
@@ -512,7 +545,12 @@ namespace HTM.Net.Network
             if (ParentNetwork != null && ParentRegion != null)
             {
                 ParentNetwork.SetSensorRegion(ParentRegion);
+                ParentNetwork.SetSensor(Sensor);
             }
+
+            // Store the SensorParams for Sensor rebuild after deserialisation
+            this.SensorParams = this.Sensor.GetSensorParams();
+
             return this;
         }
 
@@ -679,7 +717,7 @@ namespace HTM.Net.Network
         /// <summary>
         /// Returns a flag indicating whether this layer's processing thread has been halted or not.
         /// </summary>
-        public bool IsHalted()
+        public override bool IsHalted()
         {
             return _isHalted;
         }
@@ -1038,11 +1076,11 @@ namespace HTM.Net.Network
             CompleteSequenceDispatch(sequence);
 
             // Handle global network sensor access.
-            if (Sensor == null)
+            if (Sensor == null && ParentNetwork != null && ParentNetwork.IsTail(this))
             {
                 Sensor = (IHTMSensor)ParentNetwork?.GetSensor();
             }
-            else if (ParentNetwork != null)
+            else if (ParentNetwork != null && Sensor != null)
             {
                 ParentNetwork.SetSensor(Sensor);
             }
@@ -1950,7 +1988,15 @@ namespace HTM.Net.Network
             const int prime = 31;
             int result = 1;
             result = prime * result + ((Name == null) ? 0 : Name.GetHashCode());
+            result = prime * result + _recordNum;
+            result = prime * result + (int) AlgoContentMask;
+            result = prime * result + ((CurrentInference == null) ? 0 : CurrentInference.GetHashCode());
+            result = prime * result + (_hasGenericProcess ? 1231 : 1237);
+            result = prime * result + (_isClosed ? 1231 : 1237);
+            result = prime * result + (_isHalted ? 1231 : 1237);
+            result = prime * result + (IsLearn ? 1231 : 1237);
             result = prime * result + ((ParentRegion == null) ? 0 : ParentRegion.GetHashCode());
+            result = prime * result + ((SensorParams == null) ? 0 : SensorParams.GetHashCode());
             return result;
         }
 
@@ -1963,21 +2009,48 @@ namespace HTM.Net.Network
                 return false;
             if (GetType() != obj.GetType())
                 return false;
-            ILayer other = (ILayer)obj;
+            Layer<T> other = (Layer<T>)obj;
             if (Name == null)
             {
-                if (other.GetName() != null)
+                if (other.Name != null)
                     return false;
             }
-            else if (!Name.Equals(other.GetName()))
+            else if (!Name.Equals(other.Name))
+                return false;
+            if (AlgoContentMask != other.AlgoContentMask)
+                return false;
+            if (CurrentInference == null)
+            {
+                if (other.CurrentInference != null)
+                    return false;
+            }
+            else if (!CurrentInference.Equals(other.CurrentInference))
+                return false;
+            if (_recordNum != other._recordNum)
+                return false;
+            if (_hasGenericProcess != other._hasGenericProcess)
+                return false;
+            if (_isClosed != other._isClosed)
+                return false;
+            if (_isHalted != other._isHalted)
+                return false;
+            if (IsLearn != other.IsLearn)
                 return false;
             if (ParentRegion == null)
             {
-                if (other.GetParentRegion() != null)
+                if (other.ParentRegion != null)
                     return false;
             }
-            else if (!ParentRegion.Equals(other.GetParentRegion()))
+            else if (other.ParentRegion == null || !ParentRegion.GetName().Equals(other.ParentRegion.GetName()))
                 return false;
+            if (SensorParams == null)
+            {
+                if (other.SensorParams != null)
+                    return false;
+            }
+            else if (!SensorParams.Equals(other.SensorParams))
+                return false;
+   
             return true;
         }
     }

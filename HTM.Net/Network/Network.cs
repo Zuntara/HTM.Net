@@ -129,6 +129,7 @@ namespace HTM.Net.Network
     [Serializable]
     public class Network : Persistable
     {
+        [NonSerialized]
         public readonly static ILog Logger = LogManager.GetLogger(typeof(Network));
         public enum Mode { MANUAL, AUTO, REACTIVE };
 
@@ -571,6 +572,21 @@ namespace HTM.Net.Network
         }
 
         /**
+         * For internal Use: Returns a boolean flag indicating whether
+         * the specified {@link Layer} is the tail of the Network.
+         * @param l     the layer to test   
+         * @return  true if so, false if not
+         */
+        public bool IsTail(ILayer layer)
+        {
+            if (_regions.Count == 1)
+            {
+                this._tail = _regions.First();
+            }
+            return Equals(_tail.GetTail(), layer);
+        }
+
+        /**
          * Returns a {@link Iterator} capable of walking the tree of regions
          * from the root <see cref="Region"/> down through all the child Regions. In turn,
          * a <see cref="Region"/> may be queried for a {@link Iterator} which will return
@@ -641,7 +657,7 @@ namespace HTM.Net.Network
          * Subscriber leads to the observable chain not being constructed, therefore
          * we must always have at least one subscriber.
          */
-        private void AddDummySubscriber()
+        internal void AddDummySubscriber()
         {
             Observe().Subscribe(output => { }, e => Console.WriteLine(e));
 
@@ -864,5 +880,7 @@ namespace HTM.Net.Network
                 return false;
             return true;
         }
+
+        
     }
 }

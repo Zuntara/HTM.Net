@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reactive;
 using System.Threading;
 using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
@@ -20,6 +21,9 @@ namespace HTM.Net.Tests.Network
     [TestClass]
     public class PersistanceApiTest
     {
+        /** Printer to visualize DayOfWeek printouts - SET TO TRUE FOR PRINTOUT */
+        private Func<IInference, int, int> dayOfWeekPrintout = CreateDayOfWeekInferencePrintout(false);
+
         [ClassCleanup]
         public static void CleanUp()
         {
@@ -505,6 +509,277 @@ namespace HTM.Net.Tests.Network
         }
         ///////////////////////   End Serialize Anomaly //////////////////////////
 
+        ///////////////////////////
+        //      CLAClassifier    //
+        ///////////////////////////
+        // Test Serialize CLAClassifier
+        [TestMethod]
+        public void TestSerializeCLAClassifier()
+        {
+            CLAClassifier classifier = new CLAClassifier(new int[] { 1 }, 0.1, 0.1, 0);
+            int recordNum = 0;
+            Map<String, Object> classification = new Map<string, object>();
+            classification.Add("bucketIdx", 4);
+            classification.Add("actValue", 34.7);
+            Classification<double> result = classifier.Compute<double>(recordNum, classification, new int[] { 1, 5, 9 }, true, true);
+            recordNum += 1;
+
+            classification.Add("bucketIdx", 5);
+            classification.Add("actValue", 41.7);
+            result = classifier.Compute<double>(recordNum, classification, new int[] { 0, 6, 9, 11 }, true, true);
+            recordNum += 1;
+
+            classification.Add("bucketIdx", 5);
+            classification.Add("actValue", 44.9);
+            result = classifier.Compute<double>(recordNum, classification, new int[] { 6, 9 }, true, true);
+            recordNum += 1;
+
+            classification.Add("bucketIdx", 4);
+            classification.Add("actValue", 42.9);
+            result = classifier.Compute<double>(recordNum, classification, new int[] { 1, 5, 9 }, true, true);
+            recordNum += 1;
+
+            // Serialize the Metrics too just to be sure everything can be serialized
+            SerialConfig config = new SerialConfig("testSerializeCLAClassifier", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+            api.Write(classifier);
+
+            // Deserialize the Metrics
+            CLAClassifier serializedClassifier = api.Read<CLAClassifier>();
+            Assert.IsNotNull(serializedClassifier);
+
+            //Using the deserialized classifier, continue test
+            classification.Add("bucketIdx", 4);
+            classification.Add("actValue", 34.7);
+            result = serializedClassifier.Compute<double>(recordNum, classification, new int[] { 1, 5, 9 }, true, true);
+            recordNum += 1;
+
+            Assert.IsTrue(Arrays.AreEqual(new int[] { 1 }, result.StepSet()));
+            Assert.AreEqual(35.520000457763672, result.GetActualValue(4), 0.00001);
+            Assert.AreEqual(42.020000457763672, result.GetActualValue(5), 0.00001);
+            Assert.AreEqual(6, result.GetStatCount(1));
+            Assert.AreEqual(0.0, result.GetStat(1, 0), 0.00001);
+            Assert.AreEqual(0.0, result.GetStat(1, 1), 0.00001);
+            Assert.AreEqual(0.0, result.GetStat(1, 2), 0.00001);
+            Assert.AreEqual(0.0, result.GetStat(1, 3), 0.00001);
+            Assert.AreEqual(0.12300123, result.GetStat(1, 4), 0.00001);
+            Assert.AreEqual(0.87699877, result.GetStat(1, 5), 0.00001);
+        }
+        ////////////////////////  End CLAClassifier ///////////////////////
+
+        ///////////////////////////
+        //         Layers        //
+        ///////////////////////////
+        // Serialize a Layer
+        [TestMethod]
+        public void TestSerializeLayer()
+        {
+            Parameters p = NetworkTestHarness.GetParameters().Copy();
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
+                null, // map
+                8,    // n
+                0,    // w
+                0,    // min
+                0,    // max
+                0,    // radius
+                0,    // resolution
+                null, // periodic
+                null,                 // clip
+                true,         // forced
+                "dayOfWeek",          // fieldName
+                "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
+                "SDRPassThroughEncoder"); // encoderType
+
+            p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
+
+            Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
+                ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, new Object[] {"name",
+                PublisherSupplier.GetBuilder()
+                .AddHeader("dayOfWeek")
+                .AddHeader("darr")
+                .AddHeader("B").Build() }));
+
+            ILayer layer = Net.Network.Network.CreateLayer("1", p)
+                .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                .Add(new SpatialPooler())
+                .Add(sensor);
+
+            //        Observer obs = new Observer<IInference>() {
+            //        @Override public void onCompleted() { }
+            //    @Override public void onError(Throwable e) { e.printStackTrace(); }
+            //    @Override
+            //        public void onNext(Inference spatialPoolerOutput)
+            //    {
+            //        System.out.println("in onNext()");
+            //    }
+            //};
+
+            var obs = Observer.Create<IInference>(
+                spatialPoolerOutput => { Console.WriteLine("in onNext()"); },
+                e => Console.WriteLine(e),
+                () => { });
+
+            layer.Subscribe(obs);
+            layer.Close();
+
+            SerialConfig config = new SerialConfig("testSerializeLayer", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+            api.Write(layer);
+
+            //Serialize above Connections for comparison with same run but unserialized below...
+            ILayer serializedLayer = api.Read<ILayer>();
+            Assert.AreEqual(serializedLayer, layer);
+            DeepCompare(layer, serializedLayer);
+
+            // Now change one attribute and see that they are not equal
+            serializedLayer.ResetRecordNum();
+            Assert.AreNotEqual(serializedLayer, layer);
+        }
+        //////////////////////  End Layers  ///////////////////////
+
+        ///////////////////////////
+        //      Full Network     //
+        ///////////////////////////
+        [TestMethod, DeploymentItem("Resources\\rec-center-hourly.csv")]
+        public void TestHierarchicalNetwork()
+        {
+            Net.Network.Network network = GetLoadedHotGymHierarchy();
+            try
+            {
+                SerialConfig config = new SerialConfig("testSerializeHierarchy", SerialConfig.SERIAL_TEST_DIR);
+                IPersistenceAPI api = Persistence.Get(config);
+                api.Store(network);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                Assert.Fail();
+            }
+        }
+
+        /**
+     * Test that a serialized/de-serialized {@link Network} can be run...
+     */
+        //[TestMethod, DeploymentItem("Resources\\rec-center-hourly.csv")]
+        public void TestSerializedUnStartedNetworkRuns()
+        {
+            const int NUM_CYCLES = 600;
+            const int INPUT_GROUP_COUNT = 7; // Days of Week
+
+            Net.Network.Network network = GetLoadedDayOfWeekNetwork();
+
+            SerialConfig config = new SerialConfig("testSerializedUnStartedNetworkRuns", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+            api.Store(network);
+
+            //Serialize above Connections for comparison with same run but unserialized below...
+            Net.Network.Network serializedNetwork = api.Load();
+            Assert.AreEqual(serializedNetwork, network);
+            DeepCompare(network, serializedNetwork);
+
+            int cellsPerCol = (int)serializedNetwork.GetParameters().GetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN);
+
+            serializedNetwork.Observe().Subscribe(
+                inf => { dayOfWeekPrintout(inf, cellsPerCol); },
+                e => { Console.WriteLine(e); },
+                () => { });
+            //            new Observer<Inference>() {
+            //        @Override public void onCompleted() { }
+            //    @Override public void onError(Throwable e) { e.printStackTrace(); }
+            //    @Override
+            //        public void onNext(Inference inf)
+            //    {
+            //        /** see {@link #createDayOfWeekInferencePrintout()} */
+            //        dayOfWeekPrintout.apply(inf, cellsPerCol);
+            //    }
+            //});
+
+            Publisher pub = serializedNetwork.GetPublisher();
+
+            serializedNetwork.Start();
+
+            int cycleCount = 0;
+            for (; cycleCount < NUM_CYCLES; cycleCount++)
+            {
+                for (double j = 0; j < INPUT_GROUP_COUNT; j++)
+                {
+                    pub.OnNext("" + j);
+                }
+
+                serializedNetwork.Reset();
+
+                if (cycleCount == 284)
+                {
+                    break;
+                }
+            }
+
+            pub.OnComplete();
+
+            try
+            {
+                Region r1 = serializedNetwork.Lookup("r1");
+                r1.Lookup("1").GetLayerThread().Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                Assert.Fail();
+            }
+        }
+
+        private Net.Network.Network GetLoadedDayOfWeekNetwork()
+        {
+            Parameters p = NetworkTestHarness.GetParameters().Copy();
+            p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+
+            Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
+                ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, new object[] {"name",
+                PublisherSupplier.GetBuilder()
+                .AddHeader("dayOfWeek")
+                .AddHeader("number")
+                .AddHeader("B").Build() }));
+
+            Net.Network.Network network = Net.Network.Network.Create("test network", p)
+                .Add(Net.Network.Network.CreateRegion("r1")
+                .Add(Net.Network.Network.CreateLayer("1", p)
+                    .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                    .Add(Anomaly.Create())
+                    .Add(new TemporalMemory())
+                    .Add(new SpatialPooler())
+                    .Add(sensor)));
+
+            return network;
+        }
+
+        private Net.Network.Network GetLoadedHotGymHierarchy()
+        {
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+
+            Net.Network.Network network = Net.Network.Network.Create("test network", p)
+                .Add(Net.Network.Network.CreateRegion("r1")
+                    .Add(Net.Network.Network.CreateLayer("2", p)
+                        .Add(Anomaly.Create())
+                        .Add(new TemporalMemory()))
+                    .Add(Net.Network.Network.CreateLayer("3", p)
+                        .Add(new SpatialPooler()))
+                    .Connect("2", "3"))
+                .Add(Net.Network.Network.CreateRegion("r2")
+                    .Add(Net.Network.Network.CreateLayer("1", p)
+                        .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                        .Add(new TemporalMemory())
+                        .Add(new SpatialPooler())
+                        .Add(FileSensor.Create(Net.Network.Sensor.FileSensor.Create, SensorParams.Create(
+                            SensorParams.Keys.Path, "", ResourceLocator.Path("rec-center-hourly.csv"))))))
+                .Connect("r1", "r2");
+
+            return network;
+        }
+
         private Parameters GetTestEncoderParams()
         {
             Map<String, Map<String, Object>> fieldEncodings = SetupMap(
@@ -782,5 +1057,68 @@ namespace HTM.Net.Tests.Network
         {
             getParameterByKey.ShouldDeepEqual(p1);
         }
+
+        private static Func<IInference, int, int> CreateDayOfWeekInferencePrintout(bool on)
+        {
+            int cycles = 1;
+            return (IInference inf, int cellsPerColumn) =>
+                {
+
+                    Classification<Object> result = inf.GetClassification("dayOfWeek");
+                    double day = MapToInputData((int[])inf.GetLayerInput());
+                    if (day == 1.0)
+                    {
+                        if (on)
+                        {
+                            Console.WriteLine("\n=========================");
+                            Console.WriteLine("CYCLE: " + cycles);
+                        }
+                        cycles++;
+                    }
+
+                    if (on)
+                    {
+                        Console.WriteLine("RECORD_NUM: " + inf.GetRecordNum());
+                        Console.WriteLine("ScalarEncoder Input = " + day);
+                        Console.WriteLine("ScalarEncoder Output = " + Arrays.ToString(inf.GetEncoding()));
+                        Console.WriteLine("SpatialPooler Output = " + Arrays.ToString(inf.GetFeedForwardActiveColumns()));
+
+                        if (inf.GetPreviousPredictiveCells() != null)
+                            Console.WriteLine("TemporalMemory Previous Prediction = " +
+                            Arrays.ToString(SDR.CellsAsColumnIndices(inf.GetPreviousPredictiveCells(), cellsPerColumn)));
+
+                        Console.WriteLine("TemporalMemory Actives = " + Arrays.ToString(SDR.AsColumnIndices(inf.GetSdr(), cellsPerColumn)));
+
+                        Console.Write("CLAClassifier prediction = " +
+                        result.GetMostProbableValue(1) + " --> " + result.GetMostProbableValue(1));
+
+                        Console.WriteLine("  |  CLAClassifier 1 step prob = " + Arrays.ToString(result.GetStats(1)) + "\n");
+                    }
+                    return cycles;
+                };
+        }
+
+        private static double MapToInputData(int[] encoding)
+        {
+            for (int i = 0; i < DayMap.Length; i++)
+            {
+                if (Arrays.AreEqual(encoding, DayMap[i]))
+                {
+                    return i + 1;
+                }
+            }
+            return -1;
+        }
+
+        private static int[][] DayMap = new int[][]
+        {
+            new int[] {1, 1, 0, 0, 0, 0, 0, 1},
+            new int[] {1, 1, 1, 0, 0, 0, 0, 0},
+            new int[] {0, 1, 1, 1, 0, 0, 0, 0},
+            new int[] {0, 0, 1, 1, 1, 0, 0, 0},
+            new int[] {0, 0, 0, 1, 1, 1, 0, 0},
+            new int[] {0, 0, 0, 0, 1, 1, 1, 0},
+            new int[] {0, 0, 0, 0, 0, 1, 1, 1},
+        };
     }
 }

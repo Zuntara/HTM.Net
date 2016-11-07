@@ -34,9 +34,10 @@ namespace HTM.Net.Network
      * @author cogmission
      *
      */
-     [Serializable]
+    [Serializable]
     public class Region : Persistable
     {
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Region));
 
         private Network network;
@@ -91,7 +92,7 @@ namespace HTM.Net.Network
 
         public override object PreSerialize()
         {
-            layers.Values.ToList().ForEach(l=>l.PreSerialize());
+            layers.Values.ToList().ForEach(l => l.PreSerialize());
             return this;
         }
 
@@ -104,11 +105,11 @@ namespace HTM.Net.Network
             if (IsMultiLayer())
             {
                 Layer<IInference> curr = (Layer<IInference>)head;
-                Layer<IInference> prev = (Layer<IInference>) curr.GetPrevious();
+                Layer<IInference> prev = (Layer<IInference>)curr.GetPrevious();
                 do
                 {
                     Connect(curr, prev);
-                } while ((curr = prev) != null && (prev = (Layer<IInference>) prev.GetPrevious()) != null);
+                } while ((curr = prev) != null && (prev = (Layer<IInference>)prev.GetPrevious()) != null);
             }
             return this;
         }
@@ -297,6 +298,10 @@ namespace HTM.Net.Network
             if (regionObservable == null && !assemblyClosed)
             {
                 Close();
+            }
+            if (head.IsHalted() || regionObservable == null)
+            {
+                regionObservable = head.Observe();
             }
             return regionObservable;
         }
@@ -550,6 +555,7 @@ namespace HTM.Net.Network
             // Set the sink's pointer to its previous Layer --> (source : going downward)
             @in.Previous(@out);
             // Connect out to in
+            ConfigureConnection(@in, @out);
             Connect(@in, @out);
 
             return this;
@@ -711,6 +717,42 @@ namespace HTM.Net.Network
             //});
         }
 
+        /**
+         * Called internally to configure the connection between two {@link Layer} 
+         * {@link Observable}s taking care of other connection details such as passing
+         * the inference up the chain and any possible encoder.
+         * 
+         * @param in         the sink end of the connection between two layers
+         * @param out        the source end of the connection between two layers
+         * @throws IllegalStateException if Region is already closed
+         */
+        private void ConfigureConnection<I, O>(I @in, O @out)
+            where I : Layer<IInference>
+            where O : Layer<IInference>
+        {
+            if (assemblyClosed)
+            {
+                throw new InvalidOperationException("Cannot add Layers when Region has already been closed.");
+            }
+
+            HashSet<ILayer> all = new HashSet<ILayer>(sources);
+            all.UnionWith(sinks);
+            LayerMask inMask = @in.GetMask();
+            LayerMask outMask = @out.GetMask();
+            if (!all.Contains(@out))
+            {
+                layersDistinct = (int)(flagAccumulator & outMask) < 1;
+                flagAccumulator |= outMask;
+            }
+            if (!all.Contains(@in))
+            {
+                layersDistinct = (int)(flagAccumulator & inMask) < 1;
+                flagAccumulator |= inMask;
+            }
+
+            sources.Add(@out);
+            sinks.Add(@in);
+        }
 
         public override int GetHashCode()
         {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -37,7 +38,8 @@ namespace HTM.Net.Algorithms
     /// </summary>
     //@JsonSerialize(using=CLAClassifierSerializer.class)
     //@JsonDeserialize(using=CLAClassifierDeserializer.class)
-    public class CLAClassifier : IClassifier
+    [Serializable]
+    public class CLAClassifier : Persistable, IClassifier
     {
         public int Verbosity { get; set; }
 

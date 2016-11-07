@@ -95,6 +95,7 @@ namespace HTM.Net.Encoders
     public abstract class Encoder<T> : Persistable, IEncoder<T>
     {
 
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Encoder<T>));
 
         /** Value used to represent no data */

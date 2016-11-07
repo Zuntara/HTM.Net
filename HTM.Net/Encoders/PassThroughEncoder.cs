@@ -17,6 +17,7 @@ namespace HTM.Net.Encoders
     public class PassThroughEncoder<T> : Encoder<T>
     {
 
+        [NonSerialized]
         protected readonly ILog LOGGER = LogManager.GetLogger(typeof(PassThroughEncoder<T>));
 
         protected PassThroughEncoder() { }

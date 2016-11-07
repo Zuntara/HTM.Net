@@ -15,7 +15,7 @@ namespace HTM.Net.Encoders
  * @author cogmission
  *
  */
- [Serializable]
+    [Serializable]
     public class MultiEncoderAssembler
     {
 
@@ -75,7 +75,8 @@ namespace HTM.Net.Encoders
                         // pre-configure the GeospatialCoordinateEncoder with its needed directives.
                         ConfigureGeoBuilder(encoder, field, encoderSettings, (GeospatialCoordinateEncoder.Builder)builder);
                     }
-                    else {
+                    else
+                    {
                         foreach (string param in @params.Keys)
                         {
                             if (!param.Equals("fieldName") && !param.Equals("encoderType") && !param.Equals("type") &&
@@ -87,7 +88,7 @@ namespace HTM.Net.Encoders
                         }
                     }
 
-                     encoder.AddEncoder(field, fieldName, builder.Build());
+                    encoder.AddEncoder(field, fieldName, builder.Build());
                 }
             }
         }
@@ -95,7 +96,7 @@ namespace HTM.Net.Encoders
         private static void ConfigureCategoryBuilder(MultiEncoder multiEncoder,
             Map<string, object> encoderSettings, IBuilder builder)
         {
-            if(encoderSettings.ContainsKey("name"))
+            if (encoderSettings.ContainsKey("name"))
                 multiEncoder.SetValue(builder, "name", encoderSettings["name"]);
             multiEncoder.SetValue(builder, "n", encoderSettings["n"]);
             multiEncoder.SetValue(builder, "w", encoderSettings["w"]);
@@ -130,7 +131,8 @@ namespace HTM.Net.Encoders
 
                         multiEncoder.SetValue(b, key, dateEncoderSettings[key]);
                     }
-                    else {
+                    else
+                    {
                         if (key.Equals("formatPattern"))
                         {
                             b.FormatPattern((string)dateEncoderSettings[key]);
@@ -139,7 +141,8 @@ namespace HTM.Net.Encoders
                         {
                             b.Formatter((DateTimeFormatInfo)dateEncoderSettings[key]);
                         }
-                        else {
+                        else
+                        {
                             SetDateFieldBits(b, dateEncoderSettings, key);
                         }
                     }
@@ -164,7 +167,8 @@ namespace HTM.Net.Encoders
                         {
                             b.Season((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
                         }
-                        else {
+                        else
+                        {
                             b.Season((int)t.Get(0));
                         }
                         break;
@@ -175,7 +179,8 @@ namespace HTM.Net.Encoders
                         {
                             b.DayOfWeek((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
                         }
-                        else {
+                        else
+                        {
                             b.DayOfWeek((int)t.Get(0));
                         }
                         break;
@@ -186,7 +191,8 @@ namespace HTM.Net.Encoders
                         {
                             b.Weekend((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
                         }
-                        else {
+                        else
+                        {
                             b.Weekend((int)t.Get(0));
                         }
                         break;
@@ -197,7 +203,8 @@ namespace HTM.Net.Encoders
                         {
                             b.Holiday((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
                         }
-                        else {
+                        else
+                        {
                             b.Holiday((int)t.Get(0));
                         }
                         break;
@@ -208,7 +215,8 @@ namespace HTM.Net.Encoders
                         {
                             b.TimeOfDay((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
                         }
-                        else {
+                        else
+                        {
                             b.TimeOfDay((int)t.Get(0));
                         }
                         break;
@@ -219,7 +227,8 @@ namespace HTM.Net.Encoders
                         {
                             b.CustomDays((int)t.Get(0), (List<string>)t.Get(1));
                         }
-                        else {
+                        else
+                        {
                             b.CustomDays((int)t.Get(0));
                         }
                         break;
@@ -234,9 +243,9 @@ namespace HTM.Net.Encoders
          * @param encoderSettings
          * @param builder
          */
-        private static void ConfigureGeoBuilder(MultiEncoder multiEncoder,string fieldName, Map<string, Map<string, object>> encoderSettings, GeospatialCoordinateEncoder.Builder builder)
+        private static void ConfigureGeoBuilder(MultiEncoder multiEncoder, string fieldName, Map<string, Map<string, object>> encoderSettings, GeospatialCoordinateEncoder.Builder builder)
         {
-            Map<string, object> geoEncoderSettings = GetEncoderMap(fieldName,encoderSettings, "GeospatialCoordinateEncoder");
+            Map<string, object> geoEncoderSettings = GetEncoderMap(fieldName, encoderSettings, "GeospatialCoordinateEncoder");
             if (geoEncoderSettings == null)
             {
                 throw new InvalidOperationException("Input requires missing GeospatialCoordinateEncoder settings mapping.");
@@ -252,7 +261,8 @@ namespace HTM.Net.Encoders
                     {
                         multiEncoder.SetValue(builder, key, geoEncoderSettings[key]);
                     }
-                    else {
+                    else
+                    {
                         SetGeoFieldBits(builder, geoEncoderSettings, key);
                     }
                 }
@@ -286,7 +296,8 @@ namespace HTM.Net.Encoders
                     default: break;
                 }
             }
-            else {
+            else
+            {
                 int t = (int)obj;
                 switch (key)
                 {
@@ -313,7 +324,7 @@ namespace HTM.Net.Encoders
          */
         private static Map<string, object> GetEncoderMap(string fieldName, Map<string, Map<string, object>> encoderSettings, string encoderType)
         {
-            foreach (string key in encoderSettings.Keys.Where(k=>k.Equals(fieldName, StringComparison.InvariantCultureIgnoreCase)))
+            foreach (string key in encoderSettings.Keys.Where(k => k.Equals(fieldName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 string keyType = null;
                 if (encoderSettings[key].ContainsKey("encoderType"))
@@ -334,7 +345,7 @@ namespace HTM.Net.Encoders
                         return (Map<string, object>)encoderSettings[key];
                     }
                 }
-                
+
             }
             return null;
         }

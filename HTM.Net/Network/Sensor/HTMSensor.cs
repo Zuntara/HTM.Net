@@ -8,13 +8,20 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network.Sensor
 {
-    public interface IHTMSensor : ISensor
+    public interface IHTMSensor : ISensor, IPersistable
     {
         IStream<int[]> GetOutputStream();
 
         IDictionary<string, object> GetInputMap();
 
         void SetEncoder(MultiEncoder encoder);
+
+        /// <summary>
+        /// DO NOT CALL THIS METHOD! 
+        /// Used internally by deserialization routines.
+        /// </summary>
+        /// <param name="localParameters"></param>
+        void SetLocalParameters(Parameters localParameters);
     }
 
     /**
@@ -41,10 +48,11 @@ namespace HTM.Net.Network.Sensor
      *
      * @param <T>   the input type (i.e. File, URL, etc.)
      */
-     [Serializable]
+    [Serializable]
     public class HTMSensor<T> : Sensor<T>, IHTMSensor
-     {
+    {
         private ISensor @delegate;
+        private SensorParams sensorParams;
         private Header header;
         private Parameters localParameters;
         private MultiEncoder encoder;
@@ -73,6 +81,7 @@ namespace HTM.Net.Network.Sensor
         public HTMSensor(ISensor sensor)
         {
             this.@delegate = sensor;
+            sensorParams = sensor.GetSensorParams();
             header = new Header(sensor.GetInputStream().GetMeta());
             if (header == null || header.Size() < 3)
             {
@@ -82,9 +91,32 @@ namespace HTM.Net.Network.Sensor
         }
 
         /**
-         * Called internally during construction to build the encoders
-         * needed to process the configured field types.
+         * DO NOT CALL THIS METHOD! 
+         * Used internally by deserialization routines.
+         * 
+         * Sets the {@link Parameters} reconstituted from deserialization 
+         * @param localParameters   the Parameters to use.
          */
+        public void SetLocalParameters(Parameters localParameters)
+        {
+            this.localParameters = localParameters;
+        }
+
+        #region Overrides of Persistable
+
+        public override object PostDeSerialize()
+        {
+            InitEncoder(localParameters);
+            MakeIndexEncoderMap();
+            return this;
+        }
+
+        #endregion
+
+        /**
+        * Called internally during construction to build the encoders
+        * needed to process the configured field types.
+        */
         private void CreateEncoder()
         {
             encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("MultiEncoder").Build();
@@ -120,7 +152,8 @@ namespace HTM.Net.Network.Sensor
                         {
                             indexToEncoderMap.Add(i, de.Value);
                         }
-                        else {
+                        else
+                        {
                             throw new ArgumentException("DateEncoder never initialized: " + header.GetFieldNames()[i]);
                         }
                         break;
@@ -132,7 +165,8 @@ namespace HTM.Net.Network.Sensor
                         {
                             indexToEncoderMap.Add(i, ne.Value);
                         }
-                        else {
+                        else
+                        {
                             throw new ArgumentException("Number (or Boolean) encoder never initialized: " + header.GetFieldNames()[i]);
                         }
                         break;
@@ -143,7 +177,8 @@ namespace HTM.Net.Network.Sensor
                         {
                             indexToEncoderMap.Add(i, ce.Value);
                         }
-                        else {
+                        else
+                        {
                             throw new ArgumentException("Category encoder never initialized: " + header.GetFieldNames()[i]);
                         }
                         break;
@@ -154,7 +189,8 @@ namespace HTM.Net.Network.Sensor
                         {
                             indexToEncoderMap.Add(i, ge.Value);
                         }
-                        else {
+                        else
+                        {
                             throw new ArgumentException("Coordinate encoder never initialized: " + header.GetFieldNames()[i]);
                         }
                         break;
@@ -165,7 +201,8 @@ namespace HTM.Net.Network.Sensor
                         {
                             indexToEncoderMap.Add(i, spte.Value);
                         }
-                        else {
+                        else
+                        {
                             throw new ArgumentException("SDRPassThroughEncoder encoder never initialized: " + header.GetFieldNames()[i]);
                         }
                         break;
@@ -185,7 +222,7 @@ namespace HTM.Net.Network.Sensor
          */
         public override SensorParams GetSensorParams()
         {
-            return @delegate.GetSensorParams();
+            return sensorParams;
         }
 
         /**
@@ -397,7 +434,7 @@ namespace HTM.Net.Network.Sensor
                 int idx = _parent.indexFieldMap[key];
                 FieldMetaType fmt = fTypes[idx];
                 FieldMetaTypeHelper helper = new FieldMetaTypeHelper(key);
-                return helper.DecodeType<TDecode>(fmt, arr[idx+1], _parent.indexToEncoderMap[idx]);
+                return helper.DecodeType<TDecode>(fmt, arr[idx + 1], _parent.indexToEncoderMap[idx]);
             }
 
             public bool ContainsKey(string key)
@@ -464,7 +501,8 @@ namespace HTM.Net.Network.Sensor
                 throw new NotImplementedException();
             }
 
-            public int Count {
+            public int Count
+            {
                 get { return arr.Length; }
             }
             public bool IsReadOnly { get; }
@@ -854,5 +892,39 @@ namespace HTM.Net.Network.Sensor
             this.encoder = encoder;
         }
 
-     }
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + ((indexFieldMap == null) ? 0 : indexFieldMap.GetHashCode());
+            result = prime * result + ((sensorParams == null) ? 0 : Arrays.GetHashCode(sensorParams.GetKeys()));
+            return result;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            HTMSensor <T> other = (HTMSensor <T>)obj;
+            if (indexFieldMap == null)
+            {
+                if (other.indexFieldMap != null)
+                    return false;
+            }
+            else if (!indexFieldMap.Equals(other.indexFieldMap))
+                return false;
+            if (sensorParams == null)
+            {
+                if (other.sensorParams != null)
+                    return false;
+            }
+            else if (!Arrays.AreEqual(sensorParams.GetKeys(), other.sensorParams.GetKeys()))
+                return false;
+            return true;
+        }
+    }
 }

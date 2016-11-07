@@ -63,6 +63,7 @@ namespace HTM.Net.Encoders
     {
 
 
+        [NonSerialized]
         private static readonly ILog LOG = LogManager.GetLogger(typeof(RandomDistributedScalarEncoder));
 
         public const long DEFAULT_SEED = 42;

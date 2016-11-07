@@ -19,6 +19,7 @@ namespace HTM.Net.Network
     [Serializable]
     public abstract class BaseLayer : Persistable, ILayer
     {
+        [NonSerialized]
         protected static ILog LOGGER = LogManager.GetLogger(typeof(BaseLayer));
         /// <summary>
         /// Gets or sets the layer's current thread
@@ -39,6 +40,7 @@ namespace HTM.Net.Network
         protected Region ParentRegion;
 
         protected Parameters Params;
+        protected SensorParams SensorParams;
         protected Connections Connections;
         protected IHTMSensor Sensor;
         protected MultiEncoder Encoder;
@@ -110,36 +112,7 @@ namespace HTM.Net.Network
             return this;
         }
 
-        public override object PostDeSerialize()
-        {
-            //RecreateSensors();
-
-            //FunctionFactory old = factory;
-            //factory = new FunctionFactory();
-            //factory.inference = old.inference.postDeSerialize(old.inference);
-
-            //checkPointOpObservers = new ArrayList<>();
-
-            //if (sensor != null)
-            //{
-            //    sensor.setLocalParameters(params);
-            //    // Initialize encoders and recreate encoding index mapping.
-            //    sensor.postDeSerialize();
-            //}
-            //else
-            //{
-            //    // Dispatch functions (Observables) are transient & non-serializable so they must be rebuilt.
-            //    observableDispatch = createDispatchMap();
-            //    // Dispatch chain will not propagate unless it has subscribers.
-            //    parentNetwork.addDummySubscriber();
-            //}
-            //// Flag which lets us know to skip or do certain setups during initialization.
-            _isPostSerialized = true;
-
-            //observers = new ArrayList<Observer<Inference>>();
-
-            return this;
-        }
+       
 
         /// <summary>
         /// Returns the next Layer following this Layer in order of process flow.
@@ -275,7 +248,11 @@ namespace HTM.Net.Network
         /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
         /// </summary>
         public abstract void Halt();
+
+        public abstract bool IsHalted();
         public abstract IObservable<IInference> Observe();
+        public abstract IDisposable Subscribe(IObserver<IInference> subscriber);
+
         public abstract ILayer Close();
 
         /// <summary>
