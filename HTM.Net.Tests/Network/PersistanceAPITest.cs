@@ -806,7 +806,7 @@ namespace HTM.Net.Tests.Network
                 ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, new Object[] { "name", manual }));
 
             Parameters p = NetworkTestHarness.GetParameters().Copy();
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
 
             Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
                 null, // map
@@ -842,13 +842,13 @@ namespace HTM.Net.Tests.Network
             inputs[5] = new int[] { 0, 0, 0, 0, 1, 1, 1, 0 };
             inputs[6] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1 };
 
-            int[] expected0 = new int[] { 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0 };
-            int[] expected1 = new int[] { 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0 };
-            int[] expected2 = new int[] { 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1 };
-            int[] expected3 = new int[] { 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0 };
-            int[] expected4 = new int[] { 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0 };
-            int[] expected5 = new int[] { 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 };
-            int[] expected6 = new int[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
+            int[] expected0 = new int[] { 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
+            int[] expected1 = new int[] { 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1 };
+            int[] expected2 = new int[] { 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1 };
+            int[] expected3 = new int[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };
+            int[] expected4 = new int[] { 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 };
+            int[] expected5 = new int[] { 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 };
+            int[] expected6 = new int[] { 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 };
             int[][] expecteds = new int[][] { expected0, expected1, expected2, expected3, expected4, expected5, expected6 };
 
             //TestObserver<Inference> tester;
@@ -856,9 +856,10 @@ namespace HTM.Net.Tests.Network
             network.Observe().Subscribe(
                 spatialPoolerOutput =>
                 {
-                    Console.WriteLine("expected: " + Arrays.ToString(expecteds[test]) + "  --  "
-                        + "actual: " + Arrays.ToString(spatialPoolerOutput.GetSdr()));
-                    Assert.IsTrue(Arrays.AreEqual(expecteds[test++], spatialPoolerOutput.GetSdr()));
+                    Console.WriteLine(test + " E: " + Arrays.ToString(expecteds[test]) + "  --  "
+                        + "A: " + Arrays.ToString(spatialPoolerOutput.GetSdr()));
+                    Assert.IsTrue(Arrays.AreEqual(expecteds[test], spatialPoolerOutput.GetSdr()));
+                    test++;
                 },
                 e =>
                 {

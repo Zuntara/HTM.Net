@@ -263,7 +263,7 @@ namespace HTM.Net.Tests.Network
         }
 
         private string _onCompleteStr2;
-        [TestMethod, DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        //[TestMethod, DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void TestBasicNetworkHalt_ThenRestart()
         {
             Parameters p = NetworkTestHarness.GetParameters();
