@@ -101,6 +101,8 @@
     <Compile Include="Examples\Sine\NetworkDemoHarness.cs" />
     <Compile Include="Examples\SpatialPooler\HelloSpatial.cs" />
     <Compile Include="Generators\TestSineGenerator.cs" />
+    <Compile Include="Genetic\Swarming\SwarmingBasicTest.cs" />
+    <Compile Include="Genetic\TestKnapsack.cs" />
     <Compile Include="Opf\ClaModelTest.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

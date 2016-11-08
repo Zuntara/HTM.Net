@@ -572,7 +572,7 @@ namespace HTM.Net.Research.Tests.Swarming
             //this.assertLess(len(resultInfos), 350);
         }
 
-        //[TestMethod]
+        [TestMethod]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
