@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -93,7 +94,14 @@ namespace HTM.Net.Util
                 }
                 else
                 {
-                    sb.AppendFormat("{0}, ", item);
+                    if (item is double)
+                    {
+                        sb.AppendFormat("{0}, ", ((double)Convert.ToDouble(item)).ToString(NumberFormatInfo.InvariantInfo));
+                    }
+                    else
+                    {
+                        sb.AppendFormat("{0}, ", item);
+                    }
                 }
             }
             string result = sb.ToString().TrimEnd(',', ' ');
@@ -113,12 +121,27 @@ namespace HTM.Net.Util
                 }
                 else
                 {
-                    sb.AppendFormat("{0}, ", item);
+                    if (item is double)
+                    {
+                        sb.AppendFormat("{0}, ", ((double)Convert.ToDouble(item)).ToString(NumberFormatInfo.InvariantInfo));
+                    }
+                    else
+                    {
+                        sb.AppendFormat("{0}, ", item);
+                    }
                 }
             }
             string result = sb.ToString().TrimEnd(',', ' ');
             result += "]";
             return result;
+        }
+
+        public static void Fill<T>(T[] array, T i)
+        {
+            for (int j = 0; j < array.Length; j++)
+            {
+                array[j] = i;
+            }
         }
 
         public static void Fill(byte[] array, byte i)
@@ -179,9 +202,10 @@ namespace HTM.Net.Util
             //}
         }
 
-        public static bool AreEqual<T>(IEnumerable<T> arr1, IEnumerable<T> arr2)
+        public static bool AreEqual<T>(IEnumerable<T> arr1, IEnumerable<T> arr2, bool nullAlsoIsEqual = true)
             where T : IComparable<T>
         {
+            if (arr1 == null && arr2 == null && nullAlsoIsEqual) return true;
             if (arr1 == null || arr2 == null) return false;
 
             IList<T> list1 = new List<T>(arr1);
@@ -191,6 +215,19 @@ namespace HTM.Net.Util
             for (int i = 0; i < list1.Count; i++)
             {
                 if (list1[i].CompareTo(list2[i]) != 0) return false;
+            }
+            return true;
+        }
+
+        public static bool AreEqualList(IList arr1, IList arr2)
+        {
+            if (arr1 == null || arr2 == null) return false;
+
+            if (arr1.Count != arr2.Count) return false;
+
+            for (int i = 0; i < arr1.Count; i++)
+            {
+                if (!arr1[i].Equals(arr2[i])) return false;
             }
             return true;
         }
@@ -212,6 +249,18 @@ namespace HTM.Net.Util
         public static List<int[]> AsList(params int[][] args)
         {
             return new List<int[]>(args);
+        }
+
+        public static int GetHashCode<T>(T[] o)
+        {
+            if (o == null)
+                return 0;
+
+            int result = 1;
+            foreach (T element in o)
+                result = 31 * result + element.GetHashCode();
+
+            return result;
         }
     }
 

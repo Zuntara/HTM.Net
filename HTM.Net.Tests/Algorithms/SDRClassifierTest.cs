@@ -81,7 +81,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 1 }, 1.0);
             // Enough times to perform Inference and learn associations
-            ClassifierResult<double> retVal = null;
+            Classification<double> retVal = null;
             for (int i = 0; i < 10; i++)
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
@@ -98,7 +98,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 0 }, 1.0);
             // Enough times to perform Inference and learn associations
-            ClassifierResult<double> retVal = null;
+            Classification<double> retVal = null;
             for (int i = 0; i < 10; i++)
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
@@ -295,7 +295,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 1,2 });
 
-            ClassifierResult<double> retVal = null;
+            Classification<double> retVal = null;
             for (int i = 0; i < 10; i++)
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
@@ -362,7 +362,7 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(1.0, result2.GetStats(0)[1], 0.01);
         }
 
-        private ClassifierResult<double> _compute(SDRClassifier classifier, int recordNum, int[] pattern, int bucket, double value)
+        private Classification<double> _compute(SDRClassifier classifier, int recordNum, int[] pattern, int bucket, double value)
         {
             var classification = new Map<string, object> {{"bucketIdx", bucket}, {"actValue", value}};
             return classifier.Compute<double>(recordNum, classification, pattern, true, true);

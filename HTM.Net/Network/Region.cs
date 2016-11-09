@@ -1,45 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using log4net;
 
 namespace HTM.Net.Network
 {
     /**
- * <p>
- * Regions are collections of {@link Layer}s, which are in turn collections
- * of algorithmic components. Regions can be connected to each other to establish
- * a hierarchy of processing. To connect one Region to another, typically one 
- * would do the following:
- * </p><p>
- * <pre>
- *      Parameters p = Parameters.getDefaultParameters(); // May be altered as needed
- *      Network n = Network.create("Test Network", p);
- *      Region region1 = n.createRegion("r1"); // would typically add Layers to the Region after this
- *      Region region2 = n.createRegion("r2"); 
- *      region1.connect(region2);
- * </pre>
- * <b>--OR--</b>
- * <pre>
- *      n.connect(region1, region2);
- * </pre>
- * <b>--OR--</b>
- * <pre>
- *      Network.lookup("r1").connect(Network.lookup("r2"));
- * </pre>    
- * 
- * @author cogmission
- *
- */
-    public class Region
+     * <p>
+     * Regions are collections of {@link Layer}s, which are in turn collections
+     * of algorithmic components. Regions can be connected to each other to establish
+     * a hierarchy of processing. To connect one Region to another, typically one 
+     * would do the following:
+     * </p><p>
+     * <pre>
+     *      Parameters p = Parameters.getDefaultParameters(); // May be altered as needed
+     *      Network n = Network.create("Test Network", p);
+     *      Region region1 = n.createRegion("r1"); // would typically add Layers to the Region after this
+     *      Region region2 = n.createRegion("r2"); 
+     *      region1.connect(region2);
+     * </pre>
+     * <b>--OR--</b>
+     * <pre>
+     *      n.connect(region1, region2);
+     * </pre>
+     * <b>--OR--</b>
+     * <pre>
+     *      Network.lookup("r1").connect(Network.lookup("r2"));
+     * </pre>    
+     * 
+     * @author cogmission
+     *
+     */
+    [Serializable]
+    public class Region : Persistable
     {
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Region));
 
         private Network network;
         private Region upstreamRegion;
         private Region downstreamRegion;
         private Map<string, Layer<IInference>> layers = new Map<string, Layer<IInference>>();
+        [NonSerialized]
         private IObservable<IInference> regionObservable;
         private ILayer tail;
         private ILayer head;
@@ -75,13 +80,38 @@ namespace HTM.Net.Network
          */
         public Region(string name, Network network)
         {
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrWhiteSpace(name))
             {
-                throw new InvalidOperationException("name may not be null or empty");
+                throw new InvalidOperationException("Name may not be null or empty. " +
+                                                    "...not that anyone here advocates name calling!");
             }
 
             this.name = name;
             this.network = network;
+        }
+
+        public override object PreSerialize()
+        {
+            layers.Values.ToList().ForEach(l => l.PreSerialize());
+            return this;
+        }
+
+        public override object PostDeSerialize()
+        {
+            layers.Values.ToList().ForEach(l => l.PostDeSerialize());
+
+            // Connect Layer Observable chains (which are transient so we must 
+            // rebuild them and their subscribers)
+            if (IsMultiLayer())
+            {
+                Layer<IInference> curr = (Layer<IInference>)head;
+                Layer<IInference> prev = (Layer<IInference>)curr.GetPrevious();
+                do
+                {
+                    Connect(curr, prev);
+                } while ((curr = prev) != null && (prev = (Layer<IInference>)prev.GetPrevious()) != null);
+            }
+            return this;
         }
 
         /**
@@ -105,6 +135,17 @@ namespace HTM.Net.Network
                     network.SetEncoder(l.GetEncoder());
                 }
             }
+        }
+
+        /**
+         * Returns a flag indicating whether this {@code Region} contain multiple
+         * {@link Layer}s.
+         * 
+         * @return  true if so, false if not.
+         */
+        public bool IsMultiLayer()
+        {
+            return layers.Count > 1;
         }
 
         /**
@@ -258,6 +299,10 @@ namespace HTM.Net.Network
             {
                 Close();
             }
+            if (head.IsHalted() || regionObservable == null)
+            {
+                regionObservable = head.Observe();
+            }
             return regionObservable;
         }
 
@@ -281,11 +326,65 @@ namespace HTM.Net.Network
                 tail.Start();
                 return true;
             }
-            else {
+            else
+            {
                 LOGGER.Warn("Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
             }
 
             return false;
+        }
+
+        /**
+         * Calls {@link Layer#restart(boolean)} on this Region's input {@link Layer} if
+         * that layer contains a {@link Sensor}. If not, this method has no effect. If
+         * "startAtIndex" is true, the Network will start at the last saved index as 
+         * obtained from the serialized "recordNum" field; if false then the Network
+         * will restart from 0.
+         * 
+         * @param startAtIndex      flag indicating whether to start from the previous save
+         *                          point or not. If true, this region's Network will start
+         *                          at the previously stored index, if false then it will 
+         *                          start with a recordNum of zero.
+         * @return  flag indicating whether the call to restart had an effect or not.
+         */
+        public bool Restart(bool startAtIndex)
+        {
+            if (!assemblyClosed)
+            {
+                return Start();
+            }
+
+            if (tail.HasSensor())
+            {
+                LOGGER.Info("Re-Starting Region [" + GetName() + "] input Layer thread.");
+                tail.Restart(startAtIndex);
+                return true;
+            }
+            else
+            {
+                LOGGER.Warn("Re-Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
+            }
+
+            return false;
+        }
+
+        /**
+         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
+         * that stores the state of this {@code Network} while keeping the Network up and running.
+         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
+         * 
+         * @return  the {@link CheckPointOp} operator 
+         */
+        internal ICheckPointOp<byte[]> GetCheckPointOperator()
+        {
+            LOGGER.Debug("Region [" + GetName() + "] CheckPoint called at: " + (new DateTime()));
+            if (tail != null)
+            {
+                return tail.GetCheckPointOperator();
+
+            }
+            Close();
+            return tail.GetCheckPointOperator();
         }
 
         /**
@@ -456,6 +555,7 @@ namespace HTM.Net.Network
             // Set the sink's pointer to its previous Layer --> (source : going downward)
             @in.Previous(@out);
             // Connect out to in
+            ConfigureConnection(@in, @out);
             Connect(@in, @out);
 
             return this;
@@ -586,9 +686,10 @@ namespace HTM.Net.Network
             {
                 if (layersDistinct)
                 {
-                                @in.Compute(i);
+                    @in.Compute(i);
                 }
-                else {
+                else
+                {
                     localInf.SetSdr(i.GetSdr()).SetRecordNum(i.GetRecordNum()).SetLayerInput(i.GetSdr());
                     @in.Compute(localInf);
                 }
@@ -616,5 +717,82 @@ namespace HTM.Net.Network
             //});
         }
 
+        /**
+         * Called internally to configure the connection between two {@link Layer} 
+         * {@link Observable}s taking care of other connection details such as passing
+         * the inference up the chain and any possible encoder.
+         * 
+         * @param in         the sink end of the connection between two layers
+         * @param out        the source end of the connection between two layers
+         * @throws IllegalStateException if Region is already closed
+         */
+        private void ConfigureConnection<I, O>(I @in, O @out)
+            where I : Layer<IInference>
+            where O : Layer<IInference>
+        {
+            if (assemblyClosed)
+            {
+                throw new InvalidOperationException("Cannot add Layers when Region has already been closed.");
+            }
+
+            HashSet<ILayer> all = new HashSet<ILayer>(sources);
+            all.UnionWith(sinks);
+            LayerMask inMask = @in.GetMask();
+            LayerMask outMask = @out.GetMask();
+            if (!all.Contains(@out))
+            {
+                layersDistinct = (int)(flagAccumulator & outMask) < 1;
+                flagAccumulator |= outMask;
+            }
+            if (!all.Contains(@in))
+            {
+                layersDistinct = (int)(flagAccumulator & inMask) < 1;
+                flagAccumulator |= inMask;
+            }
+
+            sources.Add(@out);
+            sinks.Add(@in);
+        }
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + (assemblyClosed ? 1231 : 1237);
+            result = prime * result + (isLearn ? 1231 : 1237);
+            result = prime * result + ((layers == null) ? 0 : layers.Count);
+            result = prime * result + ((name == null) ? 0 : name.GetHashCode());
+            return result;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            Region other = (Region)obj;
+            if (assemblyClosed != other.assemblyClosed)
+                return false;
+            if (isLearn != other.isLearn)
+                return false;
+            if (layers == null)
+            {
+                if (other.layers != null)
+                    return false;
+            }
+            else if (!layers.Equals(other.layers))
+                return false;
+            if (name == null)
+            {
+                if (other.name != null)
+                    return false;
+            }
+            else if (!name.Equals(other.name))
+                return false;
+            return true;
+        }
     }
 }

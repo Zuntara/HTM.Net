@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace HTM.Net.Util
 {
@@ -10,6 +11,7 @@ namespace HTM.Net.Util
  * 
  * @param <T>
  */
+    [Serializable]
     public class SparseObjectMatrix<T> : AbstractSparseMatrix<T>
     {
         private Map<int, T> sparseMap = new Map<int, T>();
@@ -49,7 +51,7 @@ namespace HTM.Net.Util
             }
             else
             {
-                sparseMap.Add(index, (T)obj);
+                sparseMap.Add(index, obj);
             }
             return this;
         }
@@ -117,6 +119,34 @@ namespace HTM.Net.Util
         public override string ToString()
         {
             return Arrays.ToString(GetDimensions());
+        }
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = base.GetHashCode();
+            result = prime * result + ((sparseMap == null) ? 0 : sparseMap.GetHashCode());
+            return result;
+        }
+
+        public override bool  Equals(object obj)
+        {
+            if (this == obj)
+                return true;
+            if (!base.Equals(obj))
+                return false;
+            if (obj == null) return false;
+            if (GetType() != obj.GetType())
+                return false;
+            SparseObjectMatrix<T> other = (SparseObjectMatrix<T>)obj;
+            if (sparseMap == null)
+            {
+                if (other.sparseMap != null)
+                    return false;
+            }
+            else if (!sparseMap.Equals(other.sparseMap))
+                return false;
+            return true;
         }
     }
 }

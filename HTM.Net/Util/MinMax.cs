@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text;
+using HTM.Net.Model;
 
 namespace HTM.Net.Util
 {
@@ -7,7 +8,7 @@ namespace HTM.Net.Util
     /// Holds two values, a min and a max. Can later be developed to
     /// employ operations on those values (i.e. distance etc.)
     /// </summary>
-    public class MinMax
+    public class MinMax : Persistable
     {
         private readonly double _min;
         private readonly double _max;

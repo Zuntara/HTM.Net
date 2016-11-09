@@ -1,29 +1,40 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Model;
 using HTM.Net.Monitor;
 using HTM.Net.Util;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
-    public class TemporalMemory : IComputeDecorator
+    [Serializable]
+    public class TemporalMemory : Persistable, IComputeDecorator
     {
+        /** simple serial version id */
+        private const long serialVersionUID = 1L;
+
+        private const double EPSILON = 0.00001;
+
+        private const int ACTIVE_COLUMNS = 1;
+
         /**
          * Uses the specified {@link Connections} object to Build the structural 
          * anatomy needed by this {@code TemporalMemory} to implement its algorithms.
          * 
-         * The connections object holds the <see cref="Column"/> and <see cref="Cell"/> infrastructure,
+         * The connections object holds the {@link Column} and {@link Cell} infrastructure,
          * and is used by both the {@link SpatialPooler} and {@link TemporalMemory}. Either of
          * these can be used separately, and therefore this Connections object may have its
          * Columns and Cells initialized by either the init method of the SpatialPooler or the
          * init method of the TemporalMemory. We check for this so that complete initialization
          * of both Columns and Cells occurs, without either being redundant (initialized more than
-         * once). However, <see cref="Cell"/>s only get created when initializing a TemporalMemory, because
+         * once). However, {@link Cell}s only get created when initializing a TemporalMemory, because
          * they are not used by the SpatialPooler.
          * 
          * @param   c       {@link Connections} object
          */
-        public void Init(Connections c)
+        public static void Init(Connections c)
         {
             SparseObjectMatrix<Column> matrix = c.GetMemory() ?? new SparseObjectMatrix<Column>(c.GetColumnDimensions());
             c.SetMemory(matrix);
@@ -60,409 +71,364 @@ namespace HTM.Net.Algorithms
          */
         public ComputeCycle Compute(Connections connections, int[] activeColumns, bool learn)
         {
-            ComputeCycle result = ComputeFn(connections, connections.GetColumnSet(activeColumns), connections.GetPredictiveCells(),
-                connections.GetActiveSegments(), connections.GetActiveCells(), connections.GetWinnerCells(), connections.GetMatchingSegments(),
-                    connections.GetMatchingCells(), learn);
-
-            connections.SetActiveCells(result.ActiveCells());
-            connections.SetWinnerCells(result.WinnerCells());
-            connections.SetPredictiveCells(result.PredictiveCells());
-            connections.SetSuccessfullyPredictedColumns(result.SuccessfullyPredictedColumns());
-            connections.SetActiveSegments(result.ActiveSegments());
-            connections.SetLearningSegments(result.LearningSegments());
-            connections.SetMatchingSegments(result.MatchingSegments());
-            connections.SetMatchingCells(result.MatchingCells());
-
-            return result;
-        }
-
-        /**
-         * Functional version of {@link #compute(int[], boolean)}. 
-         * This method is stateless and concurrency safe.
-         * 
-         * @param c                             {@link Connections} object containing state of memory members
-         * @param activeColumns                 active <see cref="Column"/>s in t
-         * @param prevPredictiveCells           cells predicting in t-1
-         * @param prevActiveSegments            active {@link Segment}s in t-1
-         * @param prevActiveCells               active <see cref="Cell"/>s in t-1
-         * @param prevWinnerCells               winner <see cref="Cell"/>s in t-1
-         * @param prevMatchingSegments          matching {@link Segment}s in t-1
-         * @param prevMatchingCells             matching cells in t-1 
-         * @param learn                         whether mode is "learning" mode
-         * @return
-         */
-        public ComputeCycle ComputeFn(Connections c, HashSet<Column> activeColumns, HashSet<Cell> prevPredictiveCells, HashSet<DistalDendrite> prevActiveSegments,
-            HashSet<Cell> prevActiveCells, HashSet<Cell> prevWinnerCells, HashSet<DistalDendrite> prevMatchingSegments, HashSet<Cell> prevMatchingCells, bool learn)
-        {
             ComputeCycle cycle = new ComputeCycle();
-
-            ActivateCorrectlyPredictiveCells(c, cycle, prevPredictiveCells, prevMatchingCells, activeColumns);
-
-            BurstColumns(cycle, c, activeColumns, cycle.SuccessfullyPredictedColumns(), prevActiveCells, prevWinnerCells);
-
-            if (learn)
-            {
-                LearnOnSegments(c, prevActiveSegments, cycle.LearningSegments(), prevActiveCells,
-                    cycle.WinnerCells(), prevWinnerCells, cycle.PredictedInactiveCells(), prevMatchingSegments);
-            }
-
-            ComputePredictiveCells(c, cycle, cycle.ActiveCells());
+            ActivateCells(connections, cycle, activeColumns, learn);
+            ActivateDendrites(connections, cycle, learn);
 
             return cycle;
         }
-
         /**
-         * Phase 1: Activate the correctly predictive cells
+	     * Calculate the active cells, using the current active columns and dendrite
+         * segments. Grow and reinforce synapses.
          * 
-         * Pseudocode:
-         *
-         * - for each previous predictive cell
-         *   - if in active column
-         *     - mark it as active
-         *     - mark it as winner cell
-         *     - mark column as predicted
-         *   - if not in active column
-         *     - mark it as a predicted but inactive cell
-         *     
-         * @param cnx                   Connectivity of layer
-         * @param c                     ComputeCycle interim values container
-         * @param prevPredictiveCells   predictive <see cref="Cell"/>s predictive cells in t-1
-         * @param activeColumns         active columns in t
-         */
-        public void ActivateCorrectlyPredictiveCells(Connections cnx, ComputeCycle c,
-            HashSet<Cell> prevPredictiveCells, HashSet<Cell> prevMatchingCells, HashSet<Column> activeColumns)
-        {
-
-            foreach (Cell cell in prevPredictiveCells)
-            {
-                Column column = cell.GetColumn();
-                if (activeColumns.Contains(column))
-                {
-                    c.ActiveCells().Add(cell);
-                    c.WinnerCells().Add(cell);
-                    c.SuccessfullyPredictedColumns().Add(column);
-                }
-            }
-
-            if (cnx.GetPredictedSegmentDecrement() > 0)
-            {
-                foreach (Cell cell in prevMatchingCells)
-                {
-                    Column column = cell.GetColumn();
-
-                    if (!activeColumns.Contains(column))
-                    {
-                        c.PredictedInactiveCells().Add(cell);
-                    }
-                }
-            }
-        }
-
-        /**
-         * Phase 2: Burst unpredicted columns.
-         * 
-         * Pseudocode:
-         *
-         * - for each unpredicted active column
-         *   - mark all cells as active
-         *   - mark the best matching cell as winner cell
-         *     - (learning)
-         *       - if it has no matching segment
-         *         - (optimization) if there are previous winner cells
-         *           - add a segment to it
-         *       - mark the segment as learning
-         * 
-         * @param cycle                         ComputeCycle interim values container
-         * @param c                             Connections temporal memory state
-         * @param activeColumns                 active columns in t
-         * @param predictedColumns              predicted columns in t
-         * @param prevActiveCells               active <see cref="Cell"/>s in t-1
-         * @param prevWinnerCells               winner <see cref="Cell"/>s in t-1
-         */
-        public void BurstColumns(ComputeCycle cycle, Connections c, 
-            HashSet<Column> activeColumns, HashSet<Column> predictedActiveColumns, HashSet<Cell> prevActiveCells, HashSet<Cell> prevWinnerCells)
-        {
-            var activeCells = new HashSet<Cell>();
-            var winnerCells = new HashSet<Cell>();
-            var learnSegments = new HashSet<DistalDendrite>();
-
-            var unpredictedActiveColumns = activeColumns.Except(predictedActiveColumns).ToList();
-            unpredictedActiveColumns.Sort();
-
-            foreach (Column column in unpredictedActiveColumns)
-            {
-                var cells = column.GetCells();
-                activeCells.UnionWith(cells);
-
-                CellSearch bmcs = GetBestMatchingCell(c, cells, prevActiveCells);
-                winnerCells.Add(bmcs.BestCell);
-
-                if (bmcs.BestSegment == null && prevWinnerCells.Count > 0)
-                {
-                    bmcs.BestSegment = bmcs.BestCell.CreateSegment(c);
-                }
-                if (bmcs.BestSegment != null)
-                {
-                    learnSegments.Add(bmcs.BestSegment);
-                }
-            }
-
-            cycle.ActiveCells().UnionWith(activeCells);
-            cycle.WinnerCells().UnionWith(winnerCells);
-            cycle.LearningSegments().UnionWith(learnSegments);
-        }
-
-        /**
-         * Phase 3: Perform learning by adapting segments.
          * <pre>
          * Pseudocode:
-         *
-         * - (learning) for each previously active or learning segment
-         *   - if learning segment or from winner cell
-         *     - strengthen active synapses
-         *     - weaken inactive synapses
-         *   - if learning segment
-         *     - add some synapses to the segment
-         *       - sub sample from previous winner cells
-         *   
-         *   - if predictedSegmentDecrement > 0
-         *     - for each previously matching segment
-         *       - weaken active synapses but don't touch inactive synapses
-         * </pre>    
-         *     
-         * @param c                             the Connections state of the temporal memory
-         * @param prevActiveSegments            the Set of segments active in the previous cycle. "t-1"
-         * @param learningSegments              the Set of segments marked as learning segments in "t"
-         * @param prevActiveCells               the Set of active cells in "t-1"
-         * @param winnerCells                   the Set of winner cells in "t"
-         * @param prevWinnerCells               the Set of winner cells in "t-1"
-         * @param predictedInactiveCells        the Set of predicted inactive cells
-         * @param prevMatchingSegments          the Set of segments with
+         *   for each column
+         *     if column is active and has active distal dendrite segments
+         *       call activatePredictedColumn
+         *     if column is active and doesn't have active distal dendrite segments
+         *       call burstColumn
+         *     if column is inactive and has matching distal dendrite segments
+         *       call punishPredictedColumn
+         *      
+         * </pre>
          * 
-         */
-        public void LearnOnSegments(Connections c, HashSet<DistalDendrite> prevActiveSegments,
-            HashSet<DistalDendrite> learningSegments, HashSet<Cell> prevActiveCells, HashSet<Cell> winnerCells, HashSet<Cell> prevWinnerCells,
-                HashSet<Cell> predictedInactiveCells, HashSet<DistalDendrite> prevMatchingSegments)
+	     * @param conn                     
+	     * @param activeColumnIndices
+	     * @param learn
+	     */
+        public void ActivateCells(Connections conn, ComputeCycle cycle, int[] activeColumnIndices, bool learn)
         {
+            ColumnData columnData = new ColumnData();
 
-            double permanenceIncrement = c.GetPermanenceIncrement();
-            double permanenceDecrement = c.GetPermanenceDecrement();
+            HashSet<Cell> prevActiveCells = conn.GetActiveCells();
+            HashSet<Cell> prevWinnerCells = conn.GetWinnerCells();
 
-            HashSet<DistalDendrite> prevAndLearning = new HashSet<DistalDendrite>(prevActiveSegments);
+            List<Column> activeColumns = activeColumnIndices
+                .OrderBy(i => i)
+                .Select(i => conn.GetColumn(i))
+                .ToList();
 
-            foreach (DistalDendrite dendrite in learningSegments)
+            Func<Column, Column> identity = c => c;
+            Func<DistalDendrite, Column> segToCol = segment => segment.GetParentCell().GetColumn();
+
+            //@SuppressWarnings({ "rawtypes" })
+            GroupBy2<Column> grouper = GroupBy2<Column>.Of(
+                new Tuple<List<object>, Func<object, Column>>(activeColumns.Cast<object>().ToList(), x=> identity((Column) x)),
+                new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetActiveSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)),
+                new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetMatchingSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)));
+
+            double permanenceIncrement = conn.GetPermanenceIncrement();
+            double permanenceDecrement = conn.GetPermanenceDecrement();
+
+            foreach (Tuple t in grouper)
             {
-                prevAndLearning.Add(dendrite);
-            }
+                columnData = columnData.Set(t);
 
-            //prevAndLearning.addAll(learningSegments);
-
-            foreach (DistalDendrite dd in prevAndLearning)
-            {
-
-                bool isLearningSegment = learningSegments.Contains(dd);
-                bool isFromWinnerCell = winnerCells.Contains(dd.GetParentCell());
-
-                HashSet<Synapse> activeSynapses = dd.GetActiveSynapses(c, prevActiveCells);
-
-                if (isLearningSegment || isFromWinnerCell)
+                if (columnData.IsNotNone(ACTIVE_COLUMNS))
                 {
-                    dd.AdaptSegment(c, activeSynapses, permanenceIncrement, permanenceDecrement);
-                }
-
-                int n = c.GetMaxNewSynapseCount() - activeSynapses.Count;
-                if (isLearningSegment && n > 0)
-                {
-                    HashSet<Cell> learnCells = dd.PickCellsToLearnOn(c, n, prevWinnerCells, c.GetRandom());
-                    foreach (Cell sourceCell in learnCells)
+                    if (columnData.ActiveSegments().Any())
                     {
-                        dd.CreateSynapse(c, sourceCell, c.GetInitialPermanence());
+                        List<Cell> cellsToAdd = ActivatePredictedColumn(conn, columnData.ActiveSegments(),
+                            columnData.MatchingSegments(), prevActiveCells, prevWinnerCells,
+                                permanenceIncrement, permanenceDecrement, learn);
+
+                        cycle.ActiveCells().UnionWith(cellsToAdd);
+                        cycle.WinnerCells().UnionWith(cellsToAdd);
+                    }
+                    else
+                    {
+                        Tuple cellsXwinnerCell = BurstColumn(conn, columnData.Column(), columnData.MatchingSegments(),
+                            prevActiveCells, prevWinnerCells, permanenceIncrement, permanenceDecrement, conn.GetRandom(),
+                               learn);
+
+                        cycle.ActiveCells().UnionWith((IEnumerable<Cell>)cellsXwinnerCell.Get(0));
+                        cycle.WinnerCells().Add((Cell)cellsXwinnerCell.Get(1));
                     }
                 }
-            }
-
-            if (c.GetPredictedSegmentDecrement() > 0)
-            {
-                foreach (DistalDendrite segment in prevMatchingSegments)
+                else
                 {
-                    bool isPredictedInactiveCell = predictedInactiveCells.Contains(segment.GetParentCell());
-
-                    if (isPredictedInactiveCell)
+                    if (learn)
                     {
-                        HashSet<Synapse> activeSynapses = segment.GetActiveSynapses(c, prevActiveCells);
-                        segment.AdaptSegment(c, activeSynapses, -c.GetPredictedSegmentDecrement(), 0.0);
+                        PunishPredictedColumn(conn, columnData.ActiveSegments(), columnData.MatchingSegments(),
+                            prevActiveCells, prevWinnerCells, conn.GetPredictedSegmentDecrement());
                     }
                 }
             }
         }
 
         /**
-         * Phase 4: Compute predictive cells due to lateral input on distal dendrites.
-         *
+         * Calculate dendrite segment activity, using the current active cells.
+         * 
+         * <pre>
          * Pseudocode:
-         *
-         * - for each distal dendrite segment with activity >= activationThreshold
-         *   - mark the segment as active
-         *   - mark the cell as predictive
-         *   
-         * - if predictedSegmentDecrement > 0
-         *   - for each distal dendrite segment with unconnected activity > = minThreshold
-         *     - mark the segment as matching
-         *     - mark the cell as matching
+         *   for each distal dendrite segment with activity >= activationThreshold
+         *     mark the segment as active
+         *   for each distal dendrite segment with unconnected activity >= minThreshold
+         *     mark the segment as matching
+         * </pre>
          * 
-         * @param c                 the Connections state of the temporal memory
-         * @param cycle             the state during the current compute cycle
-         * @param activeCells       the active <see cref="Cell"/>s in t
+         * @param conn     the Connectivity
+         * @param cycle    Stores current compute cycle results
+         * @param learn    If true, segment activations will be recorded. This information is used
+         *                 during segment cleanup.
          */
-        public void ComputePredictiveCells(Connections c, ComputeCycle cycle, HashSet<Cell> activeCells)
+        public void ActivateDendrites(Connections conn, ComputeCycle cycle, bool learn)
         {
-            Map<DistalDendrite, int> numActiveConnectedSynapsesForSegment = new Map<DistalDendrite, int>();
-            Map<DistalDendrite, int> numActiveSynapsesForSegment = new Map<DistalDendrite, int>();
-            double connectedPermanence = c.GetConnectedPermanence();
+            Connections.Activity activity = conn.ComputeActivity(cycle.activeCells, conn.GetConnectedPermanence());
 
-            foreach (Cell cell in activeCells)
+            List<DistalDendrite> activeSegments = ArrayUtils.Range(0, activity.numActiveConnected.Length)
+                .Where(i => activity.numActiveConnected[i] >= conn.GetActivationThreshold())
+                .Select(i => conn.GetSegmentForFlatIdx(i))
+                .ToList();
+
+            List<DistalDendrite> matchingSegments = ArrayUtils.Range(0, activity.numActiveConnected.Length)
+                .Where(i => activity.numActivePotential[i] >= conn.GetMinThreshold())
+                .Select(i => conn.GetSegmentForFlatIdx(i))
+                .ToList();
+
+            activeSegments.Sort(conn.segmentPositionSortKey);
+            matchingSegments.Sort(conn.segmentPositionSortKey);
+
+            //Collections.sort(activeSegments, conn.segmentPositionSortKey);
+            //Collections.sort(matchingSegments, conn.segmentPositionSortKey);
+
+            cycle.activeSegments = activeSegments;
+            cycle.matchingSegments = matchingSegments;
+
+            conn.lastActivity = activity;
+            conn.SetActiveCells(new HashSet<Cell>(cycle.activeCells));
+            conn.SetWinnerCells(new HashSet<Cell>(cycle.winnerCells));
+            conn.SetActiveSegments(activeSegments);
+            conn.setMatchingSegments(matchingSegments);
+            // Forces generation of the predictive cells from the above active segments
+            conn.ClearPredictiveCells();
+            conn.GetPredictiveCells();
+
+            if (learn)
             {
-                foreach (Synapse syn in c.GetReceptorSynapses(cell))
-                {
-                    DistalDendrite segment = syn.GetSegment<DistalDendrite>();
-                    double permanence = syn.GetPermanence();
-
-                    if (permanence >= connectedPermanence)
-                    {
-                        numActiveConnectedSynapsesForSegment.AdjustOrPutValue(segment, 1, 1);
-
-                        if (numActiveConnectedSynapsesForSegment[segment] >= c.GetActivationThreshold())
-                        {
-                            cycle.ActiveSegments().Add(segment);
-                            cycle.PredictiveCells().Add(segment.GetParentCell());
-                        }
-                    }
-
-                    if (permanence > 0 && c.GetPredictedSegmentDecrement() > 0)
-                    {
-                        numActiveSynapsesForSegment.AdjustOrPutValue(segment, 1, 1);
-
-                        if (numActiveSynapsesForSegment[segment] >= c.GetMinThreshold())
-                        {
-                            cycle.MatchingSegments().Add(segment);
-                            cycle.MatchingCells().Add(segment.GetParentCell());
-                        }
-                    }
-                }
+                activeSegments.ForEach(s => conn.RecordSegmentActivity(s));
+                conn.StartNewIteration();
             }
         }
 
         /**
-         * Called to start the input of a new sequence, and
-         * reset the sequence state of the TM.
-         * 
-         * @param   connections   the Connections state of the temporal memory
+         * Indicates the start of a new sequence. Clears any predictions and makes sure
+         * synapses don't grow to the currently active cells in the next time step.
          */
         public void Reset(Connections connections)
         {
             connections.GetActiveCells().Clear();
-            connections.GetPredictiveCells().Clear();
-            connections.GetActiveSegments().Clear();
             connections.GetWinnerCells().Clear();
-            connections.GetMatchingCells().Clear();
+            connections.GetActiveSegments().Clear();
             connections.GetMatchingSegments().Clear();
         }
 
-        /////////////////////////////////////////////////////////////
-        //                    Helper functions                     //
-        /////////////////////////////////////////////////////////////
         /**
-         * Gets the cell with the best matching segment
-         * (see `TM.bestMatchingSegment`) that has the largest number of active
-         * synapses of all best matching segments.
-         *
-         * If none were found, pick the least used cell (see `TM.leastUsedCell`).
-         *  
-         * @param c                 Connections temporal memory state
-         * @param columnCells             
-         * @param activeCells
-         * @return a CellSearch (bestCell, BestSegment)
-         */
-        public CellSearch GetBestMatchingCell(Connections c, IList<Cell> columnCells, HashSet<Cell> activeCells)
-        {
-            int maxSynapses = 0;
-            Cell bestCell = null;
-            DistalDendrite bestSegment = null;
-
-            foreach (Cell cell in columnCells)
-            {
-                SegmentSearch bestMatchResult = GetBestMatchingSegment(c, cell, activeCells);
-
-                if (bestMatchResult.BestSegment != null && bestMatchResult.NumActiveSynapses > maxSynapses)
-                {
-                    maxSynapses = bestMatchResult.NumActiveSynapses;
-                    bestCell = cell;
-                    bestSegment = bestMatchResult.BestSegment;
-                }
-            }
-
-            if (bestCell == null)
-            {
-                bestCell = GetLeastUsedCell(c, columnCells);
-            }
-
-            return new CellSearch(bestCell, bestSegment);
-        }
-
-        /**
-         * Gets the segment on a cell with the largest number of activate synapses,
-         * including all synapses with non-zero permanences.
+         * Determines which cells in a predicted column should be added to winner cells
+         * list, and learns on the segments that correctly predicted this column.
          * 
-         * @param c
-         * @param columnCell
-         * @param activeCells
-         * @return
+         * @param conn                 the connections
+         * @param activeSegments       Active segments in the specified column
+         * @param matchingSegments     Matching segments in the specified column
+         * @param prevActiveCells      Active cells in `t-1`
+         * @param prevWinnerCells      Winner cells in `t-1`
+         * @param learn                If true, grow and reinforce synapses
+         * 
+         * <pre>
+         * Pseudocode:
+         *   for each cell in the column that has an active distal dendrite segment
+         *     mark the cell as active
+         *     mark the cell as a winner cell
+         *     (learning) for each active distal dendrite segment
+         *       strengthen active synapses
+         *       weaken inactive synapses
+         *       grow synapses to previous winner cells
+         * </pre>
+         * 
+         * @return A list of predicted cells that will be added to active cells and winner
+         *         cells.
          */
-        public SegmentSearch GetBestMatchingSegment(Connections c, Cell columnCell, HashSet<Cell> activeCells)
+        public List<Cell> ActivatePredictedColumn(Connections conn, List<DistalDendrite> activeSegments,
+            List<DistalDendrite> matchingSegments, HashSet<Cell> prevActiveCells, HashSet<Cell> prevWinnerCells,
+                double permanenceIncrement, double permanenceDecrement, bool learn)
         {
-            int maxSynapses = c.GetMinThreshold();
-            DistalDendrite bestSegment = null;
-            int bestNumActiveSynapses = 0;
-            int numActiveSynapses = 0;
 
-            foreach (DistalDendrite segment in c.GetSegments(columnCell))
+            List<Cell> cellsToAdd = new List<Cell>();
+            Cell previousCell = null;
+            Cell currCell;
+            foreach (DistalDendrite segment in activeSegments)
             {
-                numActiveSynapses = 0;
-                foreach (Synapse synapse in c.GetSynapses(segment))
+                if ((currCell = segment.GetParentCell()) != previousCell)
                 {
-                    if (activeCells.Contains(synapse.GetPresynapticCell()) && synapse.GetPermanence() > 0)
+                    cellsToAdd.Add(currCell);
+                    previousCell = currCell;
+                }
+
+                if (learn)
+                {
+                    AdaptSegment(conn, segment, prevActiveCells, permanenceIncrement, permanenceDecrement);
+
+                    int numActive = conn.GetLastActivity().numActivePotential[segment.GetIndex()];
+                    int nGrowDesired = conn.GetMaxNewSynapseCount() - numActive;
+
+                    if (nGrowDesired > 0)
                     {
-                        ++numActiveSynapses;
+                        GrowSynapses(conn, prevWinnerCells, segment, conn.GetInitialPermanence(),
+                            nGrowDesired, conn.GetRandom());
                     }
                 }
+            }
 
-                if (numActiveSynapses >= maxSynapses)
+            return cellsToAdd;
+        }
+
+        /**
+         * Activates all of the cells in an unpredicted active column,
+         * chooses a winner cell, and, if learning is turned on, either adapts or
+         * creates a segment. growSynapses is invoked on this segment.
+         * </p><p>
+         * <b>Pseudocode:</b>
+         * </p><p>
+         * <pre>
+         *  mark all cells as active
+         *  if there are any matching distal dendrite segments
+         *      find the most active matching segment
+         *      mark its cell as a winner cell
+         *      (learning)
+         *      grow and reinforce synapses to previous winner cells
+         *  else
+         *      find the cell with the least segments, mark it as a winner cell
+         *      (learning)
+         *      (optimization) if there are previous winner cells
+         *          add a segment to this winner cell
+         *          grow synapses to previous winner cells
+         * </pre>
+         * </p>
+         * 
+         * @param conn                      Connections instance for the TM
+         * @param column                    Bursting {@link Column}
+         * @param matchingSegments          List of matching {@link DistalDendrite}s
+         * @param prevActiveCells           Active cells in `t-1`
+         * @param prevWinnerCells           Winner cells in `t-1`
+         * @param permanenceIncrement       Amount by which permanences of synapses
+         *                                  are decremented during learning
+         * @param permanenceDecrement       Amount by which permanences of synapses
+         *                                  are incremented during learning
+         * @param random                    Random number generator
+         * @param learn                     Whether or not learning is enabled
+         * 
+         * @return  Tuple containing:
+         *                  cells       list of the processed column's cells
+         *                  bestCell    the best cell
+         */
+        public Tuple BurstColumn(Connections conn, Column column, List<DistalDendrite> matchingSegments,
+            HashSet<Cell> prevActiveCells, HashSet<Cell> prevWinnerCells, double permanenceIncrement, double permanenceDecrement,
+                IRandom random, bool learn)
+        {
+
+            IList<Cell> cells = column.GetCells();
+            Cell bestCell = null;
+
+            if (matchingSegments.Any())
+            {
+                int[] numPoten = conn.GetLastActivity().numActivePotential;
+                Comparison<DistalDendrite> cmp = (dd1, dd2) => numPoten[dd1.GetIndex()] - numPoten[dd2.GetIndex()];
+
+                var sortedSegments = new List<DistalDendrite>(matchingSegments);
+                sortedSegments.Sort(cmp);
+
+                DistalDendrite bestSegment = sortedSegments.Last();
+                bestCell = bestSegment.GetParentCell();
+
+                if (learn)
                 {
-                    maxSynapses = numActiveSynapses;
-                    bestSegment = segment;
-                    bestNumActiveSynapses = numActiveSynapses;
+                    AdaptSegment(conn, bestSegment, prevActiveCells, permanenceIncrement, permanenceDecrement);
+
+                    int nGrowDesired = conn.GetMaxNewSynapseCount() - numPoten[bestSegment.GetIndex()];
+
+                    if (nGrowDesired > 0)
+                    {
+                        GrowSynapses(conn, prevWinnerCells, bestSegment, conn.GetInitialPermanence(),
+                            nGrowDesired, random);
+                    }
+                }
+            }
+            else
+            {
+                bestCell = LeastUsedCell(conn, cells, random);
+                if (learn)
+                {
+                    int nGrowExact = Math.Min(conn.GetMaxNewSynapseCount(), prevWinnerCells.Count);
+                    if (nGrowExact > 0)
+                    {
+                        DistalDendrite bestSegment = conn.CreateSegment(bestCell);
+                        GrowSynapses(conn, prevWinnerCells, bestSegment, conn.GetInitialPermanence(),
+                            nGrowExact, random);
+                    }
                 }
             }
 
-            return new SegmentSearch(bestSegment, bestNumActiveSynapses);
+            return new Tuple(cells, bestCell);
         }
+
+        /**
+         * Punishes the Segments that incorrectly predicted a column to be active.
+         * 
+         * <p>
+         * <pre>
+         * Pseudocode:
+         *  for each matching segment in the column
+         *    weaken active synapses
+         * </pre>
+         * </p>
+         *   
+         * @param conn                              Connections instance for the tm
+         * @param activeSegments                    An iterable of {@link DistalDendrite} actives
+         * @param matchingSegments                  An iterable of {@link DistalDendrite} matching
+         *                                          for the column compute is operating on
+         *                                          that are matching; None if empty
+         * @param prevActiveCells                   Active cells in `t-1`
+         * @param prevWinnerCells                   Winner cells in `t-1`
+         *                                          are decremented during learning.
+         * @param predictedSegmentDecrement         Amount by which segments are punished for incorrect predictions
+         */
+        public void PunishPredictedColumn(Connections conn, List<DistalDendrite> activeSegments,
+            List<DistalDendrite> matchingSegments, HashSet<Cell> prevActiveCells, HashSet<Cell> prevWinnerCells,
+               double predictedSegmentDecrement)
+        {
+
+            if (predictedSegmentDecrement > 0)
+            {
+                foreach (DistalDendrite segment in matchingSegments)
+                {
+                    AdaptSegment(conn, segment, prevActiveCells, -conn.GetPredictedSegmentDecrement(), 0);
+                }
+            }
+        }
+
+
+        ////////////////////////////
+        //     Helper Methods     //
+        ////////////////////////////
 
         /**
          * Gets the cell with the smallest number of segments.
          * Break ties randomly.
          * 
-         * @param c
-         * @param columnCells
-         * @return
+         * @param conn      Connections instance for the tm
+         * @param cells     List of {@link Cell}s
+         * @param random    Random Number Generator
+         * 
+         * @return  the least used {@code Cell}
          */
-        public Cell GetLeastUsedCell(Connections c, IList<Cell> columnCells)
+        public Cell LeastUsedCell(Connections conn, IEnumerable<Cell> cells, IRandom random)
         {
-            HashSet<Cell> leastUsedCells = new HashSet<Cell>();
+            List<Cell> leastUsedCells = new List<Cell>();
             int minNumSegments = int.MaxValue;
-
-            foreach (Cell cell in columnCells)
+            foreach (Cell cell in cells)
             {
-                int numSegments = c.GetSegments(cell).Count;
+                int numSegments = conn.GetNumSegments(cell);
 
                 if (numSegments < minNumSegments)
                 {
@@ -476,41 +442,171 @@ namespace HTM.Net.Algorithms
                 }
             }
 
-            int randomIdx = c.GetRandom().NextInt(leastUsedCells.Count);
-            List<Cell> l = new List<Cell>(leastUsedCells);
-            l.Sort();
-
-            return l[randomIdx];
+            int i = random.NextInt(leastUsedCells.Count);
+            return leastUsedCells[i];
         }
 
-        /// <summary>
-        /// Used locally to return best cell/segment pair
-        /// </summary>
-        public class CellSearch
+        /**
+         * Creates nDesiredNewSynapes synapses on the segment passed in if
+         * possible, choosing random cells from the previous winner cells that are
+         * not already on the segment.
+         * <p>
+         * <b>Notes:</b> The process of writing the last value into the index in the array
+         * that was most recently changed is to ensure the same results that we get
+         * in the c++ implementation using iter_swap with vectors.
+         * </p>
+         * 
+         * @param conn                      Connections instance for the tm
+         * @param prevWinnerCells           Winner cells in `t-1`
+         * @param segment                   Segment to grow synapses on.     
+         * @param initialPermanence         Initial permanence of a new synapse.
+         * @param nDesiredNewSynapses       Desired number of synapses to grow
+         * @param random                    Tm object used to generate random
+         *                                  numbers
+         */
+        public void GrowSynapses(Connections conn, HashSet<Cell> prevWinnerCells, DistalDendrite segment,
+            double initialPermanence, int nDesiredNewSynapses, IRandom random)
         {
-            internal Cell BestCell { get; set; }
-            internal DistalDendrite BestSegment { get; set; }
 
-            public CellSearch() { }
-            public CellSearch(Cell bestCell, DistalDendrite bestSegment)
+            List<Cell> candidates = new List<Cell>(prevWinnerCells);
+            candidates.Sort();
+            //Collections.sort(candidates);
+
+            foreach (Synapse synapse in conn.GetSynapses(segment))
             {
-                BestCell = bestCell;
-                BestSegment = bestSegment;
+                Cell presynapticCell = synapse.GetPresynapticCell();
+                int index = candidates.IndexOf(presynapticCell);
+                if (index != -1)
+                {
+                    candidates.RemoveAt(index);
+                }
+            }
+
+            int candidatesLength = candidates.Count;
+            int nActual = nDesiredNewSynapses < candidatesLength ? nDesiredNewSynapses : candidatesLength;
+
+            for (int i = 0; i < nActual; i++)
+            {
+                int rand = random.NextInt(candidates.Count);
+                conn.CreateSynapse(segment, candidates[rand], initialPermanence);
+                candidates.RemoveAt(rand);
             }
         }
 
-        /// <summary>
-        /// Used locally to return best segment matching results
-        /// </summary>
-        public class SegmentSearch
+        /**
+         * Updates synapses on segment.
+         * Strengthens active synapses; weakens inactive synapses.
+         *  
+         * @param conn                      {@link Connections} instance for the tm
+         * @param segment                   {@link DistalDendrite} to adapt
+         * @param prevActiveCells           Active {@link Cell}s in `t-1`
+         * @param permanenceIncrement       Amount to increment active synapses    
+         * @param permanenceDecrement       Amount to decrement inactive synapses
+         */
+        public void AdaptSegment(Connections conn, DistalDendrite segment, HashSet<Cell> prevActiveCells,
+            double permanenceIncrement, double permanenceDecrement)
         {
-            internal DistalDendrite BestSegment { get; set; }
-            internal int NumActiveSynapses { get; set; }
 
-            public SegmentSearch(DistalDendrite bestSegment, int numActiveSynapses)
+            // Destroying a synapse modifies the set that we're iterating through.
+            List<Synapse> synapsesToDestroy = new List<Synapse>();
+
+            foreach (Synapse synapse in conn.GetSynapses(segment))
             {
-                BestSegment = bestSegment;
-                NumActiveSynapses = numActiveSynapses;
+                double permanence = synapse.GetPermanence();
+
+                if (prevActiveCells.Contains(synapse.GetPresynapticCell()))
+                {
+                    permanence += permanenceIncrement;
+                }
+                else
+                {
+                    permanence -= permanenceDecrement;
+                }
+
+                // Keep permanence within min/max bounds
+                permanence = permanence < 0 ? 0 : permanence > 1.0 ? 1.0 : permanence;
+
+                // Use this to examine issues caused by subtle floating point differences
+                // be careful to set the scale (1 below) to the max significant digits right of the decimal point
+                // between the permanenceIncrement and initialPermanence
+                //
+                // permanence = new BigDecimal(permanence).setScale(1, RoundingMode.HALF_UP).doubleValue(); 
+
+                if (permanence < EPSILON)
+                {
+                    synapsesToDestroy.Add(synapse);
+                }
+                else
+                {
+                    synapse.SetPermanence(conn, permanence);
+                }
+            }
+
+            foreach (Synapse s in synapsesToDestroy)
+            {
+                conn.DestroySynapse(s);
+            }
+
+            if (conn.GetNumSynapses(segment) == 0)
+            {
+                conn.DestroySegment(segment);
+            }
+        }
+
+        /**
+         * Used in the {@link TemporalMemory#compute(Connections, int[], boolean)} method
+         * to make pulling values out of the {@link GroupBy2} more readable and named.
+         */
+        [Serializable]
+        public class ColumnData // implements Serializable
+        {
+            /** Default Serial */
+            private const long serialVersionUID = 1L;
+            Tuple t;
+
+            public ColumnData() { }
+
+            public ColumnData(Tuple t)
+            {
+                this.t = t;
+            }
+
+            public Column Column() { return (Column)t.Get(0); }
+            public List<Column> ActiveColumns() { return (List<Column>)t.Get(1); }
+
+            public List<DistalDendrite> ActiveSegments()
+            {
+                var list = (IList) t.Get(2);
+                return list[0].Equals(GroupBy2<Column>.Slot<Tuple<object,Column>>.Empty()) ?
+                     new List<DistalDendrite>() :
+                         list.Cast<DistalDendrite>().ToList();
+            }
+
+            public List<DistalDendrite> MatchingSegments()
+            {
+                var list = (IList) t.Get(3);
+                return list[0].Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.Empty()) ?
+                     new List<DistalDendrite>() :
+                         list.Cast<DistalDendrite>().ToList();
+            }
+
+            public ColumnData Set(Tuple t) { this.t = t; return this; }
+
+            /**
+             * Returns a boolean flag indicating whether the slot contained by the
+             * tuple at the specified index is filled with the special empty
+             * indicator.
+             * 
+             * @param memberIndex   the index of the tuple to assess.
+             * @return  true if <em><b>not</b></em> none, false if it <em><b>is none</b></em>.
+             */
+            public bool IsNotNone(int memberIndex)
+            {
+                // return !((List<?>)t.get(memberIndex)).get(0).equals(NONE);
+                var list = (IList)t.Get(memberIndex);
+                var element = list[0];
+
+                return !((IList)t.Get(memberIndex))[0].Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.NONE);
             }
         }
     }

@@ -14,7 +14,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(66, p.Size());
+            Assert.AreEqual(69, p.Size());
         }
 
         [TestMethod]

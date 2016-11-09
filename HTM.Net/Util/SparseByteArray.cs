@@ -8,6 +8,7 @@ namespace HTM.Net.Util
     /// <summary>
     /// Represents an array with dimensions (recursivly), only with concrete data, empty spaces are not recorded
     /// </summary>
+    [Serializable]
     public class SparseByteArray
     {
         private readonly int[] _dimensions;

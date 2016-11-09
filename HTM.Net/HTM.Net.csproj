@@ -43,16 +43,20 @@
       <HintPath>..\packages\ImageLibrary.2.0.5\lib\net45\Kaliko.ImageLibrary.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="DeepEqual, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DeepEqual.1.6.0.0\lib\net40\DeepEqual.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MathNet.Numerics, Version=3.11.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MathNet.Numerics.3.11.0\lib\net40\MathNet.Numerics.dll</HintPath>
+    <Reference Include="MathNet.Numerics, Version=3.13.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MathNet.Numerics.3.13.1\lib\net40\MathNet.Numerics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -96,19 +100,27 @@
     <Compile Include="Algorithms\AnomalyLikelihoodMetrics.cs" />
     <Compile Include="Algorithms\BitHistory.cs" />
     <Compile Include="Algorithms\CLAClassifier.cs" />
-    <Compile Include="Algorithms\ClassifierResult.cs" />
+    <Compile Include="Algorithms\Classification.cs" />
+    <Compile Include="Model\Connections.cs" />
+    <Compile Include="Model\Persistable.cs" />
     <Compile Include="Monitor\MonitoredTemporalMemory.cs" />
     <Compile Include="Network\BaseLayer.cs" />
     <Compile Include="Network\BaseRxLayer.cs" />
     <Compile Include="Network\CustomGetDictionary.cs" />
     <Compile Include="Network\ILayer.cs" />
     <Compile Include="Network\LayerMask.cs" />
+    <Compile Include="Network\PersistenceApi.cs" />
+    <Compile Include="Network\PublisherSupplier.cs" />
     <Compile Include="Network\Sensor\CustomFileSensor.cs" />
     <Compile Include="Network\Sensor\ImageDefinition.cs" />
     <Compile Include="Network\Sensor\Optional.cs" />
     <Compile Include="Network\Sensor\YieldingFileReader.cs" />
     <Compile Include="Network\Transformer.cs" />
+    <Compile Include="Serialize\SerialConfig.cs" />
+    <Compile Include="Serialize\SerializerCore.cs" />
     <Compile Include="Util\ArrayExtentions.cs" />
+    <Compile Include="Util\GroupBy.cs" />
+    <Compile Include="Util\GroupBy2.cs" />
     <Compile Include="Util\ListExtentions.cs" />
     <Compile Include="Network\Sensor\BatchedCsvStream.cs" />
     <Compile Include="Network\Sensor\FileSensor.cs" />
@@ -120,7 +132,7 @@
     <Compile Include="Algorithms\SpatialPooler.cs" />
     <Compile Include="Algorithms\Statistic.cs" />
     <Compile Include="Algorithms\TemporalMemory.cs" />
-    <Compile Include="ComputeCycle.cs" />
+    <Compile Include="Model\ComputeCycle.cs" />
     <Compile Include="Connections.cs" />
     <Compile Include="Encoders\CategoryEncoder.cs" />
     <Compile Include="Encoders\CoordinateEncoder.cs" />
@@ -142,6 +154,7 @@
     <Compile Include="Encoders\SDRPassThroughEncoder.cs" />
     <Compile Include="Encoders\SparsePassThroughEncoder.cs" />
     <Compile Include="Util\SparseByteArray.cs" />
+    <Compile Include="Util\Topology.cs" />
     <Compile Include="Util\TypeConverter.cs" />
     <Compile Include="Monitor\ComputeDecorator.cs" />
     <Compile Include="Network\ManualInput.cs" />
@@ -205,12 +218,12 @@
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\MathNet.Numerics.MKL.Win.2.0.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\packages\MathNet.Numerics.MKL.Win.2.0.0\build\MathNet.Numerics.MKL.Win.targets')" />
+  <Import Project="..\packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\MathNet.Numerics.MKL.Win.2.0.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MathNet.Numerics.MKL.Win.2.0.0\build\MathNet.Numerics.MKL.Win.targets'))" />
+    <Error Condition="!Exists('..\packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

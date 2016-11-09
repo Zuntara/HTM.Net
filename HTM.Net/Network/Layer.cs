@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -114,10 +115,13 @@ namespace HTM.Net.Network
     /// 
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Serializable]
     public class Layer<T> : BaseRxLayer
     {
+        [NonSerialized]
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
 
+        protected int numColumns;
         protected readonly FunctionFactory _factory;
 
         /// <summary>
@@ -222,6 +226,37 @@ namespace HTM.Net.Network
             }
         }
 
+        public override object PostDeSerialize()
+        {
+            RecreateSensors();
+
+            FunctionFactory old = _factory;
+            _factory = new FunctionFactory(this);
+            _factory.Inference = (ManualInput) old.Inference.PostDeSerialize(old.Inference);
+
+            _checkPointOpObservers = new List<IObserver<byte[]>>();
+
+            if (Sensor != null)
+            {
+                Sensor.SetLocalParameters(this.Params);
+                // Initialize encoders and recreate encoding index mapping.
+                Sensor.PostDeSerialize();
+            }
+            else
+            {
+                // Dispatch functions (Observables) are transient & non-serializable so they must be rebuilt.
+                ObservableDispatch = CreateDispatchMap();
+                // Dispatch chain will not propagate unless it has subscribers.
+                ParentNetwork.AddDummySubscriber();
+            }
+            // Flag which lets us know to skip or do certain setups during initialization.
+            _isPostSerialized = true;
+            
+            _observers = new List<IObserver<IInference>>();
+
+            return this;
+        }
+
         /// <summary>
         /// Finalizes the initialization in one method call so that side effect
         /// operations to share objects and other special initialization tasks can
@@ -246,6 +281,14 @@ namespace HTM.Net.Network
                 if (ParentNetwork != null && ParentRegion != null)
                 {
                     ParentNetwork.SetSensorRegion(ParentRegion);
+                    object supplier;
+                    if ((supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
+                    {
+                        if (supplier is PublisherSupplier) {
+                            ((PublisherSupplier)supplier).SetNetwork(ParentNetwork);
+                            ParentNetwork.SetPublisher(((PublisherSupplier)supplier).Get());
+                        }
+                    }
                 }
             }
 
@@ -341,7 +384,12 @@ namespace HTM.Net.Network
             }
 
             // Let the TemporalMemory initialize the matrix with its requirements
-            TemporalMemory?.Init(Connections);
+            if (TemporalMemory != null)
+            {
+                TemporalMemory.Init(Connections);
+            }
+
+            this.numColumns = Connections.GetNumColumns();
 
             FeedForwardActiveColumns = new int[Connections.GetNumColumns()];
 
@@ -496,7 +544,12 @@ namespace HTM.Net.Network
             if (ParentNetwork != null && ParentRegion != null)
             {
                 ParentNetwork.SetSensorRegion(ParentRegion);
+                ParentNetwork.SetSensor(Sensor);
             }
+
+            // Store the SensorParams for Sensor rebuild after deserialisation
+            this.SensorParams = this.Sensor.GetSensorParams();
+
             return this;
         }
 
@@ -640,6 +693,14 @@ namespace HTM.Net.Network
         /// </summary>
         public override void Halt()
         {
+            object supplier = null;
+            if (Sensor != null && (supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
+            {
+                if (supplier is PublisherSupplier) {
+                    ((PublisherSupplier)supplier).ClearSuppliedInstance();
+                }
+            }
+
             // Signal the Observer chain to complete
             if (LayerThread == null)
             {
@@ -655,7 +716,7 @@ namespace HTM.Net.Network
         /// <summary>
         /// Returns a flag indicating whether this layer's processing thread has been halted or not.
         /// </summary>
-        public bool IsHalted()
+        public override bool IsHalted()
         {
             return _isHalted;
         }
@@ -673,6 +734,12 @@ namespace HTM.Net.Network
         /// </summary>
         public override void Start()
         {
+            if (_isHalted)
+            {
+                Restart(true);
+                return;
+            }
+
             // Save boilerplate setup steps by automatically closing when start is
             // called.
             if (!_isClosed)
@@ -696,86 +763,58 @@ namespace HTM.Net.Network
                 NotifyError(e);
             }
 
-            LayerThread = new Task(() =>
+            StartLayerThread();
+        }
+
+        public override void Restart(bool startAtIndex)
+        {
+            _isHalted = false;
+
+            if (!_isClosed)
             {
-                Logger.Debug("Layer [" + GetName() + "] started Sensor output stream processing.");
-
-                //////////////////////////
-
-                var outputStream = (IBaseStream)Sensor.GetOutputStream();
-
-                int[] intArray = null;
-                object inputObject;
-
-                while (!outputStream.EndOfStream)
+                Start();
+            }
+            else
+            {
+                if (Sensor == null)
                 {
-                    inputObject = outputStream.ReadUntyped();
-                    if (inputObject is int[])
-                    {
-                        intArray = (int[])inputObject;
-                    }
-                    bool doComputation = false;
-                    bool computed = false;
-                    try
-                    {
-                        if (_isHalted)
-                        {
-                            NotifyComplete();
-                            if (_next != null)
-                            {
-                                _next.Halt();
-                            }
-                        }
-                        else
-                        {
-                            doComputation = true;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
-                        throw;
-                    }
-
-                    if (!doComputation) continue;
-
-                    try
-                    {
-
-                        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                        if (intArray != null) _factory.Inference.SetEncoding(intArray);
-
-                        Compute(inputObject);
-                        computed = true;
-
-                        // Notify all downstream observers that the stream is closed
-                        if (!Sensor.EndOfStream())
-                        {
-                            NotifyComplete();
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        if (Debugger.IsAttached) Debugger.Break();
-                        NotifyError(e);
-                    }
-
-                    if (!computed)
-                    {
-                        // Wait a little while, because new work can come
-                        Thread.Sleep(5000);
-                    }
+                    throw new InvalidOperationException("A sensor must be added when the mode is not Network.Mode.MANUAL");
                 }
 
-                Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
-            }, TaskCreationOptions.LongRunning);
+                // Re-init the Sensor only if we're halted and haven't already been initialized
+                // following a deserialization.
+                if (!_isPostSerialized)
+                {
+                    // Recreate the Sensor and its underlying Stream
+                    RecreateSensors();
+                }
 
-            //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
-            LayerThread.Start();
+                if (ParentNetwork != null)
+                {
+                    ParentNetwork.SetSensor(Sensor);
+                }
 
-            Logger.Debug(string.Format("Start called on Layer thread {0}", LayerThread));
+                ObservableDispatch = CreateDispatchMap();
+                
+                this.Encoder = Encoder ?? Sensor.GetEncoder();
+
+                _skip = startAtIndex ?
+                    (Sensor.GetSensorParams().Get("ONSUB")) != null ? -1 : _recordNum :
+                        (_recordNum = -1);
+
+                try
+                {
+                    CompleteDispatch(new int[] { });
+                }
+                catch (Exception e)
+                {
+                    NotifyError(e);
+                }
+
+                StartLayerThread();
+
+                Logger.Debug($"Re-Start called on Layer thread {LayerThread}");
+            }
         }
 
         /// <summary>
@@ -883,10 +922,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             return c?.GetActualValues().Select(av => av != null ? (TV)av : default(TV)).ToArray();
@@ -911,10 +950,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             return c?.GetStats(step);
@@ -933,10 +972,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             return (TK)c?.GetMostProbableValue(step);
@@ -954,10 +993,10 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            ClassifierResult<object> c = CurrentInference.GetClassification(field);
+            Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No ClassifierResult exists for the specified field: {0}", field));
+                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
             Debug.Assert(c != null, "c != null");
@@ -1032,11 +1071,11 @@ namespace HTM.Net.Network
             CompleteSequenceDispatch(sequence);
 
             // Handle global network sensor access.
-            if (Sensor == null)
+            if (Sensor == null && ParentNetwork != null && ParentNetwork.IsTail(this))
             {
                 Sensor = (IHTMSensor)ParentNetwork?.GetSensor();
             }
-            else if (ParentNetwork != null)
+            else if (ParentNetwork != null && Sensor != null)
             {
                 ParentNetwork.SetSensor(Sensor);
             }
@@ -1286,9 +1325,11 @@ namespace HTM.Net.Network
                 Logger.Info("Layer " + GetName() + " received zero length bit vector");
                 return input;
             }
-            SpatialPooler.Compute(Connections, input, FeedForwardActiveColumns, Sensor == null || Sensor.GetMetaInfo().IsLearn(), IsLearn);
 
-            return FeedForwardActiveColumns;
+            int[] activeColumns = new int[numColumns];
+            SpatialPooler.Compute(Connections, input, activeColumns, IsLearn || (Sensor != null && Sensor.GetMetaInfo().IsLearn()));
+
+            return activeColumns;
         }
 
         /// <summary>
@@ -1324,6 +1365,135 @@ namespace HTM.Net.Network
             return SDR.AsCellIndices(ActiveCells = cc.ActiveCells());
         }
 
+        protected void StartLayerThread()
+        {
+            LayerThread = new Task(() =>
+            {
+                Logger.Debug("Layer [" + GetName() + "] started Sensor output stream processing.");
+
+                //////////////////////////
+
+                var outputStream = Sensor.GetOutputStream();
+
+                int[] intArray;
+                while (!outputStream.EndOfStream)
+                {
+                    intArray = outputStream.Read();
+                    bool doComputation = false;
+                    bool computed = false;
+                    try
+                    {
+                        if (_isHalted)
+                        {
+                            NotifyComplete();
+                            if (_next != null)
+                            {
+                                _next.Halt();
+                            }
+                        }
+                        else
+                        {
+                            doComputation = true;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
+                        throw;
+                    }
+
+                    if (!doComputation) continue;
+
+                    try
+                    {
+
+                        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
+                        _factory.Inference.SetEncoding(intArray);
+
+                        Compute(intArray);
+                        computed = true;
+
+                        // Notify all downstream observers that the stream is closed
+                        if (!Sensor.EndOfStream())
+                        {
+                            NotifyComplete();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        if (Debugger.IsAttached) Debugger.Break();
+                        NotifyError(e);
+                    }
+
+                    if (!computed)
+                    {
+                        // Wait a little while, because new work can come
+                        Thread.Sleep(5000);
+                    }
+                }
+
+                Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
+                //////////////////////////
+
+                // Applies "terminal" function, at this point the input stream
+                // is "sealed".
+                //sensor.GetOutputStream().Filter(i =>
+                //{
+                //    try
+                //    {
+                //        if (isHalted)
+                //        {
+                //            NotifyComplete();
+                //            if (next != null)
+                //            {
+                //                next.Halt();
+                //            }
+                //            return false;
+                //        }
+                //        return true;
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        Console.WriteLine(e);
+                //        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
+                //        throw;
+                //    }
+                //}).ForEach(intArray =>
+                //{
+                //    try
+                //    {
+
+                //        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
+                //        factory.inference.Encoding(intArray);
+
+                //        //T computeInput = (T)Convert.ChangeType(intArray, typeof(int[]));
+
+                //        Compute(intArray);
+
+                //        // Notify all downstream observers that the stream is closed
+                //        if (!sensor.HasNext())
+                //        {
+                //            NotifyComplete();
+                //        }
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        Console.WriteLine(e);
+                //        if (Debugger.IsAttached) Debugger.Break();
+                //        NotifyError(e);
+                //    }
+
+                //});
+            }, TaskCreationOptions.LongRunning);
+
+            //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
+            LayerThread.Start();
+            Logger.Debug($"Start called on Layer thread {LayerThread}");
+        }
+
+
         public FunctionFactory GetFunctionFactory()
         {
             return _factory;
@@ -1349,6 +1519,7 @@ namespace HTM.Net.Network
         /// <see cref="Layer{T}.ResolveObservableSequence{V}(V)"/>
         /// <see cref="Layer{T}.FillInSequence(System.IObservable{HTM.Net.Network.ManualInput})"/>
         /// </summary>
+        [Serializable]
         public class FunctionFactory
         {
             internal Layer<T> Layer { get; set; }
@@ -1745,7 +1916,7 @@ namespace HTM.Net.Network
                         actValue = inputs.Get("inputValue");
 
                         IClassifier c = (IClassifier)t1.GetClassifiers().Get(key);
-                        ClassifierResult<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
+                        Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
 
                         t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);
                     }
@@ -1778,7 +1949,7 @@ namespace HTM.Net.Network
                 //          actValue = inputs.Get("inputValue");
 
                 //         CLAClassifier c = (CLAClassifier)t1.GetClassifiers().Get(key);
-                //         ClassifierResult<Object> result = c.Compute(recordNum, inputMap, t1.GetSDR(), isLearn, true);
+                //         Classification<Object> result = c.Compute(recordNum, inputMap, t1.GetSDR(), isLearn, true);
 
                 //         t1.recordNum(recordNum).storeClassification((String)inputs.Get("name"), result);
                 //       }
@@ -1818,13 +1989,51 @@ namespace HTM.Net.Network
 
         }
 
+        /**
+         * Re-initializes the {@link HTMSensor} following deserialization or restart
+         * after halt.
+         */
+        private void RecreateSensors()
+        {
+            if (Sensor != null)
+            {
+                // Recreate the Sensor and its underlying Stream
+                Type sensorKlass = Sensor.GetType();
+                if (sensorKlass.FullName.IndexOf("File") != -1)
+                {
+                    Object path = Sensor.GetSensorParams().Get("PATH");
+                    Sensor = (IHTMSensor)Sensor<FileSensor>.Create(
+                         FileSensor.Create, SensorParams.Create(SensorParams.Keys.Path, "", path));
+                }
+                else if (sensorKlass.FullName.IndexOf("Observ") != -1)
+                {
+                    Object supplierOfObservable = Sensor.GetSensorParams().Get("ONSUB");
+                    Sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(
+                         ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, "", supplierOfObservable));
+                }
+                //else if (sensorKlass.FullName.IndexOf("URI") != -1)
+                //{
+                //    Object url = Sensor.GetSensorParams().Get("URI");
+                //    Sensor = (IHTMSensor)Sensor.Create(
+                //         UriSensor.Create, SensorParams.Create(SensorParams.Keys.Uri, "", url));
+                //}
+            }
+        }
 
         public override int GetHashCode()
         {
             const int prime = 31;
             int result = 1;
             result = prime * result + ((Name == null) ? 0 : Name.GetHashCode());
+            result = prime * result + _recordNum;
+            result = prime * result + (int) AlgoContentMask;
+            result = prime * result + ((CurrentInference == null) ? 0 : CurrentInference.GetHashCode());
+            result = prime * result + (_hasGenericProcess ? 1231 : 1237);
+            result = prime * result + (_isClosed ? 1231 : 1237);
+            result = prime * result + (_isHalted ? 1231 : 1237);
+            result = prime * result + (IsLearn ? 1231 : 1237);
             result = prime * result + ((ParentRegion == null) ? 0 : ParentRegion.GetHashCode());
+            result = prime * result + ((SensorParams == null) ? 0 : SensorParams.GetHashCode());
             return result;
         }
 
@@ -1837,21 +2046,48 @@ namespace HTM.Net.Network
                 return false;
             if (GetType() != obj.GetType())
                 return false;
-            ILayer other = (ILayer)obj;
+            Layer<T> other = (Layer<T>)obj;
             if (Name == null)
             {
-                if (other.GetName() != null)
+                if (other.Name != null)
                     return false;
             }
-            else if (!Name.Equals(other.GetName()))
+            else if (!Name.Equals(other.Name))
+                return false;
+            if (AlgoContentMask != other.AlgoContentMask)
+                return false;
+            if (CurrentInference == null)
+            {
+                if (other.CurrentInference != null)
+                    return false;
+            }
+            else if (!CurrentInference.Equals(other.CurrentInference))
+                return false;
+            if (_recordNum != other._recordNum)
+                return false;
+            if (_hasGenericProcess != other._hasGenericProcess)
+                return false;
+            if (_isClosed != other._isClosed)
+                return false;
+            if (_isHalted != other._isHalted)
+                return false;
+            if (IsLearn != other.IsLearn)
                 return false;
             if (ParentRegion == null)
             {
-                if (other.GetParentRegion() != null)
+                if (other.ParentRegion != null)
                     return false;
             }
-            else if (!ParentRegion.Equals(other.GetParentRegion()))
+            else if (other.ParentRegion == null || !ParentRegion.GetName().Equals(other.ParentRegion.GetName()))
                 return false;
+            if (SensorParams == null)
+            {
+                if (other.SensorParams != null)
+                    return false;
+            }
+            else if (!SensorParams.Equals(other.SensorParams))
+                return false;
+   
             return true;
         }
     }

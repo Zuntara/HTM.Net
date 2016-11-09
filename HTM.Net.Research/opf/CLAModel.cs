@@ -854,7 +854,7 @@ namespace HTM.Net.Research.opf
                 recordNum = this.__numRunCalls;
             }
             IClassifier classifierImpl = classifierLayer.GetClassifier(sensor.GetEncoder(), predictedFieldName);
-            ClassifierResult<double> clResults = classifierImpl.Compute<double>(recordNum: recordNum, patternNonZero: patternNZ.ToArray(),
+            Classification<double> clResults = classifierImpl.Compute<double>(recordNum: recordNum, patternNonZero: patternNZ.ToArray(),
                 classification: classificationIn, learn: needLearning, infer: true);
 
             //        clResults = classifier.getSelf().customCompute(recordNum = recordNum,

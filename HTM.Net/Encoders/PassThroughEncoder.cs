@@ -13,9 +13,11 @@ namespace HTM.Net.Encoders
  *
  * @author wilsondy (from Python original)
  */
+ [Serializable]
     public class PassThroughEncoder<T> : Encoder<T>
     {
 
+        [NonSerialized]
         protected readonly ILog LOGGER = LogManager.GetLogger(typeof(PassThroughEncoder<T>));
 
         protected PassThroughEncoder() { }

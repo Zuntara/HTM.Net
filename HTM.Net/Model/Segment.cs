@@ -3,8 +3,12 @@ using System.Collections.Generic;
 
 namespace HTM.Net.Model
 {
-    public abstract class Segment : IComparable<Segment>
+    [Serializable]
+    public abstract class Segment : Persistable, IComparable<Segment>
     {
+        /** keep it simple */
+        private const long serialVersionUID = 1L;
+
         protected int index;
 
         protected Segment(int index)
@@ -21,27 +25,30 @@ namespace HTM.Net.Model
             return index;
         }
 
-        /// <summary>
-        /// Creates and returns a newly created <see cref="Synapse"/> with the specified source cell, permanence, and index.
-        /// IMPORTANT: 	
-        /// For DistalDendrites, there is only one synapse per pool, so the
-        /// synapse's index doesn't really matter (in terms of tracking its
-        /// order within the pool. In that case, the index is a global counter of all distal dendrite synapses.
-        /// 
-        /// For ProximalDendrites, there are many synapses within a pool, and in
-        /// that case, the index specifies the synapse's sequence order within
-        /// the pool object, and may be referenced by that index.
-        /// </summary>
-        /// <param name="c">the connections state of the temporal memory</param>
-        /// <param name="syns"></param>
-        /// <param name="sourceCell">the source cell which will activate the new {@code Synapse}</param>
-        /// <param name="pool">the new <see cref="Synapse"/>'s pool for bound variables.</param>
-        /// <param name="index">the new <see cref="Synapse"/>'s index.</param>
-        /// <param name="inputIndex">the index of this <see cref="Synapse"/>'s input (source object); be it a Cell or InputVector bit.</param>
-        /// <returns>Created synapse</returns>
+        /**
+        * <p>
+        * Creates and returns a newly created {@link Synapse} with the specified
+        * source cell, permanence, and index.
+        * </p><p>
+        * IMPORTANT: 	<b>This method is only called for Proximal Synapses.</b> For ProximalDendrites, 
+        * 				there are many synapses within a pool, and in that case, the index 
+        * 				specifies the synapse's sequence order within the pool object, and may 
+        * 				be referenced by that index.
+        * </p>
+        * @param c             the connections state of the temporal memory
+        * @param sourceCell    the source cell which will activate the new {@code Synapse}
+        * @param pool		    the new {@link Synapse}'s pool for bound variables.
+        * @param index         the new {@link Synapse}'s index.
+        * @param inputIndex	the index of this {@link Synapse}'s input (source object); be it a Cell or InputVector bit.
+        * 
+        * @return the newly created {@code Synapse}
+        * @see Connections#createSynapse(DistalDendrite, Cell, double)
+        */
         public virtual Synapse CreateSynapse(Connections c, List<Synapse> syns, Cell sourceCell, Pool pool, int index, int inputIndex)
         {
-            throw new NotImplementedException("Must be implemented by derived class!");
+            Synapse s = new Synapse(c, sourceCell, this, pool, index, inputIndex);
+            syns.Add(s);
+            return s;
         }
 
 

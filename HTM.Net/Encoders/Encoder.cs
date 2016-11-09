@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using log4net;
 using Tuple = HTM.Net.Util.Tuple;
@@ -90,9 +91,11 @@ namespace HTM.Net.Encoders
  *
  * </PRE>
  */
-    public abstract class Encoder<T> : IEncoder<T>
+    [Serializable]
+    public abstract class Encoder<T> : Persistable, IEncoder<T>
     {
 
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Encoder<T>));
 
         /** Value used to represent no data */

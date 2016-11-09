@@ -1,4 +1,5 @@
 ﻿using System;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -81,7 +82,7 @@ namespace HTM.Net.Research.Tests.Examples.SpatialPooler
             for (int i = 0; i < 70; i++) Console.Write("-");
             Console.WriteLine();
 
-            sp.Compute(mem, inputArray, activeArray, true, true);
+            sp.Compute(mem, inputArray, activeArray, true);
 
             int[] res = ArrayUtils.Where(activeArray, ArrayUtils.INT_GREATER_THAN_0);
             Console.WriteLine(Arrays.ToString(res));

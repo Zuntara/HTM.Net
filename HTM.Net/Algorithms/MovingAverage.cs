@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using HTM.Net.Model;
 
 namespace HTM.Net.Algorithms
 {
@@ -11,7 +12,8 @@ namespace HTM.Net.Algorithms
  * @author Numenta
  * @author David Ray
  */
-    public class MovingAverage
+    [Serializable]
+    public class MovingAverage : Persistable
     {
             [JsonProperty]
         private Calculation calc;
@@ -34,7 +36,7 @@ namespace HTM.Net.Algorithms
         public MovingAverage(List<double> historicalValues, int windowSize)
             : this(historicalValues, -1, windowSize)
         {
-            
+
         }
 
         /**
@@ -202,6 +204,7 @@ namespace HTM.Net.Algorithms
         /**
          * Container for calculated data
          */
+        [Serializable]
         public class Calculation
         {
             [JsonProperty]

@@ -11,6 +11,7 @@ namespace HTM.Net
      * 
      */
 
+    [Serializable]
     public enum FieldMetaType
     {
         String,
@@ -116,9 +117,9 @@ namespace HTM.Net
         {
             if (input is IConvertible)
             {
-                return (TType) Convert.ChangeType(input, typeof (TType));
+                return (TType)Convert.ChangeType(input, typeof(TType));
             }
-            return (TType) input;
+            return (TType)input;
         }
 
         /**

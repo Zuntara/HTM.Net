@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using HTM.Net.Util;
 
 namespace HTM.Net.Encoders
@@ -7,6 +8,7 @@ namespace HTM.Net.Encoders
      * Tuple to contain the results of an {@link Encoder}'s decoded
      * values.
      */
+ [Serializable]
     public class DecodeResult : DecodeTuple<Map<string, RangeList>, List<string>>
     {
         /**

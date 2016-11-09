@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -12,14 +13,26 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network
 {
+    [Serializable]
     public abstract class BaseRxLayer : BaseLayer
     {
+        [NonSerialized]
         private IDisposable _subscription; //Subscription 
+        [NonSerialized]
         private IObservable<IInference> _userObservable;
-        private readonly List<IObserver<IInference>> _observers = new List<IObserver<IInference>>();
-        private readonly ConcurrentQueue<IObserver<IInference>> _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+        [NonSerialized]
+        protected List<IObserver<IInference>> _observers = new List<IObserver<IInference>>();
+        [NonSerialized]
+        protected ConcurrentQueue<IObserver<IInference>> _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+        [NonSerialized]
         protected Subject<object> Publisher = null;
+        [NonSerialized]
         protected Map<Type, IObservable<ManualInput>> ObservableDispatch = new Map<Type, IObservable<ManualInput>>();// Collections.synchronizedMap(
+
+        [NonSerialized]
+        private CheckPointOperator _checkPointOp;
+        [NonSerialized]
+        protected List<IObserver<byte[]>> _checkPointOpObservers = new List<IObserver<byte[]>>();
 
         protected BaseRxLayer(string name, Network n, Parameters p)
             : base(name, n, p)
@@ -52,10 +65,21 @@ namespace HTM.Net.Network
         /// <returns>this <see cref="ILayer"/>'s output <see cref="IObservable{IInference}"/></returns>
         public override IObservable<IInference> Observe()
         {
+            // This will be called again after the Network is halted so we have to prepare
+            // for rebuild of the Observer chain
+            if (IsHalted())
+            {
+                ClearSubscriberObserverLists();
+            }
+
             if (_userObservable == null)
             {
                 _userObservable = Observable.Create<IInference>(t1 =>
                 {
+                    if (_observers == null)
+                    {
+                        _observers = new List<IObserver<IInference>>();
+                    }
                     _observers.Add(t1);
                     return () => { }; // why is this?
                 });
@@ -75,13 +99,23 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="subscriber">a <see cref="IObserver{IInference}"/> to be notified as data is published.</param>
         /// <returns>A Subscription disposable</returns>
-        public IDisposable Subscribe(IObserver<IInference> subscriber)
+        public override IDisposable Subscribe(IObserver<IInference> subscriber)
         {
+            // This will be called again after the Network is halted so we have to prepare
+            // for rebuild of the Observer chain
+            if (IsHalted())
+            {
+                ClearSubscriberObserverLists();
+            }
+
             if (subscriber == null)
             {
                 throw new InvalidOperationException("Subscriber cannot be null.");
             }
-
+            if (_subscribers == null)
+            {
+                _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+            }
             _subscribers.Enqueue(subscriber);
 
             return CreateSubscription(subscriber);
@@ -196,7 +230,7 @@ namespace HTM.Net.Network
         /// the <see cref="Layer{T}"/> subsribers.
         /// </summary>
         /// <returns></returns>
-        private IObserver<IInference> GetDelegateObserver()
+        protected IObserver<IInference> GetDelegateObserver()
         {
             return Observer.Create<IInference>
                 (
@@ -238,6 +272,7 @@ namespace HTM.Net.Network
         protected void CompleteSequenceDispatch(IObservable<ManualInput> sequence)
         {
             // All subscribers and observers are notified from a single delegate.
+            if (_subscribers == null) _subscribers = new ConcurrentQueue<IObserver<IInference>>();
             _subscribers.Enqueue(GetDelegateObserver());
             _subscription = sequence.Subscribe(GetDelegateSubscriber());
 
@@ -277,6 +312,11 @@ namespace HTM.Net.Network
         {
             IObservable<ManualInput> sequenceStart = null;
 
+            if (ObservableDispatch == null)
+            {
+                ObservableDispatch = CreateDispatchMap();
+            }
+
             if (ObservableDispatch != null)
             {
                 if (t is ManualInput)
@@ -308,7 +348,165 @@ namespace HTM.Net.Network
                 }
             }
 
+            // Insert skip observable operator if initializing with an advanced record number
+            // (i.e. Serialized Network)
+            if (_recordNum > 0 && _skip != -1)
+            {
+                sequenceStart = sequenceStart.Skip(_recordNum + 1);
+
+                int? skipCount;
+                if ((skipCount = (int?)Params.GetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY)) != null) {
+                // No need to "warm up" the SpatialPooler if we're deserializing an SP
+                // that has been running... However "skipCount - recordNum" is there so 
+                // we make sure the Network has run at least long enough to satisfy the 
+                // original requested "primer delay".
+                    Params.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, Math.Max(0, skipCount.GetValueOrDefault() - _recordNum));
+                }
+            }
+
+            sequenceStart = sequenceStart.Where(m=> {
+                if (_checkPointOpObservers.Any() && ParentNetwork != null)
+                {
+                    // Execute check point logic
+                    DoCheckPoint();
+                }
+
+                return true;
+            });
+
             return sequenceStart;
+        }
+
+        /**
+         * Executes the check point logic, handles the return of the serialized byte array
+         * by delegating the call to {@link rx.Observer#onNext(byte[])} of all the currently queued
+         * Observers; then clears the list of Observers.
+         */
+        private void DoCheckPoint()
+        {
+            byte[] bytes = ParentNetwork.InternalCheckPointOp();
+
+            if (bytes != null)
+            {
+                LOGGER.Debug("Layer [" + GetName() + "] checkPointed file: " +
+                    Persistence.Get().GetLastCheckPointFileName());
+            }
+            else
+            {
+                LOGGER.Debug("Layer [" + GetName() + "] checkPoint   F A I L E D   at: " + (new DateTime()));
+            }
+
+            foreach (IObserver<byte[]> o in _checkPointOpObservers)
+            {
+                o.OnNext(bytes);
+                o.OnCompleted();
+            }
+
+            _checkPointOpObservers.Clear();
+        }
+
+        /**
+         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
+         * that stores the state of this {@code Network} while keeping the Network up and running.
+         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
+         * 
+         * @param network   the {@link Network} to check point.
+         * @return  the {@link CheckPointOp} operator 
+         */
+        public override ICheckPointOp<byte[]> GetCheckPointOperator()
+        {
+            if (_checkPointOp == null)
+            {
+                _checkPointOp = new CheckPointOperator(this);
+            }
+            return (ICheckPointOp<byte[]>)_checkPointOp;
+        }
+
+        /**
+        * Clears the subscriber and observer lists so they can be rebuilt
+        * during restart or deserialization.
+        */
+        private void ClearSubscriberObserverLists()
+        {
+            if (_observers == null) _observers = new List<IObserver<IInference>>();
+            /*if (_subscribers == null)*/ _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+           /* _subscribers.Clear();*/
+            _userObservable = null;
+        }
+
+        //////////////////////////////////////////////////////////////
+        //   Inner Class Definition for CheckPointer (Observable)   //
+        //////////////////////////////////////////////////////////////
+
+        /**
+         * <p>
+         * Implementation of the CheckPointOp interface which serves to checkpoint
+         * and register a listener at the same time. The {@link rx.Observer} will be
+         * notified with the byte array of the {@link Network} being serialized.
+         * </p><p>
+         * The layer thread automatically tests for the list of observers to 
+         * contain > 0 elements, which indicates a check point operation should
+         * be executed.
+         * </p>
+         * 
+         * @param <T>       {@link rx.Observer}'s return type
+         */
+        internal class CheckPointOperator : ICheckPointOp<byte[]>
+        {
+            [NonSerialized]
+            private IObservable<byte[]> _instance;
+
+            internal CheckPointOperator(ILayer l)
+            //: this()
+            {
+                _instance = Observable.Create<byte[]>(o =>
+                {
+                    if (l.GetLayerThread() != null)
+                    {
+                        ((BaseRxLayer) l)._checkPointOpObservers.Add(o);
+                    }
+                    else
+                    {
+                        ((BaseRxLayer)l).DoCheckPoint();
+                    }
+                    return Observable.Empty<byte[]>().Subscribe();
+                });
+                //        this(new Observable.OnSubscribe<T>() {
+                //        @SuppressWarnings({ "unchecked" })
+                //            @Override public void call(Subscriber<? super T> r)
+                //    {
+                //        if (l.LAYER_THREAD != null)
+                //        {
+                //            // The layer thread automatically tests for the list of observers to 
+                //            // contain > 0 elements, which indicates a check point operation should
+                //            // be executed.
+                //            l.checkPointOpObservers.add((Observer<byte[]>)r);
+                //        }
+                //        else
+                //        {
+                //            l.doCheckPoint();
+                //        }
+                //    }
+                //});
+            }
+
+            /**
+             * Constructs this {@code CheckPointOperator}
+             * @param f     a subscriber function
+             */
+            //protected CheckPointOperator(rx.Observable.OnSubscribe<T> f)
+            //{
+            //    super(f);
+            //}
+
+            /**
+             * Queues the specified {@link rx.Observer} for notification upon
+             * completion of a check point operation.
+             */
+            public IDisposable CheckPoint(IObserver<byte[]> t)
+            {
+                return _instance.Subscribe(t);
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ namespace HTM.Net.Algorithms
 {
     public interface IClassifier
     {
-        ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNonZero,
+        Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNonZero,
             bool learn, bool infer);
 
         int Verbosity { get; }

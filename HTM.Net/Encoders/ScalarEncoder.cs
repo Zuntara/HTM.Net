@@ -121,8 +121,10 @@ namespace HTM.Net.Encoders
  *
  * @author metaware
  */
+ [Serializable]
     public class ScalarEncoder : Encoder<double>
     {
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(ScalarEncoder));
 
         /**

@@ -17,7 +17,7 @@ namespace HTM.Net.Network
     ///      <li>Bucket Index</li>
     ///      <li>SDR</li>
     ///      <li>Previous SDR</li>
-    ///      <li><see cref="ClassifierResult{T}"/></li>
+    ///      <li><see cref="Classification{T}"/></li>
     ///      <li>anomalyScore</li>
     /// </ul>
     /// </summary>
@@ -28,7 +28,8 @@ namespace HTM.Net.Network
     /// For instance, if the user does not include an <see cref="Encoder{T}"/> in the <see cref="ILayer"/> constructor, 
     /// the slot containing the "Bucket Index" will be empty.
     /// </remarks>
-    public class ManualInput : IInference
+    [Serializable]
+    public class ManualInput : Persistable, IInference
     {
         private int _recordNum;
         /// <summary>
@@ -68,7 +69,7 @@ namespace HTM.Net.Network
         private List<double> _probabilities;
         private List<int> _bestPrototypeIndices;
 
-        private Map<string, ClassifierResult<object>> _classification;
+        private Map<string, Classification<object>> _classification;
         private double _anomalyScore;
         private object _customObject;
 
@@ -287,7 +288,7 @@ namespace HTM.Net.Network
             retVal._feedForwardSparseActives = Arrays.CopyOf(this._feedForwardSparseActives, this._feedForwardSparseActives.Length);
             retVal._previousPredictiveCells = new HashSet<Cell>(this._previousPredictiveCells);
             retVal._predictiveCells = new HashSet<Cell>(this._predictiveCells);
-            retVal._classification = new Map<string, ClassifierResult<object>>(this._classification);
+            retVal._classification = new Map<string, Classification<object>>(this._classification);
             retVal._anomalyScore = this._anomalyScore;
             retVal._customObject = this._customObject;
             retVal._activeCells = new HashSet<Cell>(this._activeCells);
@@ -298,12 +299,12 @@ namespace HTM.Net.Network
         }
 
         /**
-         * Returns the most recent {@link ClassifierResult}
+         * Returns the most recent {@link Classification}
          * 
          * @param fieldName
          * @return
          */
-        public ClassifierResult<object> GetClassification(string fieldName)
+        public Classification<object> GetClassification(string fieldName)
         {
             return _classification[fieldName];
         }
@@ -314,11 +315,11 @@ namespace HTM.Net.Network
         /// <param name="fieldName"></param>
         /// <param name="classification"></param>
         /// <returns></returns>
-        public ManualInput StoreClassification(string fieldName, ClassifierResult<object> classification)
+        public ManualInput StoreClassification(string fieldName, Classification<object> classification)
         {
             if (this._classification == null)
             {
-                this._classification = new Map<string, ClassifierResult<object>>();
+                this._classification = new Map<string, Classification<object>>();
             }
             this._classification.Add(fieldName, classification);
             return this;
@@ -446,6 +447,119 @@ namespace HTM.Net.Network
             SetPreviousPredictiveCells(_predictiveCells);
             _predictiveCells = cells;
             return this;
+        }
+
+        #region Implementation of IPersistable<IInference>
+
+        public override object PostDeSerialize(object manualInput)
+        {
+            ManualInput mi = (ManualInput)manualInput;
+
+            ManualInput retVal = new ManualInput();
+            retVal._activeCells = mi._activeCells;
+            retVal._anomalyScore = mi._anomalyScore;
+            retVal._classification = mi._classification;
+            retVal._classifierInput = mi._classifierInput;
+            retVal._classifiers = mi._classifiers;
+            retVal._customObject = mi._customObject;
+            retVal._encoding = mi._encoding;
+            retVal._feedForwardActiveColumns = mi._feedForwardActiveColumns;
+            retVal._feedForwardSparseActives = mi._feedForwardSparseActives;
+            retVal._layerInput = mi._layerInput;
+            retVal._predictiveCells = mi._predictiveCells;
+            retVal._previousPredictiveCells = mi._previousPredictiveCells;
+            retVal._sdr = mi._sdr;
+
+            return retVal;
+        }
+
+        #endregion
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + ((_activeCells == null) ? 0 : _activeCells.GetHashCode());
+            long temp;
+            temp = BitConverter.DoubleToInt64Bits(_anomalyScore);
+            result = prime * result + (int)(temp ^ (temp >> 32));
+            result = prime * result + ((_classification == null) ? 0 : _classification.GetHashCode());
+            result = prime * result + ((_classifierInput == null) ? 0 : _classifierInput.GetHashCode());
+            result = prime * result + ((_computeCycle == null) ? 0 : _computeCycle.GetHashCode());
+            result = prime * result + Arrays.GetHashCode(_encoding);
+            result = prime * result + Arrays.GetHashCode(_feedForwardActiveColumns);
+            result = prime * result + Arrays.GetHashCode(_feedForwardSparseActives);
+            result = prime * result + ((_predictiveCells == null) ? 0 : _predictiveCells.GetHashCode());
+            result = prime * result + ((_previousPredictiveCells == null) ? 0 : _previousPredictiveCells.GetHashCode());
+            result = prime * result + _recordNum;
+            result = prime * result + Arrays.GetHashCode(_sdr);
+            return result;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (!typeof(IInference).IsAssignableFrom(obj.GetType()))
+                return false;
+            ManualInput other = (ManualInput)obj;
+            if (_activeCells == null)
+            {
+                if (other._activeCells != null)
+                    return false;
+            }
+            else if (!_activeCells.Equals(other._activeCells))
+                return false;
+            if (BitConverter.DoubleToInt64Bits(_anomalyScore) != BitConverter.DoubleToInt64Bits(other._anomalyScore))
+                return false;
+            if (_classification == null)
+            {
+                if (other._classification != null)
+                    return false;
+            }
+            else if (!_classification.Equals(other._classification))
+                return false;
+            if (_classifierInput == null)
+            {
+                if (other._classifierInput != null)
+                    return false;
+            }
+            else if (!_classifierInput.Equals(other._classifierInput))
+                return false;
+            if (_computeCycle == null)
+            {
+                if (other._computeCycle != null)
+                    return false;
+            }
+            else if (!_computeCycle.Equals(other._computeCycle))
+                return false;
+            if (!Arrays.AreEqual(_encoding, other._encoding) && _encoding != null && other._encoding != null)
+                return false;
+            if (!Arrays.AreEqual(_feedForwardActiveColumns, other._feedForwardActiveColumns) && _feedForwardActiveColumns != null && other._feedForwardActiveColumns != null)
+                return false;
+            if (!Arrays.AreEqual(_feedForwardSparseActives, other._feedForwardSparseActives) && _feedForwardSparseActives != null && other._feedForwardSparseActives != null)
+                return false;
+            if (_predictiveCells == null)
+            {
+                if (other._predictiveCells != null)
+                    return false;
+            }
+            else if (!_predictiveCells.Equals(other._predictiveCells))
+                return false;
+            if (_previousPredictiveCells == null)
+            {
+                if (other._previousPredictiveCells != null)
+                    return false;
+            }
+            else if (!_previousPredictiveCells.Equals(other._previousPredictiveCells))
+                return false;
+            if (_recordNum != other._recordNum)
+                return false;
+            if (!Arrays.AreEqual(_sdr, other._sdr) && _sdr != null && other._sdr != null)
+                return false;
+            return true;
         }
 
         /// <summary>

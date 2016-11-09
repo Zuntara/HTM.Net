@@ -1,27 +1,37 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
+using log4net;
 
 namespace HTM.Net.Network
 {
     /// <summary>
     /// Contains the Base properties of a layer
     /// </summary>
-    public abstract class BaseLayer : ILayer
+    [Serializable]
+    public abstract class BaseLayer : Persistable, ILayer
     {
+        [NonSerialized]
+        protected static ILog LOGGER = LogManager.GetLogger(typeof(BaseLayer));
         /// <summary>
         /// Gets or sets the layer's current thread
         /// </summary>
+        [NonSerialized]
         protected Task LayerThread;
 
         protected LayerMask AlgoContentMask = 0;
-
-        private int _recordNum = -1;
+        /** Used to track and document the # of records processed */
+        protected int _recordNum = -1;
+        /** Keeps track of number of records to skip on restart */
+        protected int _skip = -1;
         protected string Name;
         protected bool IsLearn = true;
         protected bool _isClosed;
@@ -30,6 +40,7 @@ namespace HTM.Net.Network
         protected Region ParentRegion;
 
         protected Parameters Params;
+        protected SensorParams SensorParams;
         protected Connections Connections;
         protected IHTMSensor Sensor;
         protected MultiEncoder Encoder;
@@ -37,6 +48,8 @@ namespace HTM.Net.Network
         protected TemporalMemory TemporalMemory;
         protected bool? AutoCreateClassifiers;
         protected Anomaly AnomalyComputer;
+
+        protected bool _isPostSerialized;
 
         /**
         * Creates a new {@code Layer} using the specified {@link Parameters}
@@ -81,6 +94,22 @@ namespace HTM.Net.Network
             Connections = new Connections();
 
             InitializeMask();
+
+            if (LOGGER.IsDebugEnabled)
+            {
+                LOGGER.DebugFormat("Layer successfully created containing: {0}{1}{2}{3}{4}",
+                    (Encoder == null ? "" : "MultiEncoder,"),
+                    (SpatialPooler == null ? "" : "SpatialPooler,"),
+                    (TemporalMemory == null ? "" : "TemporalMemory,"),
+                    (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."),
+                    (AnomalyComputer == null ? "" : "Anomaly"));
+            }
+        }
+
+        public override object PreSerialize()
+        {
+            _isPostSerialized = false;
+            return this;
         }
 
         /// <summary>
@@ -107,12 +136,45 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
+        /// Returns the parent network
+        /// </summary>
+        /// <returns></returns>
+        public Network GetNetwork()
+        {
+            return ParentNetwork;
+        }
+
+        /**
+         * USED INTERNALLY, DO NOT CALL.
+         * @return
+         */
+        public ICheckPointOp<byte[]> DelegateCheckPointCall()
+        {
+            if (ParentNetwork != null)
+            {
+                return ParentNetwork.GetCheckPointOperator();
+            }
+            return null;
+        }
+
+        
+
+        /// <summary>
         /// Sets the parent region which contains this <see cref="Layer{T}"/>
         /// </summary>
         /// <param name="r"></param>
         public void SetRegion(Region r)
         {
             ParentRegion = r;
+        }
+
+        /// <summary>
+        /// Returns the parent region
+        /// </summary>
+        /// <returns></returns>
+        public Region GetRegion()
+        {
+            return ParentRegion;
         }
 
         /// <summary>
@@ -139,12 +201,12 @@ namespace HTM.Net.Network
             {
                 return ParentNetwork.GetTail().GetTail().GetLayerThread();
             }
-            
+
             throw new InvalidOperationException("No thread found?");
         }
 
         /// <summary>
-        /// Returns the<see cref="Net.Connections"/> object being used as the structural matrix and state.
+        /// Returns the<see cref="Model.Connections"/> object being used as the structural matrix and state.
         /// </summary>
         /// <returns></returns>
         public Connections GetMemory()
@@ -177,11 +239,18 @@ namespace HTM.Net.Network
         /// cannot be accessed again.
         /// </summary>
         public abstract void Start();
+
+        public abstract void Restart(bool startAtIndex);
+
         /// <summary>
         /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
         /// </summary>
         public abstract void Halt();
+
+        public abstract bool IsHalted();
         public abstract IObservable<IInference> Observe();
+        public abstract IDisposable Subscribe(IObserver<IInference> subscriber);
+
         public abstract ILayer Close();
 
         /// <summary>
@@ -304,9 +373,9 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
-        /// Returns the <see cref="Net.Connections"/> object being used by this <see cref="ILayer"/>
+        /// Returns the <see cref="Model.Connections"/> object being used by this <see cref="ILayer"/>
         /// </summary>
-        /// <returns>this <see cref="ILayer"/>'s <see cref="Net.Connections"/></returns>
+        /// <returns>this <see cref="ILayer"/>'s <see cref="Model.Connections"/></returns>
         public Connections GetConnections()
         {
             return Connections;
@@ -367,7 +436,7 @@ namespace HTM.Net.Network
             Name = name;
             return this;
         }
-        
+
         /// <summary>
         /// Returns the String identifier of this <see cref="ILayer"/>
         /// </summary>
@@ -517,5 +586,7 @@ namespace HTM.Net.Network
         /// of insertion within the <see cref="ILayer"/>'s declaration.</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
         public abstract ILayer Add(Func<ManualInput, ManualInput> func);
+
+        public abstract ICheckPointOp<byte[]> GetCheckPointOperator();
     }
 }

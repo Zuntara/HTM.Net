@@ -1,5 +1,6 @@
 ﻿using System;
 using HTM.Net.Algorithms;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
@@ -382,12 +383,12 @@ namespace HTM.Net.Tests.Util
         [TestMethod]
         public void TestCalculateOverlap()
         {
-            DoTestCalculateOverlap(new SparseMatrix(this.dimensions[0], dimensions[1]));
+            DoTestCalculateOverlap(Matrix<float>.Build.Sparse(dimensions[0], dimensions[1]));
             //doTestCalculateOverlap(new LowMemorySparseBinaryMatrix(this.dimensions));
             //doTestCalculateOverlap(new FastConnectionsMatrix(this.dimensions));
         }
 
-        private void DoTestCalculateOverlap(SparseMatrix sm)
+        private void DoTestCalculateOverlap(Matrix<float> sm)
         {
             SetupParameters();
             parameters.SetInputDimensions(new int[] { 10 });
@@ -399,13 +400,13 @@ namespace HTM.Net.Tests.Util
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 3.0);
             InitSp();
 
-            int[][] connectedSynapses =
+            float[][] connectedSynapses =
             {
-                new[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
-                new[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+                new float[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+                new float[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
             };
 
             for (int i = 0; i < sm.RowCount; i++)
@@ -454,8 +455,8 @@ namespace HTM.Net.Tests.Util
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             parameters.SetParameterByKey(Parameters.KEY.SEED, 42);

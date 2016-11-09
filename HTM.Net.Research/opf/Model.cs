@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
 using log4net;

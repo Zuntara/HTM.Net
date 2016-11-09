@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Util;
@@ -10,8 +11,11 @@ namespace HTM.Net.Model
     /// to a {@code Pool} to retrieve relevant values.In addition, that same pool can be referenced from the Connections object externally 
     /// which will update the Synapse's internal reference.
     /// </summary>
-    public class Pool
+    [Serializable]
+    public class Pool : Persistable
     {
+        /** keep it simple */
+        private const long serialVersionUID = 1L;
         private readonly int _size;
 
         /** Allows fast removal of connected synapse indexes. */
@@ -35,10 +39,7 @@ namespace HTM.Net.Model
          */
         public double GetPermanence(Synapse s)
         {
-            lock (_synapsesBySourceIndex)
-            {
-                return _synapsesBySourceIndex[s.GetInputIndex()].GetPermanence();
-            }
+            return _synapsesBySourceIndex.Get(s.GetInputIndex()).GetPermanence();
         }
 
         /**
@@ -48,7 +49,6 @@ namespace HTM.Net.Model
          */
         public void SetPermanence(Connections c, Synapse s, double permanence)
         {
-            UpdatePool(c, s, permanence);
             s.SetPermanence(c, permanence);
         }
 
@@ -61,7 +61,6 @@ namespace HTM.Net.Model
         public void UpdatePool(Connections c, Synapse s, double permanence)
         {
             int inputIndex = s.GetInputIndex();
-
             //Synapse foundSynapse;
             lock (_synapsesBySourceIndex)
             {
@@ -72,7 +71,7 @@ namespace HTM.Net.Model
             }
             lock (_synapseConnections)
             {
-                if (permanence > c.GetSynPermConnected())
+                if (permanence >= c.GetSynPermConnected())
                 {
                     _synapseConnections.Add(inputIndex);
                 }
@@ -82,6 +81,20 @@ namespace HTM.Net.Model
                         _synapseConnections.RemoveAt(inputIndex);
                 }
             }
+
+            //int inputIndex = s.GetInputIndex();
+            //if (_synapsesBySourceIndex.Get(inputIndex) == null)
+            //{
+            //    _synapsesBySourceIndex[inputIndex] = s;
+            //}
+            //if (permanence >= c.GetSynPermConnected())
+            //{
+            //    _synapseConnections.Add(inputIndex);
+            //}
+            //else
+            //{
+            //    _synapseConnections.Remove(inputIndex);
+            //}
         }
 
         /**
@@ -90,10 +103,7 @@ namespace HTM.Net.Model
          */
         public void ResetConnections()
         {
-            lock (_synapseConnections)
-            {
-                _synapseConnections.Clear();
-            }
+            _synapseConnections.Clear();
         }
 
         /**
@@ -105,10 +115,7 @@ namespace HTM.Net.Model
          */
         public Synapse GetSynapseWithInput(int inputIndex)
         {
-            lock (_synapsesBySourceIndex)
-            {
-                return _synapsesBySourceIndex[inputIndex];
-            }
+            return _synapsesBySourceIndex.Get(inputIndex);
         }
 
         /**
@@ -143,33 +150,40 @@ namespace HTM.Net.Model
         }
 
         /**
-         * Returns an array of input bit indexes indicating the index of the source. 
-         * (input vector bit or lateral cell)
-         * @return the sparse array
-         */
-        public int[] GetSparseConnections()
+     * Returns an array of input bit indexes indicating the index of the source. 
+     * (input vector bit or lateral cell)
+     * @return the sparse array
+     */
+        public int[] GetSparsePotential()
         {
-            int[] keys = ArrayUtils.Reverse(_synapsesBySourceIndex.Keys.ToArray());
-            return keys;
+            return ArrayUtils.Reverse(_synapsesBySourceIndex.Keys.ToArray());
         }
 
         /**
-         * Returns a dense array representing the potential pool bits
-         * with the connected bits set to 1. 
-         * 
-         * Note: Only called from tests for now...
-         * @param c
-         * @return
+         * Returns a dense binary array containing 1's where the input bits are part
+         * of this pool.
+         * @param c     the {@link Connections}
+         * @return  dense binary array of member inputs
          */
-        public int[] GetDenseConnections(Connections c)
+        public int[] GetDensePotential(Connections c)
         {
-            int[] retVal = new int[c.GetNumInputs()];
-            //for (int inputIndex : synapseConnections.ToArray())
-            foreach (int inputIndex in _synapseConnections)
-            {
-                retVal[inputIndex] = 1;
-            }
-            return retVal;
+            return ArrayUtils.Range(0, c.GetNumInputs())
+                .Select(i=>_synapsesBySourceIndex.ContainsKey(i) ? 1 : 0)
+                .ToArray();
+        }
+
+        /**
+         * Returns an binary array whose length is equal to the number of inputs;
+         * and where 1's are set in the indexes of this pool's assigned bits.
+         * 
+         * @param   c   {@link Connections}
+         * @return the sparse array
+         */
+        public int[] GetDenseConnected(Connections c)
+        {
+            return ArrayUtils.Range(0, c.GetNumInputs())
+                .Select(i=>_synapseConnections.Contains(i) ? 1 : 0)
+                .ToArray();
         }
 
         /**
@@ -182,8 +196,7 @@ namespace HTM.Net.Model
         {
             _synapseConnections.Remove(synapse.GetInputIndex());
             _synapsesBySourceIndex.Remove(synapse.GetInputIndex());
-            if (synapse.GetSegment<DistalDendrite>() != null)
-            {
+            if (synapse.GetSegment() is DistalDendrite) {
                 Destroy();
             }
         }
@@ -197,6 +210,45 @@ namespace HTM.Net.Model
             _synapsesBySourceIndex.Clear();
             _synapseConnections = null;
             _synapsesBySourceIndex = null;
+        }
+
+        public override int GetHashCode()
+        {
+            const int prime = 31;
+            int result = 1;
+            result = prime * result + _size;
+            result = prime * result + ((_synapseConnections == null) ? 0 : _synapseConnections.ToString().GetHashCode());
+            result = prime * result + ((_synapsesBySourceIndex == null) ? 0 : _synapsesBySourceIndex.ToString().GetHashCode());
+            return result;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (GetType() != obj.GetType())
+                return false;
+            Pool other = (Pool)obj;
+            if (_size != other._size)
+                return false;
+            if (_synapseConnections == null)
+            {
+                if (other._synapseConnections != null)
+                    return false;
+            }
+            else if ((!_synapseConnections.SequenceEqual(other._synapseConnections) ||
+              !other._synapseConnections.SequenceEqual(_synapseConnections)))
+                return false;
+            if (_synapsesBySourceIndex == null)
+            {
+                if (other._synapsesBySourceIndex != null)
+                    return false;
+            }
+            else if (!_synapsesBySourceIndex.ToString().Equals(other._synapsesBySourceIndex.ToString()))
+                return false;
+            return true;
         }
     }
 }

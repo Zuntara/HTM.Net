@@ -10,3 +10,14 @@
 
 <a name="needHelp"></a>
 ### Your help is needed! [HTM.Net needs you!](https://github.com/zuntara/htm.net/wiki/We-need-you!)
+
+### Roadmap
+
+- Add saving and loading of the network
+- Add taurus application as example
+- Add vision support
+- Add swarming support
+- Add multi region support with connections inbetween them
+
+
+

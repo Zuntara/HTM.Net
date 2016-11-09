@@ -1,5 +1,6 @@
 ﻿using System;
 using HTM.Net.Algorithms;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -139,7 +140,7 @@ namespace HTM.Net.Tests
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ArgumentException), e.GetType());
-                Assert.AreEqual("Can not set Parameters Property 'synPermActiveInc' because of value '2,00' not in range. Range[0,00-1,00]", e.Message);
+                Assert.AreEqual("Can not set Parameters Property 'synPermActiveInc' because of value '2.00' not in range. Range[0.00-1.00]", e.Message);
             }
 
             try
@@ -182,7 +183,7 @@ namespace HTM.Net.Tests
         public void TestSize()
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
-            Assert.AreEqual(66, @params.Size());
+            Assert.AreEqual(69, @params.Size());
         }
 
         [TestMethod]
@@ -190,7 +191,7 @@ namespace HTM.Net.Tests
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
             Assert.IsNotNull(@params.Keys());
-            Assert.AreEqual(66, @params.Keys().Count);
+            Assert.AreEqual(69, @params.Keys().Count);
         }
 
         [TestMethod]

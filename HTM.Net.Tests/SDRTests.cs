@@ -19,7 +19,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] expectedIndexes = { 0, 3, 4, 16383 };
             HashSet<Cell> cells = cn.GetCellSet(expectedIndexes);
@@ -85,7 +85,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] expectedIndexes = { 0, 3, 4, 4095 };
             int[] inputIndices = expectedIndexes.Select(i=>i * cn.GetCellsPerColumn()).ToArray();
@@ -103,7 +103,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] expectedIndexes = { 0, 3, 4, 4095 };
             int[] inputIndices = expectedIndexes.Select(i=>i * cn.GetCellsPerColumn()).ToArray();

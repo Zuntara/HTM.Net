@@ -11,6 +11,7 @@ namespace HTM.Net.Util
  * 
  * @author David Ray
  */
+    [Serializable]
     public class NamedTuple : Tuple
     {
         private readonly Bucket[] _entries;
@@ -224,6 +225,7 @@ namespace HTM.Net.Util
         /**
          * Encapsulates the hashed key/value pair in a linked node.
          */
+        [Serializable]
         private sealed class Entry
         {
             internal readonly string Key;
@@ -303,6 +305,7 @@ namespace HTM.Net.Util
          * Rudimentary (light-weight) Linked List implementation for storing
          * hash {@link Entry} collisions.
          */
+        [Serializable]
         private sealed class Bucket
         {
             Entry _last;
@@ -327,7 +330,8 @@ namespace HTM.Net.Util
                 {
                     _last = e;
                 }
-                else {
+                else
+                {
                     e.Prev = _last;
                     _last = e;
                 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using HTM.Net.Util;
 
 namespace HTM.Net.Encoders
@@ -10,6 +11,7 @@ namespace HTM.Net.Encoders
      * the verbosity at the instantiation site.
      * 
      */
+    [Serializable]
     public class RangeList : RangeTuple<List<MinMax>, string>
     {
         /**
@@ -21,7 +23,7 @@ namespace HTM.Net.Encoders
         public RangeList(List<MinMax> l, string s)
             : base(l, s)
         {
-            
+
         }
 
         /**
@@ -80,7 +82,7 @@ namespace HTM.Net.Encoders
         {
             get { return l.Count; }
         }
-        
+
         /**
          * {@inheritDoc}
          */

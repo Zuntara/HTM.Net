@@ -15,7 +15,8 @@ namespace HTM.Net.Network.Sensor
     /// or <see cref="Publisher"/> from this library.
     /// </summary>
     /// <typeparam name="T">the resource type to retrieve (i.e. <see cref="FileInfo"/>, <see cref="Uri"/>, <see cref="IObservable{T}"/></typeparam>
-    public abstract class Sensor<T> : ISensor
+     [Serializable]
+    public abstract class Sensor<T> : Persistable, ISensor
     {
         /// <summary>
         /// <p>Creates and returns the <see cref="Sensor"/> subtype indicated by the method reference passed in for the SensorFactory <see cref="Func{SensorParams, Sensor{T}}"/>
@@ -44,7 +45,7 @@ namespace HTM.Net.Network.Sensor
         /// to initialize the different types of Sensors with
         /// their resource location or source object.
         /// </summary>
-        public abstract SensorParams GetParams();
+        public abstract SensorParams GetSensorParams();
 
         /**
          * Returns the configured {@link Stream} if this is of
@@ -68,7 +69,7 @@ namespace HTM.Net.Network.Sensor
 
     public interface ISensor
     {
-        SensorParams GetParams();
+        SensorParams GetSensorParams();
         IMetaStream GetInputStream();
         IValueList GetMetaInfo();
         void InitEncoder(Parameters parameters);

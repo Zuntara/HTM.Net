@@ -18,7 +18,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 2048 });
             cn.SetCellsPerColumn(5);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             Assert.AreEqual(0, cn.GetCell(0).GetColumn().GetIndex());
             Assert.AreEqual(0, cn.GetCell(4).GetColumn().GetIndex());
@@ -33,7 +33,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             Assert.AreEqual(0, cn.GetCell(0).GetColumn().GetIndex());
             Assert.AreEqual(0, cn.GetCell(3).GetColumn().GetIndex());
@@ -48,7 +48,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] expectedIndexes = { 0, 3, 4, 16383 };
             HashSet<Cell> cells = cn.GetCellSet(expectedIndexes);
@@ -68,7 +68,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] expectedIndexes = { 0, 3, 4, 4095 };
             HashSet<Column> columns = cn.GetColumnSet(expectedIndexes);
@@ -88,7 +88,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] indexes = { 0, 3, 4, 16383 };
             HashSet<int> idxSet = new HashSet<int>(indexes);
@@ -105,7 +105,7 @@ namespace HTM.Net.Tests
             Connections cn = new Connections();
             cn.SetColumnDimensions(new[] { 64, 64 });
             cn.SetCellsPerColumn(4);
-            tm.Init(cn);
+            TemporalMemory.Init(cn);
 
             int[] indexes = { 0, 3, 4, 4095 };
             HashSet<int> idxSet = new HashSet<int>(indexes);
@@ -131,7 +131,7 @@ namespace HTM.Net.Tests
             Connections con = new Connections();
             p.Apply(con);
             TemporalMemory tm = new TemporalMemory();
-            tm.Init(con);
+            TemporalMemory.Init(con);
 
             for (int x = 0; x < 602; x++)
             {
@@ -164,8 +164,8 @@ namespace HTM.Net.Tests
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             parameters.SetParameterByKey(Parameters.KEY.SEED, 42);

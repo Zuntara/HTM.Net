@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 
 namespace HTM.Net.Monitor
@@ -340,8 +341,8 @@ namespace HTM.Net.Monitor
                 new HashSet<int>(Connections.AsCellIndexes(cnx.GetActiveCells())));
             ((IndicesTrace)getTraceMap().Get("activeColumns")).items.Add(new HashSet<int>(activeColumns));
             //Arrays.stream(activeColumns).boxed().collect(Collectors.toCollection(HashSet::new)));
-            ((CountsTrace)getTraceMap().Get("numSegments")).items.Add(cnx.GetSegmentCount());
-            ((CountsTrace)getTraceMap().Get("numSynapses")).items.Add(cnx.GetSynapseCount());
+            ((CountsTrace)getTraceMap().Get("numSegments")).items.Add(cnx.GetNumSegments());
+            ((CountsTrace)getTraceMap().Get("numSynapses")).items.Add((int)(cnx.GetNumSynapses() ^ (cnx.GetNumSynapses() >> 32)));
             ((StringsTrace)getTraceMap().Get("sequenceLabels")).items.Add(sequenceLabel);
             ((BoolsTrace)getTraceMap().Get("resets")).items.Add(resetActive());
 

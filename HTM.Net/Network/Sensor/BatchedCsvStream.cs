@@ -1009,8 +1009,10 @@ namespace HTM.Net.Network.Sensor
     /// Defines a CSV stream that reads CSV files
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Serializable]
     public class BatchedCsvStream<T> : IMetaStream
     {
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(BatchedCsvStream<T>));
 
         private readonly int _headerLength;
@@ -1129,7 +1131,7 @@ namespace HTM.Net.Network.Sensor
                 retVal[0] = i++.ToString();
                 return retVal;
             });
-          
+
             //_contentStream = stream;
 
             //for (int i = 0; i < _contents.Count; i++)
@@ -1246,6 +1248,7 @@ namespace HTM.Net.Network.Sensor
 
         #endregion
 
+        [Serializable]
         public class BatchedCsvHeader<THeaderLine> : IValueList
         {
             /// <summary>

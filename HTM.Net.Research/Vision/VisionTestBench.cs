@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using HTM.Net.Algorithms;
+using HTM.Net.Model;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.Vision
@@ -116,7 +117,7 @@ namespace HTM.Net.Research.Vision
                     int j = trainingPair.Key;
                     var trainingVector = trainingPair.Value;
 
-                    sp.Compute(_connections, trainingVector, activeArray, true, true);
+                    sp.Compute(_connections, trainingVector, activeArray, true);
                     // Build a list of indexes corresponding to each SDR
                     var activeList = activeArray.ToArray();
                     if (!SDRs.Any(ip => ip.SequenceEqual(activeList)))
@@ -179,7 +180,7 @@ namespace HTM.Net.Research.Vision
             {
                 int j = testPair.Key;
                 var testVector = testPair.Value;
-                sp.Compute(_connections, testVector, activeArray, learn, learn);
+                sp.Compute(_connections, testVector, activeArray, learn);
                 // Build a list of indexes corresponding to each SDR
                 var activeList = activeArray.ToArray();
                 if (!SDRs.Any(ip => ip.SequenceEqual(activeList)))

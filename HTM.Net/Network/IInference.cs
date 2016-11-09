@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
 using HTM.Net.Util;
@@ -12,7 +13,7 @@ namespace HTM.Net.Network
  * various stages in the sequence of calculations a Layer may contain.
  * 
  */
-    public interface IInference
+    public interface IInference : IPersistable
     {
         /**
          * Returns the input record sequence number associated with 
@@ -71,11 +72,11 @@ namespace HTM.Net.Network
         int[] GetEncoding();
 
         /// <summary>
-        /// Returns the most recent <see cref="ClassifierResult{T}"/>
+        /// Returns the most recent <see cref="Classification{T}"/>
         /// </summary>
         /// <param name="fieldName"></param>
         /// <returns></returns>
-        ClassifierResult<object> GetClassification(string fieldName);
+        Classification<object> GetClassification(string fieldName);
         /// <summary>
         /// Returns the most recent anomaly calculation.
         /// </summary>

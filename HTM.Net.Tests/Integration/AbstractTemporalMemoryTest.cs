@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using HTM.Net.Algorithms;
 using HTM.Net.Datagen;
+using HTM.Net.Model;
 using HTM.Net.Monitor;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -26,7 +27,7 @@ namespace HTM.Net.Tests.Integration
             parameters.Apply(connections);
 
             temporalMemory = new TemporalMemory();
-            temporalMemory.Init(connections);
+            TemporalMemory.Init(connections);
             tm = new MonitoredTemporalMemory(temporalMemory, connections);
 
             this.patternMachine = pm;

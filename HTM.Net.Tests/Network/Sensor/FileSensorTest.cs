@@ -18,8 +18,8 @@ namespace HTM.Net.Tests.Network.Sensor
             Sensor<FileInfo> sensor = Sensor<FileInfo>.Create(FileSensor.Create, parms);
 
             Assert.IsNotNull(sensor);
-            Assert.IsNotNull(sensor.GetParams());
-            SensorParams sp = sensor.GetParams();
+            Assert.IsNotNull(sensor.GetSensorParams());
+            SensorParams sp = sensor.GetSensorParams();
             Assert.AreEqual("some name", sp.Get("FILE"));
             Assert.AreEqual(null, sp.Get("NAME"));
             Assert.AreEqual(ResourceLocator.Path(typeof(Resources), "rec-center-hourly.csv"), sp.Get("PATH"));
@@ -27,8 +27,8 @@ namespace HTM.Net.Tests.Network.Sensor
             Sensor<FileInfo> sensor2 = Sensor< FileInfo>.Create(FileSensor.Create,SensorParams.Create(SensorParams.Keys.Path, n));
 
             Assert.IsNotNull(sensor2);
-            Assert.IsNotNull(sensor2.GetParams());
-            sp = sensor2.GetParams();
+            Assert.IsNotNull(sensor2.GetSensorParams());
+            sp = sensor2.GetSensorParams();
             Assert.AreEqual("some name", sp.Get("FILE"));
             Assert.AreEqual(null, sp.Get("NAME"));
             Assert.AreEqual(ResourceLocator.Path(typeof(Resources), "rec-center-hourly.csv"), sp.Get("PATH"));

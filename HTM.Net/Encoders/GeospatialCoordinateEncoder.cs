@@ -4,6 +4,7 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
 {
+    [Serializable]
     public class GeospatialCoordinateEncoder : CoordinateEncoder
     {
 

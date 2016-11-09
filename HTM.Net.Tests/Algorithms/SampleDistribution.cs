@@ -1,4 +1,4 @@
-using HTM.Net.Util;
+﻿using HTM.Net.Util;
 
 namespace HTM.Net.Tests.Algorithms
 {
@@ -28,6 +28,14 @@ namespace HTM.Net.Tests.Algorithms
             return sample;
         }
 
+        /**
+         * Return the next distributed value with the specified
+         * mean and variance.
+         * 
+         * @param aMean         the centered location
+         * @param aVariance     the 
+         * @return
+         */
         private double GetGaussian(IRandom random, double mean, double variance)
         {
             return mean + random.NextGaussian() * variance;

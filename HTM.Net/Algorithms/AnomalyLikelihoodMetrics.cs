@@ -1,4 +1,6 @@
-﻿using HTM.Net.Util;
+﻿using System;
+using HTM.Net.Model;
+using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
 {
@@ -10,7 +12,8 @@ namespace HTM.Net.Algorithms
  * @see AnomalyLikelihood
  * @see AnomalyLikelihoodTest
  */
-    public class AnomalyLikelihoodMetrics
+    [Serializable]
+    public class AnomalyLikelihoodMetrics : Persistable
     {
         private readonly AnomalyLikelihood.AnomalyParams _params;
         private Anomaly.AveragedAnomalyRecordList _aggRecordList;

@@ -3,24 +3,25 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network.Sensor
 {
-    /**
- * <p>
- * Implementation of named parameter tuples that is tightly
- * keyed to only known keys in order to assist with proper
- * formation and auto creation within a <see cref="Network"/>.
- * </p>
- * <p>
- * To retrieve a {@code Keys.Args} from this {@code SensorParams}
- * for the purpose of construction follow this pattern for usage:
- * <p>
- * <pre>
- *  Object[] n = { "rec-center-hourly", ResourceLocator.locate("rec-center-hourly") };
-    SensorParams parms = SensorParams.create(Keys::uri, n); // May be (Keys::path, Keys::obs) also
- * </pre>
- * 
- * 
- * @author David Ray
- */
+        /**
+     * <p>
+     * Implementation of named parameter tuples that is tightly
+     * keyed to only known keys in order to assist with proper
+     * formation and auto creation within a <see cref="Network"/>.
+     * </p>
+     * <p>
+     * To retrieve a {@code Keys.Args} from this {@code SensorParams}
+     * for the purpose of construction follow this pattern for usage:
+     * <p>
+     * <pre>
+     *  Object[] n = { "rec-center-hourly", ResourceLocator.locate("rec-center-hourly") };
+        SensorParams parms = SensorParams.create(Keys::uri, n); // May be (Keys::path, Keys::obs) also
+     * </pre>
+     * 
+     * 
+     * @author David Ray
+     */
+    [Serializable]
     public class SensorParams : NamedTuple
     {
         /**

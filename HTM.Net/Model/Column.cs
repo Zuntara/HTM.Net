@@ -5,7 +5,8 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Model
 {
-    public class Column : IComparable<Column>
+    [Serializable]
+    public class Column : Persistable, IComparable<Column>
     {
         /// <summary>
         /// The flat non-topological index of this column

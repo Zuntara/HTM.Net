@@ -42,10 +42,10 @@ namespace HTM.Net.Encoders
      * @see EncoderResult
      * @see Parameters
      */
+    [Serializable]
     public class CategoryEncoder : Encoder<string>
     {
-
-
+        [NonSerialized]
         private static readonly ILog LOG = LogManager.GetLogger(typeof(CategoryEncoder));
 
         protected int ncategories;
@@ -167,7 +167,8 @@ namespace HTM.Net.Encoders
             {
                 val = "<missing>";
             }
-            else {
+            else
+            {
                 value = categoryToIndex[input];
                 value = value == 0 ? 0 : value;
                 scalarEncoder.EncodeIntoArray(value, output);
@@ -230,7 +231,8 @@ namespace HTM.Net.Encoders
             {
                 fieldName = string.Format("{0}.{1}", parentFieldName, name);
             }
-            else {
+            else
+            {
                 fieldName = name;
             }
 

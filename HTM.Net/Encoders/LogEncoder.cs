@@ -38,8 +38,10 @@ namespace HTM.Net.Encoders
      *                 than maxval will be clipped to minval/maxval
      *   forced -- (default False), if True, skip some safety checks
      */
+    [Serializable]
     public class LogEncoder : Encoder<double>
     {
+        [NonSerialized]
         private static readonly ILog LOG = LogManager.GetLogger(typeof(LogEncoder));
 
         private ScalarEncoder _encoder;
@@ -174,7 +176,8 @@ namespace HTM.Net.Encoders
             {
                 return null;
             }
-            else {
+            else
+            {
                 double val = input;
                 if (val < GetMinVal())
                 {
@@ -202,7 +205,8 @@ namespace HTM.Net.Encoders
             {
                 return new int[] { };
             }
-            else {
+            else
+            {
                 return _encoder.GetBucketIndices(scaledVal.GetValueOrDefault());
             }
         }
@@ -225,7 +229,8 @@ namespace HTM.Net.Encoders
             {
                 Arrays.Fill(output, 0);
             }
-            else {
+            else
+            {
                 _encoder.EncodeIntoArray(scaledVal.GetValueOrDefault(), output);
 
                 LOG.Debug("input: " + input);
@@ -269,7 +274,8 @@ namespace HTM.Net.Encoders
                 {
                     desc += string.Format("{0:#.00}-{1:#.00}", minMax.Min(), minMax.Max());
                 }
-                else {
+                else
+                {
                     desc += string.Format("{0:#.00}", minMax.Min());
                 }
                 if (i < numRanges - 1)
@@ -284,7 +290,8 @@ namespace HTM.Net.Encoders
             {
                 fieldName = string.Format("{0}.{1}", parentFieldName, GetName());
             }
-            else {
+            else
+            {
                 fieldName = GetName();
             }
 
@@ -310,7 +317,7 @@ namespace HTM.Net.Encoders
 
                 foreach (TS scaledValue in scaledValues)
                 {
-                    double dScaledValue = (double) Convert.ChangeType(scaledValue, typeof (double));
+                    double dScaledValue = (double)Convert.ChangeType(scaledValue, typeof(double));
                     double value = Math.Pow(10, dScaledValue);
                     ((List<double>)bucketValues).Add(value);
                 }
@@ -354,14 +361,16 @@ namespace HTM.Net.Encoders
             {
                 expValue = Math.Log10(expValues[0]);
             }
-            else {
+            else
+            {
                 expValue = _minScaledValue;
             }
             if (actValues[0] > 0)
             {
                 actValue = Math.Log10(actValues[0]);
             }
-            else {
+            else
+            {
                 actValue = _minScaledValue;
             }
 
@@ -373,7 +382,8 @@ namespace HTM.Net.Encoders
                 pctErr = Math.Min(1.0, pctErr);
                 closeness = 1.0 - pctErr;
             }
-            else {
+            else
+            {
                 closeness = Math.Abs(expValue - actValue);
             }
 

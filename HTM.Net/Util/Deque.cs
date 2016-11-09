@@ -22,6 +22,7 @@ namespace HTM.Net.Util
  *
  * @param <E>
  */
+    [Serializable]
     public class Deque<E> : IEnumerator<E>
     {
         /** Backing array list */

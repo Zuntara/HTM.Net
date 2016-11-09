@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -37,7 +38,8 @@ namespace HTM.Net.Algorithms
     /// </summary>
     //@JsonSerialize(using=CLAClassifierSerializer.class)
     //@JsonDeserialize(using=CLAClassifierDeserializer.class)
-    public class CLAClassifier : IClassifier
+    [Serializable]
+    public class CLAClassifier : Persistable, IClassifier
     {
         public int Verbosity { get; set; }
 
@@ -163,9 +165,9 @@ namespace HTM.Net.Algorithms
         /// 	'actualValues': [1.5, 3,5, 5,5, 7.6],
         /// }
         /// </returns>
-        public ClassifierResult<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
+        public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
         {
-            ClassifierResult<T> retVal = new ClassifierResult<T>();
+            Classification<T> retVal = new Classification<T>();
             //List<T> actualValues = this.actualValues.Select(av => av == null ? default(T) : (T)av).ToList();
 
             // Save the offset between recordNum and learnIteration if this is the first

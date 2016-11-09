@@ -207,7 +207,7 @@ namespace HTM.Net.Tests.Network
             parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 6);
 
             //SpatialPooler specific
-            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 12);//3
+            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, -1);//3
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.5);//0.5
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, false);
             parameters.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0);
@@ -217,12 +217,11 @@ namespace HTM.Net.Tests.Network
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
-            parameters.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
 
             //Temporal Memory specific
             parameters.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);

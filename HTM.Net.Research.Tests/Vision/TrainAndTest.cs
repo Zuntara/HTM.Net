@@ -6,6 +6,7 @@ using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
+using HTM.Net.Model;
 using HTM.Net.Research.Vision;
 using HTM.Net.Research.Vision.Network;
 using HTM.Net.Research.Vision.Sensor;
@@ -41,8 +42,8 @@ namespace HTM.Net.Research.Tests.Vision
             p.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.001);
             p.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.001);
             p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.3);
-            p.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLE, 0.001);
-            p.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLE, 0.001);
+            p.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.001);
+            p.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.001);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 1000);
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
             p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses

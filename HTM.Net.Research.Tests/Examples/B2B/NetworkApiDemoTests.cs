@@ -17,7 +17,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(66, p.Size());
+            Assert.AreEqual(69, p.Size());
         }
 
         [TestMethod]
@@ -94,7 +94,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                     while (read != null)
                     {
                         string[] parts = read.Split('\t');
-                        DateTime dt = DateTime.Parse(parts[0], DateTimeFormatInfo.CurrentInfo);
+                        DateTime dt = DateTime.Parse(parts[0], CultureInfo.GetCultureInfo("nl-be").DateTimeFormat);
                         int sequence = int.Parse(parts[1]);
                         double consumption = double.Parse(parts[2]);
                         DateTime offset = dt.AddMinutes((sequence - 1) * 15);

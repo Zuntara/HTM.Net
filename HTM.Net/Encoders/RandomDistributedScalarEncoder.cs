@@ -58,9 +58,14 @@ namespace HTM.Net.Encoders
  * @author Anubhav Chaturvedi
  */
 
+ [Serializable]
     public class RandomDistributedScalarEncoder : Encoder<double>
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(RandomDistributedScalarEncoder));
+
+
+        [NonSerialized]
+        private static readonly ILog LOG = LogManager.GetLogger(typeof(RandomDistributedScalarEncoder));
 
         public const long DEFAULT_SEED = 42;
 

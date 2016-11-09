@@ -8,6 +8,7 @@ namespace HTM.Net.Util
     /// <summary>
     /// Implementation of a sparse matrix which contains binary byte values only.
     /// </summary>
+    [Serializable]
     public class SparseBinaryMatrix : AbstractSparseBinaryMatrix
     {
         protected readonly SparseByteArray _backingArray;
@@ -290,7 +291,25 @@ namespace HTM.Net.Util
             }
         }
 
+        public static void RightVecSumAtNZ(this Matrix<float> matrix, int[] inputVector, int[] results, double stimulusThreshold = 0)
+        {
+            Vector<float> inputVec = Vector<float>.Build.DenseOfEnumerable(inputVector.Select(i => (float)i));
+
+            Vector<float> vecResult = matrix.Multiply(inputVec);
+            int[] tempResults = vecResult.Select(v => (int)v).ToArray();
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                results[i] = tempResults[i] < stimulusThreshold ? 0 : tempResults[i];
+            }
+        }
+
         public static void ClearStatistics(this Matrix<double> matrix, int row)
+        {
+            matrix.ClearRow(row);
+        }
+
+        public static void ClearStatistics(this Matrix<float> matrix, int row)
         {
             matrix.ClearRow(row);
         }
@@ -298,6 +317,12 @@ namespace HTM.Net.Util
         public static int[] GetTrueCounts(this Matrix<double> matrix)
         {
             var rowSums = matrix.RowSums().Select(d => (int) d);
+            return rowSums.ToArray();
+        }
+
+        public static int[] GetTrueCounts(this Matrix<float> matrix)
+        {
+            var rowSums = matrix.RowSums().Select(d => (int)d);
             return rowSums.ToArray();
         }
     }

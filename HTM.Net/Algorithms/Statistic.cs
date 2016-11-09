@@ -1,4 +1,5 @@
 ﻿using System;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Newtonsoft.Json.Linq;
 
@@ -21,7 +22,8 @@ namespace HTM.Net.Algorithms
  * </pre>
  * @author David Ray
  */
-    public class Statistic
+ [Serializable]
+    public class Statistic : Persistable
     {
         public double Mean { get; }
         public double Variance { get; }

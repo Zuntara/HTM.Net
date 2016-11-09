@@ -10,6 +10,7 @@ namespace HTM.Net.Network.Sensor
      * rules usually specified by a file header, but may 
      * be manually or programmatically set.
      */
+    [Serializable]
     public class Header : IValueList
     {
         private readonly IValueList _rawTupleList;

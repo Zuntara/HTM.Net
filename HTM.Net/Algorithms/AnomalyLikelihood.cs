@@ -67,6 +67,7 @@ namespace HTM.Net.Algorithms
  * @see Statistic
  * @see MovingAverage
  */
+    [Serializable]
     public class AnomalyLikelihood : Anomaly
     {
         private static readonly ILog LOG = LogManager.GetLogger(typeof(AnomalyLikelihood));
@@ -631,11 +632,13 @@ namespace HTM.Net.Algorithms
         ///  @author David Ray
         ///
         /// </summary>
+        [Serializable]
         public class AnomalyParams
         {
             [JsonProperty]
             private Parameters _parameters;
             /** Cached Json formatting. Possible because Objects of this class is immutable */
+            [NonSerialized]
             private JObject cachedNode;
 
             [JsonProperty]

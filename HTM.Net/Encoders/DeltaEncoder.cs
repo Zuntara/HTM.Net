@@ -4,6 +4,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Encoders
 {
+ [Serializable]
     public class DeltaEncoder : AdaptiveScalarEncoder
     {
         public double PrevAbsolute { get; set; }

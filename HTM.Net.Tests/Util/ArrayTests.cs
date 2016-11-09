@@ -200,7 +200,7 @@ namespace HTM.Net.Tests.Util
 
             List<object> strings = new List<object> { "myString", 2.1, 3 };
             s = Arrays.ToString(strings);
-            Assert.AreEqual("[myString, 2,1, 3]", s);
+            Assert.AreEqual("[myString, 2.1, 3]", s);
         }
 
         [TestMethod]
@@ -216,7 +216,7 @@ namespace HTM.Net.Tests.Util
         {
             List<object> objs = new List<object> { new[] { 1, 2 }, new List<int>{ 3, 4 }, new List<object> { 5, 6.1 } };
             string s = Arrays.ToString(objs);
-            Assert.AreEqual("[[1, 2], [3, 4], [5, 6,1]]", s);
+            Assert.AreEqual("[[1, 2], [3, 4], [5, 6.1]]", s);
         }
     }
 }

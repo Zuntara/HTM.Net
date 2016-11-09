@@ -4,8 +4,10 @@ using log4net;
 
 namespace HTM.Net.Encoders
 {
+    [Serializable]
     public class SDRPassThroughEncoder : PassThroughEncoder<int[]>
     {
+        [NonSerialized]
         protected new static readonly ILog LOGGER = LogManager.GetLogger(typeof(SDRPassThroughEncoder));
 
         protected SDRPassThroughEncoder() { }
@@ -51,7 +53,7 @@ namespace HTM.Net.Encoders
 
         public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
         {
-            EncodeIntoArray((int[]) o, tempArray);
+            EncodeIntoArray((int[])o, tempArray);
         }
 
         /**

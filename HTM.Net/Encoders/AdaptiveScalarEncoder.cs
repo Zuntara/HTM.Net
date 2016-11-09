@@ -25,10 +25,10 @@ namespace HTM.Net.Encoders
  * data set, and therefore does not reflect the statistical distribution of
  * the input data and may not be used to calculate the median, mean etc.
  */
+    [Serializable]
     public class AdaptiveScalarEncoder : ScalarEncoder
     {
-
-
+        [NonSerialized]
         private static readonly ILog LOGGER = LogManager.GetLogger(typeof(AdaptiveScalarEncoder));
 
         private int recordNum = 0;
@@ -143,7 +143,7 @@ namespace HTM.Net.Encoders
 
         public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
         {
-            EncodeIntoArray((double) o, tempArray);
+            EncodeIntoArray((double)o, tempArray);
         }
 
         private void SetMinAndMax(double input, bool learn)
@@ -160,7 +160,8 @@ namespace HTM.Net.Encoders
                 this.maxVal = input + 1;
                 SetEncoderParams();
             }
-            else {
+            else
+            {
                 double[] sorted = Arrays.CopyOf(slidingWindow, slidingWindow.Length);
                 Array.Sort(sorted);
                 double minOverWindow = sorted[0];
@@ -238,7 +239,8 @@ namespace HTM.Net.Encoders
             {
                 return new int[this.n];
             }
-            else {
+            else
+            {
                 this.SetMinAndMax(input.GetValueOrDefault(), learn);
             }
             return base.GetBucketIndices(input.GetValueOrDefault());

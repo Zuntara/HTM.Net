@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using HTM.Net.Model;
 using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
@@ -52,7 +53,8 @@ namespace HTM.Net.Algorithms
     /// 
     /// For more information please see: <see cref="AnomalyTest"/> and <see cref="AnomalyLikelihoodTest"/>
     /// </summary>
-    public class Anomaly
+    [Serializable]
+    public class Anomaly : Persistable
     {
         private readonly Func<Anomaly, int[], int[], double, long, double> _computeFunc;
         /// <summary>
@@ -182,9 +184,9 @@ namespace HTM.Net.Algorithms
                 // our anomaly score.
                 score = (nActiveColumns - score) / (double)nActiveColumns;
             }
-            else if (prevPredictedColumns.Length > 0)
+            else
             {
-                score = 1.0d;
+                score = 0.0d;
             }
 
             return score;
@@ -212,6 +214,7 @@ namespace HTM.Net.Algorithms
         /// <summary>
         /// Container to hold interim <see cref="AnomalyLikelihood"/> calculations.
         /// </summary>
+        [Serializable]
         public class AveragedAnomalyRecordList
         {
             internal readonly List<Sample> AveragedRecords;

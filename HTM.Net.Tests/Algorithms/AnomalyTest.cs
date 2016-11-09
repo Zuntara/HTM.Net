@@ -22,7 +22,7 @@ namespace HTM.Net.Tests.Algorithms
         public void TestComputeRawAnomalyScoreNoActive()
         {
             double score = Anomaly.ComputeRawAnomalyScore(new int[0], new[] { 3, 5 });
-            Assert.AreEqual(score, 1.0, 0.00001);
+            Assert.AreEqual(score, 0.0, 0.00001);
         }
 
         [TestMethod]
@@ -66,7 +66,7 @@ namespace HTM.Net.Tests.Algorithms
             @params.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
             Anomaly anomalyComputer = Anomaly.Create(@params);
             double score = anomalyComputer.Compute(new int[0], new[] { 3, 5 }, 0, 0);
-            Assert.AreEqual(1.0, score, 0);
+            Assert.AreEqual(0.0, score, 0);
         }
 
         [TestMethod]

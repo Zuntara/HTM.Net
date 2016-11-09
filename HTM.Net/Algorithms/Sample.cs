@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using HTM.Net.Model;
 
 namespace HTM.Net.Algorithms
 {
@@ -8,6 +9,7 @@ namespace HTM.Net.Algorithms
     /// A sample data point or record consisting of a timestamp, value, and score.
     /// This class is used as an input value to methods in the <see cref="AnomalyLikelihood"/> class.
     /// </summary>
+    [Serializable]
     public class Sample
     {
         public readonly DateTime? Date;

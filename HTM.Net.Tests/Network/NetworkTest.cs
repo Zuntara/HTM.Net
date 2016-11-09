@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reactive;
+using System.Text.RegularExpressions;
 using System.Threading;
 using HTM.Net.Algorithms;
 using HTM.Net.Datagen;
 using HTM.Net.Encoders;
+using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Tests.Properties;
@@ -19,14 +21,26 @@ namespace HTM.Net.Tests.Network
     [TestClass]
     public class NetworkTest
     {
+        private static int[][] dayMap = new int[][]
+        {
+            new int[] {1, 1, 0, 0, 0, 0, 0, 1}, // Sunday
+            new int[] {1, 1, 1, 0, 0, 0, 0, 0}, // Monday
+            new int[] {0, 1, 1, 1, 0, 0, 0, 0}, // Tuesday
+            new int[] {0, 0, 1, 1, 1, 0, 0, 0}, // Wednesday
+            new int[] {0, 0, 0, 1, 1, 1, 0, 0}, // Thursday
+            new int[] {0, 0, 0, 0, 1, 1, 1, 0}, // Friday
+            new int[] {0, 0, 0, 0, 0, 1, 1, 1}, // Saturday
+        };
+
+        private Func<IInference, int, int> dayOfWeekPrintout = CreateDayOfWeekInferencePrintout();
+
         [TestMethod]
         public void TestResetMethod()
         {
-
             Parameters p = NetworkTestHarness.GetParameters();
-            Net.Network.Network network = new Net.Network.Network("", p)
+            Net.Network.Network network = new Net.Network.Network("ResetTestNetwork", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("l1", p).Add(new TemporalMemory())));
+                    .Add(Net.Network.Network.CreateLayer("l1", p).Add(new TemporalMemory())));
             try
             {
                 network.Reset();
@@ -37,9 +51,9 @@ namespace HTM.Net.Tests.Network
                 Assert.Fail(e.ToString());
             }
 
-            network = new Net.Network.Network("", p)
+            network = new Net.Network.Network("ResetMethodTestNetwork", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("l1", p).Add(new SpatialPooler())));
+                    .Add(Net.Network.Network.CreateLayer("l1", p).Add(new SpatialPooler())));
             try
             {
                 network.Reset();
@@ -55,13 +69,16 @@ namespace HTM.Net.Tests.Network
         public void TestResetRecordNum()
         {
             Parameters p = NetworkTestHarness.GetParameters();
-            Net.Network.Network network = new Net.Network.Network("", p)
+            Net.Network.Network network = new Net.Network.Network("ResetRecordNumNetwork", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("l1", p).Add(new TemporalMemory())));
-            network.Observe().Subscribe(Observer.Create<IInference>(output =>
-            {
+                    .Add(Net.Network.Network.CreateLayer("l1", p).Add(new TemporalMemory())));
+            network.Observe().Subscribe(Observer.Create<IInference>(
+                output =>
+                {
 
-            }, e => Console.WriteLine(e), () => { }));
+                },
+                e => Console.WriteLine(e),
+                () => { }));
             //    network.Observe().Subscribe(new Observer.Create<Inference>() {
             //     public void onCompleted() { }
             //     public void onError(Throwable e) { Console.WriteLine(e); }
@@ -86,11 +103,11 @@ namespace HTM.Net.Tests.Network
             Net.Network.Network network = Net.Network.Network.Create("test", NetworkTestHarness.GetParameters());
 
             // Add Layers to regions but regions not yet added to Network
-            Region r1 = Net.Network.Network.CreateRegion("r1").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r2 = Net.Network.Network.CreateRegion("r2").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r3 = Net.Network.Network.CreateRegion("r3").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r4 = Net.Network.Network.CreateRegion("r4").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r5 = Net.Network.Network.CreateRegion("r5").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
+            Region r1 = Net.Network.Network.CreateRegion("r1").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r2 = Net.Network.Network.CreateRegion("r2").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r3 = Net.Network.Network.CreateRegion("r3").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r4 = Net.Network.Network.CreateRegion("r4").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r5 = Net.Network.Network.CreateRegion("r5").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
 
             Region[] regions = { r1, r2, r3, r4, r5 };
             foreach (Region r in regions)
@@ -119,11 +136,11 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             Net.Network.Network network = Net.Network.Network.Create("test", NetworkTestHarness.GetParameters());
 
-            Region r1 = Net.Network.Network.CreateRegion("r1").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r2 = Net.Network.Network.CreateRegion("r2").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r3 = Net.Network.Network.CreateRegion("r3").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r4 = Net.Network.Network.CreateRegion("r4").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
-            Region r5 = Net.Network.Network.CreateRegion("r5").Add(Net.Network.Network.CreateLayer<IInference>("l", p).Add(new SpatialPooler()));
+            Region r1 = Net.Network.Network.CreateRegion("r1").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r2 = Net.Network.Network.CreateRegion("r2").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r3 = Net.Network.Network.CreateRegion("r3").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r4 = Net.Network.Network.CreateRegion("r4").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
+            Region r5 = Net.Network.Network.CreateRegion("r5").Add(Net.Network.Network.CreateLayer("l", p).Add(new SpatialPooler()));
 
             try
             {
@@ -175,7 +192,7 @@ namespace HTM.Net.Tests.Network
             Assert.AreEqual(network.GetHead(), downstream);
         }
 
-        string _onCompleteStr;
+        private string _onCompleteStr;
         [TestMethod, DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void TestBasicNetworkHaltGetsOnComplete()
         {
@@ -186,7 +203,7 @@ namespace HTM.Net.Tests.Network
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
@@ -204,8 +221,8 @@ namespace HTM.Net.Tests.Network
                     //Console.WriteLine(output.GetRecordNum() + "," +
                     //    output.GetClassifierInput()["consumption"].Get("inputValue") + "," + output.GetAnomalyScore());
 
-                    lines.Add(output.GetRecordNum() + "|" +
-                              ((NamedTuple)output.GetClassifierInput()["consumption"]).GetAsString("inputValue") + "|" +
+                    lines.Add(output.GetRecordNum() + "," +
+                              output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "," +
                               output.GetAnomalyScore());
 
                     if (output.GetRecordNum() == 9)
@@ -237,12 +254,280 @@ namespace HTM.Net.Tests.Network
             int i = 0;
             foreach (string l in lines)
             {
-                string[] sa = l.Split('|');//"[\\s]*\\,[\\s]*"
+                string[] sa = Regex.Split(l, "[\\s]*\\,[\\s]*");// l.Split('|');//"[\\s]*\\,[\\s]*"
                 Assert.AreEqual(3, sa.Length);
                 Assert.AreEqual(i++, int.Parse(sa[0]));
             }
 
             Assert.AreEqual("On completed reached!", _onCompleteStr);
+        }
+
+        private string _onCompleteStr2;
+        //[TestMethod, DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        public void TestBasicNetworkHalt_ThenRestart()
+        {
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+
+            // Create a Network
+            Net.Network.Network network = Net.Network.Network.Create("test network", p)
+                .Add(Net.Network.Network.CreateRegion("r1")
+                    .Add(Net.Network.Network.CreateLayer("1", p)
+                        .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                        .Add(Anomaly.Create())
+                        .Add(new TemporalMemory())
+                        .Add(new SpatialPooler())
+                        .Add(Sensor<FileInfo>.Create(FileSensor.Create, SensorParams.Create(
+                            SensorParams.Keys.Path, "", ResourceLocator.Path("rec-center-hourly.Csv"))))));
+
+            List<string> lines = new List<string>();
+
+            Stopwatch sw = new Stopwatch();
+            List<TimeSpan> timings = new List<TimeSpan>();
+
+            // Listen to network emissions
+            network.Observe().Subscribe(output =>
+            {
+                timings.Add(sw.Elapsed);
+                string sToAdd = output.GetRecordNum() + "," +
+                                output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "," +
+                                output.GetAnomalyScore();
+                //Console.WriteLine(Arrays.ToString(output.GetSdr()));
+                //Console.WriteLine("> " + sToAdd);
+                lines.Add(sToAdd);
+
+
+                if (output.GetRecordNum() == 9)
+                {
+                    network.Halt();
+                }
+            }, Console.WriteLine, () =>
+            {
+                _onCompleteStr2 = "On completed reached!";
+                sw.Stop();
+            });
+
+            // Start the network
+            sw.Start();
+            network.Start();
+
+            // Test network output
+            try
+            {
+                Region r1 = network.Lookup("r1");
+                r1.Lookup("1").GetLayerThread().Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            Assert.AreEqual(10, lines.Count);
+            int i = 0;
+            Console.WriteLine("Start printing...");
+            foreach (string l in lines)
+            {
+                Console.WriteLine(l);
+                string[] sa = Regex.Split(l, "[\\s]*\\,[\\s]*");// l.Split('|');//"[\\s]*\\,[\\s]*"
+                Assert.AreEqual(3, sa.Length);
+                Assert.AreEqual(i++, int.Parse(sa[0]));
+            }
+
+            Assert.AreEqual("On completed reached!", _onCompleteStr2);
+
+            Debug.WriteLine("Fastest call: {0}", timings.Min());
+            Debug.WriteLine("Slowest call: {0}", timings.Max());
+            Debug.WriteLine("Average call: {0}", timings.Average(t => t.TotalSeconds));
+
+            ///////////////////////
+            //     Now Restart   //
+            ///////////////////////
+            _onCompleteStr2 = null;
+
+            // Listen to network emissions
+            network.Observe().Subscribe(
+                output =>
+                {
+                    //Console.WriteLine(Arrays.ToString(output.GetSdr()));
+
+                    string sToAdd = output.GetRecordNum() + "," +
+                                    output.GetClassifierInput().Get("consumption").GetAsString("inputValue") + "," +
+                                    output.GetAnomalyScore();
+                    //Console.WriteLine("2 > " + sToAdd);
+                    lines.Add(sToAdd);
+
+                    if (output.GetRecordNum() == 19)
+                    {
+                        network.Halt();
+                    }
+                },
+                Console.WriteLine,
+                () =>
+                {
+                    _onCompleteStr2 = "On completed reached!";
+                });
+
+
+            network.Restart();
+
+            // Test network output
+            try
+            {
+                Region r1 = network.Lookup("r1");
+                r1.Lookup("1").GetLayerThread().Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+
+            Assert.AreEqual(20, lines.Count);
+
+            i = 0;
+            Console.WriteLine("Start printing...");
+            foreach (String l in lines)
+            {
+                Console.WriteLine(l);
+                String[] sa = Regex.Split(l, "[\\s]*\\,[\\s]*");
+                Assert.AreEqual(3, sa.Length);
+                Assert.AreEqual(i++, int.Parse(sa[0]));
+            }
+
+
+            Assert.AreEqual("On completed reached!", _onCompleteStr2);
+        }
+
+        bool expectedDataFlag = true;
+        String failMessage;
+        //[TestMethod]
+        public void TestBasicNetworkHalt_ThenRestart_TighterExpectation()
+        {
+            const int NUM_CYCLES = 600;
+            const int INPUT_GROUP_COUNT = 7; // Days of Week
+
+            ///////////////////////////////////////
+            //   Run until CYCLE 284, then halt  //
+            ///////////////////////////////////////
+            Net.Network.Network network = GetLoadedDayOfWeekNetwork();
+            int cellsPerCol = (int)network.GetParameters().GetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN);
+
+            network.Observe().Subscribe(
+                inf =>
+                {
+                    /** see {@link #createDayOfWeekInferencePrintout()} */
+                    int cycle = dayOfWeekPrintout(inf, cellsPerCol);
+                    if (cycle == 284)
+                    {
+                        Console.WriteLine("halting publisher = " + network.GetPublisher());
+                        network.Halt();
+                    }
+                },
+                Console.WriteLine,
+                () => { });
+
+            Publisher pub = network.GetPublisher();
+
+            network.Start();
+
+            int cycleCount = 0;
+            for (; cycleCount < NUM_CYCLES; cycleCount++)
+            {
+                for (double j = 0; j < INPUT_GROUP_COUNT; j++)
+                {
+                    pub.OnNext("" + j);
+                }
+
+                network.Reset();
+
+                if (cycleCount == 284)
+                {
+                    break;
+                }
+            }
+
+            // Test network output
+            try
+            {
+                Region r1 = network.Lookup("r1");
+                r1.Lookup("1").GetLayerThread().Wait(2000);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            // Announce new start
+            Console.WriteLine("\n\n\n Network Restart \n\n\n");
+
+
+            ///////////////////////
+            //     Now Restart   //
+            ///////////////////////
+
+            // 1. Re-Attach Observer
+            // 2. Restart Network
+
+            network.Observe().Subscribe(
+                inf =>
+                {
+                    /** see {@link #createDayOfWeekInferencePrintout()} */
+
+                    dayOfWeekPrintout(inf, cellsPerCol);
+
+                    ////////////////////////////////////////////////////////////
+                    // Ensure the records pick up precisely where we left off //
+                    ////////////////////////////////////////////////////////////
+                    if (inf.GetRecordNum() == 1975)
+                    {
+                        expectedDataFlag = true;
+                    }
+                },
+                Console.WriteLine,
+                () => { });
+
+
+            network.Halt();
+            try
+            {
+                network.Lookup("r1").Lookup("1").GetLayerThread().Wait(3000);
+                // Add a little more wait time
+                Thread.Sleep(3000);
+            }
+            catch (Exception e) { Console.WriteLine(e); }
+            network.Restart();
+
+            Publisher newPub = network.GetPublisher();
+
+            // Assert that we have a new Publisher being created in the background upon restart()
+            Assert.IsFalse(pub == newPub, "publisher is not recreated");
+
+            for (; cycleCount < NUM_CYCLES; cycleCount++)
+            {
+                for (double j = 0; j < INPUT_GROUP_COUNT; j++)
+                {
+                    newPub.OnNext("" + j);
+                }
+                network.Reset();
+            }
+
+            newPub.OnComplete();
+
+            try
+            {
+                Region r1 = network.Lookup("r1");
+                r1.Lookup("1").GetLayerThread().Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            if (!expectedDataFlag)
+            {
+                Assert.Fail(failMessage);
+            }
         }
 
         [TestMethod, DeploymentItem("Resources\\rec-center-hourly.Csv")]
@@ -253,7 +538,6 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
-            p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -279,7 +563,7 @@ namespace HTM.Net.Tests.Network
                 //                System.out.Println(i.GetRecordNum() + "," + 
                 //                    i.GetClassifierInput().Get("consumption").Get("inputValue") + "," + i.GetAnomalyScore());
                 lines.Add(output.GetRecordNum() + "|" +
-                          ((NamedTuple)output.GetClassifierInput()["consumption"]).GetAsString("inputValue") + "|" + output.GetAnomalyScore());
+                  output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "|" + output.GetAnomalyScore());
 
 
                 if (output.GetRecordNum() == 1000)
@@ -320,7 +604,7 @@ namespace HTM.Net.Tests.Network
 
             Debug.WriteLine("Fastest call: {0}", timings.Min());
             Debug.WriteLine("Slowest call: {0}", timings.Max());
-            Debug.WriteLine("Average call: {0}", timings.Average(t=>t.TotalSeconds));
+            Debug.WriteLine("Average call: {0}", timings.Average(t => t.TotalSeconds));
         }
 
 
@@ -331,18 +615,18 @@ namespace HTM.Net.Tests.Network
         public void TestRegionHierarchies()
         {
             Parameters p = NetworkTestHarness.GetParameters();
+            p.SetPotentialRadius(16);
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, false);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("2", p)
+                    .Add(Net.Network.Network.CreateLayer("2", p)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())))
                 .Add(Net.Network.Network.CreateRegion("r2")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
@@ -387,7 +671,7 @@ namespace HTM.Net.Tests.Network
             {
                 r2.Lookup("1").GetLayerThread().Wait();//5000);
 
-                Assert.IsTrue(r1Hits>0);
+                Assert.IsTrue(r1Hits > 0);
                 Assert.AreEqual(r1Hits, r2Hits);
 
                 Console.WriteLine("Hits R1 = {0}, R2 = {1}", r1Hits, r2Hits);
@@ -485,7 +769,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
-            
+
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -611,7 +895,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
 
-            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
+            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -637,8 +921,7 @@ namespace HTM.Net.Tests.Network
             //////////////////////////////////////////////////////
             p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
-
+            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
             n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
                     .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
@@ -662,6 +945,7 @@ namespace HTM.Net.Tests.Network
             {
                 p = NetworkTestHarness.GetParameters();
                 p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+                p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
                 n = Net.Network.Network.Create("test network", p)
                     .Add(Net.Network.Network.CreateRegion("r1")
                         .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
@@ -706,12 +990,13 @@ namespace HTM.Net.Tests.Network
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
                         .Add(htmSensor)));
 
+            network.Start();
 
             network.Observe().Subscribe(output =>
             {
@@ -721,30 +1006,12 @@ namespace HTM.Net.Tests.Network
                 {
                     _anomaly = output.GetAnomalyScore();
                 }
-            }, Console.WriteLine, () =>
+            }, Console.WriteLine, 
+            () =>
             {
-                Assert.AreEqual(0, _anomaly, 0.18);
+                Assert.AreEqual(0, _anomaly, 0);
                 _completed = true;
             });
-
-            //network.Observe().Subscribe(new Observer<Inference>() {
-            //    @Override public void onCompleted()
-            //    {
-            //        Assert.AreEqual(0, anomaly, 0);
-            //        completed = true;
-            //    }
-            //    @Override public void onError(Throwable e) { Console.WriteLine(e); }
-            //    @Override public void onNext(Inference output)
-            //    {
-            //        //System.out.Println(output.GetRecordNum() + ":  input = " + Arrays.toString(output.GetEncoding()));//output = " + Arrays.toString(output.GetSDR()) + ", " + output.GetAnomalyScore());
-            //        if (output.GetAnomalyScore() < anomaly)
-            //        {
-            //            anomaly = output.GetAnomalyScore();
-            //            //                    System.out.Println("anomaly = " + anomaly);
-            //        }
-            //    }
-            //});
-
 
 
             int x = 0;
@@ -754,7 +1021,6 @@ namespace HTM.Net.Tests.Network
                 manual.OnNext("7/12/10 13:10,35.3,40.6457;-73.7" + x + "692;" + x); //5 = meters per second
             }
 
-            network.Start();
 
 
             manual.OnComplete();
@@ -767,6 +1033,7 @@ namespace HTM.Net.Tests.Network
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                Assert.Fail();
             }
 
 
@@ -801,31 +1068,21 @@ namespace HTM.Net.Tests.Network
                         .Add(new SpatialPooler())
                         .Add(htmSensor)));
 
-            network.Observe().Subscribe(output => { }, e =>
-            {
-                _errorMessage = e.Message;
-                network.Halt();
-            }, () =>
-            {
-                //Should never happen here.
-                Assert.AreEqual(0, _anomaly, 0);
-                _completed = true;
-            });
+            network.Observe().Subscribe(
+                output => { }, 
+                e =>
+                {
+                    _errorMessage = e.Message;
+                    network.Halt();
+                }, 
+                () =>
+                {
+                    //Should never happen here.
+                    Assert.AreEqual(0, _anomaly, 0);
+                    _completed = true;
+                });
 
-            //network.Observe().Subscribe(new Observer<Inference>() {
-            //    @Override public void onCompleted()
-            //    {
-            //        //Should never happen here.
-            //        Assert.AreEqual(0, anomaly, 0);
-            //        completed = true;
-            //    }
-            //    @Override public void onError(Throwable e)
-            //    {
-            //        errorMessage = e.Message;
-            //        network.halt();
-            //    }
-            //    @Override public void onNext(Inference output) { }
-            //});
+
 
             network.Start();
 
@@ -1034,35 +1291,113 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
-            
+
             Region region1 = Net.Network.Network.CreateRegion("region1");
             ILayer layer1 = Net.Network.Network.CreateLayer("layer1", p);
             region1.Add(layer1);
-            
+
             Region region2 = Net.Network.Network.CreateRegion("region2");
             ILayer layer2 = Net.Network.Network.CreateLayer("layer2", p);
             region2.Add(layer2);
-            
+
             Net.Network.Network network = Net.Network.Network.Create("test network", p);
-            
-                    // Calling close on an empty Network should not throw any Exceptions
+
+            // Calling close on an empty Network should not throw any Exceptions
             network.Close();
-            
-                    // Calling close on a Network with a single unclosed Region
+
+            // Calling close on a Network with a single unclosed Region
             network.Add(region1);
             network.Close();
-            
-            Assert.IsTrue(region1.IsClosed(),"Region 1 did not close, after closing Network");
+
+            Assert.IsTrue(region1.IsClosed(), "Region 1 did not close, after closing Network");
             Assert.IsTrue(layer1.IsClosed(), "Layer 1 did not close, after closing Network");
-            
-                    // Calling close on a Network with two regions, one of which is closed
+
+            // Calling close on a Network with two regions, one of which is closed
             network.Add(region2);
             network.Close();
-            
+
             Assert.IsTrue(region1.IsClosed(), "Region 1 did not close, after closing Network with 2 Regions");
-            Assert.IsTrue(layer1.IsClosed(),"Layer 1 did not close, after closing Network with 2 Regions");
+            Assert.IsTrue(layer1.IsClosed(), "Layer 1 did not close, after closing Network with 2 Regions");
             Assert.IsTrue(region2.IsClosed(), "Region 2 did not close, after closing Network with 2 Regions");
             Assert.IsTrue(layer2.IsClosed(), "Layer 2 did not close, after closing Network with 2 Regions");
+        }
+
+        ////////////////////////////////////////
+        //         Utility Methods            //
+        ////////////////////////////////////////
+
+        //Publisher pub = null;
+        private Net.Network.Network GetLoadedDayOfWeekNetwork()
+        {
+            Parameters p = NetworkTestHarness.GetParameters().Copy();
+            p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+
+            Sensor<ObservableSensor<String[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
+                ObservableSensor<string[]>.Create, 
+                    SensorParams.Create(SensorParams.Keys.Obs, new Object[] {"name",
+                Publisher.GetBuilder()
+                    .AddHeader("dayOfWeek")
+                    .AddHeader("number")
+                    .AddHeader("B").Build() }));
+
+            Net.Network.Network network = Net.Network.Network.Create("test network", p)
+                .Add(Net.Network.Network.CreateRegion("r1")
+                .Add(Net.Network.Network.CreateLayer("1", p)
+                    .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                    .Add(Anomaly.Create())
+                    .Add(new TemporalMemory())
+                    .Add(new SpatialPooler())
+                    .Add(sensor)));
+
+            return network;
+        }
+
+        private static Func<IInference, int, int> CreateDayOfWeekInferencePrintout()
+        {
+            int cycles = 1;
+            return (inf, cellsPerColumn) =>
+            {
+
+                //                Classification<Object> result = inf.getClassification("dayOfWeek");
+                double day = MapToInputData((int[])inf.GetLayerInput());
+                if (day == 1.0)
+                {
+                    //                    System.out.println("\n=========================");
+                    //                    System.out.println("CYCLE: " + cycles);
+                    cycles++;
+                }
+
+                //                System.out.println("RECORD_NUM: " + inf.getRecordNum());
+                //                System.out.println("ScalarEncoder Input = " + day);
+                //                System.out.println("ScalarEncoder Output = " + Arrays.toString(inf.getEncoding()));
+                //                System.out.println("SpatialPooler Output = " + Arrays.toString(inf.getFeedForwardActiveColumns()));
+                //                
+                //                if(inf.getPreviousPredictiveCells() != null)
+                //                    System.out.println("TemporalMemory Previous Prediction = " + 
+                //                        Arrays.toString(SDR.cellsAsColumnIndices(inf.getPreviousPredictiveCells(), cellsPerColumn)));
+                //                
+                //                System.out.println("TemporalMemory Actives = " + Arrays.toString(SDR.asColumnIndices(inf.getSDR(), cellsPerColumn)));
+                //                
+                //                System.out.print("CLAClassifier prediction = " + 
+                //                    stringValue((Double)result.getMostProbableValue(1)) + " --> " + ((Double)result.getMostProbableValue(1)));
+                //                
+                //                System.out.println("  |  CLAClassifier 1 step prob = " + Arrays.toString(result.getStats(1)) + "\n");
+
+                return cycles;
+            };
+        }
+
+        private static double MapToInputData(int[] encoding)
+        {
+            for (int i = 0; i < dayMap.Length; i++)
+            {
+                if (Arrays.AreEqual(encoding, dayMap[i]))
+                {
+                    return i + 1;
+                }
+            }
+            return -1;
         }
     }
 }

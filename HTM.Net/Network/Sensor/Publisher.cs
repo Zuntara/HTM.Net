@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reactive.Subjects;
+using HTM.Net.Model;
 
 namespace HTM.Net.Network.Sensor
 {
@@ -50,11 +51,15 @@ namespace HTM.Net.Network.Sensor
  * </pre>
  *
  */
-    public class Publisher
+    [Serializable]
+    public class Publisher : Persistable
     {
         private static int HEADER_SIZE = 3;
 
+        [NonSerialized]
         private ReplaySubject<string> subject;
+
+        private Network parentNetwork;
 
         public class Builder<T>
         {
@@ -62,6 +67,27 @@ namespace HTM.Net.Network.Sensor
 
             string[] _lines = new string[3];
             int _cursor = 0;
+            private Action<Publisher> notifier;
+
+            public Builder() 
+                : this(null)
+            {
+
+            }
+
+            /**
+             * Instantiates a new {@code Builder} with the specified
+             * {@link Consumer} used to propagate "build" events using a
+             * plugged in function.
+             * 
+             * @param c     Consumer used to notify the {@link Network} of new
+             *              builds of a {@link Publisher}
+             */
+            public Builder(Action<Publisher> c)
+            {
+                this.notifier = c;
+            }
+
             /**
              * Adds a header line which in the case of a multi column input 
              * is a comma separated string.
@@ -97,6 +123,11 @@ namespace HTM.Net.Network.Sensor
                 Publisher p = new Publisher();
                 p.subject = _subject;
 
+                if (notifier != null)
+                {
+                    notifier(p);
+                }
+
                 return p;
             }
         }
@@ -110,6 +141,34 @@ namespace HTM.Net.Network.Sensor
         public static Builder<Subject<string>> GetBuilder()
         {
             return new Builder<Subject<string>>();
+        }
+
+        /**
+        * Builder that notifies a Network on every build of a new {@link Publisher}
+        * @param c     Consumer which consumes a Publisher and executes an Network notification.
+        * @return      a new Builder
+        */
+        public static Builder<Subject<string>> GetBuilder(Action<Publisher> c)
+        {
+            return new Builder<Subject<string>>(c);
+        }
+
+        /**
+            * Sets the parent {@link Network} on this {@code Publisher} for use as a convenience. 
+            * @param n     the Network to which the {@code Publisher} is connected.
+            */
+        public void SetNetwork(Network n)
+        {
+            this.parentNetwork = n;
+        }
+
+        /**
+         * Returns the parent {@link Network} connected to this {@code Publisher} for use as a convenience. 
+         * @return  this {@code Publisher}'s parent {@link Network}
+         */
+        public Network GetNetwork()
+        {
+            return parentNetwork;
         }
 
         /**

@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Kaliko.ImageLibrary;
 
