@@ -319,7 +319,7 @@ namespace HTM.Net.Research.opf
             var results = base.run(inputRecord);
             __numRunCalls++;
 
-            results.inferences = null;
+            results.inferences = new Map<InferenceElement, object>();
             this._input = inputRecord;
             // Turn learning on or off?
             if (inputRecord.ContainsKey("_learning"))

@@ -98,7 +98,6 @@
     <Compile Include="Algorithms\AnomalyLikelihoodTest.cs" />
     <Compile Include="Algorithms\AnomalyTest.cs" />
     <Compile Include="Algorithms\CLAClassifierTest.cs" />
-    <Compile Include="Algorithms\AnomalyLikelihoodTest.cs" />
     <Compile Include="Algorithms\ClassefierResultTest.cs" />
     <Compile Include="Algorithms\KNNClassifierTest.cs" />
     <Compile Include="Algorithms\SampleDistribution.cs" />

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.opf
 {
@@ -7,7 +8,7 @@ namespace HTM.Net.Research.opf
         public int? predictionNumber;
         public Dictionary<string, object> rawInput;
         public SensorInput sensorInput;
-        public Dictionary<InferenceElement, object> inferences;
+        public Map<InferenceElement, object> inferences;
         public object metrics;
         public int? predictedFieldIdx;
         public string predictedFieldName;
@@ -16,7 +17,7 @@ namespace HTM.Net.Research.opf
         public ModelResult(int? predictionNumber = null,
             Dictionary<string, object> rawInput = null,
             SensorInput sensorInput = null,
-            Dictionary<InferenceElement, object> inferences = null,
+            Map<InferenceElement, object> inferences = null,
             object metrics = null,
             int? predictedFieldIdx = null,
             string predictedFieldName = null,
@@ -33,5 +34,9 @@ namespace HTM.Net.Research.opf
         }
 
 
+        public ModelResult Clone()
+        {
+            return new ModelResult(predictionNumber, rawInput, sensorInput, inferences, metrics, predictedFieldIdx, predictedFieldName, classifierInput);
+        }
     }
 }

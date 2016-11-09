@@ -3122,6 +3122,21 @@ namespace HTM.Net.Research.Swarming
         NontemporalMultiStep = 64
     }
 
+    public static class InferenceTypeHelper
+    {
+        public static bool IsTemporal(InferenceType infType)
+        {
+            return new[]
+            {
+                InferenceType.TemporalNextStep,
+                InferenceType.TemporalClassification,
+                InferenceType.TemporalAnomaly,
+                InferenceType.TemporalMultiStep,
+                InferenceType.NontemporalMultiStep
+            }.Contains(infType);
+        }
+
+    }
 
     /// <summary>
     /// The v2 Hypersearch implementation. This is one example of a Hypersearch

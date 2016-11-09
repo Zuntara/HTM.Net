@@ -109,6 +109,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\FieldMetaInfo.cs" />
+    <Compile Include="Data\InferenceShifter.cs" />
     <Compile Include="Generators\SineGenerator.cs" />
     <Compile Include="Genetic\Gene.cs" />
     <Compile Include="opf\CLAModel.cs" />

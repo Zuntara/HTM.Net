@@ -151,6 +151,8 @@ namespace HTM.Net.Util
             currentSize = 0;
         }
 
+        public int Length { get { return currentSize;} }
+
         /**
          * Returns the item at the head of this {@code Deque} or null
          * if it is empty. This call does not block if empty.
@@ -247,9 +249,9 @@ namespace HTM.Net.Util
          * @return		the contents of this {@code Deque} in an array of
          * 				type &lt;T&gt;
          */
-        public T[] ToArray<T>(T[] a)
+        public E[] ToArray()
         {
-            return backingList.Cast<T>().ToArray();
+            return backingList.ToArray();
         }
 
         /**
