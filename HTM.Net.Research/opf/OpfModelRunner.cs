@@ -1,34 +1,43 @@
-﻿namespace HTM.Net.Research.opf
+﻿using System;
+using System.Diagnostics;
+using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
+using log4net;
+using MetricsManager = HTM.Net.Research.opf.PredictionMetricsManager;
+
+namespace HTM.Net.Research.opf
 {
     /// <summary>
     /// This class runs an a given Model
     /// </summary>
     public class OpfModelRunner
     {
-        //// The minimum number of records that need to have been read for this model
-        //// to be a candidate for 'best model'
-        //int? _MIN_RECORDS_TO_BE_BEST = null;
+        private ILog _logger = LogManager.GetLogger(typeof (OpfModelRunner));
+        // The minimum number of records that need to have been read for this model
+        // to be a candidate for 'best model'
+        int? _MIN_RECORDS_TO_BE_BEST = null;
 
-        //// The number of points we look at when trying to figure out whether or not a
-        //// model has matured
-        //int? _MATURITY_NUM_POINTS = null;
+        // The number of points we look at when trying to figure out whether or not a
+        // model has matured
+        int? _MATURITY_NUM_POINTS = null;
 
-        //// The maximum rate of change in the model's metric for it to be considered 'mature'
-        //double? _MATURITY_MAX_CHANGE = null;
-        //private ulong _modelID;
-        //private uint _jobID;
-        //private string _predictedField;
-        //private IDescription _experimentDir;
-        //private string _reportKeyPatterns;
-        //private string _optimizeKeyPattern;
-        //private BaseClientJobDao _jobsDAO;
-        //private string _modelCheckpointGUID;
-        //private int? _predictionCacheMaxRecords;
-        //private bool _isMaturityEnabled;
-        //private string _optimizedMetricLabel;
-        //private string _cmpReason;
-        //private DescriptionControlModel _modelControl;
-        //private Model _model;
+        // The maximum rate of change in the model's metric for it to be considered 'mature'
+        double? _MATURITY_MAX_CHANGE = null;
+        private ulong _modelID;
+        private uint _jobID;
+        private string _predictedField;
+        private IDescription _experimentDir;
+        private string _reportKeyPatterns;
+        private string _optimizeKeyPattern;
+        private BaseClientJobDao _jobsDAO;
+        private string _modelCheckpointGUID;
+        private int? _predictionCacheMaxRecords;
+        private bool _isMaturityEnabled;
+        private string _optimizedMetricLabel;
+        private string _cmpReason;
+        private DescriptionControlModel _modelControl;
+        private Model _model;
+        private MetricsManager __metricMgr;
 
         ///// <summary>
         ///// 
@@ -149,6 +158,7 @@
 
         //    this.__loggedMetricPatterns = [];
         //}
+
         ///// <summary>
         ///// Runs the OPF Model
         ///// </summary>

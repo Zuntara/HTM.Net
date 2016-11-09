@@ -3112,13 +3112,14 @@ namespace HTM.Net.Research.Swarming
     [Flags]
     public enum InferenceType
     {
-        TemporalNextStep,
-        TemporalClassification,
-        NontemporalClassification,
-        TemporalAnomaly,
-        NontemporalAnomaly,
-        TemporalMultiStep,
-        NontemporalMultiStep
+        None = 0,
+        TemporalNextStep = 1,
+        TemporalClassification = 2,
+        NontemporalClassification = 4,
+        TemporalAnomaly = 8,
+        NontemporalAnomaly = 16,
+        TemporalMultiStep = 32,
+        NontemporalMultiStep = 64
     }
 
 

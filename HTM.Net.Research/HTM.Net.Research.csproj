@@ -82,6 +82,7 @@
     <Compile Include="opf\ModelResult.cs" />
     <Compile Include="opf\NetworkInfo.cs" />
     <Compile Include="opf\OpfModelRunner.cs" />
+    <Compile Include="opf\PredictionMetricsManager.cs" />
     <Compile Include="opf\SensorInput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Swarming\BaseClientJobDao.cs" />
