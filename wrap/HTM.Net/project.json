@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0-*",
+  "frameworks": {
+    "net451": {
+      "wrappedProject": "../../HTM.Net/HTM.Net.csproj",
+      "bin": {
+        "assembly": "../../HTM.Net/obj/{configuration}/HTM.Net.dll",
+        "pdb": "../../HTM.Net/obj/{configuration}/HTM.Net.pdb"
+      },
+      "dependencies": {
+        "ImageLibrary": "2.0.5",
+        "DeepEqual": "1.6.0.0",
+        "log4net": "2.0.5",
+        "MathNet.Numerics": "3.13.1",
+        "MathNet.Numerics.MKL.Win": "2.2.0",
+        "Newtonsoft.Json": "9.0.1",
+        "Rx-Core": "2.2.5",
+        "Rx-Interfaces": "2.2.5",
+        "Rx-Linq": "2.2.5"
+      }
+    }
+  }
+}

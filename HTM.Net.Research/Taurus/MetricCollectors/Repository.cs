@@ -14,10 +14,8 @@ using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
 using Tweetinvi;
-using Tweetinvi.Core.Authentication;
-using Tweetinvi.Core.Interfaces;
-using Tweetinvi.Core.Interfaces.Streaminvi;
-using Tweetinvi.Logic;
+using Tweetinvi.Models;
+using Tweetinvi.Streaming;
 using User = Tweetinvi.User;
 
 namespace HTM.Net.Research.Taurus.MetricCollectors

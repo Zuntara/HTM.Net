@@ -86,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Algorithms\IClassifier.cs" />
+    <Compile Include="Algorithms\KnnClassification.cs" />
     <Compile Include="Algorithms\KNNClassifier.cs" />
     <Compile Include="Algorithms\PASpatialPooler.cs" />
     <Compile Include="Algorithms\SDRClassifier.cs" />

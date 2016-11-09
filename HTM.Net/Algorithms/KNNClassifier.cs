@@ -180,10 +180,10 @@ namespace HTM.Net.Algorithms
             _nextTrainingIndices = null;
         }
 
-        public KnnClassifierResult Compute(double[] inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1
+        public KnnClassification Compute(double[] inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1
             , bool computeScores = true, bool overCategories = true, bool infer = true, bool learn = true)
         {
-            KnnClassifierResult retVal = new KnnClassifierResult();
+            KnnClassification retVal = new KnnClassification();
 
             if (infer)
             {

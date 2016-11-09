@@ -189,7 +189,7 @@ namespace HTM.Net.Research.Vision.Sensor
         /// to initialize the different types of Sensors with
         /// their resource location or source object.
         /// </summary>
-        public override SensorParams GetParams()
+        public override SensorParams GetSensorParams()
         {
             return _params;
         }

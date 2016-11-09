@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using MathNet.Numerics.Random;
 
@@ -778,7 +779,7 @@ namespace HTM.Net.Util
     public class XorshiftRandom : Xorshift, IRandom, ISerializable
     {
         public XorshiftRandom(SerializationInfo info, StreamingContext context)
-            :base((int)info.GetUInt64("_x"))
+            : base((int)info.GetUInt64("_x"))
         {
             SetPrivateFieldValue("_a", info.GetUInt64("_a"));
             SetPrivateFieldValue("_c", info.GetUInt64("_c"));
@@ -842,6 +843,30 @@ namespace HTM.Net.Util
                 return v1 * multiplier;
             }
         }
+
+        #region Implementation of ISerializable
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("_a", GetPrivateFieldValue("_a"));
+            info.AddValue("_c", GetPrivateFieldValue("_c"));
+            info.AddValue("_x", GetPrivateFieldValue("_x"));
+            info.AddValue("_y", GetPrivateFieldValue("_y"));
+            info.AddValue("_z", GetPrivateFieldValue("_z"));
+        }
+
+        private object GetPrivateFieldValue(string name)
+        {
+            var value = this.GetType().BaseType?.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(this);
+            return value;
+        }
+
+        private void SetPrivateFieldValue(string name, object value)
+        {
+            GetType().BaseType?.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(this, value);
+        }
+
+        #endregion
     }
 
     [Serializable]

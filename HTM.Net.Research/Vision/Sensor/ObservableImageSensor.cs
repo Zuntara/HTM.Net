@@ -45,7 +45,7 @@ namespace HTM.Net.Research.Vision.Sensor
          * 
          * @return the SensorParams
          */
-        public override SensorParams GetParams()
+        public override SensorParams GetSensorParams()
         {
             return @params;
         }

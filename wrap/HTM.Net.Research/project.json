@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0-*",
+  "frameworks": {
+    "net451": {
+      "wrappedProject": "../../HTM.Net.Research/HTM.Net.Research.csproj",
+      "bin": {
+        "assembly": "../../HTM.Net.Research/obj/{configuration}/HTM.Net.Research.dll",
+        "pdb": "../../HTM.Net.Research/obj/{configuration}/HTM.Net.Research.pdb"
+      },
+      "dependencies": {
+        "Autofac": "3.5.2",
+        "ImageLibrary": "3.0.0",
+        "log4net": "2.0.5",
+        "MathNet.Numerics": "3.13.1",
+        "MathNet.Numerics.MKL.Win": "2.2.0",
+        "Microsoft.Bcl": "1.1.10",
+        "Microsoft.Bcl.Async": "1.0.168",
+        "Microsoft.Bcl.Build": "1.0.21",
+        "Microsoft.Net.Http": "2.2.29",
+        "Newtonsoft.Json": "9.0.1",
+        "Rx-Core": "2.2.5",
+        "Rx-Interfaces": "2.2.5",
+        "Rx-Linq": "2.2.5",
+        "TweetinviAPI": "1.1.1",
+        "HTM.Net": "1.0.0-*"
+      }
+    }
+  }
+}

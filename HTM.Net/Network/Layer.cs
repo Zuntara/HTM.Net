@@ -122,7 +122,7 @@ namespace HTM.Net.Network
         protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
 
         protected int numColumns;
-        protected readonly FunctionFactory _factory;
+        protected FunctionFactory _factory;
 
         /// <summary>
         /// Active columns in the <see cref="SpatialPooler"/> at time "t"
@@ -1373,12 +1373,17 @@ namespace HTM.Net.Network
 
                 //////////////////////////
 
-                var outputStream = Sensor.GetOutputStream();
+                var outputStream = (IBaseStream)Sensor.GetOutputStream();
 
-                int[] intArray;
+                int[] intArray = null;
+                object inputObject;
                 while (!outputStream.EndOfStream)
                 {
-                    intArray = outputStream.Read();
+                    inputObject = outputStream.ReadUntyped();
+                    if (inputObject is int[])
+                    {
+                        intArray = (int[])inputObject;
+                    }
                     bool doComputation = false;
                     bool computed = false;
                     try
@@ -1409,7 +1414,7 @@ namespace HTM.Net.Network
                     {
 
                         //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                        _factory.Inference.SetEncoding(intArray);
+                        if (intArray != null) _factory.Inference.SetEncoding(intArray);
 
                         Compute(intArray);
                         computed = true;

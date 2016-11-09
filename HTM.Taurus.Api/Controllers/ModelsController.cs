@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using HTM.Net.Research.Taurus.HtmEngine.Adapters;
-using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using Microsoft.AspNet.Mvc;
 using HTM.Net.Research.Taurus.HtmEngine.Repository;
 using HTM.Net.Research.Taurus.MetricCollectors;
-using Microsoft.AspNet.Mvc;
+using HTM.Net.Research.Taurus.HtmEngine.runtime;
+using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 
 namespace HTM.Taurus.Api.Controllers
 {
