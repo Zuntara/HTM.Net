@@ -147,5 +147,8 @@ namespace HTM.Net.Tests.Network
             Assert.AreNotEqual(t1.GetHashCode(), t2.GetHashCode());
             Assert.IsFalse(t1.Equals(t2));
         }
+
+        // TODO: test serialisation of tuples to json and back
+
     }
 }

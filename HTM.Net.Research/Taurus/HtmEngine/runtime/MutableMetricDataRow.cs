@@ -245,21 +245,19 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                 // Intermediate variables used to compute fields in modelParams and also
                 // referenced from the control section.
-                aggregationInfo = new Map<string, object>
-                        {
-                            {"seconds", 0},
-                            {
-                                "fields", new Map<string, object>()
-                            },
-                            {"months", 0},
-                            {"days", 0},
-                            {"years", 0},
-                            {"hours", 0},
-                            {"microseconds", 0},
-                            {"weeks", 0},
-                            {"minutes", 0},
-                            {"milliseconds", 0},
-                        },
+                aggregationInfo = new AggregationDict
+                {
+                    days = 0,
+                    fields = new Map<string, object>(),
+                    hours = 0,
+                    microseconds = 0,
+                    milliseconds = 0,
+                    minutes = 0,
+                    months = 0,
+                    seconds = 0,
+                    weeks = 0,
+                    years = 0
+                },
 
                 predictAheadTime = null,
 

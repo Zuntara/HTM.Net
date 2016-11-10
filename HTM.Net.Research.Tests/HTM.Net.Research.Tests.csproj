@@ -111,6 +111,7 @@
     <Compile Include="Genetic\Swarming\SwarmingBasicTest.cs" />
     <Compile Include="Genetic\TestKnapsack.cs" />
     <Compile Include="Opf\ClaModelTest.cs" />
+    <Compile Include="Opf\MetricManagerTests.cs" />
     <Compile Include="Opf\MetricTests.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

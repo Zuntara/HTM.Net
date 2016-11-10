@@ -7,6 +7,7 @@ using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
@@ -140,9 +141,9 @@ namespace HTM.Net.Research.opf
             this._predictedFieldName = null;
             this._numFields = null;
             // init anomaly
-            int? windowSize = anomalyParams.slidingWindowSize;// anomalyParams.get("slidingWindowSize", null);
-            Anomaly.Mode mode = anomalyParams.mode ?? Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
-            int? anomalyThreshold = anomalyParams.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
+            int? windowSize = anomalyParams?.slidingWindowSize;// anomalyParams.get("slidingWindowSize", null);
+            Anomaly.Mode mode = anomalyParams?.mode ?? Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
+            int? anomalyThreshold = anomalyParams?.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
 
             parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, windowSize);
             parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, mode);
@@ -1385,7 +1386,7 @@ namespace HTM.Net.Research.opf
             throw new System.NotImplementedException();
         }
 
-        public override void getFieldInfo(bool includeClassifierOnlyField = false)
+        public override List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false)
         {
             throw new System.NotImplementedException();
         }

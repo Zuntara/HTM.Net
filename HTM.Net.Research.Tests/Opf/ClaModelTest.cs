@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
@@ -206,7 +208,7 @@ namespace HTM.Net.Research.Tests.Opf
             {
                 var result = model.run(row);
                 Assert.IsInstanceOfType(result, typeof(ModelResult));
-                
+
             }
         }
 
@@ -217,20 +219,18 @@ namespace HTM.Net.Research.Tests.Opf
                 var config = new DescriptionConfigModel()
                 {
                     model = "CLA",
-                    aggregationInfo = new Map<string, object>
+                    aggregationInfo = new AggregationDict
                     {
-                        {"days", 0},
-                        {
-                            "fields", new Map<string, object>()
-                        },
-                        {"hours", 0},
-                        {"microseconds", 0},
-                        {"milliseconds", 0},
-                        {"minutes", 0},
-                        {"months", 0},
-                        {"seconds", 0},
-                        {"weeks", 0},
-                        {"years", 0}
+                        days = 0,
+                        fields = new Map<string, object>(),
+                        hours = 0,
+                        microseconds = 0,
+                        milliseconds = 0,
+                        minutes = 0,
+                        months = 0,
+                        seconds = 0,
+                        weeks = 0,
+                        years = 0
                     },
                     modelParams = new ModelDescriptionParamsDescrModel
                     {
@@ -331,7 +331,7 @@ namespace HTM.Net.Research.Tests.Opf
                     {"predictedField", "c1" },
                     {"predictionSteps", new[] {1} },
                 };
-                inputRecordSchema=new Map<string, Tuple<FieldMetaType, SensorFlags>>
+                inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
                 {
                     {"c0", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp) },
                     {"c1", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank) },
@@ -365,6 +365,31 @@ namespace HTM.Net.Research.Tests.Opf
             }
 
             #endregion
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\rec-center-hourly.csv")]
+        public void TestFileHeader_BatchedCsvStream()
+        {
+            string fileName = "rec-center-hourly.csv";
+
+            IStream<string> fileStream = new Stream<string>(YieldingFileReader.ReadAllLines(fileName, Encoding.UTF8).ToList());
+            var inputSource = BatchedCsvStream<string>.Batch(fileStream, 20, false, 3);
+
+            var fields = inputSource.GetHeader().GetFieldNames().ToList();
+
+            Assert.IsNotNull(fields);
+            Assert.IsTrue(fields.Any());
+
+            var minValue = inputSource.GetFieldMin("consumption");
+            Assert.IsNotNull(minValue);
+            Assert.IsTrue(minValue.Length > 0);
+            Debug.WriteLine(minValue);
+
+            var maxValue = inputSource.GetFieldMax("consumption");
+            Assert.IsNotNull(maxValue);
+            Assert.IsTrue(maxValue.Length > 0);
+            Debug.WriteLine(maxValue);
         }
     }
 }

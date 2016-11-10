@@ -17,7 +17,10 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
         {
             // Load the metrics.json file
             string metrics = Properties.Resources.metrics;
-            return JsonConvert.DeserializeObject<MetricsConfiguration>(metrics);
+            return JsonConvert.DeserializeObject<MetricsConfiguration>(metrics, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
         }
 
         /// <summary>

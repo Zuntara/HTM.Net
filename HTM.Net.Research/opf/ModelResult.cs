@@ -6,7 +6,7 @@ namespace HTM.Net.Research.opf
     public class ModelResult
     {
         public int? predictionNumber;
-        public Dictionary<string, object> rawInput;
+        public Map<string, object> rawInput;
         public SensorInput sensorInput;
         public Map<InferenceElement, object> inferences;
         public object metrics;
@@ -15,7 +15,7 @@ namespace HTM.Net.Research.opf
         public object classifierInput;
 
         public ModelResult(int? predictionNumber = null,
-            Dictionary<string, object> rawInput = null,
+            Map<string, object> rawInput = null,
             SensorInput sensorInput = null,
             Map<InferenceElement, object> inferences = null,
             object metrics = null,

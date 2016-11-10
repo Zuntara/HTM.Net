@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
@@ -66,7 +68,7 @@ namespace HTM.Net.Research.opf
             this.__fieldNameIndexMap = new Map<string, int>();
             for (int i = 0; i < fieldInfo.Count; i++)
             {
-                var info = fieldInfo[0];
+                var info = fieldInfo[i];
                 __fieldNameIndexMap.Add(info.name, i);
             }
             this.__constructMetricsModules(metricSpecs);
@@ -84,12 +86,12 @@ namespace HTM.Net.Research.opf
         /// </summary>
         /// <param name="results">ModelResult object that was computed during the last iteration of the model</param>
         /// <returns>A dictionary where each key is the metric-name, and the values are it scalar value.</returns>
-        public Map<string, double> update(ModelResult results)
+        public Map<string, double?> update(ModelResult results)
         {
             _addResults(results);
-            if(__metricSpecs == null || __currentInference == null) return  new Map<string, double>();
+            if(__metricSpecs == null || __currentInference == null) return  new Map<string, double?>();
 
-            var metricResults = new Map<string,double>();
+            var metricResults = new Map<string,double?>();
             foreach (var item in ArrayUtils.Zip(__metrics, __metricSpecs, __metricLabels))
             {
                 var metric = (MetricIFace) item.Get(0);
@@ -98,15 +100,82 @@ namespace HTM.Net.Research.opf
 
                 var inferenceElement = spec.InferenceElement;
                 var field = spec.Field;
-                //var groundTruth = _getGroundTruth(inferenceElement);
-                //var inference = _getInference(inferenceElement);
-                //var rawRecord = _getRawGroundTruth();
+                var groundTruth = _getGroundTruth(inferenceElement.GetValueOrDefault());
+                var inference = _getInference(inferenceElement.GetValueOrDefault());
+                var rawRecord = _getRawGroundTruth();
                 var result = __currentResult;
                 if (!string.IsNullOrWhiteSpace(field))
                 {
-                    // TODO
-                    throw new NotImplementedException();
+                    if (inference is IList)
+                    {
+                        if (__fieldNameIndexMap.ContainsKey(field))
+                        {
+                            // NOTE: If the predicted field is not fed in at the bottom, we won't have it in our fieldNameIndexMap
+                            int fieldIndex = __fieldNameIndexMap[field];
+                            inference = ((IList) inference)[fieldIndex];
+                        }
+                        else
+                        {
+                            inference = null;
+                        }
+                    }
+                    else if (inference is Util.Tuple)
+                    {
+                        if (__fieldNameIndexMap.ContainsKey(field))
+                        {
+                            // NOTE: If the predicted field is not fed in at the bottom, we won't have it in our fieldNameIndexMap
+                            int fieldIndex = __fieldNameIndexMap[field];
+                            inference = ((Util.Tuple)inference).Get(fieldIndex);
+                        }
+                        else
+                        {
+                            inference = null;
+                        }
+                    }
+
+                    if (groundTruth != null)
+                    {
+                        if (groundTruth is IList)
+                        {
+                            if (__fieldNameIndexMap.ContainsKey(field))
+                            {
+                                // NOTE: If the predicted field is not fed in at the bottom, we won't have it in our fieldNameIndexMap
+                                int fieldIndex = __fieldNameIndexMap[field];
+                                groundTruth = ((IList)groundTruth)?[fieldIndex];
+                            }
+                            else
+                            {
+                                groundTruth = null;
+                            }
+                        }
+                        else if (groundTruth is Util.Tuple)
+                        {
+                            if (__fieldNameIndexMap.ContainsKey(field))
+                            {
+                                // NOTE: If the predicted field is not fed in at the bottom, we won't have it in our fieldNameIndexMap
+                                int fieldIndex = __fieldNameIndexMap[field];
+                                groundTruth = ((Util.Tuple)groundTruth)?.Get(fieldIndex);
+                            }
+                            else
+                            {
+                                groundTruth = null;
+                            }
+                        }
+                        else
+                        {
+                            // groundTruth could be a dict based off of field names
+                            groundTruth = ((IDictionary)groundTruth)[field];
+                        }
+                    }
                 }
+
+                metric.addInstance(
+                    groundTruth:  (groundTruth != null ? Convert.ToDouble(groundTruth) : (double?)null), 
+                    prediction: (inference != null ? Convert.ToDouble(inference) : (double?)null),
+                    record: rawRecord, 
+                    result: result);
+
+                metricResults[label] = (double?) metric.getMetric()["value"];
             }
             return metricResults;
         }
@@ -148,6 +217,10 @@ namespace HTM.Net.Research.opf
             __metricSpecs = metricSpecs.ToList();
             foreach (MetricSpec spec in __metricSpecs)
             {
+                if (!spec.InferenceElement.HasValue)
+                {
+                    throw new InvalidOperationException($"Invalid inference element for metric spec: {spec}");
+                }
                 // if not InferenceElement.validate(spec.inferenceElement):
                 //   raise ValueError("Invalid inference element for metric spec: %r" % spec)
                 __metrics.Add(MetricSpec.GetModule(spec));
@@ -155,15 +228,70 @@ namespace HTM.Net.Research.opf
             }
         }
 
-        public Map<string, double> GetMetrics()
+        /// <summary>
+        /// Gets the current metric values
+        /// </summary>
+        /// <returns>
+        /// A dictionary where each key is the metric-name, and the values are it scalar value. 
+        /// Same as the output of <see cref="update"/>
+        /// </returns>
+        public Map<string, double?> GetMetrics()
         {
-            Map<string, double> result = new Map<string, double>();
+            Map<string, double?> result = new Map<string, double?>();
             foreach (var item in ArrayUtils.Zip(__metrics, __metricLabels))
             {
                 var value = ((MetricIFace)item.Get(0)).getMetric();
-                result[(string)item.Get(1)] = (double)value["value"];
+                result[(string)item.Get(1)] = (double?)value["value"];
             }
             return result;
+        }
+
+        /// <summary>
+        /// Get the actual value for this field
+        /// </summary>
+        /// <param name="inferenceElement">The inference element (part of the inference) that is being used for this metric</param>
+        /// <returns></returns>
+        internal object _getGroundTruth(InferenceElement inferenceElement)
+        {
+            string sensorInputElement = InferenceElementHelper.GetInputElement(inferenceElement);
+            if (sensorInputElement == null)
+                return null;
+
+            var sensorElementProp = typeof (SensorInput).GetProperty(sensorInputElement, BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Public);
+
+            return sensorElementProp.GetValue(__currentGroundTruth.sensorInput);
+        }
+
+        /// <summary>
+        /// Get what the inferred value for this field was
+        /// </summary>
+        /// <param name="inferenceElement">The inference element (part of the inference) that is being used for this metric</param>
+        /// <returns></returns>
+        internal object _getInference(InferenceElement inferenceElement)
+        {
+            if (__currentInference != null)
+            {
+                return __currentInference.Get(inferenceElement, null);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get what the inferred value for this field was
+        /// </summary>
+        /// <returns></returns>
+        internal Map<string,object> _getRawGroundTruth()
+        {
+            return __currentGroundTruth.rawInput;
+        }
+
+        /// <summary>
+        /// Return the list of labels for the metrics that are being calculated
+        /// </summary>
+        /// <returns></returns>
+        public string[] getMetricLabels()
+        {
+            return __metricLabels.ToArray();
         }
     }
 }

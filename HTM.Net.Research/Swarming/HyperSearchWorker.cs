@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -220,7 +221,10 @@ namespace HTM.Net.Research.Swarming
                     }
 
                     this._hs.recordModelProgress(modelID: modelID,
-                        modelParams: JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string),
+                        modelParams: JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        }),
                         modelParamsHash: mParamsAndHash["engParamsHash"] as string,
                         results: results,
                         completed: (mResult.status == BaseClientJobDao.STATUS_COMPLETED),
@@ -303,7 +307,19 @@ namespace HTM.Net.Research.Swarming
             // ---------------------------------------------------------------------
             // Instantiate the Hypersearch object, which will handle the logic of
             //  which models to create when we need more to evaluate.
-            var jobParams = JsonConvert.DeserializeObject<HyperSearchSearchParams>(jobInfo["params"] as string);
+
+            var jobParamsMap = JsonConvert.DeserializeObject<Map<string, object>>(jobInfo["params"] as string, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
+
+            HyperSearchSearchParams jobParams=new HyperSearchSearchParams();
+            jobParams.persistentJobGUID = (string) jobParamsMap["persistentJobGUID"];
+            jobParams.descriptionPyContents = (DescriptionBase) jobParamsMap["descriptionPyContents"];
+            jobParams.permutationsPyContents = (PermutionFilterBase) jobParamsMap["permutationsPyContents"];
+            jobParams.maxModels = (int?) jobParamsMap["maxModels"];
+            jobParams.hsVersion = (string) jobParamsMap["hsVersion"];
+            
 
             // Validate job params
             //var jsonSchemaPath = os.path.join(os.path.dirname(__file__), "jsonschema", "jobParamsSchema.json");
@@ -385,7 +401,10 @@ namespace HTM.Net.Research.Swarming
                                 modelParams = tuple.Item1;
                                 modelParamsHash = tuple.Item2;
                                 particleHash = tuple.Item3;
-                                string jsonModelParams = JsonConvert.SerializeObject(modelParams);
+                                string jsonModelParams = JsonConvert.SerializeObject(modelParams, new JsonSerializerSettings
+                                {
+                                    TypeNameHandling = TypeNameHandling.All
+                                });
 
                                 var insertTuple = cjDAO.modelInsertAndStart(options.jobID,
                                     jsonModelParams, modelParamsHash, particleHash);
@@ -405,7 +424,10 @@ namespace HTM.Net.Research.Swarming
                                     }
 
                                     modelParams =
-                                        JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string);
+                                        JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string, new JsonSerializerSettings
+                                        {
+                                            TypeNameHandling = TypeNameHandling.All
+                                        });
                                     particleHash = cjDAO.modelsGetFields(modelID, new[] {"engParticleHash"})[0];
                                     string particleInst = string.Format("{0}.{1}", modelParams.particleState.id,
                                         modelParams.particleState.genIdx);
@@ -438,7 +460,10 @@ namespace HTM.Net.Research.Swarming
                             // A specific modelID was passed on the command line
                             modelIDToRun = ulong.Parse(options.modelID);
                             var mParamsAndHash = cjDAO.modelsGetParams(new List<ulong> {modelIDToRun.Value})[0];
-                            modelParams = JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string);
+                            modelParams = JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string, new JsonSerializerSettings
+                            {
+                                TypeNameHandling = TypeNameHandling.All
+                            });
                             modelParamsHash = mParamsAndHash["engParamsHash"] as string;
 
                             // Make us the worker

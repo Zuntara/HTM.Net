@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MathNet.Numerics;
 
@@ -3636,6 +3637,27 @@ namespace HTM.Net.Util
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Returns a subset of the keys that match any of the given patterns
+        /// </summary>
+        /// <param name="patterns">A list of regular expressions to match</param>
+        /// <param name="keys">A list of keys to search for matches</param>
+        /// <returns></returns>
+        public static List<string> MatchPatterns(string[] patterns, string[] keys)
+        {
+            List<string> results = new List<string>();
+
+            if (patterns == null || !patterns.Any()) return null;
+
+            foreach (var pattern in patterns)
+            {
+                var prog = new Regex(pattern);
+                results.AddRange(keys.Where(k => prog.IsMatch(k)).ToList());
+            }
+
+            return results;
         }
     }
 }

@@ -74,7 +74,7 @@ namespace HTM.Net.Research.Swarming
         /// <returns>completion reason and msg</returns>
         public static ModelCompletionStatus runModelGivenBaseAndParams(ulong? modelID, uint? jobID,
             IDescription baseDescription, ModelDescription @params,
-            string predictedField, object reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
+            string predictedField, string[] reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
             string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
         {
             //// --------------------------------------------------------------------------
@@ -83,11 +83,23 @@ namespace HTM.Net.Research.Swarming
             ModelCompletionStatus completionStatus;
             try
             {
+                var runner = new OpfModelRunner(
+                    modelID: modelID,
+                    jobID: jobID,
+                    predictedField: predictedField,
+                    experimentDir: baseDescription,
+                    reportKeyPatterns: reportKeys,
+                    optimizeKeyPattern: optimizeKey,
+                    jobsDAO: jobsDAO,
+                    modelCheckpointGUID: modelCheckpointGUID,
+                    predictionCacheMaxRecords: predictionCacheMaxRecords);
 
+                completionStatus = runner.run();
+                return completionStatus;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                if(Debugger.IsAttached) Debugger.Break();
                 throw;
             }
             //try
@@ -525,7 +537,7 @@ namespace HTM.Net.Research.Swarming
         /// For example: 
         /// aggregationDivide({ 'hours': 4}, {'minutes': 15}) == 16
         /// </remarks>
-        public static double aggregationDivide(Map<string, object> dividend, Map<string, object> divisor)
+        public static double aggregationDivide(AggregationDict dividend, AggregationDict divisor)
         {
             // Convert each into microseconds
             Map<string, double> dividendMonthSec = aggregationToMonthsSeconds(dividend);
@@ -540,7 +552,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             if (dividendMonthSec["months"] > 0)
-            { return (dividendMonthSec["months"]) / double.Parse(divisor["months"] as string); }
+            { return (dividendMonthSec["months"]) / divisor.months; }
             else
             {
                 return (dividendMonthSec["seconds"]) / divisorMonthSec["seconds"];
@@ -562,18 +574,18 @@ namespace HTM.Net.Research.Swarming
         /// For example:
         /// aggregationMicroseconds({ 'years': 1, 'hours': 4, 'microseconds':42}) ==  {'months':12, 'seconds':14400.000042}
         /// </remarks>
-        public static Map<string, double> aggregationToMonthsSeconds(Map<string, object> interval)
+        public static Map<string, double> aggregationToMonthsSeconds(AggregationDict interval)
         {
-            double seconds = (double)interval.Get("microseconds", 0) * 0.000001;
-            seconds += (double)interval.Get("milliseconds", 0) * 0.001;
-            seconds += (double)interval.Get("seconds", 0);
-            seconds += (double)interval.Get("minutes", 0) * 60;
-            seconds += (double)interval.Get("hours", 0) * 60 * 60;
-            seconds += (double)interval.Get("days", 0) * 24 * 60 * 60;
-            seconds += (double)interval.Get("weeks", 0) * 7 * 24 * 60 * 60;
+            double seconds = (double)interval.microseconds * 0.000001;
+            seconds += (double)interval.milliseconds * 0.001;
+            seconds += (double)interval.seconds;
+            seconds += (double)interval.minutes * 60;
+            seconds += (double)interval.hours * 60 * 60;
+            seconds += (double)interval.days * 24 * 60 * 60;
+            seconds += (double)interval.weeks * 7 * 24 * 60 * 60;
 
-            double months = (double)interval.Get("months", 0);
-            months += 12 * (double)interval.Get("years", 0);
+            double months = (double)interval.months;
+            months += 12 * (double)interval.years;
 
             return new Map<string, double> { { "months", months }, { "seconds", seconds } };
         }
@@ -582,6 +594,12 @@ namespace HTM.Net.Research.Swarming
 
     public struct ModelCompletionStatus
     {
+        public ModelCompletionStatus(string reason, string msg)
+        {
+            completionReason = reason;
+            completionMsg = msg;
+        }
+
         public string completionReason;
         public string completionMsg;
     }
@@ -956,12 +974,28 @@ namespace HTM.Net.Research.Swarming
         public int? autoDetectWaitRecords { get; set; }
     }
 
+    public class AggregationDict
+    {
+        public double years { get; set; }
+        public double months { get; set; }
+        public double weeks { get; set; }
+        public double days { get; set; }
+        public double hours { get; set; }
+        public double minutes { get; set; }
+        public double seconds { get; set; }
+        public double milliseconds { get; set; }
+        public double microseconds { get; set; }
+        public Map<string, object> fields { get; set; }
+
+
+    }
+
     public class DescriptionConfigModel
     {
         public string model { get; set; }
         public int? version { get; set; }
-        public Map<string, object> aggregationInfo { get; set; }
-        public Map<string, object> predictAheadTime { get; set; }
+        public AggregationDict aggregationInfo { get; set; }
+        public AggregationDict predictAheadTime { get; set; }
         public ModelDescriptionParamsDescrModel modelParams { get; set; }
 
         public Map<string, object> GetDictionary()
@@ -999,10 +1033,10 @@ namespace HTM.Net.Research.Swarming
                     version = (int)value;
                     break;
                 case "aggregationInfo":
-                    aggregationInfo = (Map<string, object>)value;
+                    aggregationInfo = (AggregationDict)value;
                     break;
                 case "predictAheadTime":
-                    predictAheadTime = (Map<string, object>)value;
+                    predictAheadTime = (AggregationDict)value;
                     break;
                 case "modelParams":
                     modelParams = (ModelDescriptionParamsDescrModel)value;

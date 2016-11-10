@@ -1038,7 +1038,10 @@ namespace HTM.Net.Research.Taurus.MetricCollectors
             tweetRow.InReplyToStatusId = msg.TweetData.InReplyToStatusIdStr;
             tweetRow.InReplyToUserid = msg.TweetData.InReplyToUserIdStr;
             tweetRow.InReplyToUsername = msg.TweetData.InReplyToScreenName;
-            tweetRow.Contributors = JsonConvert.SerializeObject(contributors);
+            tweetRow.Contributors = JsonConvert.SerializeObject(contributors, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
 
             // Compute aggregation timestamp as the lower aggregation boundary relative
             // to the given reference (required by Taurus-Mobile)

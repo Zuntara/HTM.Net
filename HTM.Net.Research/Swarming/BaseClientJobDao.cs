@@ -644,7 +644,7 @@ namespace HTM.Net.Research.Swarming
         public override uint jobInsert(string client, string cmdLine, string clientInfo = "", string clientKey = "", string @params = "",
             bool alreadyRunning = false, int minimumWorkers = 0, int maximumWorkers = 0, string jobType = "")
         {
-            string jobHash = this._normalizeHash(Guid.NewGuid().ToString());
+            string jobHash = this._normalizeHash(Guid.NewGuid().ToString().Replace("-", ""));
             uint jobID = (uint) (Jobs.Count + 1);
 
             string initStatus;

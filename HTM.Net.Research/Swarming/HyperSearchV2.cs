@@ -1921,14 +1921,20 @@ namespace HTM.Net.Research.Swarming
 
                 // This will do nothing if the value of engWorkerState is not still None.
                 this._hsObj._cjDAO.jobSetFieldIfEqual(
-                    this._hsObj._jobID, "engWorkerState", JsonConvert.SerializeObject(this._state), null);
+                    this._hsObj._jobID, "engWorkerState", JsonConvert.SerializeObject(this._state, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    }), null);
 
                 this._priorStateJSON = (string)this._hsObj._cjDAO.jobGetFields(this._hsObj._jobID, new[] { "engWorkerState" })[0];
                 Debug.Assert(this._priorStateJSON != null);
             }
 
             // Read state from the database
-            this._state = (HsStateModel)JsonConvert.DeserializeObject(this._priorStateJSON, typeof(HsStateModel));
+            this._state = (HsStateModel)JsonConvert.DeserializeObject(this._priorStateJSON, typeof(HsStateModel), new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
             this._dirty = false;
         }
 
@@ -1952,7 +1958,10 @@ namespace HTM.Net.Research.Swarming
 
             // Set the update time
             this._state.lastUpdateTime = DateTime.Now;
-            var newStateJSON = JsonConvert.SerializeObject(_state);
+            var newStateJSON = JsonConvert.SerializeObject(_state, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
             bool success = this._hsObj._cjDAO.jobSetFieldIfEqual(this._hsObj._jobID,
                 "engWorkerState", newStateJSON.ToString(), this._priorStateJSON.ToString());
 
@@ -1968,7 +1977,10 @@ namespace HTM.Net.Research.Swarming
                 this.logger.Debug(string.Format("Failed to change hsState to: \n{0} ", this._state.ToString()));
 
                 this._priorStateJSON = (string)this._hsObj._cjDAO.jobGetFields(this._hsObj._jobID, new[] { "engWorkerState" })[0];
-                this._state = (HsStateModel)JsonConvert.DeserializeObject(_priorStateJSON);
+                this._state = (HsStateModel)JsonConvert.DeserializeObject(_priorStateJSON, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.All
+                });
 
                 this.logger.Info("New hsState has been set by some other worker to: " + this._state.ToString());
             }
@@ -3473,7 +3485,10 @@ namespace HTM.Net.Research.Swarming
                     }
 
                     Debug.Assert(this._searchParams.permutationsPyContents != null);
-                    permutationsScript = JsonConvert.SerializeObject(this._searchParams.permutationsPyContents);
+                    permutationsScript = JsonConvert.SerializeObject(this._searchParams.permutationsPyContents, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    });
                     // Generate the permutations.py and description.py files
                     //string outDir = this._tempDir = @"C:\temp\" + Path.GetRandomFileName();//tempfile.mkdtemp();
                     //permutationsScript = Path.Combine(outDir, "permutations.py");
@@ -3525,11 +3540,17 @@ namespace HTM.Net.Research.Swarming
                         jobID: this._jobID,
                         fieldName: "genBaseDescription",
                         curValue: null,
-                        newValue: JsonConvert.SerializeObject(this._baseDescription));
+                        newValue: JsonConvert.SerializeObject(this._baseDescription, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        }));
                     if (updated)
                     {
                         //string permContents = new StreamReader(permutationsScript).ReadToEnd();
-                        string permContents = JsonConvert.SerializeObject(permutationsScript);
+                        string permContents = JsonConvert.SerializeObject(permutationsScript, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        });
                         this._cjDAO.jobSetFieldIfEqual(jobID: this._jobID,
                                                        fieldName: "genPermutations",
                                                        curValue: null,
@@ -3733,7 +3754,10 @@ namespace HTM.Net.Research.Swarming
             //Dictionary<string, object> vars = new Dictionary<string, object>();
 
             //permFile = execfile(filename, globals(), vars);
-            IPermutionFilter permFile = (IPermutionFilter)JsonConvert.DeserializeObject(permFileJson, typeof(PermutionFilterBase));
+            IPermutionFilter permFile = (IPermutionFilter)JsonConvert.DeserializeObject(permFileJson, typeof(PermutionFilterBase), new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
 
             // Read in misc info.
             this._reportKeys = permFile.report; // vars.Get("report", []);
@@ -4243,7 +4267,10 @@ namespace HTM.Net.Research.Swarming
                         }
                         else
                         {
-                            results = (Dictionary<string, Dictionary<string, Tuple<int, List<double>>>>)JsonConvert.DeserializeObject(resultsStr);
+                            results = (Dictionary<string, Dictionary<string, Tuple<int, List<double>>>>)JsonConvert.DeserializeObject(resultsStr, new JsonSerializerSettings
+                            {
+                                TypeNameHandling = TypeNameHandling.All
+                            });
                         }
                         if (!results.ContainsKey("terminatedSwarms"))
                         {
@@ -4258,7 +4285,10 @@ namespace HTM.Net.Research.Swarming
                             }
                         }
 
-                        string newResultsStr = JsonConvert.SerializeObject(results);
+                        string newResultsStr = JsonConvert.SerializeObject(results, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        });
                         if (newResultsStr == resultsStr)
                         {
                             break;
@@ -4325,7 +4355,10 @@ namespace HTM.Net.Research.Swarming
                     ulong? bestModelId;
                     if (jobResultsStr != null)
                     {
-                        jobResults = (Dictionary<string, object>)JsonConvert.DeserializeObject(jobResultsStr);
+                        jobResults = (Dictionary<string, object>)JsonConvert.DeserializeObject(jobResultsStr, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        });
                         bestModelId = (ulong?)jobResults.Get("bestModel", null);
                     }
                     else
@@ -4861,7 +4894,10 @@ namespace HTM.Net.Research.Swarming
             Dictionary<string, object> jobResults;
             if (jobResultsStr != null)
             {
-                jobResults = (Dictionary<string, object>)JsonConvert.DeserializeObject(jobResultsStr);
+                jobResults = (Dictionary<string, object>)JsonConvert.DeserializeObject(jobResultsStr, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.All
+                });
             }
             else
             {
@@ -4877,7 +4913,10 @@ namespace HTM.Net.Research.Swarming
                 bool isUpdated = this._cjDAO.jobSetFieldIfEqual(this._jobID,
                                                              fieldName: "results",
                                                              curValue: jobResultsStr,
-                                                             newValue: JsonConvert.SerializeObject(jobResults));
+                                                             newValue: JsonConvert.SerializeObject(jobResults, new JsonSerializerSettings
+                                                             {
+                                                                 TypeNameHandling = TypeNameHandling.All
+                                                             }));
                 if (isUpdated)
                 {
                     this.logger.Info("Successfully updated the field contributions:" + pctFieldContributions);
@@ -5103,8 +5142,14 @@ namespace HTM.Net.Research.Swarming
                     //m.update(sortedJSONDumpS(structuredParams));
                     //m.update(this._baseDescriptionHash);
                     //paramsHash = m.digest();
-                    paramsHash = GetMd5Hash(MD5.Create(), JsonConvert.SerializeObject(structuredParams)
-                        + JsonConvert.SerializeObject(_baseDescriptionHash));
+                    paramsHash = GetMd5Hash(MD5.Create(), JsonConvert.SerializeObject(structuredParams, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    })
+                        + JsonConvert.SerializeObject(_baseDescriptionHash, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        }));
                     string particleInst = string.Format("{0}.{1}", modelParams.particleState.id, modelParams.particleState.genIdx);
                     particleHash = GetMd5Hash(MD5.Create(), particleInst);// hashlib.md5(particleInst).digest();
 

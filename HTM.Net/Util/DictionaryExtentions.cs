@@ -303,6 +303,11 @@ namespace HTM.Net.Util
             }
         }
 
+        public void Add(KeyValuePair<TKey, TValue> pair)
+        {
+            this.Add(pair.Key, pair.Value);
+        }
+
         public void Update(IDictionary<TKey, TValue> dictionary)
         {
             if (dictionary == null) return;

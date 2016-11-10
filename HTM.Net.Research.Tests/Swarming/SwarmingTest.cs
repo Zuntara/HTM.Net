@@ -286,7 +286,10 @@ namespace HTM.Net.Research.Tests.Swarming
             if (!continueJobId.HasValue)
             {
                 jobID = (int)cjDAO.jobInsert(client: "test", cmdLine: "<started manually>",
-                        @params: JsonConvert.SerializeObject(jobParams),
+                        @params: JsonConvert.SerializeObject(jobParams, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.All
+                        }),
                         alreadyRunning: true, minimumWorkers: 1, maximumWorkers: 1,
                         jobType: BaseClientJobDao.JOB_TYPE_HS);
             }
@@ -573,6 +576,7 @@ namespace HTM.Net.Research.Tests.Swarming
         }
 
         //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.csv")]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
@@ -583,11 +587,19 @@ namespace HTM.Net.Research.Tests.Swarming
         {
             SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
             
-            string json = JsonConvert.SerializeObject(file);
+            string json = JsonConvert.SerializeObject(file, Formatting.Indented, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
             Debug.WriteLine(json);
-            var deserialized = JsonConvert.DeserializeObject(json, typeof(DescriptionBase));
+            var deserialized = JsonConvert.DeserializeObject(json, typeof(DescriptionBase), new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
             Assert.IsNotNull(deserialized);
             Assert.IsInstanceOfType(deserialized, typeof(SimpleV2DescriptionFile));
+
+            
         }
 
         [TestMethod]

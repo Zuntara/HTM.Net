@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
 using log4net;
@@ -50,7 +51,7 @@ namespace HTM.Net.Research.opf
 
         public abstract void finishLearning();
         public abstract void resetSequenceStates();
-        public abstract void getFieldInfo(bool includeClassifierOnlyField = false);
+        public abstract List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false);
         public abstract void setFieldStatistics(Map<string, Map<string, object>> fieldStats);
         public abstract void getRuntimeStats();
         protected abstract ILog _getLogger();

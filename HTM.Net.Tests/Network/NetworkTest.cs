@@ -222,7 +222,7 @@ namespace HTM.Net.Tests.Network
                     //    output.GetClassifierInput()["consumption"].Get("inputValue") + "," + output.GetAnomalyScore());
 
                     lines.Add(output.GetRecordNum() + "," +
-                              output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "," +
+                              ((NamedTuple)output.GetClassifierInput()["consumption"]).GetAsString("inputValue") + "," +
                               output.GetAnomalyScore());
 
                     if (output.GetRecordNum() == 9)
@@ -291,7 +291,7 @@ namespace HTM.Net.Tests.Network
             {
                 timings.Add(sw.Elapsed);
                 string sToAdd = output.GetRecordNum() + "," +
-                                output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "," +
+                               ((NamedTuple)output.GetClassifierInput()["consumption"]).GetAsString("inputValue") + "," +
                                 output.GetAnomalyScore();
                 //Console.WriteLine(Arrays.ToString(output.GetSdr()));
                 //Console.WriteLine("> " + sToAdd);
@@ -352,7 +352,7 @@ namespace HTM.Net.Tests.Network
                     //Console.WriteLine(Arrays.ToString(output.GetSdr()));
 
                     string sToAdd = output.GetRecordNum() + "," +
-                                    output.GetClassifierInput().Get("consumption").GetAsString("inputValue") + "," +
+                                    ((NamedTuple)output.GetClassifierInput()["consumption"]).GetAsString("inputValue") + "," +
                                     output.GetAnomalyScore();
                     //Console.WriteLine("2 > " + sToAdd);
                     lines.Add(sToAdd);
@@ -563,7 +563,7 @@ namespace HTM.Net.Tests.Network
                 //                System.out.Println(i.GetRecordNum() + "," + 
                 //                    i.GetClassifierInput().Get("consumption").Get("inputValue") + "," + i.GetAnomalyScore());
                 lines.Add(output.GetRecordNum() + "|" +
-                  output.GetClassifierInput()["consumption"].GetAsString("inputValue") + "|" + output.GetAnomalyScore());
+                  ((NamedTuple)output.GetClassifierInput()["consumption"]).GetAsString("inputValue") + "|" + output.GetAnomalyScore());
 
 
                 if (output.GetRecordNum() == 1000)

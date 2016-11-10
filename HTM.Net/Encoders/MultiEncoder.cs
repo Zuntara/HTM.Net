@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Util;
+using Newtonsoft.Json.Linq;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
@@ -173,10 +174,10 @@ namespace HTM.Net.Encoders
             switch (param.ToLower())
             {
                 case "n":
-                    builder.N((int)value);
+                    builder.N(Convert.ToInt32(value));
                     break;
                 case "w":
-                    builder.W((int)value);
+                    builder.W(Convert.ToInt32(value));
                     break;
                 case "minval":
                     builder.MinVal(TypeConverter.Convert<double>(value));
@@ -212,6 +213,11 @@ namespace HTM.Net.Encoders
                             throw new ArgumentException("Category field not delimited with '" + CATEGORY_DELIMITER + "' character.");
                         }
                         value = strVal.Split(CATEGORY_DELIMITER).ToList();
+                    }
+                    if (value is JArray)
+                    {
+                        var arr = ((JArray) value).Select(a=>a.Value<string>()).ToList();
+                        value = arr;
                     }
                     if (builder is CategoryEncoder.Builder)
                     {

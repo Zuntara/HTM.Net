@@ -1081,8 +1081,8 @@ namespace HTM.Net.Network.Sensor
         }
 
         /// <summary>
-        /// Factory method to create a {@code BatchedCsvStream}. If isParallel is false,
-        /// this stream will behave like a typical stream. See also {@link BatchedCsvStream#batch(Stream, int, boolean, int, int)}
+        /// Factory method to create a <see cref="BatchedCsvStream{T}"/>. If isParallel is false,
+        /// this stream will behave like a typical stream. See also <see cref="BatchedCsvStream{T}.Batch"/>
         /// for more fine grained setting of characteristics.
         /// </summary>
         /// <param name="stream">Incomming stream</param>
@@ -1191,7 +1191,7 @@ namespace HTM.Net.Network.Sensor
 
         public IBaseStream Map(Func<string[], int[]> mapFunc)
         {
-            return (IBaseStream) _contentStream.Map(mapFunc);
+            return (IBaseStream)_contentStream.Map(mapFunc);
             //return new Stream<int[]>(_contents.Select(mapFunc).ToArray());
         }
 
@@ -1325,6 +1325,15 @@ namespace HTM.Net.Network.Sensor
                 throw new NotImplementedException();
             }
 
+            /// <summary>
+            /// Returns the fieldnames of the header
+            /// </summary>
+            /// <returns></returns>
+            public IEnumerable<string> GetFieldNames()
+            {
+                return _headerValues[0].All().Cast<string>().ToList();
+            }
+
             public List<FieldMetaType> GetFieldTypes()
             {
                 throw new NotImplementedException();
@@ -1336,6 +1345,8 @@ namespace HTM.Net.Network.Sensor
                 _headerValues.ToList().ForEach(l => sb.Append(l).Append("\n"));
                 return sb.ToString();
             }
+
+
         }
 
         public void ForEach(Action<object> action)
@@ -1351,6 +1362,56 @@ namespace HTM.Net.Network.Sensor
         public void Write(string[] input)
         {
             _contentStream.Write(input);
+        }
+
+        private List<String[]> _cachedValues;
+
+        /// <summary>
+        /// Returns the min value of the given field present in this stream.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public string GetFieldMin(string field)
+        {
+            if (_cachedValues == null)
+            {
+                var copy = _contentStream.Copy();
+                _cachedValues = new List<string[]>();
+                do
+                {
+                    string[] values = copy.Read();
+                    if (values == null) break;
+                    _cachedValues.Add(values);
+                } while (!copy.EndOfStream);
+            }
+
+            int fieldIndex = GetHeader().GetFieldNames().ToList().IndexOf(field);
+
+            return _cachedValues.Select(v => v[fieldIndex+1]).Min();
+        }
+
+        /// <summary>
+        /// Returns the min value of the given field present in this stream.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public string GetFieldMax(string field)
+        {
+            if (_cachedValues == null)
+            {
+                var copy = _contentStream.Copy();
+                _cachedValues = new List<string[]>();
+                do
+                {
+                    string[] values = copy.Read();
+                    if (values == null) break;
+                    _cachedValues.Add(values);
+                } while (!copy.EndOfStream);
+            }
+
+            int fieldIndex = GetHeader().GetFieldNames().ToList().IndexOf(field);
+
+            return _cachedValues.Select(v => v[fieldIndex+1]).Max();
         }
     }
 }

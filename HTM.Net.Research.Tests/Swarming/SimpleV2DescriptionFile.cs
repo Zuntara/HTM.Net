@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using HTM.Net.Algorithms;
+using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
@@ -24,26 +25,24 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 // Intermediate variables used to compute fields in modelParams and also
                 // referenced from the control section.
-                aggregationInfo = new Map<string, object>
+                aggregationInfo = new AggregationDict
                 {
-                    {"days", 0},
-                    {
-                        "fields", new Map<string, object>
+                    days = 0,
+                    fields = new Map<string, object>
                         {
                             {"timestamp", "first"},
                             {"gym", "first"},
                             {"consumption", "mean"},
                             {"address", "first"}
-                        }
-                    },
-                    {"hours", 0},
-                    {"microseconds", 0},
-                    {"milliseconds", 0},
-                    {"minutes", 0},
-                    {"months", 0},
-                    {"seconds", 0},
-                    {"weeks", 0},
-                    {"years", 0}
+                        },
+                    hours = 0,
+                    microseconds = 0,
+                    milliseconds = 0,
+                    minutes = 0,
+                    months = 0,
+                    seconds = 0,
+                    weeks = 0,
+                    years = 0
                 },
 
                 predictAheadTime = null,
@@ -299,6 +298,14 @@ namespace HTM.Net.Research.Tests.Swarming
                 }
             };
             // end of config dictionary
+
+            inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
+            {
+                { "address", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
+                { "consumption", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank) },
+                { "gym", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
+                { "timestamp", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp) },
+            };
 
             // Adjust base config dictionary for any modifications if imported from a
             // sub-experiment

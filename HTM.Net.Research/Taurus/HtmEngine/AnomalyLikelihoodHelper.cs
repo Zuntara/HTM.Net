@@ -396,7 +396,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine
                 throw new MetricNotActiveError(string.Format("getAnomalyLikelihoodParams failed because metric={0} is not ACTIVE; status={1}; resource={2}",
                     metricObj.Uid, metricObj.Status, metricObj.Server));
             }
-            ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams);
+            ModelParams modelParams = JsonConvert.DeserializeObject<ModelParams>(metricObj.ModelParams, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
             var anomalyParams = modelParams.AnomalyLikelihoodParams;
             //Debug.Assert(anomalyParams != null, "anomalyParams");
 

@@ -111,6 +111,7 @@
   <ItemGroup>
     <Compile Include="Data\FieldMetaInfo.cs" />
     <Compile Include="Data\InferenceShifter.cs" />
+    <Compile Include="Data\StreamReader.cs" />
     <Compile Include="Generators\SineGenerator.cs" />
     <Compile Include="Genetic\Gene.cs" />
     <Compile Include="opf\CLAModel.cs" />
@@ -119,7 +120,7 @@
     <Compile Include="opf\ModelFactory.cs" />
     <Compile Include="opf\ModelResult.cs" />
     <Compile Include="opf\NetworkInfo.cs" />
-    <Compile Include="opf\OpfModelRunner.cs" />
+    <Compile Include="Swarming\OpfModelRunner.cs" />
     <Compile Include="opf\PredictionMetricsManager.cs" />
     <Compile Include="opf\SensorInput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

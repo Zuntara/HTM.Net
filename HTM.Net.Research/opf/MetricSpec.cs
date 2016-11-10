@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
@@ -39,14 +40,14 @@ namespace HTM.Net.Research.opf
             {
                 result.Add(inferenceType.ToString());
             }
-            result.Add(this.InferenceElement.ToString());
-            result.Add(this.Metric);
+            result.Add(this.InferenceElement.ToString().ToLowerInvariant());
+            result.Add(this.Metric.ToLowerInvariant());
 
             var @params = this.Params;
             if (@params != null)
             {
-                var sortedParams = @params.Keys;
-                //sortedParams.Sort();
+                var sortedParams = @params.Keys.ToList();
+                sortedParams.Sort();
                 foreach (var param in sortedParams)
                 {
                     // Don't include the customFuncSource - it is too long an unwieldy
@@ -58,11 +59,11 @@ namespace HTM.Net.Research.opf
                     var value = @params[param];
                     if (value is string)
                     {
-                        result.Add(string.Format("{0}={1}", param, value));
+                        result.Add(string.Format(CultureInfo.InvariantCulture, "{0}=\"{1}\"", param, value));
                     }
                     else
                     {
-                        result.Add(string.Format("{0}={1}", param, value));
+                        result.Add(string.Format(CultureInfo.InvariantCulture, "{0}={1}", param, value));
                     }
                 }
             }
@@ -70,7 +71,7 @@ namespace HTM.Net.Research.opf
             if (this.Field != null)
                 result.Add("field=" + this.Field);
 
-            return string.Join("", result);
+            return string.Join(":", result);
         }
 
         /// <summary>
@@ -91,8 +92,10 @@ namespace HTM.Net.Research.opf
             {
                 case "rmse":
                     return new MetricRMSE(metricSpec);
+                case "aae":
+                    return new MetricAAE(metricSpec);
             }
-            return null;
+            throw new InvalidOperationException($"Invalid metric given: {metricName}");
         }
 
         public object Clone()
@@ -122,7 +125,7 @@ namespace HTM.Net.Research.opf
         /// <param name="record"></param>
         /// <param name="result">An ModelResult class </param>
         /// <returns></returns>
-        public abstract double? addInstance(double? groundTruth, double prediction, object record = null, ModelResult result = null);
+        public abstract double? addInstance(double? groundTruth, double? prediction, Map<string,object> record = null, ModelResult result = null);
 
         public abstract Map<string, object> getMetric();
 
@@ -239,7 +242,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of MetricIFace
 
-        public override double? addInstance(double? groundTruth, double prediction, object record = null, ModelResult result = null)
+        public override double? addInstance(double? groundTruth, double? prediction, Map<string, object> record = null, ModelResult result = null)
         {
             // This base class does not support time shifting the ground truth or a
             // subErrorMetric.
@@ -296,7 +299,7 @@ namespace HTM.Net.Research.opf
 
         #endregion
 
-        public abstract double accumulate(double? groundTruth, double prediction, double accumulatedError, Deque<double> historyBuffer, ModelResult result);
+        public abstract double accumulate(double? groundTruth, double? prediction, double accumulatedError, Deque<double> historyBuffer, ModelResult result);
 
         public abstract double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps);
     }
@@ -314,10 +317,10 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double accumulate(double? groundTruth, double prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, double? prediction, double accumulatedError, Deque<double> historyBuffer,
             ModelResult result)
         {
-            var error = Math.Pow(groundTruth.GetValueOrDefault() - prediction, 2);
+            var error = Math.Pow(groundTruth.GetValueOrDefault() - prediction.GetValueOrDefault(), 2);
             accumulatedError += error;
 
             if (historyBuffer != null)
@@ -345,6 +348,46 @@ namespace HTM.Net.Research.opf
         #endregion
     }
 
+    public class MetricAAE : AggregateMetric
+    {
+        public MetricAAE(MetricSpec metricSpec)
+            : base(metricSpec)
+        {
+
+        }
+
+        #region Overrides of AggregateMetric
+
+        public override double accumulate(double? groundTruth, double? prediction, double accumulatedError, Deque<double> historyBuffer,
+            ModelResult result)
+        {
+            double error = Math.Abs(groundTruth.GetValueOrDefault() - prediction.GetValueOrDefault());
+            accumulatedError += error;
+
+            if (historyBuffer != null)
+            {
+                historyBuffer.Append(error);
+                if (historyBuffer.Length > (int) spec.Params["window"])
+                {
+                    accumulatedError -= historyBuffer.TakeFirst();
+                }
+            }
+            return accumulatedError;
+        }
+
+        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        {
+            int n = steps;
+            if (historyBuffer != null)
+            {
+                n = historyBuffer.Length;
+            }
+            return accumulatedError/(double)n;
+        }
+
+        #endregion
+    }
+
     public enum InferenceElement
     {
         Prediction,
@@ -360,6 +403,15 @@ namespace HTM.Net.Research.opf
 
     public static class InferenceElementHelper
     {
+        private static Map<InferenceElement, string> _inferenceMap = new Map<InferenceElement, string>
+        {
+            { InferenceElement.Prediction, "dataRow" },
+            { InferenceElement.Encodings, "dataEncodings" },
+            { InferenceElement.Classification, "category" },
+            { InferenceElement.ClassConfidences, "category" },
+            { InferenceElement.MultiStepPredictions, "dataDict" },
+            { InferenceElement.MultiStepBestPredictions, "dataDict" },
+        };
         /// <summary>
         /// Returns the maximum delay for the InferenceElements in the inference dictionary
         /// </summary>
@@ -423,6 +475,17 @@ namespace HTM.Net.Research.opf
             // -----------------------------------------------------------------------
             // default: return 0
             return 0;
+        }
+
+        /// <summary>
+        /// Get the sensor input element that corresponds to the given inference
+        /// element. This is mainly used for metrics and prediction logging
+        /// </summary>
+        /// <param name="inferenceElement"></param>
+        /// <returns></returns>
+        public static string GetInputElement(InferenceElement inferenceElement)
+        {
+            return _inferenceMap.Get(inferenceElement, null);
         }
     }
 }

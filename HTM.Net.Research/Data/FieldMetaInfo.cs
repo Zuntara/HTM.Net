@@ -24,6 +24,6 @@ namespace HTM.Net.Research.Data
         }
 
         public FieldMetaType type { get { return (FieldMetaType) Get(1); } }
-        public FieldMetaType special { get { return (FieldMetaType) Get(2); } }
+        public SensorFlags special { get { return (SensorFlags) Get(2); } }
     }
 }

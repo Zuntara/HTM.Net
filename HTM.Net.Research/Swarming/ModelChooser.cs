@@ -97,7 +97,10 @@ namespace HTM.Net.Research.Swarming
             }
             else
             {
-                results = JsonConvert.DeserializeObject<NamedTuple>(resultsObj as string);
+                results = JsonConvert.DeserializeObject<NamedTuple>(resultsObj as string, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.All
+                });
                 LOGGER.Debug(string.Format("Updating old results {0}", results));
             }
             int oldCandidateID = (int) results["bestModel"];
@@ -119,7 +122,10 @@ namespace HTM.Net.Research.Swarming
             }
 
             LOGGER.Debug(string.Format("New Results {0}", results));
-            _cjDB.jobUpdateResults(_jobID, JsonConvert.SerializeObject(results));
+            _cjDB.jobUpdateResults(_jobID, JsonConvert.SerializeObject(results, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            }));
         }
 
         private object _getJobResults()

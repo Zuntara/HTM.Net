@@ -239,7 +239,10 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 new Map<string, object>
                 {
                     {"status", MetricStatus.CreatePending},
-                    {"modelParams", JsonConvert.SerializeObject(swarmParams)}
+                    {"modelParams", JsonConvert.SerializeObject(swarmParams, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    })}
                 });
 
             metricObj = RepositoryFactory.Metric.GetMetric(metricObj.Uid);
