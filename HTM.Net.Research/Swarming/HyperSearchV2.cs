@@ -5421,6 +5421,7 @@ namespace HTM.Net.Research.Swarming
             catch (Exception e)
             {
                 this.logger.Warn(e);
+                if(Debugger.IsAttached) Debugger.Break();
                 throw;
             }
         }

@@ -284,7 +284,7 @@ namespace HTM.Net.Research.Swarming
             throw new NotImplementedException();
         }
 
-        public void modelSetCompleted(ulong? modelID, string completionReason, string completionMsg, long? cpuTime = null)
+        public virtual void modelSetCompleted(ulong? modelID, string completionReason, string completionMsg, long? cpuTime = null)
         {
             throw new NotImplementedException();
         }
@@ -631,6 +631,11 @@ namespace HTM.Net.Research.Swarming
         {
             throw new NotImplementedException();
         }
+
+        public virtual void modelUpdateTimestamp(ulong? modelId)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MemoryClientJobDao : BaseClientJobDao
@@ -725,6 +730,10 @@ namespace HTM.Net.Research.Swarming
                 {
                     results.Add(job.cancel);
                 }
+                else if (field == "results")
+                {
+                    results.Add(job.results);
+                }
                 else if (field == "engWorkerState")
                 {
                     results.Add(job._eng_worker_state);
@@ -797,6 +806,11 @@ namespace HTM.Net.Research.Swarming
             if (fieldName == "genBaseDescription" && job.gen_base_description == curValue)
             {
                 job.gen_base_description = newValue;
+                return true;
+            }
+            if (fieldName == "results" && job.results == curValue)
+            {
+                job.results = newValue;
                 return true;
             }
             if (fieldName == "engWorkerState" && job._eng_worker_state == curValue)
@@ -1066,13 +1080,42 @@ namespace HTM.Net.Research.Swarming
         /// <param name="numRecords"></param>
         public override void modelUpdateResults(ulong? modelId, string results = null, double? metricValue = null, uint? numRecords = null)
         {
-            //var assignmentExpressions;
-
             var model = Models.Single(m => m.model_id == modelId.GetValueOrDefault());
+            model._eng_last_update_time = DateTime.Now;
+            model.update_counter += 1;
 
             if (results != null) model.results = results;
             if (numRecords.HasValue) model.num_records = numRecords.Value;
             if (metricValue.HasValue) model.optimized_metric = metricValue.Value;
+        }
+
+        public override void modelUpdateTimestamp(ulong? modelId)
+        {
+            modelUpdateResults(modelId);
+        }
+
+        /// <summary>
+        /// Mark a model as completed, with the given completionReason and
+        /// completionMsg.This will fail if the model does not currently belong to this
+        /// client (connection_id doesn't match).
+        /// </summary>
+        /// <param name="modelID"></param>
+        /// <param name="completionReason"></param>
+        /// <param name="completionMsg"></param>
+        /// <param name="cpuTime"></param>
+        public override void modelSetCompleted(ulong? modelID, string completionReason, string completionMsg, long? cpuTime = null)
+        {
+            if (string.IsNullOrWhiteSpace(completionMsg)) completionMsg = String.Empty;
+
+            var model = Models.Single(m => m.model_id == modelID.GetValueOrDefault());
+
+            model.status = STATUS_COMPLETED;
+            model.completion_reason = completionReason;
+            model.completion_msg = completionMsg;
+            model.end_time = DateTime.Now;
+            model.cpu_time = cpuTime.GetValueOrDefault(0);
+            model._eng_last_update_time = DateTime.Now;
+            model.update_counter += 1;
         }
 
         #endregion

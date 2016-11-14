@@ -508,7 +508,9 @@ namespace HTM.Net.Research.Swarming
         {
             if (__predictionCache == null) return;
 
-            throw new NotImplementedException("flushing not yet implemented");
+            _logger.Error("OPF Model runner __flushPredictionCache not yet implemented!");
+            _logger.Error(Arrays.ToString(__predictionCache));
+            //throw new NotImplementedException("flushing not yet implemented");
         }
 
         /// <summary>
@@ -536,12 +538,12 @@ namespace HTM.Net.Research.Swarming
 
             // -----------------------------------------------------------------------
             // Update model results
-            string results = JsonConvert.SerializeObject(new Tuple(metrics,optimizeDict));
+            string results = JsonConvert.SerializeObject(new Tuple(metrics, optimizeDict));
 
             _jobsDAO.modelUpdateResults(_modelID, results: results, metricValue: optimizeDict.Values.First(),
                 numRecords: (uint)(_currentRecordIndex + 1));
 
-            _logger.Debug($"Model Results: modelID={_modelID}; numRecords={_currentRecordIndex+1}; results={results}");
+            _logger.Debug($"Model Results: modelID={_modelID}; numRecords={_currentRecordIndex + 1}; results={results}");
         }
 
         private Map<string, double?> _getMetrics()
@@ -560,7 +562,150 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         private void __updateJobResults()
         {
-            throw new NotImplementedException();
+            bool isSaved = false;
+            while (true)
+            {
+                Tuple cbm = __checkIfBestCompletedModel();
+                _isBestModel = (bool)cbm.Get(0);
+                Map<string, object> jobResults = (Map<string, object>)cbm.Get(1);
+                string jobResultsStr = (string)cbm.Get(2);
+
+                // -----------------------------------------------------------------------
+                // If the current model is the best:
+                //   1) Save the model's predictions
+                //   2) Checkpoint the model state
+                //   3) Update the results for the job
+                if (_isBestModel)
+                {
+                    // Save the current model and its results
+                    if (!isSaved)
+                    {
+                        __flushPredictionCache();
+                        _jobsDAO.modelUpdateTimestamp(_modelID);
+                        __createModelCheckpoint();
+                        _jobsDAO.modelUpdateTimestamp(_modelID);
+                        isSaved = true;
+                    }
+
+                    // Now record the model as the best for the job
+                    ulong? prevBest = (ulong?)jobResults.Get("bestModel", null);
+                    bool prevWasSaved = (bool)jobResults.Get("saved", false);
+
+                    // If the current model is the best, it shouldn't already be checkpointed
+                    if (prevBest == _modelID)
+                    {
+                        Debug.Assert(!prevWasSaved);
+                    }
+
+                    var metrics = _getMetrics();
+
+                    jobResults["bestModel"] = _modelID;
+                    jobResults["bestValue"] = metrics[_optimizedMetricLabel];
+                    jobResults["metrics"] = metrics;
+                    jobResults["saved"] = true;
+
+                    bool isUpdated = _jobsDAO.jobSetFieldIfEqual(_jobID, fieldName: "results", curValue: jobResultsStr,
+                        newValue:
+                            JsonConvert.SerializeObject(jobResults,
+                                new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All }));
+                    if (isUpdated)
+                    {
+                        if (prevWasSaved)
+                        {
+                            __deleteOutputCache(prevBest);
+                            _jobsDAO.modelUpdateTimestamp(_modelID);
+                            __deleteModelCheckpoint(prevBest);
+                            _jobsDAO.modelUpdateTimestamp(_modelID);
+                        }
+                        _logger.Info($"Model {_modelID} chosen as best model.");
+                        break;
+                    }
+                }
+                // -----------------------------------------------------------------------
+                // If the current model is not the best, delete its outputs
+                else
+                {
+                    // NOTE: we update model timestamp around these occasionally-lengthy
+                    // operations to help prevent the model from becoming orphaned
+                    __deleteOutputCache(_modelID);
+                    _jobsDAO.modelUpdateTimestamp(_modelID);
+                    __deleteModelCheckpoint(_modelID);
+                    _jobsDAO.modelUpdateTimestamp(_modelID);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Delete the stored checkpoint for the specified modelID. This function is
+        /// called if the current model is now the best model, making the old model's
+        /// checkpoint obsolete
+        /// </summary>
+        /// <param name="prevBest"></param>
+        private void __deleteModelCheckpoint(ulong? modelID)
+        {
+            var checkpointID = _jobsDAO.modelsGetFields(modelID.GetValueOrDefault(), new[] { "modelCheckpointId" })[0];
+
+            if (checkpointID == null) return;
+
+            try
+            {
+                // whot?  // TODO
+                throw new NotImplementedException("wtf do i have to do here?");
+            }
+            catch (Exception)
+            {
+                _logger.Warn($"Failed to delete model checkpoint {checkpointID}. Assuming that another worker has already deleted it.");
+                //return;
+            }
+
+            _jobsDAO.modelSetFields(modelID, new Map<string, object> { { "modelCheckpointId", null } }, ignoreUnchanged: true);
+        }
+
+        /// <summary>
+        /// Create a checkpoint from the current model, and store it in a dir named
+        /// after checkpoint GUID, and finally store the GUID in the Models DB
+        /// </summary>
+        private void __createModelCheckpoint()
+        {
+            _logger.Error("The model has not been saved yet in the OPF Model runner!");
+            //throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Reads the current "best model" for the job and returns whether or not the
+        /// current model is better than the "best model" stored for the job
+        /// </summary>
+        /// <remarks>
+        /// isBetter:
+        ///     True if the current model is better than the stored "best model"
+        /// storedResults:
+        ///     A dict of the currently stored results in the jobs table record
+        /// origResultsStr:
+        ///     The json-encoded string that currently resides in the "results" field
+        ///     of the jobs record(used to create atomicity)
+        /// </remarks>
+        /// <returns>(isBetter, storedBest, origResultsStr)</returns>
+        private Tuple __checkIfBestCompletedModel()
+        {
+            string jobResultsStr = _jobsDAO.jobGetFields(_jobID, new[] { "results" })[0] as string;
+
+            Map<string, object> jobResults = null;
+            if (jobResultsStr == null)
+            {
+                jobResults = new Map<string, object>();
+            }
+            else
+            {
+                jobResults = JsonConvert.DeserializeObject<Map<string, object>>(jobResultsStr, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+            }
+            bool isSaved = (bool)jobResults.Get("saved", false);
+            double? bestMetric = (double?)jobResults.Get("bestValue", null);
+
+            var currentMetric = _getMetrics()[_optimizedMetricLabel];
+            _isBestModel = !isSaved || (currentMetric < bestMetric);
+
+            return new Tuple(_isBestModel, jobResults, jobResultsStr);
         }
 
         /// <summary>
@@ -571,22 +716,86 @@ namespace HTM.Net.Research.Swarming
         /// <param name="modelId">The id of the model whose output cache is being deleted</param>
         private void __deleteOutputCache(ulong? modelId)
         {
-            throw new NotImplementedException();
+            _logger.Error("__deleteOutputCache not implemented");
+            //throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Periodic check to see if this is the best model. This should only have an 
+        /// effect if this is the* first* model to report its progress
+        /// </summary>
         private void __updateJobResultsPeriodic()
         {
-            throw new NotImplementedException();
+            if (_isBestModelStored && !_isBestModel)
+            {
+                return;
+            }
+
+            while (true)
+            {
+                string jobResultsStr = _jobsDAO.jobGetFields(_jobID, new[] { "results" })[0] as string;
+                Map<string, object> jobResults;
+                if (jobResultsStr == null)
+                {
+                    jobResults = new Map<string, object>();
+                }
+                else
+                {
+                    _isBestModelStored = true;
+                    if (!_isBestModel) return;
+                    jobResults = JsonConvert.DeserializeObject<Map<string, object>>(jobResultsStr,
+                        new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+                }
+
+                ulong? bestModel = (ulong?) TypeConverter.Convert<ulong>(jobResults.Get("bestModel", null));
+                var bestMetric = jobResults.Get("bestValue", null) == null ? (double?)null : (double?)TypeConverter.Convert<double>(jobResults.Get("bestValue", null));
+                bool isSaved = (bool)jobResults.Get("saved", false);
+
+                // If there is a best model, and it is not the same as the current model
+                // we should wait till we have processed all of our records to see if
+                // we are the the best
+                if ((bestModel != null) && (_modelID != bestModel))
+                {
+                    _isBestModel = false;
+                    return;
+                }
+
+                // Make sure prediction output stream is ready before we present our model
+                // as "bestModel"; sometimes this takes a long time, so update the model's
+                // timestamp to help avoid getting orphaned
+                __flushPredictionCache();
+                _jobsDAO.modelUpdateTimestamp(_modelID);
+
+                var metrics = _getMetrics();
+
+                jobResults["bestModel"] = _modelID;
+                jobResults["bestValue"] = metrics[_optimizedMetricLabel];
+                jobResults["metrics"] = metrics;
+                jobResults["saved"] = false;
+
+                var newResults = JsonConvert.SerializeObject(jobResults, new JsonSerializerSettings {TypeNameHandling = TypeNameHandling.All});
+                bool isUpdated = _jobsDAO.jobSetFieldIfEqual(_jobID,
+                    fieldName: "results",
+                    curValue: jobResultsStr,
+                    newValue: newResults);
+                if (isUpdated || (!isUpdated && newResults == jobResultsStr))
+                {
+                    _isBestModel = true;
+                    break;
+                }
+            }
         }
 
         private void __checkCancelation()
         {
-            throw new NotImplementedException();
+            _logger.Error("__checkCancelation not implemented");
+            //throw new NotImplementedException();
         }
 
         private void __checkMaturity()
         {
-            throw new NotImplementedException();
+            _logger.Error("__checkMaturity not implemented");
+            //throw new NotImplementedException();
         }
     }
 
@@ -634,7 +843,8 @@ namespace HTM.Net.Research.Swarming
 
                 try
                 {
-                    act.iterationHolder[0].MoveNext();
+                    bool moved = act.iterationHolder[0].MoveNext();
+                    if (!moved) throw new InvalidOperationException("cannot move cursor");
                 }
                 catch (Exception e)
                 {
@@ -647,7 +857,6 @@ namespace HTM.Net.Research.Swarming
                     {
                         act.iterationHolder[0] = null;
                     }
-                    throw;
                 }
             }
             return true;
