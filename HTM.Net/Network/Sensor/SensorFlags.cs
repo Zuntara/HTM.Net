@@ -38,32 +38,32 @@
         /// Reset
         /// </summary>
         R,
-        Reset,
+        Reset = R,
         /// <summary>
         /// Sequence
         /// </summary>
         S,
-        Sequence,
+        Sequence = S,
         /// <summary>
         /// Timestamp
         /// </summary>
         T,
-        Timestamp,
+        Timestamp = T,
         /// <summary>
         /// Category
         /// </summary>
         C,
-        Category,
+        Category = C,
         /// <summary>
         /// Learn
         /// </summary>
         L,
-        Learn,
+        Learn = L,
         /// <summary>
         /// Blank
         /// </summary>
         B,
-        Blank
+        Blank = B
         //R("reset"), S("sequence"), T("timestamp"), C("category"), L("learn"), B("blank");
     }
 

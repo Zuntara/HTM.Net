@@ -197,19 +197,14 @@ namespace HTM.Net.Network.Sensor
             {
                 switch (sf)
                 {
-                    case SensorFlags.T:
                     case SensorFlags.Timestamp:
                         tList.Add(idx); break;
-                    case SensorFlags.R:
                     case SensorFlags.Reset:
                         rList.Add(idx); break;
-                    case SensorFlags.C:
                     case SensorFlags.Category:
                         cList.Add(idx); break;
-                    case SensorFlags.S:
                     case SensorFlags.Sequence:
                         sList.Add(idx); break;
-                    case SensorFlags.L:
                     case SensorFlags.Learn:
                         lList.Add(idx); break;
                     default:

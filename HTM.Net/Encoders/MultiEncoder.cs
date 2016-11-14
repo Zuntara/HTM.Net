@@ -39,7 +39,7 @@ namespace HTM.Net.Encoders
         }
 
 
-        public override void SetFieldStats(string fieldName, Map<string, double> fieldStatistics)
+        public override void SetFieldStats(string fieldName, Map<string, Map<string, object>> fieldStatistics)
         {
             foreach (var t in GetEncoders(this))
             {

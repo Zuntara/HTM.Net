@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using HTM.Net.Data;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;

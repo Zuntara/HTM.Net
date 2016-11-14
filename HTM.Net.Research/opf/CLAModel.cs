@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using HTM.Net.Algorithms;
+using HTM.Net.Data;
 using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -565,7 +566,7 @@ namespace HTM.Net.Research.opf
                 }
                 else
                 {
-                    anomalyInputValue = (double) _input[_predictedFieldName];
+                    anomalyInputValue = (double)_input[_predictedFieldName];
                 }
                 score = _anomalyInst.Compute(activeColumns, _prevPredictedColumns, anomalyInputValue,
                     this.__numRunCalls);
@@ -754,7 +755,7 @@ namespace HTM.Net.Research.opf
                 this._numFields = encoderList.Count;
 
                 // This is getting index of predicted field if being fed to CLA.
-                var fieldNames = encoderList.Select(et=> et.GetFieldName()).ToList();
+                var fieldNames = encoderList.Select(et => et.GetFieldName()).ToList();
                 if (fieldNames != null && fieldNames.Contains(predictedFieldName))
                 {
                     this._predictedFieldIdx = fieldNames.IndexOf(predictedFieldName);
@@ -872,9 +873,9 @@ namespace HTM.Net.Research.opf
             // each classification value in that time step, represented as
             // another dict where the keys are the classification values and
             // the values are the relative likelihoods.
-            inferences[InferenceElement.MultiStepPredictions] = new Map<int, Map<object, double>>();
-            inferences[InferenceElement.MultiStepBestPredictions] = new Map<int, double>();
-            inferences[InferenceElement.MultiStepBucketLikelihoods] = new Map<int, Map<int, double>>();
+            inferences[InferenceElement.MultiStepPredictions] = new Map<int, Map<object, double?>>();
+            inferences[InferenceElement.MultiStepBestPredictions] = new Map<int, double?>();
+            inferences[InferenceElement.MultiStepBucketLikelihoods] = new Map<int, Map<int, double?>>();
 
 
             // ======================================================================
@@ -893,7 +894,7 @@ namespace HTM.Net.Research.opf
                 //  duplicate bucketValues (this happens early on in the model when
                 //  it doesn't have actual values for each bucket so it returns
                 //  multiple buckets with the same default actual value).
-                var likelihoodsDict = new Map<object, double>();
+                var likelihoodsDict = new Map<object, double?>();
                 object bestActValue = null;
                 double? bestProb = null;
                 foreach (var zipped in ArrayUtils.Zip(bucketValues, likelihoodsVec))
@@ -919,10 +920,10 @@ namespace HTM.Net.Research.opf
 
                 // Remove entries with 0 likelihood or likelihood less than
                 // minLikelihoodThreshold, but don't leave an empty dict.
-                likelihoodsDict = (Map<object, double>)CLAModel._removeUnlikelyPredictions(likelihoodsDict, minLikelihoodThreshold, maxPredictionsPerStep);
+                likelihoodsDict = (Map<object, double?>)CLAModel._removeUnlikelyPredictions(likelihoodsDict, minLikelihoodThreshold, maxPredictionsPerStep);
 
                 // calculate likelihood for each bucket
-                var bucketLikelihood = new Map<int, double>();
+                var bucketLikelihood = new Map<int, double?>();
                 foreach (var k in likelihoodsDict.Keys)
                 {
                     bucketLikelihood[this._classifierInputEncoder.GetBucketIndices((double)k)[0]] = (likelihoodsDict[k]);
@@ -950,7 +951,7 @@ namespace HTM.Net.Research.opf
                     // Find the sum of the deltas for the steps and use this to generate
                     // an offset from the current absolute value
                     double sumDelta = predHistory.GetBackingList().Sum(s => (double)s); //sum(predHistory);
-                    var offsetDict = new Map<object, double>();
+                    var offsetDict = new Map<object, double?>();
                     //for (k, v) in likelihoodsDict.iteritems()
                     foreach (var kv in likelihoodsDict)
                     {
@@ -966,7 +967,7 @@ namespace HTM.Net.Research.opf
                     }
 
                     // calculate likelihood for each bucket
-                    var bucketLikelihoodOffset = new Map<int, double>();
+                    var bucketLikelihoodOffset = new Map<int, double?>();
                     foreach (var k in offsetDict.Keys)
                     {
                         bucketLikelihoodOffset[this._classifierInputEncoder.GetBucketIndices((double)k)[0]] = (
@@ -989,13 +990,13 @@ namespace HTM.Net.Research.opf
                     // Provide the offsetDict as the return value
                     if (offsetDict.Count > 0)
                     {
-                        ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = offsetDict;
-                        ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihoodOffset;
+                        ((Map<int, Map<object, double?>>)inferences[InferenceElement.MultiStepPredictions])[steps] = offsetDict;
+                        ((Map<int, Map<int, double?>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihoodOffset;
                     }
                     else
                     {
-                        ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
-                        ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
+                        ((Map<int, Map<object, double?>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
+                        ((Map<int, Map<int, double?>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
                     }
 
                     if (bestActValue != null)
@@ -1004,7 +1005,7 @@ namespace HTM.Net.Research.opf
                     }
                     else
                     {
-                        ((Map<int, double>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (absoluteValue + sumDelta + (double)bestActValue);
+                        ((Map<int, double?>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (absoluteValue + sumDelta + (double)bestActValue);
                     }
                 }
 
@@ -1015,9 +1016,9 @@ namespace HTM.Net.Research.opf
                 {
                     // The multiStepPredictions element holds the probabilities for each
                     //  bucket
-                    ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
-                    ((Map<int, double>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (double) (bestActValue ?? 0);
-                    ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
+                    ((Map<int, Map<object, double?>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
+                    ((Map<int, double?>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (double)(bestActValue ?? 0);
+                    ((Map<int, Map<int, double?>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
                 }
             }
 
@@ -1135,7 +1136,7 @@ namespace HTM.Net.Research.opf
             //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
             //sensor = n.regions['sensor'].getSelf();
 
-            var fieldNames =_description.inputRecordSchema.Keys.ToList();
+            var fieldNames = _description.inputRecordSchema.Keys.ToList();
             var dataTypes = _description.inputRecordSchema.Values.Select(v => v.Item1).ToList();
             var sensorFlags = _description.inputRecordSchema.Values.Select(v => v.Item2).ToList();
             var pubBuilder = Publisher.GetBuilder()
@@ -1198,11 +1199,13 @@ namespace HTM.Net.Research.opf
                     }
                 }
             }
-            //disabledEncoders = new Map<string, Map<string, object>>(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+            disabledEncoders = new Map<string, Map<string, object>>(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
             MultiEncoder encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // enabledEncoders
             MultiEncoderAssembler.Assemble(encoder, enabledEncoders);
             sensorLayer.Add(encoder);
+            encoder.SetScalarNames(fieldNames);
+
             //sensor.SetEncoder(encoder);
             //sensor.InitEncoder(parameters);
             topRegion.Add(sensorLayer);
@@ -1336,7 +1339,7 @@ namespace HTM.Net.Research.opf
         /// minLikelihoodThreshold, but don't leave an empty dict.
         /// </summary>
         /// <returns></returns>
-        public static IDictionary<object, double> _removeUnlikelyPredictions(IDictionary<object, double> likelihoodsDict,
+        public static IDictionary<object, double?> _removeUnlikelyPredictions(IDictionary<object, double?> likelihoodsDict,
             double minLikelihoodThreshold, int maxPredictionsPerStep)
         {
             var maxVal = new Util.Tuple(null, null);
@@ -1368,7 +1371,7 @@ namespace HTM.Net.Research.opf
                 likelihoodsDict.Remove(key);
             }
             // Limit the number of predictions to include.
-            var retLikelihoodsDict = new Map<object, double>();
+            var retLikelihoodsDict = new Map<object, double?>();
             foreach (var item in likelihoodsDict.OrderByDescending(kvp => kvp.Key.ToString()).Take(maxPredictionsPerStep).Reverse())
             {
                 retLikelihoodsDict.Add(item.Key, item.Value);
@@ -1383,17 +1386,56 @@ namespace HTM.Net.Research.opf
 
         public override void resetSequenceStates()
         {
-            throw new System.NotImplementedException();
+            if (_hasTP)
+            {
+                _getTPRegion().GetTemporalMemory().Reset(_getTPRegion().GetConnections());
+                __logger.Debug("CLAModel.resetSequenceStates(): reset temporal pooler's sequence states.");
+            }
         }
 
+        /// <summary>
+        /// Returns the sequence of FieldMetaInfo objects specifying this
+        /// Model's output; note that this may be different than the list of
+        /// FieldMetaInfo objects supplied at initialization(e.g., due to the
+        /// transcoding of some input fields into meta-fields, such as datetime 
+        /// -> dayOfWeek, timeOfDay, etc.)
+        ///  </summary>
+        /// <param name="includeClassifierOnlyField"></param>
+        /// <returns>List of FieldMetaInfo objects</returns>
         public override List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false)
         {
-            throw new System.NotImplementedException();
+            MultiEncoder encoder = _getEncoder();
+
+            var fieldNames = encoder.GetScalarNames();
+            var fieldTypes = encoder.GetDecoderOutputFieldTypes();
+            Debug.Assert(fieldNames.Count == fieldTypes.Count);
+
+            // Also include the classifierOnly field?
+            MultiEncoder clEncoder = (MultiEncoder)_getClassifierOnlyEncoder();
+            if (includeClassifierOnlyField && clEncoder != null)
+            {
+                var addFieldNames = clEncoder.GetScalarNames();
+                var addFieldTypes = clEncoder.GetDecoderOutputFieldTypes();
+                Debug.Assert(addFieldNames.Count == addFieldTypes.Count);
+                fieldNames.AddRange(addFieldNames);
+                fieldTypes.UnionWith(addFieldTypes);
+            }
+
+            var fieldMetaList = ArrayUtils.Zip(fieldNames, fieldTypes)
+                .Select(t => new FieldMetaInfo((string)t.Get(0), (FieldMetaType)t.Get(1), SensorFlags.Blank))
+                .ToList();
+
+            return fieldMetaList;
         }
 
         public override void setFieldStatistics(Map<string, Map<string, object>> fieldStats)
         {
-            throw new System.NotImplementedException();
+            MultiEncoder encoder = _getEncoder();
+            // Set the stats for the encoders. The first argument to setFieldStats
+            // is the field name of the encoder. Since we are using a multiencoder
+            // we leave it blank, the multiencoder will propagate the field names to the
+            // underlying encoders
+            encoder.SetFieldStats("", fieldStats);
         }
 
         public override void getRuntimeStats()
@@ -1404,6 +1446,24 @@ namespace HTM.Net.Research.opf
         protected override ILog _getLogger()
         {
             throw new System.NotImplementedException();
+        }
+        /// <summary>
+        /// sensor region's encoder for the given network
+        /// </summary>
+        /// <returns></returns>
+        private MultiEncoder _getEncoder()
+        {
+            return _getSensorRegion().GetEncoder();
+        }
+        /// <summary>
+        /// sensor region's encoder that is sent only to the classifier,
+        /// not to the bottom of the network
+        /// </summary>
+        /// <returns></returns>
+        private IEncoder _getClassifierOnlyEncoder()
+        {
+            //_getSensorRegion().disabledEncoder;
+            return null;
         }
     }
 

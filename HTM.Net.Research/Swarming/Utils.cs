@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Algorithms;
+using HTM.Net.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
@@ -537,7 +538,7 @@ namespace HTM.Net.Research.Swarming
         /// For example: 
         /// aggregationDivide({ 'hours': 4}, {'minutes': 15}) == 16
         /// </remarks>
-        public static double aggregationDivide(AggregationDict dividend, AggregationDict divisor)
+        public static double aggregationDivide(AggregationSettings dividend, AggregationSettings divisor)
         {
             // Convert each into microseconds
             Map<string, double> dividendMonthSec = aggregationToMonthsSeconds(dividend);
@@ -574,7 +575,7 @@ namespace HTM.Net.Research.Swarming
         /// For example:
         /// aggregationMicroseconds({ 'years': 1, 'hours': 4, 'microseconds':42}) ==  {'months':12, 'seconds':14400.000042}
         /// </remarks>
-        public static Map<string, double> aggregationToMonthsSeconds(AggregationDict interval)
+        public static Map<string, double> aggregationToMonthsSeconds(AggregationSettings interval)
         {
             double seconds = (double)interval.microseconds * 0.000001;
             seconds += (double)interval.milliseconds * 0.001;
@@ -974,28 +975,12 @@ namespace HTM.Net.Research.Swarming
         public int? autoDetectWaitRecords { get; set; }
     }
 
-    public class AggregationDict
-    {
-        public double years { get; set; }
-        public double months { get; set; }
-        public double weeks { get; set; }
-        public double days { get; set; }
-        public double hours { get; set; }
-        public double minutes { get; set; }
-        public double seconds { get; set; }
-        public double milliseconds { get; set; }
-        public double microseconds { get; set; }
-        public Map<string, object> fields { get; set; }
-
-
-    }
-
     public class DescriptionConfigModel
     {
         public string model { get; set; }
         public int? version { get; set; }
-        public AggregationDict aggregationInfo { get; set; }
-        public AggregationDict predictAheadTime { get; set; }
+        public AggregationSettings aggregationInfo { get; set; }
+        public AggregationSettings predictAheadTime { get; set; }
         public ModelDescriptionParamsDescrModel modelParams { get; set; }
 
         public Map<string, object> GetDictionary()
@@ -1033,10 +1018,10 @@ namespace HTM.Net.Research.Swarming
                     version = (int)value;
                     break;
                 case "aggregationInfo":
-                    aggregationInfo = (AggregationDict)value;
+                    aggregationInfo = (AggregationSettings)value;
                     break;
                 case "predictAheadTime":
-                    predictAheadTime = (AggregationDict)value;
+                    predictAheadTime = (AggregationSettings)value;
                     break;
                 case "modelParams":
                     modelParams = (ModelDescriptionParamsDescrModel)value;

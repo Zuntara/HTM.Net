@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using HTM.Net.Algorithms;
+using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
@@ -245,7 +246,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                 // Intermediate variables used to compute fields in modelParams and also
                 // referenced from the control section.
-                aggregationInfo = new AggregationDict
+                aggregationInfo = new AggregationSettings
                 {
                     days = 0,
                     fields = new Map<string, object>(),

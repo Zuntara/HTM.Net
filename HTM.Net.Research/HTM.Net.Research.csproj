@@ -109,7 +109,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\FieldMetaInfo.cs" />
     <Compile Include="Data\InferenceShifter.cs" />
     <Compile Include="Data\StreamReader.cs" />
     <Compile Include="Generators\SineGenerator.cs" />

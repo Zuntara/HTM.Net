@@ -609,7 +609,7 @@ namespace HTM.Net.Research.Swarming
             return text;
         }
 
-        protected const int HASH_MAX_LEN = 16*2;
+        protected const int HASH_MAX_LEN = 16 * 2;
         protected const int CLIENT_MAX_LEN = 8;
         protected string _normalizeHash(string hashValue)
         {
@@ -625,6 +625,11 @@ namespace HTM.Net.Research.Swarming
             }
 
             return hashValue;
+        }
+
+        public virtual void modelUpdateResults(ulong? modelId, string results = null, double? metricValue = null, uint? numRecords = null)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -645,7 +650,7 @@ namespace HTM.Net.Research.Swarming
             bool alreadyRunning = false, int minimumWorkers = 0, int maximumWorkers = 0, string jobType = "")
         {
             string jobHash = this._normalizeHash(Guid.NewGuid().ToString().Replace("-", ""));
-            uint jobID = (uint) (Jobs.Count + 1);
+            uint jobID = (uint)(Jobs.Count + 1);
 
             string initStatus;
             // Initial status
@@ -910,10 +915,10 @@ namespace HTM.Net.Research.Swarming
             //  model's absence before calling us, we could skip this check here
             var row = Models
                 .Where(m => m.job_id == jobId && m._eng_params_hash == paramsHash && m._eng_particle_hash == particleHash)
-                .Select(m => new {m.model_id, m._eng_worker_conn_id})
+                .Select(m => new { m.model_id, m._eng_worker_conn_id })
                 .FirstOrDefault();
             //row = findExactMatchWithRetries();
-            if( row != null)
+            if (row != null)
             {
                 return new Tuple<ulong, bool>(row.model_id, false);
             }
@@ -931,7 +936,7 @@ namespace HTM.Net.Research.Swarming
             newModel._eng_last_update_time = DateTime.Now;
             newModel._eng_worker_conn_id = this.getConnectionID();
 
-            if (Models.Any(m=> m.job_id == jobId && m._eng_params_hash == paramsHash && m._eng_particle_hash == particleHash))
+            if (Models.Any(m => m.job_id == jobId && m._eng_params_hash == paramsHash && m._eng_particle_hash == particleHash))
             {
                 throw new InvalidOperationException("Duplicate entry in model table");
             }
@@ -1048,6 +1053,26 @@ namespace HTM.Net.Research.Swarming
 
 
             return new Tuple<ulong, bool>(newModel.model_id, true);
+        }
+
+        /// <summary>
+        /// Update the results string, and/or num_records fields of
+        /// a model.This will fail if the model does not currently belong to this
+        /// client (connection_id doesn't match).
+        /// </summary>
+        /// <param name="modelId"></param>
+        /// <param name="results"></param>
+        /// <param name="metricValue"></param>
+        /// <param name="numRecords"></param>
+        public override void modelUpdateResults(ulong? modelId, string results = null, double? metricValue = null, uint? numRecords = null)
+        {
+            //var assignmentExpressions;
+
+            var model = Models.Single(m => m.model_id == modelId.GetValueOrDefault());
+
+            if (results != null) model.results = results;
+            if (numRecords.HasValue) model.num_records = numRecords.Value;
+            if (metricValue.HasValue) model.optimized_metric = metricValue.Value;
         }
 
         #endregion

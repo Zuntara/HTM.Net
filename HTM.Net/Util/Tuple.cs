@@ -11,10 +11,13 @@ namespace HTM.Net.Util
     public class Tuple : Persistable
     {
         /** The internal container array */
-        private object[] container;
+        [JsonProperty]
+        private object[] _container;
 
+        [JsonProperty]
         private int _hashcode;
 
+        [JsonConstructor]
         internal Tuple()
         {
 
@@ -26,10 +29,10 @@ namespace HTM.Net.Util
          */
         public Tuple(params object[] objects)
         {
-            container = new object[objects.Length];
-            for (int i = 0; i < container.Length; i++)
+            _container = new object[objects.Length];
+            for (int i = 0; i < _container.Length; i++)
             {
-                container[i] = objects[i];
+                _container[i] = objects[i];
             }
             _hashcode = GetHashCode();
         }
@@ -39,11 +42,11 @@ namespace HTM.Net.Util
             if (objects != null)
             {
                 var list = objects.ToList();
-                container = new object[list.Count];
+                _container = new object[list.Count];
                 int i = 0;
                 foreach (object o in list)
                 {
-                    container[i++] = o;
+                    _container[i++] = o;
                 }
                 //container = new object[objects.Count()];
                 //for (int i = 0; i < container.Length; i++)
@@ -56,10 +59,10 @@ namespace HTM.Net.Util
 
         public Tuple(Array objects)
         {
-            container = new object[objects.Length];
+            _container = new object[objects.Length];
             for (int i = 0; i < objects.Length; i++)
             {
-                container[i] = objects.GetValue(i);
+                _container[i] = objects.GetValue(i);
             }
             _hashcode = GetHashCode();
         }
@@ -72,20 +75,20 @@ namespace HTM.Net.Util
          */
         public object Get(int index)
         {
-            if (container.Length > index)
-                return container[index];
+            if (_container.Length > index)
+                return _container[index];
             return null;
         }
 
         public void Set(int index, object value)
         {
-            if (container.Length > index)
-                container[index] = value;
+            if (_container.Length > index)
+                _container[index] = value;
         }
 
         public static Tuple operator +(Tuple left, Tuple right)
         {
-            return new Tuple(left.container.Union(right.container));
+            return new Tuple(left._container.Union(right._container));
         }
 
         /**
@@ -96,7 +99,7 @@ namespace HTM.Net.Util
         [JsonIgnore]
         public virtual int Count
         {
-            get { return container.Length; }
+            get { return _container.Length; }
         }
 
         [JsonIgnore]
@@ -113,28 +116,24 @@ namespace HTM.Net.Util
         /// </summary>
         public List<object> All()
         {
-            return container.ToList();
+            return _container.ToList();
         }
-
-        /**
-         * {@inheritDoc}
-         */
 
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < container.Length; i++)
+            for (int i = 0; i < _container.Length; i++)
             {
                 try
                 {
                     //new Double((double)container[i]);
                     double number;
-                    if (double.TryParse(container[i].ToString(), out number))
+                    if (double.TryParse(_container[i].ToString(), out number))
                     {
-                        sb.Append(container[i]);
+                        sb.Append(_container[i]);
                     }
                 }
-                catch (Exception) { sb.Append("'").Append(container[i]).Append("'"); }
+                catch (Exception) { sb.Append("'").Append(_container[i]).Append("'"); }
                 sb.Append(":");
             }
             sb.Length = (sb.Length - 1);
@@ -149,7 +148,7 @@ namespace HTM.Net.Util
         {
             const int prime = 31;
             int result = 1;
-            result = prime * result + container.GetArrayHashCode();
+            result = prime * result + _container.GetArrayHashCode();
 
             return result;
         }

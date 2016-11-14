@@ -177,11 +177,11 @@ namespace HTM.Net.Encoders
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1)) > 0.0))
                         {
-                            b.DayOfWeek((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.DayOfWeek(TypeConverter.Convert<int>(t.Get(0)), TypeConverter.Convert<double>(t.Get(1)));
                         }
                         else
                         {
-                            b.DayOfWeek((int)t.Get(0));
+                            b.DayOfWeek(TypeConverter.Convert<int>(t.Get(0)));
                         }
                         break;
                     }
@@ -189,11 +189,11 @@ namespace HTM.Net.Encoders
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
                         {
-                            b.Weekend((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.Weekend(TypeConverter.Convert<int>(t.Get(0)), TypeConverter.Convert<double>(t.Get(1)));
                         }
                         else
                         {
-                            b.Weekend((int)t.Get(0));
+                            b.Weekend(TypeConverter.Convert<int>(t.Get(0)));
                         }
                         break;
                     }
@@ -201,11 +201,11 @@ namespace HTM.Net.Encoders
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
                         {
-                            b.Holiday((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.Holiday(TypeConverter.Convert<int>(t.Get(0)), TypeConverter.Convert<double>(t.Get(1)));
                         }
                         else
                         {
-                            b.Holiday((int)t.Get(0));
+                            b.Holiday(TypeConverter.Convert<int>(t.Get(0)));
                         }
                         break;
                     }
@@ -213,11 +213,11 @@ namespace HTM.Net.Encoders
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
                         {
-                            b.TimeOfDay((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.TimeOfDay(TypeConverter.Convert<int>(t.Get(0)), TypeConverter.Convert<double>(t.Get(1)));
                         }
                         else
                         {
-                            b.TimeOfDay((int)t.Get(0));
+                            b.TimeOfDay(TypeConverter.Convert<int>(t.Get(0)));
                         }
                         break;
                     }
@@ -225,11 +225,11 @@ namespace HTM.Net.Encoders
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
                         {
-                            b.CustomDays((int)t.Get(0), (List<string>)t.Get(1));
+                            b.CustomDays(TypeConverter.Convert<int>(t.Get(0)), (List<string>)t.Get(1));
                         }
                         else
                         {
-                            b.CustomDays((int)t.Get(0));
+                            b.CustomDays(TypeConverter.Convert<int>(t.Get(0)));
                         }
                         break;
                     }

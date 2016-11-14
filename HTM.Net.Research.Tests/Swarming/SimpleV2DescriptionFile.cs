@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using HTM.Net.Algorithms;
+using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
@@ -25,7 +26,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 // Intermediate variables used to compute fields in modelParams and also
                 // referenced from the control section.
-                aggregationInfo = new AggregationDict
+                aggregationInfo = new AggregationSettings
                 {
                     days = 0,
                     fields = new Map<string, object>
@@ -299,6 +300,8 @@ namespace HTM.Net.Research.Tests.Swarming
             };
             // end of config dictionary
 
+
+
             inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
             {
                 { "address", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
@@ -339,8 +342,8 @@ namespace HTM.Net.Research.Tests.Swarming
                     {"streams", new Map<string, object>
                         {
                             { "columns", new[] {"*"}},
-                            {"info", "test data"},
-                            { "source", "rec-center-hourly.csv"}
+                            { "info", "test data"},
+                            { "source", "test_data.csv"}
                         }
                     },
                     {"version", 1}
@@ -359,6 +362,13 @@ namespace HTM.Net.Research.Tests.Swarming
                 // Metrics: A list of MetricSpecs that instantiate the metrics that are
                 // computed for this experiment
                 metrics = new[] { new MetricSpec(field: "consumption", inferenceElement: InferenceElement.Prediction, metric: "rmse") },
+
+                inferenceArgs = new Map<string, object>
+                {
+                    {"inputPredictedField", "auto" },
+                    {"predictedField", "consumption" },
+                    {"predictionSteps", new[] {1} },
+                },
 
                 // Logged Metrics: A sequence of regular expressions that specify which of
                 // the metrics from the Inference Specifications section MUST be logged for

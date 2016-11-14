@@ -7,6 +7,7 @@ using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
+using log4net.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 
@@ -540,6 +541,9 @@ namespace HTM.Net.Research.Tests.Swarming
         {
             base.SetUp();
             g_myEnv = new MyTestEnvironment();
+
+            // Initialize log4net.
+            XmlConfigurator.Configure();
         }
 
         /// <summary>
@@ -575,8 +579,9 @@ namespace HTM.Net.Research.Tests.Swarming
             //this.assertLess(len(resultInfos), 350);
         }
 
-        //[TestMethod]
-        //[DeploymentItem("Resources\\rec-center-hourly.csv")]
+        // nupic/src/nupic/datafiles/swarming/test_data.csv
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();

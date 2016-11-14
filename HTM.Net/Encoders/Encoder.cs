@@ -22,7 +22,7 @@ namespace HTM.Net.Encoders
         void SetClipInput(bool clipInput);
         void SetForced(bool forced);
         void SetName(string name);
-        void SetFieldStats(string fieldName, Map<string, double> fieldStatistics);
+        void SetFieldStats(string fieldName, Map<string, Map<string, object>> fieldStatistics);
 
         int GetWidth();
         List<double> GetScalars(string s);
@@ -46,6 +46,7 @@ namespace HTM.Net.Encoders
         Tuple Decode(int[] fieldOutput, string parentName);
 
         List<string> GetScalarNames(string parentFieldName);
+        HashSet<FieldMetaType> GetDecoderOutputFieldTypes();
     }
 
     public interface IEncoder<T> : IEncoder
@@ -692,7 +693,7 @@ namespace HTM.Net.Encoders
          *     							the fieldName and the second index the statistic ie:
          *     							fieldStatistics['pounds']['min']
          */
-        public virtual void SetFieldStats(string fieldName, Map<string, double> fieldStatistics) { }
+        public virtual void SetFieldStats(string fieldName, Map<string, Map<string, object>> fieldStatistics) { }
 
         /**
          * Convenience wrapper for {@link #encodeIntoArray(double, int[])}
@@ -767,7 +768,7 @@ namespace HTM.Net.Encoders
             HashSet<FieldMetaType> retVal = new HashSet<FieldMetaType>();
             foreach (var t in GetEncoders(this))
             {
-                HashSet<FieldMetaType> subTypes = ((Encoder<T>)t.Item2).GetDecoderOutputFieldTypes();
+                HashSet<FieldMetaType> subTypes = ((IEncoder)t.Get(2)).GetDecoderOutputFieldTypes();
                 foreach (FieldMetaType subType in subTypes)
                 {
                     retVal.Add(subType);

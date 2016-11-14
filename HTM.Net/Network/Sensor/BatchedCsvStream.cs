@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Util;
 using log4net;
 using Tuple = HTM.Net.Util.Tuple;
@@ -1331,12 +1335,17 @@ namespace HTM.Net.Network.Sensor
             /// <returns></returns>
             public IEnumerable<string> GetFieldNames()
             {
-                return _headerValues[0].All().Cast<string>().ToList();
+                return GetRow(0).All().Cast<string>().ToList();
             }
 
             public List<FieldMetaType> GetFieldTypes()
             {
-                throw new NotImplementedException();
+                return GetRow(1).All().Cast<string>().Select(s => FieldMetaTypeHelper.FromString(s)).ToList();
+            }
+
+            public List<SensorFlags> GetSpecialTypes()
+            {
+                return GetRow(2).All().Cast<string>().Select(s => SensorFlagsHelper.FromString(s)).ToList();
             }
 
             public override string ToString()
@@ -1364,30 +1373,66 @@ namespace HTM.Net.Network.Sensor
             _contentStream.Write(input);
         }
 
-        private List<String[]> _cachedValues;
+        private List<object[]> _cachedValues;
+        private int _cachePosition;
+        private ModelRecordEncoder _modelRecordEncoder;
 
-        /// <summary>
-        /// Returns the min value of the given field present in this stream.
-        /// </summary>
-        /// <param name="field"></param>
-        /// <returns></returns>
-        public string GetFieldMin(string field)
+        private void BuildCacheList()
         {
             if (_cachedValues == null)
             {
                 var copy = _contentStream.Copy();
-                _cachedValues = new List<string[]>();
+                _cachedValues = new List<object[]>();
+                var fieldTypes = GetHeader().GetFieldTypes();
                 do
                 {
                     string[] values = copy.Read();
                     if (values == null) break;
-                    _cachedValues.Add(values);
+                    _cachedValues.Add(TranslateToObjects(fieldTypes, values));
                 } while (!copy.EndOfStream);
+
+                _cachePosition = 0;
             }
+        }
 
-            int fieldIndex = GetHeader().GetFieldNames().ToList().IndexOf(field);
+        private object[] TranslateToObjects(List<FieldMetaType> fieldTypes, string[] values)
+        {
+            object[] result = new object[values.Length];
+            result[0] = int.Parse(values[0]);
+            for (int i = 1, j = 0; i < values.Length; i++, j++)
+            {
+                FieldMetaType fType = fieldTypes[j];
+                object value = values[i];
 
-            return _cachedValues.Select(v => v[fieldIndex+1]).Min();
+                switch (fType)
+                {
+                    case FieldMetaType.String:
+                        result[i] = value as string;
+                        break;
+                    case FieldMetaType.DateTime:
+                        result[i] = DateTime.Parse(value as string, DateTimeFormatInfo.InvariantInfo);
+                        break;
+                    case FieldMetaType.Integer:
+                        result[i] = int.Parse((string)value);
+                        break;
+                    case FieldMetaType.Float:
+                        result[i] = double.Parse((string)value, NumberFormatInfo.InvariantInfo);
+                        break;
+                    case FieldMetaType.Boolean:
+                        {
+                            result[i] = bool.Parse((string)value);
+                            break;
+                        }
+                    case FieldMetaType.List:
+                    case FieldMetaType.Coord:
+                    case FieldMetaType.Geo:
+                    case FieldMetaType.SparseArray:
+                    case FieldMetaType.DenseArray:
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            return result;
         }
 
         /// <summary>
@@ -1395,23 +1440,259 @@ namespace HTM.Net.Network.Sensor
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public string GetFieldMax(string field)
+        public object GetFieldMin(string field)
         {
             if (_cachedValues == null)
             {
-                var copy = _contentStream.Copy();
-                _cachedValues = new List<string[]>();
-                do
-                {
-                    string[] values = copy.Read();
-                    if (values == null) break;
-                    _cachedValues.Add(values);
-                } while (!copy.EndOfStream);
+                BuildCacheList();
             }
 
             int fieldIndex = GetHeader().GetFieldNames().ToList().IndexOf(field);
 
-            return _cachedValues.Select(v => v[fieldIndex+1]).Max();
+            return _cachedValues.Select(v => v[fieldIndex + 1]).Min();
+        }
+
+        /// <summary>
+        /// Returns the min value of the given field present in this stream.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public object GetFieldMax(string field)
+        {
+            if (_cachedValues == null)
+            {
+                BuildCacheList();
+            }
+
+            int fieldIndex = GetHeader().GetFieldNames().ToList().IndexOf(field);
+
+            return _cachedValues.Select(v => v[fieldIndex + 1]).Max();
+        }
+
+        private List<FieldMetaInfo> GetFields()
+        {
+            var header = GetHeader();
+
+            return ArrayUtils.Zip(header.GetFieldNames(), header.GetFieldTypes(), header.GetSpecialTypes()).Select(t => new FieldMetaInfo(t.Get(0) as string, (FieldMetaType)t.Get(1), (SensorFlags)t.Get(2))).ToList();
+        }
+
+        private AggregationSettings GetAggregationMonthsAndSeconds()
+        {
+            return new AggregationSettings();
+        }
+
+        private object[] GetNextRecord()
+        {
+            if (_cachedValues == null)
+            {
+                BuildCacheList();
+            }
+
+            if (_cachePosition < _cachedValues.Count)
+            {
+                return _cachedValues[_cachePosition++];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Returns next available data record from the storage as a dict, with the
+        /// keys being the field names.This also adds in some meta fields:
+        /// '_category': The value from the category field (if any)
+        /// '_reset': True if the reset field was True (if any)
+        /// '_sequenceId': the value from the sequenceId field (if any)
+        /// </summary>
+        /// <returns></returns>
+        public Map<string, object> GetNextRecordDict()
+        {
+            var values = GetNextRecord();
+            if (values == null)
+            {
+                return null;
+            }
+            if (!values.Any()) return new Map<string, object>();
+
+            if (_modelRecordEncoder == null)
+            {
+                _modelRecordEncoder = new ModelRecordEncoder(GetFields(), GetAggregationMonthsAndSeconds());
+            }
+            return _modelRecordEncoder.Encode(values.Skip(1).ToList()); // skip record number in input
+        }
+    }
+
+    /// <summary>
+    /// Encodes metric data input rows for consumption by OPF models. 
+    /// See the `ModelRecordEncoder.encode` method for more details.
+    /// </summary>
+    public class ModelRecordEncoder
+    {
+        private List<FieldMetaInfo> _fields;
+        private AggregationSettings _aggregationPeriod;
+        private int? _sequenceId;
+        private List<string> _fieldNames;
+        private int? _categoryFieldIndex, _resetFieldIndex, _sequenceFieldIndex, _timestampFieldIndex, _learningFieldIndex;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fields">non-empty sequence of nupic.data.fieldmeta.FieldMetaInfo objects corresponding to fields in input rows.</param>
+        /// <param name="aggregationPeriod">aggregation period of the record stream as a
+        /// dict containing 'months' and 'seconds'. The months is always an integer
+        /// and seconds is a floating point.Only one is allowed to be non-zero at a
+        /// time.If there is no aggregation associated with the stream, pass None.
+        /// Typically, a raw file or hbase stream will NOT have any aggregation info,
+        /// but subclasses of RecordStreamIface, like StreamReader, will and will
+        /// provide the aggregation period.This is used by the encode method to
+        /// assign a record number to a record given its timestamp and the aggregation
+        /// interval.</param>
+        public ModelRecordEncoder(List<FieldMetaInfo> fields, AggregationSettings aggregationPeriod = null)
+        {
+            if (fields == null || !fields.Any())
+                throw new ArgumentException("fields arg must be non-empty", nameof(fields));
+
+            _fields = fields;
+            _aggregationPeriod = aggregationPeriod;
+            _sequenceId = -1;
+            _fieldNames = fields.Select(f => f.name).ToList();
+            _categoryFieldIndex = _getFieldIndexBySpecial(fields, SensorFlags.Category);
+            _resetFieldIndex = _getFieldIndexBySpecial(fields, SensorFlags.Reset);
+            _sequenceFieldIndex = _getFieldIndexBySpecial(fields, SensorFlags.Sequence);
+            _timestampFieldIndex = _getFieldIndexBySpecial(fields, SensorFlags.Timestamp);
+            _learningFieldIndex = _getFieldIndexBySpecial(fields, SensorFlags.Learn);
+        }
+
+        public void Rewind()
+        {
+            _sequenceId = -1;
+        }
+
+        public Map<string, object> Encode(IList<object> inputRow)
+        {
+            // Create the return dict
+            Map<string, object> result = new Map<string, object>(ArrayUtils.Zip(_fieldNames, inputRow).ToDictionary(t => (string)t.Get(0), t => t.Get(1)));
+
+            // Add in the special fields
+            if (_categoryFieldIndex.HasValue)
+            {
+                // category value can be an int or a list
+                if (inputRow[_categoryFieldIndex.Value] is int)
+                {
+                }
+            }
+
+            if (_resetFieldIndex.HasValue)
+            {
+                result["_reset"] = inputRow[_resetFieldIndex.Value] == "1" ? 1 : 0;
+            }
+            else
+            {
+                result["_reset"] = 0;
+            }
+
+            if (_learningFieldIndex.HasValue)
+            {
+                result["_learning"] = inputRow[_learningFieldIndex.Value] == "1" ? 1 : 0;
+            }
+
+            result["_timestampRecordIdx"] = null;
+            if (_timestampFieldIndex.HasValue)
+            {
+                result["_timestamp"] = inputRow[_timestampFieldIndex.Value];
+                // Compute the record index based on timestamp
+                result["_timestampRecordIdx"] = _computeTimestampRecordIdx((DateTime)inputRow[_timestampFieldIndex.Value]);
+            }
+            else
+            {
+                result["_timestamp"] = null;
+            }
+
+            // -----------------------------------------------------------------------
+            // Figure out the sequence ID
+            bool hasReset = _resetFieldIndex.HasValue;
+            bool hasSequenceId = _sequenceFieldIndex.HasValue;
+            object sequenceId = null;
+            if (hasReset && !hasSequenceId)
+            {
+                // reset only
+                if ((int)result["_reset"] > 0)
+                {
+                    _sequenceId += 1;
+                }
+                sequenceId = _sequenceId;
+            }
+            else if (!hasReset && hasSequenceId)
+            {
+                sequenceId = inputRow[_sequenceFieldIndex.Value];
+                result["_reset"] = sequenceId.GetHashCode() != _sequenceId ? 1 : 0;
+                _sequenceId = sequenceId.GetHashCode();
+            }
+            else if (hasReset && hasSequenceId)
+            {
+                sequenceId = inputRow[_sequenceFieldIndex.Value];
+            }
+            else
+            {
+                sequenceId = 0;
+            }
+
+            if (sequenceId != null)
+            {
+                result["_sequenceId"] = sequenceId.GetHashCode();
+            }
+            else
+            {
+                result["_sequenceId"] = null;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Give the timestamp of a record (a datetime object), compute the record's
+        /// timestamp index - this is the timestamp divided by the aggregation period.
+        /// </summary>
+        /// <param name="recordTs"></param>
+        /// <returns></returns>
+        private int? _computeTimestampRecordIdx(DateTime recordTs)
+        {
+            if (_aggregationPeriod == null)
+                return null;
+
+            int? result = null;
+            // Base record index on number of elapsed months if aggregation is in months
+            if (_aggregationPeriod.months > 0)
+            {
+                Debug.Assert(_aggregationPeriod.seconds == 0);
+                result = (int)((recordTs.Year * 12 + (recordTs.Month - 1)) / _aggregationPeriod.months);
+            }
+            // Base record index on elapsed seconds
+            else if (_aggregationPeriod.seconds > 0)
+            {
+                var delta = recordTs - new DateTime(1, 1, 1);
+                var deltaSecs = delta.Days * 24 * 60 * 60 + delta.Seconds + delta.Milliseconds / 1000.0;
+                result = (int?)(deltaSecs / _aggregationPeriod.seconds);
+            }
+            else
+            {
+                result = null;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Return index of the field matching the field meta special value.
+        /// </summary>
+        /// <param name="fields">equence of nupic.data.fieldmeta.FieldMetaInfo objects representing the fields of a stream</param>
+        /// <param name="special">one of the special field attribute values from <see cref="SensorFlags"/></param>
+        /// <returns>first zero-based index of the field tagged with the target field meta special attribute; None if no such field</returns>
+        public static int? _getFieldIndexBySpecial(List<FieldMetaInfo> fields, SensorFlags special)
+        {
+            for (int i = 0; i < fields.Count; i++)
+            {
+                if (fields[i].special == special)
+                    return i;
+            }
+            return null;
         }
     }
 }

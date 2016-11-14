@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
@@ -20,7 +21,7 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestRemoveUnlikelyPredictionsEmpty()
         {
-            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double>(), 0.01, 3);
+            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double?>(), 0.01, 3);
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.Count);
         }
@@ -28,14 +29,14 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestRemoveUnlikelyPredictionsSingleValues()
         {
-            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double> { { 1, 0.1 } }, 0.01, 3);
+            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double?> { { 1, 0.1 } }, 0.01, 3);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
             var first = result.First();
             Assert.AreEqual(1, first.Key);
             Assert.AreEqual(0.1, first.Value);
 
-            result = CLAModel._removeUnlikelyPredictions(new Map<object, double> { { 1, 0.001 } }, 0.01, 3);
+            result = CLAModel._removeUnlikelyPredictions(new Map<object, double?> { { 1, 0.001 } }, 0.01, 3);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
             first = result.First();
@@ -46,21 +47,21 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestRemoveUnlikelyPredictionsLikelihoodThresholds()
         {
-            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double> { { 1, 0.1 }, { 2, 0.001 } }, 0.01, 3);
+            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double?> { { 1, 0.1 }, { 2, 0.001 } }, 0.01, 3);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
             var first = result.First();
             Assert.AreEqual(1, first.Key);
             Assert.AreEqual(0.1, first.Value);
 
-            result = CLAModel._removeUnlikelyPredictions(new Map<object, double> { { 1, 0.001 }, { 2, 0.002 } }, 0.01, 3);
+            result = CLAModel._removeUnlikelyPredictions(new Map<object, double?> { { 1, 0.001 }, { 2, 0.002 } }, 0.01, 3);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
             first = result.First();
             Assert.AreEqual(2, first.Key);
             Assert.AreEqual(0.002, first.Value);
 
-            result = CLAModel._removeUnlikelyPredictions(new Map<object, double> { { 1, 0.002 }, { 2, 0.001 } }, 0.01, 3);
+            result = CLAModel._removeUnlikelyPredictions(new Map<object, double?> { { 1, 0.002 }, { 2, 0.001 } }, 0.01, 3);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
             first = result.First();
@@ -71,7 +72,7 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestRemoveUnlikelyPredictionsMaxPredictions()
         {
-            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double>
+            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double?>
             {
                 { 1, 0.1 }, { 2, 0.2 }, { 3, 0.3 }, { 0.01, 3 }
             }, 0.01, 3);
@@ -87,7 +88,7 @@ namespace HTM.Net.Research.Tests.Opf
             Assert.AreEqual(3, item.Key);
             Assert.AreEqual(0.3, item.Value);
 
-            result = CLAModel._removeUnlikelyPredictions(new Map<object, double>
+            result = CLAModel._removeUnlikelyPredictions(new Map<object, double?>
             {
                 { 1, 0.1 }, { 2, 0.2 }, { 3, 0.3 }, { 4, 0.4 }
             }, 0.01, 3);
@@ -107,7 +108,7 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestRemoveUnlikelyPredictionsComplex()
         {
-            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double>
+            var result = CLAModel._removeUnlikelyPredictions(new Map<object, double?>
             {
                 { 1, 0.1 }, { 2, 0.2 }, { 3, 0.3 }, { 4, 0.004 }
             }, 0.01, 3);
@@ -123,7 +124,7 @@ namespace HTM.Net.Research.Tests.Opf
             Assert.AreEqual(3, item.Key);
             Assert.AreEqual(0.3, item.Value);
 
-            result = CLAModel._removeUnlikelyPredictions(new Map<object, double>
+            result = CLAModel._removeUnlikelyPredictions(new Map<object, double?>
             {
                 { 1, 0.1 }, { 2, 0.2 }, { 3, 0.3 }, { 4, 0.4 }, { 5, 0.005 }
             }, 0.01, 3);
@@ -139,7 +140,7 @@ namespace HTM.Net.Research.Tests.Opf
             Assert.AreEqual(4, item.Key);
             Assert.AreEqual(0.4, item.Value);
 
-            result = CLAModel._removeUnlikelyPredictions(new Map<object, double>
+            result = CLAModel._removeUnlikelyPredictions(new Map<object, double?>
             {
                 { 1, 0.1 }, { 2, 0.2 }, { 3, 0.3 }, { 4, 0.004 }, { 5, 0.005 }
             }, 0.01, 3);
@@ -219,7 +220,7 @@ namespace HTM.Net.Research.Tests.Opf
                 var config = new DescriptionConfigModel()
                 {
                     model = "CLA",
-                    aggregationInfo = new AggregationDict
+                    aggregationInfo = new AggregationSettings
                     {
                         days = 0,
                         fields = new Map<string, object>(),
@@ -383,12 +384,10 @@ namespace HTM.Net.Research.Tests.Opf
 
             var minValue = inputSource.GetFieldMin("consumption");
             Assert.IsNotNull(minValue);
-            Assert.IsTrue(minValue.Length > 0);
             Debug.WriteLine(minValue);
 
             var maxValue = inputSource.GetFieldMax("consumption");
             Assert.IsNotNull(maxValue);
-            Assert.IsTrue(maxValue.Length > 0);
             Debug.WriteLine(maxValue);
         }
     }

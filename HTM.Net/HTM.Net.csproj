@@ -95,6 +95,7 @@
     <Compile Include="Datagen\PCAKNNData.cs" />
     <Compile Include="Datagen\ResourceLocator.cs" />
     <Compile Include="Datagen\SequenceMachine.cs" />
+    <Compile Include="Data\FieldMetaInfo.cs" />
     <Compile Include="Encoders\AdaptiveScalarEncoder.cs" />
     <Compile Include="Algorithms\Anomaly.cs" />
     <Compile Include="Algorithms\AnomalyLikelihood.cs" />

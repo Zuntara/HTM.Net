@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -8,8 +9,10 @@ using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MetricsManager = HTM.Net.Research.opf.PredictionMetricsManager;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Swarming
 {
@@ -50,6 +53,11 @@ namespace HTM.Net.Research.Swarming
         private bool _isBestModelStored;
         private List<string> _reportMetricLabels;
         private PeriodicActivityMgr _periodic;
+        private int? _currentRecordIndex;
+        private bool _isKilled;
+        private bool _isCanceled;
+        private bool _isMature;
+        private Queue<object> __predictionCache;
 
         /// <summary>
         /// 
@@ -110,8 +118,8 @@ namespace HTM.Net.Research.Swarming
             //    // Current task control parameters. Will be set by __runTask()
             //    this.__task = null;
 
-            //    // Will be set to a new instance of PeriodicActivityManager by __runTask()
-            //    this._periodic = null;
+            // Will be set to a new instance of PeriodicActivityManager by __runTask()
+            this._periodic = null;
 
             //    // Will be set to streamDef string by _runTask()
             //    this._streamDef = null;
@@ -122,16 +130,16 @@ namespace HTM.Net.Research.Swarming
             // Will be set to new InputSource by __runTask()
             this._inputSource = null;
 
-            //    // 0-based index of the record being processed;
-            //    // Initialized and updated by __runTask()
-            //    this._currentRecordIndex = null;
+            // 0-based index of the record being processed;
+            // Initialized and updated by __runTask()
+            this._currentRecordIndex = null;
 
-            //    // Interface to write predictions to a persistent storage
-            //    this._predictionLogger = null;
+            // Interface to write predictions to a persistent storage
+            //this._predictionLogger = null;
 
-            //    // In-memory cache for predictions. Predictions are written here for speed
-            //    // when they don't need to be written to a persistent store
-            //    this.__predictionCache = deque();
+            // In-memory cache for predictions. Predictions are written here for speed
+            // when they don't need to be written to a persistent store
+            this.__predictionCache = new Queue<object>();
 
             // Flag to see if this is the best model in the job (as determined by the
             // model chooser logic). This is essentially a cache of the value in the
@@ -143,21 +151,21 @@ namespace HTM.Net.Research.Swarming
             this._isBestModelStored = false;
 
 
-            //    // -----------------------------------------------------------------------
-            //    // Flags for model cancelation/checkpointing
-            //    // -----------------------------------------------------------------------
+            // -----------------------------------------------------------------------
+            // Flags for model cancelation/checkpointing
+            // -----------------------------------------------------------------------
 
-            //    // Flag to see if the job that this model is part of
-            //    this._isCanceled = false;
+            // Flag to see if the job that this model is part of
+            this._isCanceled = false;
 
-            //    // Flag to see if model was killed, either by the model terminator or by the
-            //    // hypsersearch implementation (ex. the a swarm is killed/matured)
-            //    this._isKilled = false;
+            // Flag to see if model was killed, either by the model terminator or by the
+            // hypsersearch implementation (ex. the a swarm is killed/matured)
+            this._isKilled = false;
 
-            //    // Flag to see if the model is matured. In most cases, this means that we
-            //    // should stop running the model. The only execption is if this model is the
-            //    // best model for the job, in which case it should continue running.
-            //    this._isMature = false;
+            // Flag to see if the model is matured. In most cases, this means that we
+            // should stop running the model. The only execption is if this model is the
+            // best model for the job, in which case it should continue running.
+            this._isMature = false;
 
             //    // Event to see if interrupt signal has been sent
             //    this._isInterrupted = threading.Event();
@@ -168,7 +176,7 @@ namespace HTM.Net.Research.Swarming
             //    // List of tuples, (iteration, metric), used to see if the model has 'matured'
             //    this._metricRegression = regression.AveragePctChange(windowSize: this._MATURITY_NUM_POINTS);
 
-            //    this.__loggedMetricPatterns = [];
+            this.__loggedMetricPatterns = new string[0];
         }
 
         /// <summary>
@@ -185,16 +193,7 @@ namespace HTM.Net.Research.Swarming
             // Create the input data stream for this task
             var streamDef = this._modelControl.dataset;
 
-            string fileName = null;
-            if (streamDef["streams"] is JObject)
-            {
-                fileName = ((JObject) streamDef["streams"]).GetValue("source").Value<string>();
-            }
-            else
-            {
-                fileName = ((Map<string, object>)streamDef["streams"])["source"] as string;
-            }
-            
+            string fileName = ((Map<string, object>)streamDef["streams"])["source"] as string;
 
             IStream<string> fileStream = new Stream<string>(YieldingFileReader.ReadAllLines(fileName, Encoding.UTF8));
             _inputSource = BatchedCsvStream<string>.Batch(fileStream, 20, false, 3);
@@ -244,11 +243,11 @@ namespace HTM.Net.Research.Swarming
                 learningOffAt = numIters - iterationCountInferOnly;
             }
 
-            //    this.__runTaskMainLoop(numIters, learningOffAt: learningOffAt);
+            this.__runTaskMainLoop(numIters, learningOffAt: learningOffAt);
 
-            //    // -----------------------------------------------------------------------
-            //    // Perform final operations for model
-            //    this._finalize();
+            // -----------------------------------------------------------------------
+            // Perform final operations for model
+            this._finalize();
 
             return new ModelCompletionStatus(this._cmpReason, null);
         }
@@ -339,7 +338,238 @@ namespace HTM.Net.Research.Swarming
             return new PeriodicActivityMgr(requestedActivities: periodicActivities);
         }
 
+        /// <summary>
+        /// Main loop of the OPF Model Runner.
+        /// </summary>
+        /// <param name="numIters"></param>
+        /// <param name="learningOffAt">If not null, learning is turned off when we reach this iteration number</param>
+        public void __runTaskMainLoop(int numIters, int? learningOffAt = null)
+        {
+            // Reset sequence states in the model, so it starts looking for a new
+            // sequence
+            _model.resetSequenceStates();
+            _currentRecordIndex = -1;
+
+            while (true)
+            {
+                // If killed by a terminator, stop running
+                if (_isKilled) break;
+                // If job stops or hypersearch ends, stop running
+                if (_isCanceled) break;
+
+                // If the process is about to be killed, set as orphaned
+                // TODO
+                //if (_isInterrupted.isSet())
+                //{
+                //    __setAsOrphaned();
+                //    break;
+                //}
+                // If model is mature, stop running ONLY IF  we are not the best model
+                // for the job. Otherwise, keep running so we can keep returning
+                // predictions to the user
+                if (_isMature)
+                {
+                    if (!_isBestModel)
+                    {
+                        _cmpReason = BaseClientJobDao.CMPL_REASON_STOPPED;
+                        break;
+                    }
+                    else
+                    {
+                        _cmpReason = BaseClientJobDao.CMPL_REASON_EOF;
+                    }
+
+                    // Turn off learning
+                    if (learningOffAt.HasValue && _currentRecordIndex == learningOffAt.Value)
+                    {
+                        _model.disableLearning();
+                    }
+                }
+
+                // Read input record. Note that any failure here is a critical JOB failure
+                // and results in the job being immediately canceled and marked as
+                // failed. The runModelXXX code in hypesearch.utils, if it sees an
+                // exception of type utils.JobFailException, will cancel the job and
+                // copy the error message into the job record.
+                Map<string, object> inputRecord;
+                try
+                {
+                    inputRecord = _inputSource.GetNextRecordDict();
+                    if (_currentRecordIndex < 0)
+                    {
+                        //_inputSource.SetTimeout(10);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new JobFailException("StreamReading", e);
+                }
+
+                if (inputRecord == null)
+                {
+                    // EOF
+                    _cmpReason = BaseClientJobDao.CMPL_REASON_EOF;
+                    break;
+                }
+
+                if (!inputRecord.Any())
+                {
+                    throw new InvalidOperationException("Got an empty record from FileSource");
+                }
+
+                // Process input record
+                _currentRecordIndex += 1;
+
+                var result = _model.run(inputRecord);
+
+                // Compute metrics
+                result.metrics = __metricMgr.update(result);
+                // If there are None, use defaults. see MetricManager.getMetrics()
+                // TODO remove this when  API server is gone
+                if (result.metrics == null)
+                    result.metrics = __metricMgr.GetMetrics();
+
+                // Write the result to the output cache. Don't write encodings, if they were computed.
+                if (result.inferences.ContainsKey(InferenceElement.Encodings))
+                {
+                    result.inferences.Remove(InferenceElement.Encodings);
+                }
+                result.sensorInput.dataEncodings = null;
+                _writePrediction(result);
+
+                // run periodic activities
+                _periodic.Tick();
+
+                if (numIters >= 0 && _currentRecordIndex >= numIters - 1)
+                {
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Run final activities after a model has run. These include recording and
+        /// logging the final score
+        /// </summary>
+        private void _finalize()
+        {
+            _logger.Info($"Finished: modelID={_modelID}, {_currentRecordIndex + 1} records processed. Performing final activities");
+
+            // =========================================================================
+            // Dump the experiment metrics at the end of the task
+            // =========================================================================
+            _updateModelDBResults();
+
+            // =========================================================================
+            // Check if the current model is the best. Create a milestone if necessary
+            // If the model has been killed, it is not a candidate for "best model",
+            // and its output cache should be destroyed
+            // =========================================================================
+            if (!_isKilled)
+            {
+                __updateJobResults();
+            }
+            else
+            {
+                __deleteOutputCache(_modelID);
+            }
+
+            // =========================================================================
+            // Close output stream, if necessary
+            // =========================================================================
+            //if (_predictionLogger != null)
+            //    _predictionLogger.close();
+        }
+
+
+
+
+        /// <summary>
+        /// Writes the results of one iteration of a model. The results are written to
+        /// this ModelRunner's in-memory cache unless this model is the "best model" for
+        /// the job.If this model is the "best model", the predictions are written out
+        /// to a permanent store via a prediction output stream instance
+        /// </summary>
+        /// <param name="result">ModelResult object, which contains the input and output for this iteration</param>
+        private void _writePrediction(ModelResult result)
+        {
+            __predictionCache.Enqueue(result);
+            if (_isBestModel)
+            {
+                __flushPredictionCache();
+            }
+        }
+
+        /// <summary>
+        /// Writes the contents of this model's in-memory prediction cache to a permanent
+        /// store via the prediction output stream instance
+        /// </summary>
+        private void __flushPredictionCache()
+        {
+            if (__predictionCache == null) return;
+
+            throw new NotImplementedException("flushing not yet implemented");
+        }
+
+        /// <summary>
+        /// Retrieves the current results and updates the model's record in the Model database.
+        /// </summary>
         private void _updateModelDBResults()
+        {
+            // -----------------------------------------------------------------------
+            // Get metrics
+            var metrics = _getMetrics();
+
+            // -----------------------------------------------------------------------
+            // Extract report metrics that match the requested report REs
+            var reportDict = _reportMetricLabels.ToDictionary(k => k, k => metrics[k]);
+
+            // -----------------------------------------------------------------------
+            // Extract the report item that matches the optimize key RE
+            // TODO cache optimizedMetricLabel sooner
+            metrics = _getMetrics();
+            Map<string, double?> optimizeDict = new Map<string, double?>();
+            if (_optimizeKeyPattern != null)
+            {
+                optimizeDict[_optimizedMetricLabel] = metrics[_optimizedMetricLabel];
+            }
+
+            // -----------------------------------------------------------------------
+            // Update model results
+            string results = JsonConvert.SerializeObject(new Tuple(metrics,optimizeDict));
+
+            _jobsDAO.modelUpdateResults(_modelID, results: results, metricValue: optimizeDict.Values.First(),
+                numRecords: (uint)(_currentRecordIndex + 1));
+
+            _logger.Debug($"Model Results: modelID={_modelID}; numRecords={_currentRecordIndex+1}; results={results}");
+        }
+
+        private Map<string, double?> _getMetrics()
+        {
+            return __metricMgr.GetMetrics();
+        }
+
+        /// <summary>
+        /// Check if this is the best model
+        /// If so:
+        ///     1) Write it's checkpoint
+        ///     2) Record this model as the best
+        ///     3) Delete the previous best's output cache
+        /// Otherwise:
+        ///     1) Delete our output cache
+        /// </summary>
+        private void __updateJobResults()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Delete's the output cache associated with the given modelID. This actually
+        /// clears up the resources associated with the cache, rather than deleting al
+        /// the records in the cache
+        /// </summary>
+        /// <param name="modelId">The id of the model whose output cache is being deleted</param>
+        private void __deleteOutputCache(ulong? modelId)
         {
             throw new NotImplementedException();
         }
@@ -360,20 +590,82 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
+    public class JobFailException : Exception
+    {
+        public JobFailException(string message, Exception exception)
+            : base(message, exception)
+        {
+
+        }
+    }
+
     public class PeriodicActivityRequest
     {
         public bool repeating;
         public int period;
         public Action cb;
+
+        public IEnumerator<int>[] iterationHolder;
     }
 
     public class PeriodicActivityMgr
     {
-        private List<PeriodicActivityRequest> requestedActivities;
+        private List<PeriodicActivityRequest> __activities;
 
         public PeriodicActivityMgr(List<PeriodicActivityRequest> requestedActivities)
         {
-            this.requestedActivities = requestedActivities;
+            this.__activities = new List<PeriodicActivityRequest>();
+            AppendActivities(requestedActivities);
+        }
+
+        /// <summary>
+        /// Activity tick handler; services all activities
+        /// </summary>
+        /// <returns>True if controlling iterator says it's okay to keep going; False to stop</returns>
+        public bool Tick()
+        {
+            // Run activities whose time has come
+            foreach (var act in __activities)
+            {
+                if (act.iterationHolder[0] == null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    act.iterationHolder[0].MoveNext();
+                }
+                catch (Exception e)
+                {
+                    act.cb();
+                    if (act.repeating)
+                    {
+                        act.iterationHolder[0] = ArrayUtils.XRange(0, act.period - 1, 1).GetEnumerator();
+                    }
+                    else
+                    {
+                        act.iterationHolder[0] = null;
+                    }
+                    throw;
+                }
+            }
+            return true;
+        }
+
+        private void AppendActivities(List<PeriodicActivityRequest> periodicActivities)
+        {
+            foreach (PeriodicActivityRequest req in periodicActivities)
+            {
+                PeriodicActivityRequest act = new PeriodicActivityRequest
+                {
+                    repeating = req.repeating,
+                    period = req.period,
+                    cb = req.cb,
+                    iterationHolder = new[] { ArrayUtils.XRange(0, req.period - 1, 1).GetEnumerator() }
+                };
+                __activities.Add(act);
+            }
         }
     }
 

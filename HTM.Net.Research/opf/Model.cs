@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HTM.Net.Data;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
