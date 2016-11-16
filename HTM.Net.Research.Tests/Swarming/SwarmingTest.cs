@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
@@ -143,23 +144,23 @@ namespace HTM.Net.Research.Tests.Swarming
         /// </param>
         /// <param name="maxRecords"></param>
         /// <returns></returns>
-        protected Map<string, object> _generateHSJobParams(string expDirectory = null, string hsImp = "v2", int? maxModels = 2,
+        protected Map<string, object> _generateHSJobParams(Tuple<DescriptionBase, PermutionFilterBase> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
                            int? predictionCacheMaxRecords = null, string dataPath = null, int? maxRecords = 10)
         {
             Map<string, object> jobParams = null;
             if (expDirectory != null)
             {
-                string descriptionPyPath = Path.Combine(expDirectory, "description.py");
-                string permutationsPyPath = Path.Combine(expDirectory, "permutations.py");
+                //string descriptionPyPath = Path.Combine(expDirectory, "description.py");
+                //string permutationsPyPath = Path.Combine(expDirectory, "permutations.py");
 
-                string permutationsPyContents = "";//File.ReadAllText(permutationsPyPath);
-                string descriptionPyContents = "";//File.ReadAllText(descriptionPyPath);
+                var permutationsPyContents = expDirectory.Item2;//File.ReadAllText(permutationsPyPath);
+                var descriptionPyContents = expDirectory.Item1;//File.ReadAllText(descriptionPyPath);
 
                 jobParams = new Map<string, object>
                 {
                     {"persistentJobGUID", Utils.generatePersistentJobGUID()},
-                    {"permutationsPyContents", new SimpleV2PermutationsFile()},
-                    {"descriptionPyContents", new SimpleV2DescriptionFile()},
+                    {"permutationsPyContents", permutationsPyContents},
+                    {"descriptionPyContents", descriptionPyContents},
                     {"maxModels", maxModels},
                     {"hsVersion", hsImp}
                 };
@@ -287,10 +288,7 @@ namespace HTM.Net.Research.Tests.Swarming
             if (!continueJobId.HasValue)
             {
                 jobID = (int)cjDAO.jobInsert(client: "test", cmdLine: "<started manually>",
-                        @params: JsonConvert.SerializeObject(jobParams, new JsonSerializerSettings
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        }),
+                        @params: Json.Serialize(jobParams),
                         alreadyRunning: true, minimumWorkers: 1, maximumWorkers: 1,
                         jobType: BaseClientJobDao.JOB_TYPE_HS);
             }
@@ -310,7 +308,7 @@ namespace HTM.Net.Research.Tests.Swarming
             // Run it in the current process
             try
             {
-                HyperSearchWorker.main(args.ToArray());
+                HyperSearchWorker.Main(args.ToArray());
             }
 
             // The dummy model runner will call sys.exit(0) when
@@ -350,7 +348,7 @@ namespace HTM.Net.Research.Tests.Swarming
             {
                 if (result.results != null)
                 {
-                    metricResults.Add(result.results.Item2.Values.First());
+                    metricResults.Add(((Map<string,double?>)result.results.Get(1)).Values.First());
                 }
                 else
                 {
@@ -398,7 +396,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// the prediction cache.</param>
         /// <param name="kwargs"></param>
         /// <returns>(jobID, jobInfo, resultsInfoForAllModels, metricResults, minErrScore)</returns>
-        public PermutationsLocalResult runPermutations(string expDirectory, string hsImp = "v2", int? maxModels = 2,
+        public PermutationsLocalResult RunPermutations(Tuple<DescriptionBase, PermutionFilterBase> expDirectory, string hsImp = "v2", int? maxModels = 2,
                       int maxNumWorkers = 4, bool onCluster = false, bool waitForCompletion = true,
                       int? continueJobId = null, string dataPath = null, int? maxRecords = null,
                       int? timeoutSec = null, bool ignoreErrModels = false,
@@ -495,7 +493,7 @@ namespace HTM.Net.Research.Tests.Swarming
             if (metricAmts.Count > 0)
             {
                 minErrScore = metricAmts.Min();
-                ulong minModelID = resultInfos[ArrayUtils.Argmin(metricAmts.ToArray())].modelID;
+                ulong minModelID = resultInfos[ArrayUtils.Argmin(metricAmts.ToArray())].modelId;
 
                 // Get model info
                 var cjDAO = BaseClientJobDao.Create();
@@ -554,8 +552,8 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestSimpleV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
         {
             //this._printTestHeader();
-            string expDir = Path.Combine(g_myEnv.testSrcExpDir, "simpleV2");
-
+            var expDir = new Tuple<DescriptionBase, PermutionFilterBase>(
+                new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
             // Test it out
             //if (env is None)
             //{
@@ -565,7 +563,7 @@ namespace HTM.Net.Research.Tests.Swarming
             //env["NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow"] = "%d" % (g_repeatableSwarmMaturityWindow);
 
             //(jobID, jobInfo, resultInfos, metricResults, minErrScore) 
-            var permutationResult = this.runPermutations(expDirectory: expDir,
+            var permutationResult = this.RunPermutations(expDirectory: expDir,
                                    hsImp: "v2",
                                    //loggingLevel = g_myEnv.options.logLevel,
                                    onCluster: onCluster,
@@ -585,6 +583,30 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
+        }
+
+        /// <summary>
+        /// Try running a spatial classification swarm
+        /// </summary>
+        //[TestMethod]
+        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
+        public void TestSpatialClassification()
+        {
+            var expDir = new Tuple<DescriptionBase, PermutionFilterBase>(
+                new SpatialClassificationDescriptionFile(), new SpatialClassificationPermutationsFile());
+            // spatial_classification
+            var permutationResult = this.RunPermutations(expDirectory: expDir,
+                                   hsImp: "v2",
+                                   //loggingLevel = g_myEnv.options.logLevel,
+                                   onCluster: false,
+                                   //env = env,
+                                   maxModels: null,
+                                   kwargs: null);
+
+            Assert.AreEqual(20, permutationResult.minErrScore);
+            Assert.IsTrue(permutationResult.results.Count < 350);
+
+
         }
 
         [TestMethod]
@@ -653,29 +675,34 @@ namespace HTM.Net.Research.Tests.Swarming
         {
             SimpleV2PermutationsFile file = new SimpleV2PermutationsFile();
 
-            string json = JsonConvert.SerializeObject(file);
-            var deserialized = JsonConvert.DeserializeObject(json, typeof(PermutionFilterBase));
+            string json = Json.Serialize(file);
+            var deserialized = Json.Deserialize<PermutionFilterBase>(json);
             Assert.IsNotNull(deserialized);
             Assert.IsInstanceOfType(deserialized, typeof(SimpleV2PermutationsFile));
 
             SimpleV2PermutationsFile des = (SimpleV2PermutationsFile) deserialized;
-            Assert.AreEqual(7, file.permutations.modelParams.sensorParams.encoders["consumption"].kwArgs["w"]);
-            Assert.IsInstanceOfType(file.permutations.modelParams.sensorParams.encoders["consumption"].kwArgs["n"], typeof(PermuteInt));
+            Assert.AreEqual(7, ((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
+            Assert.IsInstanceOfType(((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
 
-            Assert.AreEqual(7, des.permutations.modelParams.sensorParams.encoders["consumption"].kwArgs["w"]);
-            Assert.IsInstanceOfType(des.permutations.modelParams.sensorParams.encoders["consumption"].kwArgs["n"], typeof(PermuteInt));
+            Assert.AreEqual(7, ((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
+            Assert.IsInstanceOfType(((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
         }
 
         [TestMethod]
         public void TestParamsDeserialisation()
         {
-            string expDir = Path.Combine(g_myEnv.testSrcExpDir, "simpleV2");
+            var expDir = new Tuple<DescriptionBase, PermutionFilterBase>(
+                new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
+
             var jobParamsDict = this._generateHSJobParams(expDirectory: expDir,hsImp: "v2");
             jobParamsDict.Update(null);
 
-            string jobParamsJson = JsonConvert.SerializeObject(jobParamsDict);
+            string jobParamsJson = Json.Serialize(jobParamsDict);
 
-            var jobParams = JsonConvert.DeserializeObject<HyperSearchSearchParams>(jobParamsJson);
+            var jobParams = Json.Deserialize<Map<string,object>>(jobParamsJson);
+
+            HyperSearchSearchParams p = new HyperSearchSearchParams();
+            p.Populate(jobParams);
         }
     }
 

@@ -659,9 +659,9 @@ namespace HTM.Net.Research.Swarming
         /// permuted over.
         /// </param>
         /// <returns></returns>
-        public PermuteEncoder getEncoderFlattened(string encoderName, Dictionary<string, object> flattenedChosenValues)
+        public PermuteEncoder getEncoderFlattened(string encoderName, Map<string, object> flattenedChosenValues)
         {
-            Dictionary<string, object> encoder = new Dictionary<string, object>();
+            Map<string, object> encoder = new Map<string, object>();
             //encoder.Add("fieldname", this.fieldName);
             //encoder.Add("name", this.name);
             //encoder = dict(fieldname = this.fieldName,name = this.name);
@@ -716,8 +716,8 @@ namespace HTM.Net.Research.Swarming
             }
 
             PermuteEncoder pe = new PermuteEncoder(fieldName, (string)encoder["type"], name, args);
-            pe.maxval = encoder["maxval"];
-            pe.minval = encoder["minval"];
+            pe.maxval = encoder.Get("maxval");
+            pe.minval = encoder.Get("minval");
             pe.n = encoder["n"];
             pe.w = encoder["w"];
             return pe;
@@ -816,5 +816,4 @@ namespace HTM.Net.Research.Swarming
             throw new NotImplementedException();
         }
     }
-
 }

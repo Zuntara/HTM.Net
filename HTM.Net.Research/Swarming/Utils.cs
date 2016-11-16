@@ -423,7 +423,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="obj"></param>
         /// <param name="maxElementSize"></param>
         /// <returns></returns>
-        public static object clippedObj(object obj, int maxElementSize = 64)
+        public static object ClippedObj(object obj, int maxElementSize = 64)
         {
             // Is it a named tuple?
             if (obj is Util.Tuple)
@@ -439,7 +439,7 @@ namespace HTM.Net.Research.Swarming
                 //for (key, val in obj.iteritems())
                 foreach (DictionaryEntry kvp in (IDictionary)obj)
                 {
-                    objOut.Add(kvp.Key, clippedObj(kvp.Value));
+                    objOut.Add(kvp.Key, ClippedObj(kvp.Value));
                     //objOut[key] = clippedObj(val);
                 }
                 return objOut;
@@ -451,7 +451,7 @@ namespace HTM.Net.Research.Swarming
                 var objOut = new ArrayList();
                 foreach (var val in (IEnumerable)obj)
                 {
-                    objOut.Add(clippedObj(val));
+                    objOut.Add(ClippedObj(val));
                 }
                 return objOut;
             }
@@ -868,7 +868,7 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public class SensorParamsModel
     {
-        public IDictionary<string, PermuteEncoder> encoders { get; set; }
+        public Map<string, object> encoders { get; set; }
         public TemporalParams tpParams { get; set; }
     }
 

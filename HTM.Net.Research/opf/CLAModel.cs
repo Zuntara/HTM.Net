@@ -336,36 +336,22 @@ namespace HTM.Net.Research.opf
                 }
             }
 
+            //##########################################################################
             // Predictions and Learning
+            //##########################################################################
             _layerCompute(inputRecord);
             //this._sensorCompute(inputRecord);
             //this._spCompute();
             //this._tpCompute();
 
-            results.sensorInput = this._getSensorInputRecord(inputRecord);
+            results.sensorInput = _getSensorInputRecord(inputRecord);
 
-            Map<InferenceElement, object> inferences = new Map<InferenceElement, object>();
+            Map<InferenceElement, object> inferences = this._multiStepCompute(rawInput: inputRecord);
 
-            //// TODO: Reconstruction and temporal classification not used. Remove
-            //if (this._isReconstructionModel())
-            //{
-            //    inferences = this._reconstructionCompute();
-            //}
-            //else if (this._isMultiStepModel())
-            //{
-            results.inferences = this._multiStepCompute(rawInput: inputRecord);
-            //}
-            //// For temporal classification. Not used, and might not work anymore
-            //else if (this._isClassificationModel())
-            //{
-            //    inferences = this._classificationCompute();
-            //}
+            results.inferences.Update(inferences);
 
-            //results.inferences.Update(inferences);
-            inferences.AddAll(this._anomalyCompute());
-            results.inferences.AddAll(inferences);
-            //inferences = this._anomalyCompute();
-            //results.inferences.Update(inferences);
+            inferences = this._anomalyCompute();
+            results.inferences.Update(inferences);
 
             // -----------------------------------------------------------------------
             // Store the index and name of the predictedField
@@ -404,10 +390,9 @@ namespace HTM.Net.Research.opf
             }
         }
 
-        private void _sensorCompute(Dictionary<string, object> inputRecord)
+        private void _sensorCompute(Map<string, object> inputRecord)
         {
-            //ISensor sensor = this._getSensorRegion();
-
+            //ISensor sensor = this._getSensorRegion().GetSensor();
 
             //this._getDataSource().push(inputRecord);
             //sensor.setParameter("topDownMode", false);
@@ -483,14 +468,21 @@ namespace HTM.Net.Research.opf
         /// Returns dict containing the input to the sensor Return a 'SensorInput' object, which represents the 'parsed'
         /// representation of the input record
         /// </summary>
-        /// <param name="inputRecord"></param>
+        /// <param name="inputRecord">dict containing the input to the sensor</param>
         /// <returns></returns>
         private SensorInput _getSensorInputRecord(Map<string, object> inputRecord)
         {
+            var sensor = _getSensorRegion().GetSensor();
+            // inputRecordCategory = int(sensor.getOutputData('categoryOut')[0])
+            // resetOut = sensor.getOutputData('resetOut')[0]
             var inference = (ManualInput)_netInfo.net.GetHead().GetHead().GetInference();
             var dataRow = inference.GetLayerInput();
-            return new SensorInput(null, inputRecord, inference.GetEncoding().Select(e => (object)e).ToList(),
-                null, null);
+            return new SensorInput(
+                dataRow: dataRow, 
+                dataDict: new Map<string, object>(inputRecord), 
+                dataEncodings: inference.GetEncoding().Select(e => (object)e).ToList(),
+                sequenceReset: null, 
+                category: null);// todo : fetch inputREcordCategory
         }
         ///// <summary>
         ///// 
@@ -529,6 +521,7 @@ namespace HTM.Net.Research.opf
             double? score = null;
             if (inferenceType == InferenceType.NontemporalAnomaly)
             {
+                score = sp.GetInference().GetAnomalyScore();
                 throw new NotImplementedException();
                 //score = sp.getOutputData("anomalyScore")[0]; // TODO move from SP to Anomaly ?
             }
@@ -558,26 +551,29 @@ namespace HTM.Net.Research.opf
                 }
                 // Calculate the anomaly score using the active columns
                 // and previous predicted columns.
-                double anomalyInputValue;
-                if (_input[_predictedFieldName] is string)
-                {
-                    anomalyInputValue = double.Parse(_input[_predictedFieldName] as string,
-                        NumberFormatInfo.InvariantInfo);
-                }
-                else
-                {
-                    anomalyInputValue = (double)_input[_predictedFieldName];
-                }
-                score = _anomalyInst.Compute(activeColumns, _prevPredictedColumns, anomalyInputValue,
-                    this.__numRunCalls);
-                //score = this._anomalyInst.compute(
-                //                             activeColumns,
-                //                             this._prevPredictedColumns,
-                //                             inputValue: this._input[this._predictedFieldName]);
 
-                // Store the predicted columns for the next timestep.
-                var predictedColumns = tp.GetInference().GetPredictiveCells().Select(c => c.GetColumn().GetIndex()).ToArray();// tp.getOutputData("topDownOut").nonzero()[0];
-                this._prevPredictedColumns = predictedColumns;
+                score = tp.GetInference().GetAnomalyScore();
+
+                //double anomalyInputValue;
+                //if (_input[_predictedFieldName] is string)
+                //{
+                //    anomalyInputValue = double.Parse(_input[_predictedFieldName] as string,
+                //        NumberFormatInfo.InvariantInfo);
+                //}
+                //else
+                //{
+                //    anomalyInputValue = (double)_input[_predictedFieldName];
+                //}
+                //score = _anomalyInst.Compute(activeColumns, _prevPredictedColumns, anomalyInputValue,
+                //    this.__numRunCalls);
+                ////score = this._anomalyInst.compute(
+                ////                             activeColumns,
+                ////                             this._prevPredictedColumns,
+                ////                             inputValue: this._input[this._predictedFieldName]);
+
+                //// Store the predicted columns for the next timestep.
+                //var predictedColumns = tp.GetInference().GetPredictiveCells().Select(c => c.GetColumn().GetIndex()).ToArray();// tp.getOutputData("topDownOut").nonzero()[0];
+                //this._prevPredictedColumns = predictedColumns;
 
                 // Calculate the classifier's output and use the result as the anomaly
                 // label. Stores as string of results.
@@ -755,7 +751,7 @@ namespace HTM.Net.Research.opf
                 this._numFields = encoderList.Count;
 
                 // This is getting index of predicted field if being fed to CLA.
-                var fieldNames = encoderList.Select(et => et.GetFieldName()).ToList();
+                var fieldNames = sensor.GetEncoder().GetScalarNames();// encoderList.Select(et => et.GetFieldName()).ToList();
                 if (fieldNames != null && fieldNames.Contains(predictedFieldName))
                 {
                     this._predictedFieldIdx = fieldNames.IndexOf(predictedFieldName);
@@ -1157,6 +1153,8 @@ namespace HTM.Net.Research.opf
 
             //enabledEncoders = copy.deepcopy(sensorParams['encoders']);
             Map<string, Map<string, object>> enabledEncoders = new Map<string, Map<string, object>>(_description.modelConfig.modelParams.sensorParams.encoders);
+            List<string> enabledEncodersToRemove = new List<string>();
+
             foreach (var pair in enabledEncoders)
             {
                 string name = pair.Key;
@@ -1168,11 +1166,12 @@ namespace HTM.Net.Research.opf
                     @params.Remove("classifierOnly");
                     if (classifierOnly)
                     {
-                        //enabledEncoders.pop(name);
-                        enabledEncoders.Remove(name);
+                        enabledEncodersToRemove.Add(name);
+                        //enabledEncoders.Remove(name);
                     }
                 }
             }
+            enabledEncoders = new Map<string, Map<string, object>>(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
             // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
             // SP or TP Regions. This is to handle the case where the predicted field

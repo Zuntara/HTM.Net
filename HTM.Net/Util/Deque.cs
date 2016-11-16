@@ -32,10 +32,10 @@ namespace HTM.Net.Util
         /** The internal size monitor */
         private int currentSize;
 
-        /**
-         * Constructs a new {@code Deque} with the specified capacity.
-         * @param capacity
-         */
+        /// <summary>
+        /// Constructs a new Deque with the specified capacity
+        /// </summary>
+        /// <param name="capacity">Capacity or -1 for no capacity</param>
         public Deque(int capacity)
         {
             this.capacity = capacity;

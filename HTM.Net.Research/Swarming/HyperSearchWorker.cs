@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
@@ -47,8 +48,8 @@ namespace HTM.Net.Research.Swarming
     {
         private readonly ILog logger = LogManager.GetLogger(typeof(HyperSearchWorker));
         private HypersearchV2 _hs;
-        private Dictionary<ulong, int> _modelIDCtrDict;
-        private List<Tuple> _modelIDCtrList;
+        private Dictionary<ulong, uint> _modelIDCtrDict;
+        private List<Tuple<ulong, uint>> _modelIDCtrList;
         private HashSet<ulong> _modelIDSet;
         private string _workerID;
         private HyperSearchWorkerOptions _options;
@@ -94,10 +95,10 @@ namespace HTM.Net.Research.Swarming
             // have to notify the Hypersearch object that the results have changed.
 
             // This is a dict of modelID -> updateCounter
-            this._modelIDCtrDict = new Dictionary<ulong, int>();
+            this._modelIDCtrDict = new Dictionary<ulong, uint>();
 
             // This is the above is a list of tuples: (modelID, updateCounter)
-            this._modelIDCtrList = new List<Tuple>();
+            this._modelIDCtrList = new List<Tuple<ulong, uint>>();
 
             // This is just the set of modelIDs (keys)
             this._modelIDSet = new HashSet<ulong>();
@@ -115,7 +116,7 @@ namespace HTM.Net.Research.Swarming
         {
             // Get the latest update counters. This returns a list of tuples:
             //  (modelID, updateCounter)
-            List<Tuple> curModelIDCtrList = cjDAO.modelsGetUpdateCounters(this._options.jobID);
+            List<Tuple<ulong, uint>> curModelIDCtrList = cjDAO.modelsGetUpdateCounters(this._options.jobID);
             if (curModelIDCtrList.Count == 0)
             {
                 return;
@@ -137,7 +138,7 @@ namespace HTM.Net.Research.Swarming
             //changedEntries = filter(lambda x: x[1][1] != x[2][1],
             //                  itertools.izip(xrange(numItems), curModelIDCtrList,this._modelIDCtrList));
             var changedEntries = ArrayUtils.Zip(ArrayUtils.XRange(0, numItems, 1), curModelIDCtrList, this._modelIDCtrList)
-                .Where(x => ((Tuple)x.Item2).Item1 == ((Tuple)x.Item3).Item2)
+                .Where(x => ((Tuple<ulong,uint>)x.Item2).Item2 != ((Tuple<ulong, uint>)x.Item3).Item2)
                 .ToList();
 
             if (changedEntries.Count > 0)
@@ -149,13 +150,14 @@ namespace HTM.Net.Research.Swarming
                     //(idx, (modelID, curCtr), (_, oldCtr)) = entry;
                     int idx = (int)entry.Item1;
                     ulong modelID = (ulong)((Tuple)entry.Item2).Item1;
-                    int curCtr = (int)((Tuple)entry.Item2).Item2;
+                    uint curCtr = (uint)((Tuple)entry.Item2).Item2;
                     int oldCtr = (int)((Tuple)entry.Item3).Item2;
 
                     this._modelIDCtrDict[modelID] = curCtr;
                     Debug.Assert((ulong)this._modelIDCtrList[idx].Item1 == modelID);
                     Debug.Assert(curCtr != oldCtr);
-                    this._modelIDCtrList[idx].Item2 = curCtr;
+                    //this._modelIDCtrList[idx].Item2 = curCtr;
+                    this._modelIDCtrList[idx]=new Tuple<ulong, uint>(_modelIDCtrList[idx].Item1, curCtr);
                 }
 
 
@@ -165,12 +167,12 @@ namespace HTM.Net.Research.Swarming
                 List<ResultAndStatusModel> modelResults = cjDAO.modelsGetResultAndStatus(changedModelIDs);
                 foreach (var mResult in modelResults)
                 {
-                    Tuple<Dictionary<string, object>, Dictionary<string, double?>> results = mResult.results;
-                    if (results != null)
+                    Tuple results = mResult.results;
+                    if (mResult.resultsSerialized != null)
                     {
-                        //results = json.loads(results);
+                        results = Json.Deserialize<Tuple>(mResult.resultsSerialized);
                     }
-                    this._hs.recordModelProgress(modelID: mResult.modelID,
+                    this._hs.recordModelProgress(modelID: mResult.modelId,
                                  modelParams: null,
                                  modelParamsHash: mResult.engParamsHash,
                                  results: results,
@@ -192,7 +194,7 @@ namespace HTM.Net.Research.Swarming
 
                 // Add new modelID and counters to our cache
                 this._modelIDSet.UnionWith(newModelIDs);
-                var curModelIDCtrDict = curModelIDCtrList.ToDictionary(k => (ulong)k.Item1, v => (int)v.Item2);  //  dict(curModelIDCtrList);
+                var curModelIDCtrDict = curModelIDCtrList.ToDictionary(k => (ulong)k.Item1, v => (uint)v.Item2);  //  dict(curModelIDCtrList);
 
                 // Get the results for each of these models and send them to the
                 //  Hypersearch implementation.
@@ -206,25 +208,22 @@ namespace HTM.Net.Research.Swarming
                 {
                     var mResult = (ResultAndStatusModel)resultAndParamsAndHash.Item1;
                     var mParamsAndHash = (NamedTuple)resultAndParamsAndHash.Item2;
-                    ulong modelID = mResult.modelID;
+                    ulong modelID = mResult.modelId;
                     Debug.Assert(modelID == (ulong)mParamsAndHash["modelId"]);
 
                     // Update our cache of IDs and update counters
                     this._modelIDCtrDict[modelID] = curModelIDCtrDict[modelID];
-                    this._modelIDCtrList.Add(new Tuple(new object[] { modelID, curModelIDCtrDict[modelID] }));//[modelID, curModelIDCtrDict[modelID]]);
+                    this._modelIDCtrList.Add(new Tuple<ulong,uint>(modelID, curModelIDCtrDict[modelID]));//[modelID, curModelIDCtrDict[modelID]]);
 
                     // Tell the Hypersearch implementation of the new model
-                    Tuple<Dictionary<string, object>, Dictionary<string, double?>> results = mResult.results;
-                    if (results != null)
+                    Tuple results = mResult.results;
+                    if (results == null && mResult.resultsSerialized != null)
                     {
-                        //results = json.loads(mResult.results);
+                        results = mResult.results = Json.Deserialize<Tuple>(mResult.resultsSerialized);
                     }
 
                     this._hs.recordModelProgress(modelID: modelID,
-                        modelParams: JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string, new JsonSerializerSettings
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        }),
+                        modelParams: Json.Deserialize<ModelParams>(mParamsAndHash["params"] as string),
                         modelParamsHash: mParamsAndHash["engParamsHash"] as string,
                         results: results,
                         completed: (mResult.status == BaseClientJobDao.STATUS_COMPLETED),
@@ -236,14 +235,15 @@ namespace HTM.Net.Research.Swarming
                 this._modelIDCtrList.Sort();
             }
         }
+
         /// <summary>
         /// Run this worker.
         /// </summary>
-        /// <returns>jobID of the job we ran. This is used by unit test code
-        /// when calling this working using the --params command
-        /// line option(which tells this worker to insert the job
-        /// itself).</returns>
-        public uint? run()
+        /// <returns>
+        /// jobID of the job we ran. 
+        /// This is used by unit test code when calling this working using the --params command
+        /// line option(which tells this worker to insert the job itself).</returns>
+        public uint? Run()
         {
             // Easier access to options
             var options = this._options;
@@ -262,8 +262,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             // -------------------------------------------------------------------------
-            // if params were specified on the command line, insert a new job using
-            //  them.
+            // if params were specified on the command line, insert a new job using them.
             if (options.@params != null)
             {
                 options.jobID = cjDAO.jobInsert(client: "hwTest", cmdLine: "echo 'test mode'",
@@ -271,6 +270,7 @@ namespace HTM.Net.Research.Swarming
                             minimumWorkers: 1, maximumWorkers: 1,
                             jobType: BaseClientJobDao.JOB_TYPE_HS);
             }
+
             string wID;
             if (options.workerID != null)
             {
@@ -281,8 +281,8 @@ namespace HTM.Net.Research.Swarming
                 wID = this._workerID;
             }
 
-            int buildID = Assembly.GetExecutingAssembly().GetName().Version.Build;  //Configuration.get('nupic.software.buildNumber', 'N/A');
-            string logPrefix = string.Format("<BUILDID={0}, WORKER=HW, WRKID={1}, JOBID={2}> ", buildID, wID, options.jobID);
+            //int buildID = Assembly.GetExecutingAssembly().GetName().Version.Build;  //Configuration.get('nupic.software.buildNumber', 'N/A');
+            //string logPrefix = string.Format("<BUILDID={0}, WORKER=HW, WRKID={1}, JOBID={2}> ", buildID, wID, options.jobID);
             //ExtendedLogger.setLogPrefix(logPrefix);
 
             // ---------------------------------------------------------------------
@@ -300,31 +300,22 @@ namespace HTM.Net.Research.Swarming
                     useConnectionID: false,
                     ignoreUnchanged: true);
             }
-            var jobInfo = cjDAO.jobInfo(options.jobID);
-            this.logger.Info(string.Format("Job info retrieved: %s", (Utils.clippedObj(jobInfo))));
+            NamedTuple jobInfo = cjDAO.jobInfo(options.jobID);
+            this.logger.Info($"Job info retrieved: {Utils.ClippedObj(jobInfo)}");
 
 
             // ---------------------------------------------------------------------
             // Instantiate the Hypersearch object, which will handle the logic of
             //  which models to create when we need more to evaluate.
 
-            var jobParamsMap = JsonConvert.DeserializeObject<Map<string, object>>(jobInfo["params"] as string, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
+            var jobParamsMap = Json.Deserialize<Map<string, object>>(jobInfo["params"] as string);
 
-            HyperSearchSearchParams jobParams=new HyperSearchSearchParams();
-            jobParams.persistentJobGUID = (string) jobParamsMap["persistentJobGUID"];
-            jobParams.descriptionPyContents = (DescriptionBase) jobParamsMap["descriptionPyContents"];
-            jobParams.permutationsPyContents = (PermutionFilterBase) jobParamsMap["permutationsPyContents"];
-            jobParams.maxModels = (int?) jobParamsMap["maxModels"];
-            jobParams.hsVersion = (string) jobParamsMap["hsVersion"];
-            
+            HyperSearchSearchParams jobParams = new HyperSearchSearchParams();
+            jobParams.Populate(jobParamsMap);
 
             // Validate job params
             //var jsonSchemaPath = os.path.join(os.path.dirname(__file__), "jsonschema", "jobParamsSchema.json");
             //Utils.validate(jobParams, new Dictionary<string, object> { { "schemaPath", jsonSchemaPath } });
-
 
             string hsVersion = jobParams.hsVersion ?? null;
             if (hsVersion == "v2")
@@ -340,19 +331,19 @@ namespace HTM.Net.Research.Swarming
 
             // =====================================================================
             // The main loop.
+            ulong? modelIDToRun;
             int numModelsTotal = 0;
-            ulong? modelIDToRun = null;
+            bool exit = false;
             try
             {
-                bool exit = false;
-
                 Console.WriteLine("reporter:status:Evaluating first model...");
                 while (!exit)
                 {
-
                     // ------------------------------------------------------------------
                     // Choose a model to evaluate
-                    int batchSize = 10; // How many to try at a time.
+                    int batchSize = 10;     // How many to try at a time.
+                    modelIDToRun = null;
+
                     bool ours = false;
                     List<Tuple<ModelParams, string, string>> newModels;
 
@@ -363,12 +354,12 @@ namespace HTM.Net.Research.Swarming
 
                     while (modelIDToRun == null)
                     {
+                        #region While Loop Contents
 
                         if (options.modelID == null)
                         {
                             // -----------------------------------------------------------------
-                            // Get the latest results on all running models and send them to
-                            //  the Hypersearch implementation
+                            // Get the latest results on all running models and send them to the Hypersearch implementation
                             // This calls cjDAO.modelsGetUpdateCounters(), compares the
                             // updateCounters with what we have cached, fetches the results for the
                             // changed and new models, and sends those to the Hypersearch
@@ -401,10 +392,9 @@ namespace HTM.Net.Research.Swarming
                                 modelParams = tuple.Item1;
                                 modelParamsHash = tuple.Item2;
                                 particleHash = tuple.Item3;
-                                string jsonModelParams = JsonConvert.SerializeObject(modelParams, new JsonSerializerSettings
-                                {
-                                    TypeNameHandling = TypeNameHandling.All
-                                });
+                                string jsonModelParams = Json.Serialize(modelParams);
+
+                                Debug.WriteLine("Evaluating model particle: " + particleHash);
 
                                 var insertTuple = cjDAO.modelInsertAndStart(options.jobID,
                                     jsonModelParams, modelParamsHash, particleHash);
@@ -415,20 +405,16 @@ namespace HTM.Net.Research.Swarming
                                 //  so that it doesn't try and insert it again
                                 if (!ours)
                                 {
-                                    var mParamsAndHash = cjDAO.modelsGetParams(new List<ulong> {modelID})[0];
-                                    var mResult = cjDAO.modelsGetResultAndStatus(new List<ulong> {modelID})[0];
+                                    var mParamsAndHash = cjDAO.modelsGetParams(new List<ulong> { modelID })[0];
+                                    var mResult = cjDAO.modelsGetResultAndStatus(new List<ulong> { modelID })[0];
                                     var results = mResult.results;
-                                    if (results != null)
+                                    if (mResult.resultsSerialized != null)
                                     {
-                                        //results = json.loads(results);
+                                        results = Json.Deserialize<Tuple>(mResult.resultsSerialized);
                                     }
 
-                                    modelParams =
-                                        JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string, new JsonSerializerSettings
-                                        {
-                                            TypeNameHandling = TypeNameHandling.All
-                                        });
-                                    particleHash = cjDAO.modelsGetFields(modelID, new[] {"engParticleHash"})[0];
+                                    modelParams = Json.Deserialize<ModelParams>(mParamsAndHash["params"] as string);
+                                    particleHash = cjDAO.modelsGetFields(modelID, new[] { "engParticleHash" })._eng_particle_hash;
                                     string particleInst = string.Format("{0}.{1}", modelParams.particleState.id,
                                         modelParams.particleState.genIdx);
 
@@ -459,58 +445,55 @@ namespace HTM.Net.Research.Swarming
                         {
                             // A specific modelID was passed on the command line
                             modelIDToRun = ulong.Parse(options.modelID);
-                            var mParamsAndHash = cjDAO.modelsGetParams(new List<ulong> {modelIDToRun.Value})[0];
-                            modelParams = JsonConvert.DeserializeObject<ModelParams>(mParamsAndHash["params"] as string, new JsonSerializerSettings
-                            {
-                                TypeNameHandling = TypeNameHandling.All
-                            });
+                            var mParamsAndHash = cjDAO.modelsGetParams(new List<ulong> { modelIDToRun.Value })[0];
+                            modelParams = Json.Deserialize<ModelParams>(mParamsAndHash["params"] as string);
                             modelParamsHash = mParamsAndHash["engParamsHash"] as string;
 
                             // Make us the worker
                             cjDAO.modelSetFields(modelIDToRun,
-                                new Dictionary<string, object> {{"engWorkerConnId", this._workerID}});
-                                //dict(engWorkerConnId = this._workerID)
+                                new Dictionary<string, object> { { "engWorkerConnId", this._workerID } });
+                            //dict(engWorkerConnId = this._workerID)
                             if (false)
                             {
                                 // Change the hash and params of the old entry so that we can
                                 //  create a new model with the same params
-                                //for (attempt in range(1000))
+                                //foreach (var attempt in ArrayUtils.Range(0, 1000))
                                 //{
-                                //    paramsHash = hashlib.md5("OrphanParams.%d.%d" % (modelIDToRun,
-                                //                                                     attempt)).digest();
-                                //particleHash = hashlib.md5("OrphanParticle.%d.%d" % (modelIDToRun,
-                                //                                                          attempt)).digest();
-                                //try
-                                //{
-                                //    cjDAO.modelSetFields(modelIDToRun,
-                                //                             dict(engParamsHash = paramsHash,
-                                //                                  engParticleHash = particleHash));
-                                //    success = True;
+                                //    paramsHash = hashlib.md5("OrphanParams.%d.%d" % (modelIDToRun, attempt)).digest();
+                                //    particleHash = hashlib.md5("OrphanParticle.%d.%d" % (modelIDToRun, attempt)).digest();
+                                //    try
+                                //    {
+                                //        cjDAO.modelSetFields(modelIDToRun, dict(engParamsHash = paramsHash,
+                                //                engParticleHash = particleHash));
+                                //        success = true;
+                                //    }
+                                //    catch
+                                //    {
+                                //        success = false;
+                                //    }
+                                //    if (success)
+                                //    {
+                                //        break;
+                                //    }
                                 //}
-                                //catch ()
+                                //if (!success)
                                 //{
-                                //    success = False;
+                                //    throw new InvalidOperationException(
+                                //        "Unexpected failure to change paramsHash and particleHash of orphaned model");
                                 //}
-                                //if (success)
-                                //{
-                                //    break;
-                                //}
+
+                                //// (modelIDToRun, ours)
+                                //var insertPair = cjDAO.modelInsertAndStart(options.jobID,
+                                //    mParamsAndHash["params"] as string, modelParamsHash);
+                                //modelIDToRun = insertPair.Item1;
+                                //ours = insertPair.Item2;
                             }
-                            if (!success)
-                            {
-                                throw new InvalidOperationException(
-                                    "Unexpected failure to change paramsHash and particleHash of orphaned model");
-                            }
-                            // (modelIDToRun, ours)
-                            var insertPair = cjDAO.modelInsertAndStart(options.jobID,
-                                mParamsAndHash["params"] as string, modelParamsHash);
-                            modelIDToRun = insertPair.Item1;
-                            ours = insertPair.Item2;
+
+                            // ^^^ end while modelIDToRun ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                         }
 
-                        // ^^^ end while modelIDToRun ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        #endregion
                     }
-
 
                     // ---------------------------------------------------------------
                     // We have a model, evaluate it now
@@ -529,7 +512,7 @@ namespace HTM.Net.Research.Swarming
                     // jobParams['persistentJobGUID'] contains the client's (e.g., API Server)
                     // persistent, globally-unique model identifier, which is what we need;
                     var persistentJobGUID = jobParams.persistentJobGUID;
-                    //Debug.Assert persistentJobGUID, "persistentJobGUID: %r" % (persistentJobGUID,);
+                    Debug.Assert(persistentJobGUID != null, "persistentJobGUID: " + persistentJobGUID);
 
                     string modelCheckpointGUID = jobInfo["client"] + "_" + persistentJobGUID + ('_' + modelIDToRun);
 
@@ -541,8 +524,7 @@ namespace HTM.Net.Research.Swarming
                     // TODO: don't increment for orphaned models
                     numModelsTotal += 1;
 
-                    this.logger.Info(string.Format("COMPLETED MODEL GID={0}; EVALUATED {1} MODELs", modelIDToRun,
-                        numModelsTotal));
+                    this.logger.Info(string.Format("COMPLETED MODEL GID={0}; EVALUATED {1} MODELs", modelIDToRun, numModelsTotal));
                     Console.WriteLine("reporter:status:Evaluated {0} models...", numModelsTotal);
                     Console.WriteLine("reporter:counter:HypersearchWorker,numModels,1");
 
@@ -555,6 +537,7 @@ namespace HTM.Net.Research.Swarming
             }
             catch (Exception e)
             {
+                if(Debugger.IsAttached) Debugger.Break();
                 throw;
             }
             finally
@@ -580,7 +563,7 @@ namespace HTM.Net.Research.Swarming
         ///             itself).
         /// </summary>
         /// <returns></returns>
-        public static uint? main(string[] argv)
+        public static uint? Main(string[] argv)
         {
             HyperSearchWorkerOptions options = ParseArguments(argv);
 
@@ -606,7 +589,7 @@ namespace HTM.Net.Research.Swarming
             {
                 try
                 {
-                    jobID = hst.run();
+                    jobID = hst.Run();
                 }
 
                 catch (Exception e)
@@ -626,11 +609,11 @@ namespace HTM.Net.Research.Swarming
                     if (workerCmpReason == BaseClientJobDao.CMPL_REASON_SUCCESS)
                     {
                         jobsDAO.jobSetFields(options.jobID, fields: new Dictionary<string, object>
-                        {
-                            {"cancel", true},
-                            {"workerCompletionReason", BaseClientJobDao.CMPL_REASON_ERROR},
-                            {"workerCompletionMsg", completionMsg}
-                        },
+                            {
+                                {"cancel", true},
+                                {"workerCompletionReason", BaseClientJobDao.CMPL_REASON_ERROR},
+                                {"workerCompletionMsg", completionMsg}
+                            },
                             useConnectionID: false,
                             ignoreUnchanged: true);
                     }
@@ -649,7 +632,7 @@ namespace HTM.Net.Research.Swarming
 
                 try
                 {
-                    jobID = hst.run();
+                    jobID = hst.Run();
                 }
                 catch (Exception e)
                 {

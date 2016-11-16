@@ -31,6 +31,19 @@ namespace HTM.Net.Data
         public double microseconds { get; set; }
         public Map<string, object> fields { get; set; }
 
+        public bool AboveZero()
+        {
+            if (years > 0) return true;
+            if (months > 0) return true;
+            if (weeks > 0) return true;
+            if (days > 0) return true;
+            if (hours > 0) return true;
+            if (minutes > 0) return true;
+            if (seconds > 0) return true;
+            if (milliseconds > 0) return true;
+            if (microseconds > 0) return true;
 
+            return false;
+        }
     }
 }

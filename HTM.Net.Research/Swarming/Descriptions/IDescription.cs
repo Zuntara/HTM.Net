@@ -147,6 +147,7 @@ namespace HTM.Net.Research.Swarming.Descriptions
 
         public DescriptionConfigModel modelConfig { get; set; }
         public DescriptionControlModel control { get; set; }
+
         public Map<string, object> inferenceArgs { get; set; }
         public Map<string, Tuple<FieldMetaType, SensorFlags>> inputRecordSchema { get; set; }
     }

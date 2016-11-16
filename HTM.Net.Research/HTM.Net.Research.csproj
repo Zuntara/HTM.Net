@@ -110,6 +110,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\InferenceShifter.cs" />
+    <Compile Include="Data\Json.cs" />
     <Compile Include="Data\StreamReader.cs" />
     <Compile Include="Generators\SineGenerator.cs" />
     <Compile Include="Genetic\Gene.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="Swarming\HyperSearchWorker.cs" />
     <Compile Include="Swarming\ModelChooser.cs" />
     <Compile Include="Swarming\PermutationHelpers.cs" />
+    <Compile Include="Swarming\PermutationsRunner.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />
     <Compile Include="Taurus\HtmEngine\Adapters\CustomDatasourceAdapter.cs" />

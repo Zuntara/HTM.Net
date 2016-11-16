@@ -6,11 +6,13 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Swarming
 {
@@ -360,7 +362,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="numRecords">Number of records that have been processed so far by this model.</param>
         /// <returns>Canonicalized result on the optimize metric</returns>
         public double? update(ulong modelId, ModelParams modelParams, string modelParamsHash, double? metricResult,
-           bool completed, string completionReason, bool matured, int numRecords)
+           bool completed, string completionReason, bool matured, uint numRecords)
         {
             /* 
             modelParams is a dictionary containing the following elements:
@@ -639,12 +641,12 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="paramsHash">paramsHash to look for</param>
         /// <returns>modelId, or None if not found</returns>
-        public int? getModelIDFromParamsHash(string paramsHash)
+        public ulong? getModelIDFromParamsHash(string paramsHash)
         {
             int? entryIdx = this._paramsHashToIndexes.Get(paramsHash, null);
             if (entryIdx.HasValue)
             {
-                return (int)this._allResults[entryIdx.Value]["modelID"];
+                return (ulong?)this._allResults[entryIdx.Value]["modelID"];
             }
             else
             {
@@ -1542,9 +1544,9 @@ namespace HTM.Net.Research.Swarming
         /// variable and the value is its chosen value.
         /// </summary>
         /// <returns>dict() of flattened permutation choices</returns>
-        public Dictionary<string, object> getPosition()
+        public Map<string, object> getPosition()
         {
-            Dictionary<string, object> result = new Dictionary<string, object>();
+            Map<string, object> result = new Map<string, object>();
             foreach (var pair in this.permuteVars)
             //for (varName, value) in this.permuteVars.iteritems()
             {
@@ -3118,6 +3120,15 @@ namespace HTM.Net.Research.Swarming
         public string baseDescriptionFileName;
         public string hsVersion = "v2";
         public DescriptionBase descriptionPyContents;
+
+        public void Populate(Map<string,object> jobParamsMap)
+        {
+            this.persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
+            this.descriptionPyContents = (DescriptionBase)jobParamsMap["descriptionPyContents"];
+            this.permutationsPyContents = (PermutionFilterBase)jobParamsMap["permutationsPyContents"];
+            this.maxModels = TypeConverter.Convert<int?>(jobParamsMap["maxModels"]);
+            this.hsVersion = (string)jobParamsMap["hsVersion"];
+        }
     }
 
 
@@ -3131,7 +3142,8 @@ namespace HTM.Net.Research.Swarming
         TemporalAnomaly = 8,
         NontemporalAnomaly = 16,
         TemporalMultiStep = 32,
-        NontemporalMultiStep = 64
+        NontemporalMultiStep = 64,
+        MultiStep = 128
     }
 
     public static class InferenceTypeHelper
@@ -3485,10 +3497,7 @@ namespace HTM.Net.Research.Swarming
                     }
 
                     Debug.Assert(this._searchParams.permutationsPyContents != null);
-                    permutationsScript = JsonConvert.SerializeObject(this._searchParams.permutationsPyContents, new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    });
+                    permutationsScript = Json.Serialize(this._searchParams.permutationsPyContents);
                     // Generate the permutations.py and description.py files
                     //string outDir = this._tempDir = @"C:\temp\" + Path.GetRandomFileName();//tempfile.mkdtemp();
                     //permutationsScript = Path.Combine(outDir, "permutations.py");
@@ -3540,17 +3549,11 @@ namespace HTM.Net.Research.Swarming
                         jobID: this._jobID,
                         fieldName: "genBaseDescription",
                         curValue: null,
-                        newValue: JsonConvert.SerializeObject(this._baseDescription, new JsonSerializerSettings
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        }));
+                        newValue: Json.Serialize(this._baseDescription));
                     if (updated)
                     {
                         //string permContents = new StreamReader(permutationsScript).ReadToEnd();
-                        string permContents = JsonConvert.SerializeObject(permutationsScript, new JsonSerializerSettings
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        });
+                        string permContents = Json.Serialize(permutationsScript);
                         this._cjDAO.jobSetFieldIfEqual(jobID: this._jobID,
                                                        fieldName: "genPermutations",
                                                        curValue: null,
@@ -3773,7 +3776,7 @@ namespace HTM.Net.Research.Swarming
             this._fastSwarmModelParams = permFile.fastSwarmModelParams; // vars.Get("fastSwarmModelParams", null);
             if (this._fastSwarmModelParams != null)
             {
-                IDictionary<string, PermuteEncoder> encoders = this._fastSwarmModelParams.modelParams.sensorParams.encoders;
+                Map<string, object> encoders = this._fastSwarmModelParams.modelParams.sensorParams.encoders;
                 this._fixedFields = new List<string>();
                 foreach (var fieldName in encoders.Keys)
                 {
@@ -4682,7 +4685,8 @@ namespace HTM.Net.Research.Swarming
                 //swarmSizes = numpy.array([this._resultsDB.numModels(x) for x in swarmIds]) ;
                 var swarmSizes = swarmIds.Select(x => _resultsDB.numModels(x)).ToArray();
                 var swarmSizeAndIdList = ArrayUtils.Zip(swarmSizes, swarmIds);
-                swarmSizeAndIdList.Sort();
+                //swarmSizeAndIdList.Sort();
+                swarmSizeAndIdList = swarmSizeAndIdList.OrderBy(t=> (int)t.Get(0)).ToList();
                 foreach (var pair in swarmSizeAndIdList)
                 {
                     string swarmId = (string)pair.Item2;
@@ -5171,7 +5175,7 @@ namespace HTM.Net.Research.Swarming
                     {
                         valid = true;
                     }
-                    if (valid && this._resultsDB.getModelIDFromParamsHash(paramsHash) == null)
+                    if (valid && !this._resultsDB.getModelIDFromParamsHash(paramsHash).HasValue)
                     {
                         break;
                     }
@@ -5261,8 +5265,8 @@ namespace HTM.Net.Research.Swarming
         /// <param name="completionReason"></param>
         /// <param name="matured"></param>
         /// <param name="numRecords"></param>
-        public void recordModelProgress(ulong modelID, ModelParams modelParams, string modelParamsHash, Tuple<Dictionary<string, object>, Dictionary<string, double?>> results,
-                             bool completed, string completionReason, bool matured, int numRecords)
+        public void recordModelProgress(ulong modelID, ModelParams modelParams, string modelParamsHash, Tuple results,
+                             bool completed, string completionReason, bool matured, uint numRecords)
         {
             double? metricResult;
             if (results == null)
@@ -5271,7 +5275,7 @@ namespace HTM.Net.Research.Swarming
             }
             else
             {
-                metricResult = results.Item2.Values.First();
+                metricResult = ((Map<string, double?>)results.Get(1))?.Values.First();
             }
 
             // Update our database.

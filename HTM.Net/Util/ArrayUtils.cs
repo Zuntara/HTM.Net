@@ -3653,7 +3653,7 @@ namespace HTM.Net.Util
 
             foreach (var pattern in patterns)
             {
-                var prog = new Regex(pattern);
+                var prog = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
                 results.AddRange(keys.Where(k => prog.IsMatch(k)).ToList());
             }
 

@@ -61,6 +61,10 @@ namespace HTM.Net.Research.opf
                     {
                         result.Add(string.Format(CultureInfo.InvariantCulture, "{0}=\"{1}\"", param, value));
                     }
+                    else if (value is IEnumerable)
+                    {
+                        result.Add(string.Format(CultureInfo.InvariantCulture, "{0}={1}", param, Arrays.ToString((IEnumerable)value)));
+                    }
                     else
                     {
                         result.Add(string.Format(CultureInfo.InvariantCulture, "{0}={1}", param, value));
@@ -94,6 +98,10 @@ namespace HTM.Net.Research.opf
                     return new MetricRMSE(metricSpec);
                 case "aae":
                     return new MetricAAE(metricSpec);
+                case "avg_err":
+                    return new MetricAveError(metricSpec);
+                case "multiStep":
+                    return new MetricMultiStep(metricSpec);
             }
             throw new InvalidOperationException($"Invalid metric given: {metricName}");
         }
@@ -125,7 +133,7 @@ namespace HTM.Net.Research.opf
         /// <param name="record"></param>
         /// <param name="result">An ModelResult class </param>
         /// <returns></returns>
-        public abstract double? addInstance(double? groundTruth, double? prediction, Map<string,object> record = null, ModelResult result = null);
+        public abstract double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null);
 
         public abstract Map<string, object> getMetric();
 
@@ -141,18 +149,18 @@ namespace HTM.Net.Research.opf
     public abstract class AggregateMetric : MetricIFace
     {
         private string id;
-        private int verbosity;
+        protected int verbosity;
         private int window;
         private Deque<double> history;
         private double accumulatedError;
-        private double? aggregateError;
-        private int steps;
+        protected double? aggregateError;
+        protected int steps;
         protected MetricSpec spec;
         private bool disabled;
-        private int[] _predictionSteps;
+        protected int[] _predictionSteps;
         private Deque<double> _groundTruthHistory;
         private int? _maxRecords;
-        private List<MetricIFace> _subErrorMetrics;
+        protected List<MetricIFace> _subErrorMetrics;
 
         /// <summary>
         /// If the params contains the key 'errorMetric', then that is the name of
@@ -180,7 +188,7 @@ namespace HTM.Net.Research.opf
             this._predictionSteps = new[] { 0 };
 
             // Where we store the ground truth history
-            this._groundTruthHistory = new Deque<double>(0);
+            this._groundTruthHistory = new Deque<double>(-1);
 
             // The instances of another metric to which we will pass a possibly modified
             //  groundTruth and prediction to from addInstance(). There is one instance
@@ -202,7 +210,7 @@ namespace HTM.Net.Research.opf
                 // Make sure _predictionSteps is a list
                 if (!(predStepsFromParams is int[]))
                 {
-                    this._predictionSteps = new int[] { (int)predStepsFromParams };
+                    this._predictionSteps = new[] { (int)predStepsFromParams };
                 }
                 else
                 {
@@ -215,9 +223,9 @@ namespace HTM.Net.Research.opf
                 // Get the metric window size
                 if (metricSpec.Params.ContainsKey("window"))
                 {
-                    Debug.Assert((int)metricSpec.Params["window"] >= 1);
-                    this.history = new Deque<double>(0);
-                    this.window = (int)metricSpec.Params["window"];
+                    Debug.Assert(TypeConverter.Convert<int>(metricSpec.Params["window"]) >= 1);
+                    this.window = TypeConverter.Convert<int>(metricSpec.Params["window"]);
+                    this.history = new Deque<double>(-1);
                 }
 
                 // Get the name of the sub-metric to chain to from addInstance()
@@ -230,7 +238,7 @@ namespace HTM.Net.Research.opf
                         // Do all ground truth shifting before we pass onto the sub-metric
                         subSpec.Params.Remove("steps");
                         subSpec.Params.Remove("errorMetric");
-                        subSpec.Metric = (string)metricSpec.Params["errorMetric"];
+                        subSpec.Metric = TypeConverter.Convert<string>(metricSpec.Params["errorMetric"]);
                         this._subErrorMetrics.Add(MetricSpec.GetModule(subSpec));
                     }
 
@@ -242,7 +250,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of MetricIFace
 
-        public override double? addInstance(double? groundTruth, double? prediction, Map<string, object> record = null, ModelResult result = null)
+        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
         {
             // This base class does not support time shifting the ground truth or a
             // subErrorMetric.
@@ -270,8 +278,7 @@ namespace HTM.Net.Research.opf
 
             // If there is a sub-metric, chain into it's addInstance
             // Accumulate the error
-            this.accumulatedError = this.accumulate(groundTruth, prediction,
-                this.accumulatedError, this.history, result);
+            this.accumulatedError = this.accumulate(groundTruth, prediction, this.accumulatedError, this.history, result);
 
             this.steps += 1;
             return this._compute();
@@ -299,7 +306,7 @@ namespace HTM.Net.Research.opf
 
         #endregion
 
-        public abstract double accumulate(double? groundTruth, double? prediction, double accumulatedError, Deque<double> historyBuffer, ModelResult result);
+        public abstract double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer, ModelResult result);
 
         public abstract double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps);
     }
@@ -317,10 +324,10 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double accumulate(double? groundTruth, double? prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
             ModelResult result)
         {
-            var error = Math.Pow(groundTruth.GetValueOrDefault() - prediction.GetValueOrDefault(), 2);
+            var error = Math.Pow(groundTruth.GetValueOrDefault() - TypeConverter.Convert<double?>(prediction).GetValueOrDefault(), 2);
             accumulatedError += error;
 
             if (historyBuffer != null)
@@ -358,16 +365,16 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double accumulate(double? groundTruth, double? prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
             ModelResult result)
         {
-            double error = Math.Abs(groundTruth.GetValueOrDefault() - prediction.GetValueOrDefault());
+            double error = Math.Abs(groundTruth.GetValueOrDefault() - TypeConverter.Convert<double?>(prediction).GetValueOrDefault());
             accumulatedError += error;
 
             if (historyBuffer != null)
             {
                 historyBuffer.Append(error);
-                if (historyBuffer.Length > (int) spec.Params["window"])
+                if (historyBuffer.Length > (int)spec.Params["window"])
                 {
                     accumulatedError -= historyBuffer.TakeFirst();
                 }
@@ -382,7 +389,183 @@ namespace HTM.Net.Research.opf
             {
                 n = historyBuffer.Length;
             }
-            return accumulatedError/(double)n;
+            return accumulatedError / (double)n;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// This is an "uber" metric which is used to apply one of the other basic
+    /// metrics to a specific step in a multi-step prediction.
+    /// 
+    /// The specParams are expected to contain:
+    ///     'errorMetric': name of basic metric to apply
+    ///     'steps':       compare prediction['steps'] to the current ground truth.
+    /// 
+    /// Note that the metrics manager has already performed the time shifting
+    /// for us - it passes us the prediction element from 'steps' steps ago
+    /// and asks us to compare that to the current ground truth.
+    /// 
+    /// When multiple steps of prediction are requested, we average the results of
+    /// the underlying metric for each step.
+    /// </summary>
+    public class MetricMultiStep : AggregateMetric
+    {
+        public MetricMultiStep(MetricSpec metricSpec)
+            : base(metricSpec)
+        {
+            Debug.Assert(this._subErrorMetrics != null);
+        }
+
+        #region Overrides of AggregateMetric
+
+
+        public override Map<string, object> getMetric()
+        {
+            return new Map<string, object>
+            {
+                {"value", aggregateError},
+                {"stats", new Map<string, object> {{"steps", steps}}}
+            };
+        }
+
+        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        {
+            // if missing data
+            if (groundTruth == (double?)SENTINEL_VALUE_FOR_MISSING_DATA)
+                return aggregateError;
+
+            // Get the prediction for this time step
+            double aggErrSum = 0.0;
+            try
+            {
+                foreach (var item in ArrayUtils.Zip(_predictionSteps, _subErrorMetrics))
+                {
+                    int step = (int)item.Get(0);
+                    MetricIFace subErrorMetric = (MetricIFace)item.Get(1);
+
+                    var stepPrediction = ((IDictionary)prediction)[step];
+                    // Unless this is a custom_error_metric, when we have a dict of 
+                    // probabilities, get the most probable one. For custom error metrics, 
+                    // we pass the probabilities in so that it can decide how best to deal with
+                    // them.
+                    if (stepPrediction is IDictionary && !(subErrorMetric is CustomErrorMetric))
+                    {
+                        stepPrediction = ((IDictionary<object, object>) stepPrediction)
+                            .OrderByDescending(p => p.Value)
+                            .Select(p => p.Key)
+                            .First();
+
+                        //object[] predictions = ((IDictionary)stepPrediction).Values.Cast<object>().ToArray();
+                        //Array.Sort(predictions);
+                        //stepPrediction = predictions[1];
+                    }
+
+                    // Get sum of the errors
+                    double? aggErr = subErrorMetric.addInstance(groundTruth, stepPrediction, record, result);
+                    if (verbosity >= 2)
+                    {
+                        Console.WriteLine($"MetricMultiStep {Arrays.ToString(_predictionSteps)} aggErr for stepSize {step}: {aggErr}");
+                    }
+                    aggErrSum += aggErr.GetValueOrDefault();
+                }
+
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+                throw;
+            }
+
+            // Return average aggregate error across all step sizes
+            this.aggregateError = aggErrSum/_subErrorMetrics.Count;
+
+            steps += 1;
+
+            return this.aggregateError;
+        }
+
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
+            ModelResult result)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Simply the inverse of the Accuracy metric
+    /// More consistent with scalar metrics because
+    /// they all report an error to be minimized
+    /// </summary>
+    public class MetricAveError : AggregateMetric
+    {
+        public MetricAveError(MetricSpec metricSpec)
+            : base(metricSpec)
+        {
+
+        }
+
+        #region Overrides of AggregateMetric
+
+        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        {
+            int n = steps;
+            if (historyBuffer != null)
+            {
+                n = historyBuffer.Length;
+            }
+            return accumulatedError / (double)n;
+        }
+
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
+            ModelResult result)
+        {
+            double error = groundTruth != TypeConverter.Convert<double?>(prediction).GetValueOrDefault() ? 1.0 : 0.0;
+            accumulatedError += error;
+
+            if (historyBuffer != null)
+            {
+                historyBuffer.Append(error);
+                if (historyBuffer.Length > (int)spec.Params["window"])
+                {
+                    accumulatedError -= historyBuffer.TakeFirst();
+                }
+            }
+
+            return accumulatedError;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Custom Error Metric class that handles user defined error metrics
+    /// </summary>
+    public class CustomErrorMetric : MetricIFace
+    {
+        public CustomErrorMetric(MetricSpec metricSpec)
+            : base(metricSpec)
+        {
+        }
+
+        #region Overrides of MetricIFace
+
+        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Map<string, object> getMetric()
+        {
+            throw new NotImplementedException();
         }
 
         #endregion
@@ -424,7 +607,7 @@ namespace HTM.Net.Research.opf
             {
                 if (pair.Value is IDictionary)
                 {
-                    foreach (var key in ((IDictionary) pair.Value).Keys)
+                    foreach (var key in ((IDictionary)pair.Value).Keys)
                     {
                         maxDelay = Math.Max(GetTemporalDelay(pair.Key, key), maxDelay);
                     }

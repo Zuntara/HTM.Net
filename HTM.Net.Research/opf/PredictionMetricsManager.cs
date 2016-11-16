@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HTM.Net.Data;
+using HTM.Net.Network;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
@@ -162,6 +163,10 @@ namespace HTM.Net.Research.opf
                                 groundTruth = null;
                             }
                         }
+                        else if (groundTruth is ManualInput)
+                        {
+                            groundTruth = null; // to be revised
+                        }
                         else
                         {
                             // groundTruth could be a dict based off of field names
@@ -172,7 +177,7 @@ namespace HTM.Net.Research.opf
 
                 metric.addInstance(
                     groundTruth:  (groundTruth != null ? Convert.ToDouble(groundTruth) : (double?)null), 
-                    prediction: (inference != null ? Convert.ToDouble(inference) : (double?)null),
+                    prediction: inference,
                     record: rawRecord, 
                     result: result);
 

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using HTM.Net.Network.Sensor;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
@@ -263,7 +264,7 @@ namespace HTM.Net.Research.Swarming
 
             if (matchingKeys.Count == 0)
             {
-                throw new Exception($"None of the generated metrics match the specified optimization pattern: {_optimizeKeyPattern}");
+                throw new Exception($"None of the generated metrics match the specified optimization pattern: {_optimizeKeyPattern} in {Arrays.ToString(_getMetricLabels())}");
             }
             else if (matchingKeys.Count > 1)
             {
@@ -538,7 +539,7 @@ namespace HTM.Net.Research.Swarming
 
             // -----------------------------------------------------------------------
             // Update model results
-            string results = JsonConvert.SerializeObject(new Tuple(metrics, optimizeDict));
+            string results = Json.Serialize(new Tuple(metrics, optimizeDict));
 
             _jobsDAO.modelUpdateResults(_modelID, results: results, metricValue: optimizeDict.Values.First(),
                 numRecords: (uint)(_currentRecordIndex + 1));
@@ -644,7 +645,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="prevBest"></param>
         private void __deleteModelCheckpoint(ulong? modelID)
         {
-            var checkpointID = _jobsDAO.modelsGetFields(modelID.GetValueOrDefault(), new[] { "modelCheckpointId" })[0];
+            var checkpointID = _jobsDAO.modelsGetFields(modelID.GetValueOrDefault(), new[] { "modelCheckpointId" }).model_checkpoint_id;
 
             if (checkpointID == null) return;
 
