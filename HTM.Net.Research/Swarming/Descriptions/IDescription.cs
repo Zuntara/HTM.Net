@@ -143,6 +143,9 @@ namespace HTM.Net.Research.Swarming.Descriptions
 
         public abstract Parameters GetParameters();
 
+        /// <summary>
+        /// Used for deserialisation of this description
+        /// </summary>
         public string Type { get; set; }
 
         public DescriptionConfigModel modelConfig { get; set; }

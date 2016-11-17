@@ -600,9 +600,11 @@ namespace HTM.Net.Research.Swarming
         public KWArgsModel kwArgs { get; set; }
         public string encoderClass { get; set; }
         public object maxval { get; set; } // int or permuteint
+        public object radius { get; set; } // float or permutefloat
         public object n { get; set; } // int or permuteint
         public object w { get; set; } // int or permuteint
         public object minval { get; set; } // int or permuteint
+        public bool clipInput { get; set; }
 
         [Obsolete("Don' use")]
         public PermuteEncoder()

@@ -43,6 +43,7 @@ namespace HTM.Net.Research.Swarming
         public static int? bestModelMinRecords;
         public static double? maturityPctChange;
         public static int? maturityNumPoints;
+        public static double? opf_metricWindow = 1000;
     }
 
     /// <summary>

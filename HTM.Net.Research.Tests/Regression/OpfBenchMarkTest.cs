@@ -12,7 +12,7 @@ namespace HTM.Net.Research.Tests.Regression
         protected SwarmDefinition EXP_COMMON = new SwarmDefinition
         {
             inferenceType = InferenceType.MultiStep,
-            inferenceArgs = new SwarmDefinition.SwarmDefInferenceArgs
+            inferenceArgs = new InferenceArgsDescription
             {
                 predictedField = null,
                 predictionSteps = new[] { 0 }

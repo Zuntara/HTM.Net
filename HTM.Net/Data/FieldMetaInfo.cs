@@ -45,5 +45,35 @@ namespace HTM.Net.Data
 
             return false;
         }
+
+        public AggregationSettings Clone()
+        {
+            return new AggregationSettings
+            {
+                years = this.years,
+                months = this.months,
+                weeks = this.weeks,
+                days = this.days,
+                hours = this.hours,
+                minutes = this.minutes,
+                seconds = this.seconds,
+                milliseconds = this.milliseconds,
+                microseconds = this.microseconds,
+                fields = new Map<string, object>(this.fields ?? new Map<string, object>())
+            };
+        }
+
+        public void MultiplyAllFieldsWith(int numSteps)
+        {
+            years *= numSteps;
+            months *= numSteps;
+            weeks *= numSteps;
+            days *= numSteps;
+            hours *= numSteps;
+            minutes *= numSteps;
+            seconds *= numSteps;
+            milliseconds *= numSteps;
+            microseconds *= numSteps;
+        }
     }
 }

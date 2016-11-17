@@ -235,7 +235,7 @@ namespace HTM.Net.Research.Tests.Opf
                     },
                     modelParams = new ModelDescriptionParamsDescrModel
                     {
-                        anomalyParams = new AnomalyParamsDescr
+                        anomalyParams = new AnomalyParamsDescription
                         {
                             anomalyCacheRecords = null,
                             autoDetectThreshold = null,

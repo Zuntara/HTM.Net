@@ -144,7 +144,7 @@ namespace HTM.Net.Research.opf
             // init anomaly
             int? windowSize = anomalyParams?.slidingWindowSize;// anomalyParams.get("slidingWindowSize", null);
             Anomaly.Mode mode = anomalyParams?.mode ?? Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
-            int? anomalyThreshold = anomalyParams?.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
+            double? anomalyThreshold = anomalyParams?.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
 
             parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, windowSize);
             parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, mode);

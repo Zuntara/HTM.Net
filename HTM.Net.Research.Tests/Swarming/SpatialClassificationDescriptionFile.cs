@@ -293,7 +293,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                     trainSPNetOnlyIfRequested = false,
 
-                    anomalyParams = new AnomalyParamsDescr
+                    anomalyParams = new AnomalyParamsDescription
                     {
                         autoDetectThreshold = null,
                         autoDetectWaitRecords = null,

@@ -850,7 +850,7 @@ namespace HTM.Net.Research.Swarming
         public bool tpEnable { get; set; }
         public bool trainSPNetOnlyIfRequested { get; set; }
         public ClassifierParamsDescr clParams { get; set; }
-        public AnomalyParamsDescr anomalyParams { get; set; }
+        public AnomalyParamsDescription anomalyParams { get; set; }
 
         public Parameters GetParameters()
         {
@@ -966,12 +966,22 @@ namespace HTM.Net.Research.Swarming
         public int steps { get; set; }
     }
 
-    public class AnomalyParamsDescr
+    public class AnomalyParamsDescription
     {
         public int? slidingWindowSize { get; set; }
         public Anomaly.Mode? mode { get; set; }
-        public bool? anomalyCacheRecords { get; set; }
-        public int? autoDetectThreshold { get; set; }
+
+        /// <summary>
+        /// Number of records to store in internal anomaly classifier record cache
+        /// </summary>
+        public int? anomalyCacheRecords { get; set; }
+        /// <summary>
+        /// Threshold for anomaly score to  auto detect anomalies
+        /// </summary>
+        public double? autoDetectThreshold { get; set; }
+        /// <summary>
+        /// Number of records to wait until auto detection begins
+        /// </summary>
         public int? autoDetectWaitRecords { get; set; }
     }
 

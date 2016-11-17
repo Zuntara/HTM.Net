@@ -481,7 +481,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                         // computed from the aggregationInfo and predictAheadTime.
                         steps = 1,
                     },
-                    anomalyParams = new AnomalyParamsDescr
+                    anomalyParams = new AnomalyParamsDescription
                     {
                         anomalyCacheRecords = null,
                         autoDetectThreshold = null,
