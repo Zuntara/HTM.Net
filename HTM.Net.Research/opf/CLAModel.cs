@@ -24,7 +24,7 @@ namespace HTM.Net.Research.opf
 
         #region Fields
 
-        private IDescription _description;
+        private ConfigModelDescription _modelConfig;
 
         private IInference _currentInferenceOutput;
         private Publisher _inputProvider;
@@ -83,14 +83,14 @@ namespace HTM.Net.Research.opf
 
         #endregion
 
-        public CLAModel(IDescription description)
-            : base(description.modelConfig.modelParams.inferenceType)
+        public CLAModel(ConfigModelDescription modelConfig)
+            : base(modelConfig.modelParams.inferenceType)
         {
-            _description = description;
+            _modelConfig = modelConfig;
 
-            var parameters = description.GetParameters();
+            Parameters parameters = modelConfig.GetParameters();
 
-            InferenceType inferenceType = description.modelConfig.modelParams.inferenceType;
+            InferenceType inferenceType = modelConfig.modelParams.inferenceType;
 
             if (!__supportedInferenceKindSet.Contains(inferenceType))
             {
@@ -117,11 +117,11 @@ namespace HTM.Net.Research.opf
 
             // set up learning parameters (note: these may be replaced via
             // enable/disable//SP/TP//Learning methods)
-            this.__spLearningEnabled = description.modelConfig.modelParams.spEnable;
-            this.__tpLearningEnabled = description.modelConfig.modelParams.tpEnable;
+            this.__spLearningEnabled = modelConfig.modelParams.spEnable;
+            this.__tpLearningEnabled = modelConfig.modelParams.tpEnable;
             var spEnable = __spLearningEnabled;
             var tpEnable = __tpLearningEnabled;
-            var clEnable = description.modelConfig.modelParams.clEnable;
+            var clEnable = modelConfig.modelParams.clEnable;
 
             // Explicitly exclude the TP if this type of inference doesn't require it
             if (!__temporalInferenceKindSet.Contains(inferenceType)
@@ -135,7 +135,7 @@ namespace HTM.Net.Research.opf
             this._hasTP = tpEnable;
             this._hasCL = clEnable;
 
-            var anomalyParams = description.modelConfig.modelParams.anomalyParams;
+            var anomalyParams = modelConfig.modelParams.anomalyParams;
 
             //this._classifierInputEncoder = null;
             this._predictedFieldIdx = null;
@@ -183,7 +183,7 @@ namespace HTM.Net.Research.opf
             // -----------------------------------------------------------------------
             // This flag, if present tells us not to train the SP network unless
             //  the user specifically asks for the SP inference metric
-            this.__trainSPNetOnlyIfRequested = description.modelConfig.modelParams.trainSPNetOnlyIfRequested;
+            this.__trainSPNetOnlyIfRequested = modelConfig.modelParams.trainSPNetOnlyIfRequested;
 
             this.__numRunCalls = 0;
 
@@ -628,7 +628,7 @@ namespace HTM.Net.Research.opf
         private bool _isReconstructionModel()
         {
             InferenceType inferenceType = this.getInferenceType();
-            Map<string, object> inferenceArgs = this.getInferenceArgs();
+            InferenceArgsDescription inferenceArgs = this.getInferenceArgs();
 
             if (inferenceType == InferenceType.TemporalNextStep)
             {
@@ -637,7 +637,7 @@ namespace HTM.Net.Research.opf
 
             if (inferenceArgs != null)
             {
-                return (bool)inferenceArgs.Get("useReconstruction", false);
+                return inferenceArgs.useReconstruction.GetValueOrDefault(false);
             }
             return false;
         }
@@ -719,7 +719,7 @@ namespace HTM.Net.Research.opf
             int? inputTSRecordIdx, Map<string, object> rawInput)
         {
             var inferenceArgs = this.getInferenceArgs();
-            string predictedFieldName = (string)inferenceArgs.Get("predictedField", null);
+            string predictedFieldName = inferenceArgs.predictedField;
             if (predictedFieldName == null)
             {
                 throw new InvalidOperationException("No predicted field was enabled! Did you call enableInference()?");
@@ -1120,7 +1120,7 @@ namespace HTM.Net.Research.opf
         /// <returns>NetworkInfo instance</returns>
         internal NetworkInfo CreateClaNetwork(Parameters parameters)
         {
-            Parameters p = _description.GetParameters();
+            Parameters p = _modelConfig.GetParameters();
             // --------------------------------------------------
             // Create the network
             var n = new Network.Network("CLANetwork", p);
@@ -1131,10 +1131,10 @@ namespace HTM.Net.Research.opf
             n.Add(topRegion);
             //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
             //sensor = n.regions['sensor'].getSelf();
-
-            var fieldNames = _description.inputRecordSchema.Keys.ToList();
-            var dataTypes = _description.inputRecordSchema.Values.Select(v => v.Item1).ToList();
-            var sensorFlags = _description.inputRecordSchema.Values.Select(v => v.Item2).ToList();
+            
+            var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();// _modelConfig.inputRecordSchema.Select(m=>m.name).ToList();
+            var dataTypes = _modelConfig.inputRecordSchema.Select(v => v.type).ToList();
+            var sensorFlags = _modelConfig.inputRecordSchema.Select(v => v.special).ToList();
             var pubBuilder = Publisher.GetBuilder()
                 .AddHeader(string.Join(", ", fieldNames))
                 //.AddHeader("address, consumption, gym, timestamp")
@@ -1152,7 +1152,7 @@ namespace HTM.Net.Research.opf
             //sensorLayer.Add(sensor);
 
             //enabledEncoders = copy.deepcopy(sensorParams['encoders']);
-            Map<string, Map<string, object>> enabledEncoders = new Map<string, Map<string, object>>(_description.modelConfig.modelParams.sensorParams.encoders);
+            Map<string, Map<string, object>> enabledEncoders = new Map<string, Map<string, object>>(_modelConfig.modelParams.sensorParams.encoders);
             List<string> enabledEncodersToRemove = new List<string>();
 
             foreach (var pair in enabledEncoders)
@@ -1176,7 +1176,7 @@ namespace HTM.Net.Research.opf
             // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
             // SP or TP Regions. This is to handle the case where the predicted field
             // is not fed through the SP/TP. We typically just have one of these now.
-            Map<string, Map<string, object>> disabledEncoders = new Map<string, Map<string, object>>(_description.modelConfig.modelParams.sensorParams.encoders);
+            Map<string, Map<string, object>> disabledEncoders = new Map<string, Map<string, object>>(_modelConfig.modelParams.sensorParams.encoders);
             //disabledEncoders = copy.deepcopy(sensorParams['encoders']);
             List<string> disabledEncodersToRemove = new List<string>();
             foreach (var pair in disabledEncoders)
@@ -1217,11 +1217,11 @@ namespace HTM.Net.Research.opf
             string prevRegion = "sensor";
             int prevRegionWidth = encoder.GetWidth();
 
-            bool spEnable = _description.modelConfig.modelParams.spEnable;
-            bool tpEnable = _description.modelConfig.modelParams.tpEnable;
-            bool clEnable = _description.modelConfig.modelParams.clEnable;
-            var spParams = _description.modelConfig.modelParams.spParams;
-            var tpParams = _description.modelConfig.modelParams.tpParams;
+            bool spEnable = _modelConfig.modelParams.spEnable;
+            bool tpEnable = _modelConfig.modelParams.tpEnable;
+            bool clEnable = _modelConfig.modelParams.clEnable;
+            var spParams =  _modelConfig.modelParams.spParams;
+            var tpParams =  _modelConfig.modelParams.tpParams;
 
             // SP is not enabled for spatial classification network
             if (spEnable)
@@ -1288,7 +1288,7 @@ namespace HTM.Net.Research.opf
                 prevRegionWidth = tpParams.inputWidth[0];
             }
 
-            var clParams = _description.modelConfig.modelParams.clParams;
+            var clParams = _modelConfig.modelParams.clParams;
             if (clEnable && clParams != null)
             {
                 //clParams = clParams.copy();

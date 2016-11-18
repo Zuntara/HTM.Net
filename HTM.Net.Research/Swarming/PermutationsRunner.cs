@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using HTM.Net.Data;
+using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
@@ -15,6 +17,8 @@ namespace HTM.Net.Research.Swarming
 {
     public static class PermutationsRunner
     {
+        private static HyperSearchRunner _currentSearch;
+
         /// <summary>
         /// Starts a swarm, given an dictionary configuration.
         /// </summary>
@@ -25,22 +29,167 @@ namespace HTM.Net.Research.Swarming
         /// <param name="permWorkDir">Optional location of working directory (defaults to current working directory).</param>
         /// <param name="verbosity">Optional (1,2,3) increasing verbosity of output.</param>
         /// <returns> Model parameters</returns>
-        public static object RunWithConfig(SwarmDefinition swarmConfig, object options, string outDir = null, string outputLabel = "default",
+        public static ConfigModelDescription RunWithConfig(SwarmDefinition swarmConfig, object options, string outDir = null, string outputLabel = "default",
             string permWorkDir = null, int verbosity = 1)
         {
-            ClaExperimentDescription exp = _generateExpFilesFromSwarmDescription(swarmConfig, outDir);
+            var exp = _generateExpFilesFromSwarmDescription(swarmConfig, outDir);
 
-            return _runAction(exp);
+            return _runAction(options, exp);
         }
 
-        private static object _runAction(ClaExperimentDescription exp)
+        private static ConfigModelDescription _runAction(object options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
         {
-            throw new System.NotImplementedException();
+            var returnValue = _runHyperSearch(options, exp);
+            return returnValue;
         }
 
-        private static ClaExperimentDescription _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
+        private static ConfigModelDescription _runHyperSearch(object runOptions, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        {
+            var search = new HyperSearchRunner(runOptions);
+            // Save in global for the signal handler.
+            _currentSearch = search;
+
+            // no options => just run
+            search.runNewSearch(exp);
+
+            var modelParams = HyperSearchRunner.generateReport(
+                runOptions: runOptions,
+                replaceReports: false,
+                hyperSearchJob: search.peekSearchJob(),
+                metricKeys: search.getDiscoveredMetricKeys());
+
+            return modelParams;
+        }
+
+        private static Tuple<ClaExperimentDescription, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
         {
             return new ExpGenerator(swarmConfig).Generate();
+        }
+    }
+
+    /// <summary>
+    /// Manages one instance of HyperSearch
+    /// </summary>
+    internal class HyperSearchRunner
+    {
+        private BaseClientJobDao __cjDAO;
+        private object _options;
+        private HyperSearchJob __searchJob;
+        private HashSet<string> __foundMetrcsKeySet;
+        private Task[] _workers;
+
+        public HyperSearchRunner(object options)
+        {
+            __cjDAO = BaseClientJobDao.Create();
+            _options = options;
+            __searchJob = null;
+            __foundMetrcsKeySet = new HashSet<string>();
+            // If we are instead relying on the engine to launch workers for us, this
+            // will stay as None, otherwise it becomes an array of subprocess Popen
+            // instances.
+            _workers = null;
+        }
+
+        /// <summary>
+        /// Start a new hypersearch job and monitor it to completion
+        /// </summary>
+        /// <param name="exp"></param>
+        public void runNewSearch(Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        {
+            __searchJob = this.__startSearch(exp);
+            monitorSearchJob();
+        }
+
+        /// <summary>
+        /// Starts HyperSearch as a worker or runs it inline for the "dryRun" action
+        /// </summary>
+        /// <returns></returns>
+        private HyperSearchJob __startSearch(Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        {
+            // TODO: only dryrun supported, maybe support the queing for workers also
+            var @params = ClientJobUtils.MakeSearchJobParamsDict(_options, exp);
+
+            uint? jobId = __cjDAO.jobInsert(client: "test", cmdLine: "<started manually>",
+                        @params: Json.Serialize(@params),
+                        alreadyRunning: true, minimumWorkers: 1, maximumWorkers: 1,
+                        jobType: BaseClientJobDao.JOB_TYPE_HS);
+
+            var args = new[] { $"--jobID={jobId}" };
+            jobId = HyperSearchWorker.Main(args);
+
+            // Save search ID to file (used for report generation)
+            var searchJob = new HyperSearchJob(jobId);
+
+            return searchJob;
+        }
+
+        private void monitorSearchJob()
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+        public static ConfigModelDescription generateReport(object runOptions, bool replaceReports, object hyperSearchJob, object metricKeys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public object peekSearchJob()
+        {
+            throw new NotImplementedException();
+        }
+
+        public object getDiscoveredMetricKeys()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class ClientJobUtils
+    {
+        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        {
+            string hsVersion = "v2";
+            int maxModels = 1;
+
+            var @params = new Map<string, object>
+            {
+                {"hsVersion", hsVersion },
+                {"maxModels", maxModels },
+            };
+            @params["persistentJobGUID"] = Guid.NewGuid().ToString().Replace("-", "");
+
+            @params["descriptionPyContents"] = exp.Item1;
+            @params["permutationsPyContents"] = exp.Item2;
+
+            return @params;
+        }
+    }
+
+    /// <summary>
+    /// Our Nupic Job abstraction
+    /// </summary>
+    internal abstract class NuPicJob
+    {
+        private uint? __nupicJobID;
+        private Map<string, object> __params;
+
+        public NuPicJob(uint? nupicJobID)
+        {
+            __nupicJobID = nupicJobID;
+            var jobInfo = BaseClientJobDao.Create().jobInfo(nupicJobID);
+
+            __params = Json.Deserialize<Map<string, object>>(jobInfo.GetAsString("params"));
+        }
+    }
+
+    internal class HyperSearchJob : NuPicJob
+    {
+        public HyperSearchJob(uint? jobId)
+            : base(jobId)
+        {
+
         }
     }
 
@@ -53,7 +202,7 @@ namespace HTM.Net.Research.Swarming
             Options = definition;
         }
 
-        public ClaExperimentDescription Generate()
+        public Tuple<ClaExperimentDescription, ClaPermutations> Generate()
         {
             // If the user specified nonTemporalClassification, make sure prediction steps is 0
             int[] predictionSteps = Options.inferenceArgs.predictionSteps;
@@ -372,7 +521,17 @@ namespace HTM.Net.Research.Swarming
                 tokenReplacements["$PERM_MAX_MODELS"] = null;
             }
 
-            // TODO... complete here
+            // --------------------------------------------------------------------------
+            // The Aggregation choices have to be determined when we are permuting over
+            // aggregations.
+            if (Options.dynamicPredictionSteps)
+            {
+                throw new NotImplementedException("not yet implemented!");
+            }
+            else
+            {
+                tokenReplacements["$PERM_AGGREGATION_CHOICES"] = aggregationInfo;
+            }
 
             // Generate the inferenceArgs replacement tokens
             _generateInferenceArgs(Options, tokenReplacements);
@@ -380,11 +539,16 @@ namespace HTM.Net.Research.Swarming
             // Generate the metric replacement tokens
             _generateMetricsSubstitutions(Options, tokenReplacements);
 
+            // -----------------------------------------------------------------------
+            // Generate Control dictionary
 
+            tokenReplacements["$ENVIRONMENT"] = "Nupic";
+
+            // Generate 'files' / descriptions etc from the token replacements
             ClaExperimentDescription descr = new ClaExperimentDescription();
-            ClaPermutations perms = new ClaPermutations();
-
             TokenReplacer.ReplaceIn(descr, tokenReplacements);
+
+            ClaPermutations perms = new ClaPermutations();
             TokenReplacer.ReplaceIn(perms, tokenReplacements);
 
             Debug.WriteLine("");
@@ -392,13 +556,7 @@ namespace HTM.Net.Research.Swarming
             Debug.WriteLine("");
             Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
 
-            throw new NotImplementedException(
-                "https://github.com/numenta/nupic/blob/master/src/nupic/swarming/exp_generator/ExpGenerator.py line 1485, 1809 continue");
-
-
-
-
-            return descr;
+            return new Tuple<ClaExperimentDescription, ClaPermutations>(descr, perms);
         }
 
         /// <summary>
@@ -1093,19 +1251,59 @@ namespace HTM.Net.Research.Swarming
 
     #region Description Objects
 
-    public abstract class BaseDescription
+    public interface IDescription
     {
+        ConfigModelDescription modelConfig { get; set; }
+        ControlModelDescription control { get; set; }
+
+        Parameters GetParameters();
+    }
+
+    [JsonConverter(typeof(TypedDescriptionBaseJsonConverter))]
+    [Serializable]
+    public abstract class BaseDescription : IDescription
+    {
+        protected BaseDescription()
+        {
+            Type = GetType().AssemblyQualifiedName;
+        }
+
+        public virtual Network.Network BuildNetwork()
+        {
+            return null;
+        }
+
+        public virtual Parameters GetParameters()
+        {
+            Parameters p = Parameters.GetAllDefaultParameters();
+
+            // Spatial pooling parameters
+            SpatialParamsDescription spParams = this.modelConfig.modelParams.spParams;
+            TemporalParamsDescription tpParams = this.modelConfig.modelParams.tpParams;
+
+            Parameters.ApplyParametersFromDescription(spParams, p);
+            Parameters.ApplyParametersFromDescription(tpParams, p);
+
+            return p;
+        }
+
         /// <summary>
         /// Model Configuration Dictionary
         /// </summary>
         public ConfigModelDescription modelConfig { get; set; }
 
         public ControlModelDescription control { get; set; }
+
+        /// <summary>
+        /// Used for deserialisation of this description
+        /// </summary>
+        public string Type { get; set; }
     }
 
     /// <summary>
     /// Template file used by the OPF Experiment Generator to generate the actual description
     /// </summary>
+    [Serializable]
     public class ClaExperimentDescription : BaseDescription
     {
         public ClaExperimentDescription()
@@ -1204,6 +1402,7 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
+    [Serializable]
     public class ConfigModelDescription
     {
         /// <summary>
@@ -1227,6 +1426,8 @@ namespace HTM.Net.Research.Swarming
         /// Model parameter dictionary.
         /// </summary>
         public ModelParamsDescription modelParams { get; set; }
+
+        public FieldMetaInfo[] inputRecordSchema { get; set; }
 
         public Map<string, object> GetDictionary()
         {
@@ -1275,6 +1476,7 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
+    [Serializable]
     public class ControlModelDescription
     {
         [TokenReplace("$ENVIRONMENT")]
@@ -1292,6 +1494,7 @@ namespace HTM.Net.Research.Swarming
         public int? iterationCountInferOnly { get; set; }
     }
 
+    [Serializable]
     public class SensorParamsDescription
     {
         [TokenReplace("$ENCODER_SPECS")]
@@ -1301,6 +1504,7 @@ namespace HTM.Net.Research.Swarming
         public IDictionary<string, object> sensorAutoReset { get; set; }
     }
 
+    [Serializable]
     public class ModelParamsDescription
     {
         /// <summary>
@@ -1330,16 +1534,25 @@ namespace HTM.Net.Research.Swarming
 
         public Parameters GetParameters()
         {
-            Parameters pars = Parameters.Empty();
+            Parameters p = Parameters.Empty();
             if (spEnable)
             {
-                pars.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
+                Parameters.ApplyParametersFromDescription(spParams, p);
+                //p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
             }
+            if (tpEnable)
+            {
+                Parameters.ApplyParametersFromDescription(tpParams, p);
+                //p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
+            }
+            p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
+            p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, Type.GetType(clParams.regionName));
 
-            return pars;
+            return p;
         }
     }
 
+    [Serializable]
     public class SpatialParamsDescription
     {
         [ParameterMapping]
@@ -1370,6 +1583,7 @@ namespace HTM.Net.Research.Swarming
         public double maxBoost { get; set; }
     }
 
+    [Serializable]
     public class TemporalParamsDescription
     {
         [ParameterMapping]
@@ -1413,6 +1627,7 @@ namespace HTM.Net.Research.Swarming
         public int pamLength { get; set; }
     }
 
+    [Serializable]
     public class ClassifierParamsDescription
     {
         public string regionName { get; set; }
@@ -1426,8 +1641,63 @@ namespace HTM.Net.Research.Swarming
 
     #region Permutation Objects
 
-    public abstract class BasePermutations
+    public interface IPermutionFilter
     {
+        /// <summary>
+        /// The name of the field being predicted.  Any allowed permutation MUST contain the prediction field.
+        ///  (generated from PREDICTION_FIELD)
+        /// </summary>
+        string predictedField { get; set; }
+
+        PermutationModelParameters permutations { get; set; }
+
+        /// <summary>
+        /// Fields selected for final hypersearch report;
+        /// NOTE: These values are used as regular expressions by RunPermutations.py's report generator
+        /// (fieldname values generated from PERM_PREDICTED_FIELD_NAME)
+        /// </summary>
+        string[] report { get; set; }
+
+        /// <summary>
+        /// Permutation optimization setting: either minimize or maximize metric
+        /// used by RunPermutations.
+        /// </summary>
+        string minimize { get; set; }
+
+        PermutationModelParameters fastSwarmModelParams { get; set; }
+        List<string> fixedFields { get; set; }
+        int? minParticlesPerSwarm { get; set; }
+        bool? killUselessSwarms { get; set; }
+        InputPredictedField? inputPredictedField { get; set; }
+        bool? tryAll3FieldCombinations { get; set; }
+        bool? tryAll3FieldCombinationsWTimestamps { get; set; }
+        int? minFieldContribution { get; set; }
+        int? maxFieldBranching { get; set; }
+        string maximize { get; set; }
+        int? maxModels { get; set; }
+
+        IDictionary<string, object> dummyModelParams(PermutationModelParameters perm);
+        bool permutationFilter(PermutationModelParameters perm);
+    }
+
+    [JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
+    [Serializable]
+    public abstract class BasePermutations : IPermutionFilter
+    {
+        protected BasePermutations()
+        {
+            Type = GetType().AssemblyQualifiedName;
+        }
+
+        public abstract IDictionary<string, object> dummyModelParams(PermutationModelParameters perm);
+
+        public abstract bool permutationFilter(PermutationModelParameters perm);
+
+        /// <summary>
+        /// Used for deserialisation
+        /// </summary>
+        public string Type { get; set; }
+
         [TokenReplace("$PREDICTED_FIELD")]
         public string predictedField { get; set; }
         public PermutationModelParameters permutations { get; set; }
@@ -1457,6 +1727,7 @@ namespace HTM.Net.Research.Swarming
         public int? maxModels { get; set; }
     }
 
+    [Serializable]
     public class ClaPermutations : BasePermutations
     {
         public ClaPermutations()
@@ -1476,8 +1747,23 @@ namespace HTM.Net.Research.Swarming
             };
 
         }
+
+        #region Overrides of BasePermutations
+
+        public override IDictionary<string, object> dummyModelParams(PermutationModelParameters perm)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool permutationFilter(PermutationModelParameters perm)
+        {
+            return true;
+        }
+
+        #endregion
     }
 
+    [Serializable]
     public class PermutationModelParameters
     {
         [TokenReplace("$PERM_AGGREGATION_CHOICES")]
@@ -1485,6 +1771,7 @@ namespace HTM.Net.Research.Swarming
         public PermutationModelDescriptionParams modelParams { get; set; }
     }
 
+    [Serializable]
     public class PermutationModelDescriptionParams
     {
         [TokenReplace("$PERM_INFERENCE_TYPE_CHOICES")]
@@ -1495,28 +1782,36 @@ namespace HTM.Net.Research.Swarming
         public PermutationClassifierParams clParams { get; set; }
     }
 
+    [Serializable]
     public class PermutationSensorParams
     {
         [TokenReplace("$PERM_ENCODER_CHOICES")]
         public Map<string, object> encoders { get; set; }
     }
 
+    [Serializable]
     public class PermutationSpatialPoolerParams
     {
         [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
         public PermuteVariable synPermInactiveDec { get; set; }
     }
 
+    [Serializable]
     public class PermutationTemporalPoolerParams
     {
-        [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
-        public PermuteVariable synPermInactiveDec { get; set; }
+        [TokenReplace("$PERM_TP_CHOICES_minThreshold")]
+        public object minThreshold { get; set; }  // float, int or permutevar
+        [TokenReplace("$PERM_TP_CHOICES_activationThreshold")]
+        public object activationThreshold { get; set; } // float, int or permutevar
+        [TokenReplace("$PERM_TP_CHOICES_pamLength")]
+        public object pamLength { get; set; } // int or permutevar
     }
 
+    [Serializable]
     public class PermutationClassifierParams
     {
         [TokenReplace("$PERM_CL_CHOICES_alpha")]
-        public PermuteVariable alpha { get; set; }
+        public object alpha { get; set; } // float or PermuteVariable
     }
 
     #endregion
@@ -1524,6 +1819,7 @@ namespace HTM.Net.Research.Swarming
     /// <summary>
     /// ExpGenerator-experiment-description
     /// </summary>
+    [Serializable]
     public class SwarmDefinition
     {
         public Map<string, object> customErrorMetric;
@@ -1713,8 +2009,11 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
+    [Serializable]
     public class InferenceArgsDescription
     {
+        public bool? useReconstruction;
+
         /// <summary>
         /// A list of integers that specifies which steps size(s) to learn/infer on
         /// </summary>
@@ -1730,8 +2029,18 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         public InputPredictedField? inputPredictedField { get; set; }
 
+        public InferenceArgsDescription Clone()
+        {
+            return new InferenceArgsDescription
+            {
+                predictionSteps = (int[])predictionSteps.Clone(),
+                predictedField = predictedField,
+                inputPredictedField = inputPredictedField
+            };
+        }
     }
 
+    [Serializable]
     public enum InputPredictedField
     {
         auto, yes, no
@@ -1740,6 +2049,7 @@ namespace HTM.Net.Research.Swarming
     /// <summary>
     /// Stream Definition
     /// </summary>
+    [Serializable]
     public class StreamDef
     {
         /// <summary>
@@ -1769,6 +2079,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         //public string filter { get; set; }
 
+        [Serializable]
         public class StreamItem
         {
             /// <summary>

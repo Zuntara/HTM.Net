@@ -6,24 +6,24 @@ namespace HTM.Net.Research.opf
 {
     public class ModelFactory
     {
-        public static Model Create(IDescription modelConfig)
+        public static Model Create(ConfigModelDescription modelConfig)
         {
             Type modelClass;
-            if (modelConfig.modelConfig.model == "CLA")
+            if (modelConfig.model == "CLA")
             {
                 modelClass = typeof(CLAModel);
             }
-            else if (modelConfig.modelConfig.model == "TwoGram")
+            else if (modelConfig.model == "TwoGram")
             {
-                throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.modelConfig.model);
+                throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.model);
             }
-            else if (modelConfig.modelConfig.model == "PreviousValue")
+            else if (modelConfig.model == "PreviousValue")
             {
-                throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.modelConfig.model);
+                throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.model);
             }
             else
             {
-                throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.modelConfig.model);
+                throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.model);
             }
             return (Model)Activator.CreateInstance(modelClass, modelConfig);
         }

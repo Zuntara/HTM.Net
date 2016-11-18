@@ -49,7 +49,7 @@ namespace HTM.Net.Research.Tests.Regression
                     {
                         columns = new[] {"Sine", "angle"},
                         info = "sine.csv",
-                        source = "file://sine.csv",
+                        source = "sine.csv",
                         last_record = new int?[] {3019*1, null}
                     }
                 },

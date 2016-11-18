@@ -3108,7 +3108,7 @@ namespace HTM.Net.Research.Swarming
     {
         public string persistentJobGUID;
         public string permutationsPyFilename;
-        public PermutionFilterBase permutationsPyContents;
+        public BasePermutations permutationsPyContents;
         [NonSerialized]
         public JObject description;
         public bool? createCheckpoints;
@@ -3120,13 +3120,13 @@ namespace HTM.Net.Research.Swarming
         // Added myself, is the description holder (file)
         public string baseDescriptionFileName;
         public string hsVersion = "v2";
-        public DescriptionBase descriptionPyContents;
+        public BaseDescription descriptionPyContents;
 
         public void Populate(Map<string,object> jobParamsMap)
         {
             this.persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
-            this.descriptionPyContents = (DescriptionBase)jobParamsMap["descriptionPyContents"];
-            this.permutationsPyContents = (PermutionFilterBase)jobParamsMap["permutationsPyContents"];
+            this.descriptionPyContents = (BaseDescription)jobParamsMap["descriptionPyContents"];
+            this.permutationsPyContents = (BasePermutations)jobParamsMap["permutationsPyContents"];
             this.maxModels = TypeConverter.Convert<int?>(jobParamsMap["maxModels"]);
             this.hsVersion = (string)jobParamsMap["hsVersion"];
         }
@@ -3243,21 +3243,21 @@ namespace HTM.Net.Research.Swarming
         private HsState _hsState;
         private SwarmTerminator _swarmTerminator;
         //private string _basePath;
-        private DescriptionBase _baseDescription;
+        private BaseDescription _baseDescription;
         private int _baseDescriptionHash;
         private int _maxUniqueModelAttempts;
         private double _modelOrphanIntervalSecs;
         private double _maxPctErrModels;
         private bool _killUselessSwarms;
-        private string _inputPredictedField;
+        private InputPredictedField _inputPredictedField;
         private string _predictedField;
         private Dictionary<string, PermuteVariable> _flattenedPermutations;
         private string _optimizeKey;
         private string[] _reportKeys;
-        private Func<ModelDescription, bool> _filterFunc;
-        private Func<ModelDescription, IDictionary<string, object>> _dummyModelParamsFunc;
-        private ModelDescription _fastSwarmModelParams;
-        private ModelDescription _permutations;
+        private Func<PermutationModelParameters, bool> _filterFunc;
+        private Func<PermutationModelParameters, IDictionary<string, object>> _dummyModelParamsFunc;
+        private PermutationModelParameters _fastSwarmModelParams;
+        private PermutationModelParameters _permutations;
 
         /// <summary>
         ///  Instantiate the HyperseachV2 instance.
@@ -3527,7 +3527,7 @@ namespace HTM.Net.Research.Swarming
                 //modelDescription, _ = opfhelpers.loadExperiment(this._basePath);
                 //Tuple<ModelDescription, object> modelDescrPair = new Tuple<ModelDescription, object>(null, null);// opfhelpers.loadExperiment(this._basePath);
                 //throw new NotImplementedException("Check line above");
-                DescriptionConfigModel modelDescription = _baseDescription.modelConfig;
+                ConfigModelDescription modelDescription = _baseDescription.modelConfig;
 
                 // Read info from permutations file. This sets up the following member
                 // variables:
@@ -3752,13 +3752,13 @@ namespace HTM.Net.Research.Swarming
         /// <param name="filename">Name of permutations file</param>
         /// <param name="modelDescription"></param>
         /// <returns>None</returns>
-        private void _readPermutationsFile(string permFileJson, DescriptionConfigModel modelDescription)
+        private void _readPermutationsFile(string permFileJson, ConfigModelDescription modelDescription)
         {
             // Open and execute the permutations file
             //Dictionary<string, object> vars = new Dictionary<string, object>();
 
             //permFile = execfile(filename, globals(), vars);
-            IPermutionFilter permFile = (IPermutionFilter)JsonConvert.DeserializeObject(permFileJson, typeof(PermutionFilterBase), new JsonSerializerSettings
+            IPermutionFilter permFile = (IPermutionFilter)JsonConvert.DeserializeObject(permFileJson, typeof(BasePermutations), new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.All
             });
@@ -3814,7 +3814,7 @@ namespace HTM.Net.Research.Swarming
             //  field only (the legacy mode of swarming).
             // When set to "auto", the first sprint tries all possible fields (one at a
             //  time) in the first sprint.
-            this._inputPredictedField = (string)(permFile.inputPredictedField ?? "yes"); //vars.Get("inputPredictedField", "yes");
+            this._inputPredictedField = permFile.inputPredictedField ?? InputPredictedField.yes; //vars.Get("inputPredictedField", "yes");
 
             // Try all possible 3-field combinations? Normally, we start with the best
             //  2-field combination as a base. When this flag is set though, we try
@@ -3910,7 +3910,7 @@ namespace HTM.Net.Research.Swarming
                 //    }
                 //}
 
-                if (classifierOnlyEncoder == null || this._inputPredictedField == "yes")
+                if (classifierOnlyEncoder == null || this._inputPredictedField == InputPredictedField.yes)
                 {
                     // If we don't have a separate encoder for the classifier (legacy
                     //  MultiStep) or the caller explicitly wants to include the predicted
@@ -4464,9 +4464,9 @@ namespace HTM.Net.Research.Swarming
                 //(workerCmpReason, workerCmpMsg)
                 var jobReasonAndMsg = this._cjDAO.jobGetFields(this._jobID,
                     new[] { "workerCompletionReason', 'workerCompletionMsg" });
-                var workerCmpReason = jobReasonAndMsg[0];
-                var workerCmpMsg = jobReasonAndMsg[1];
-                if (workerCmpReason == BaseClientJobDao.CMPL_REASON_SUCCESS.ToString())
+                var workerCmpReason = (string)jobReasonAndMsg[0];
+                var workerCmpMsg = (string)jobReasonAndMsg[1];
+                if (workerCmpReason == BaseClientJobDao.CMPL_REASON_SUCCESS)
                 {
                     this.logger.Info("Exiting due to job being cancelled");
                     this._cjDAO.jobSetFields(this._jobID, new Dictionary<string, object>
@@ -5100,7 +5100,7 @@ namespace HTM.Net.Research.Swarming
                     // that this is where we incorporate encoders that have no permuted
                     // values in them.
                     var position = candidateParticle.getPosition();
-                    ModelDescription structuredParams = new ModelDescription();
+                    PermutationModelParameters structuredParams = new PermutationModelParameters();
                     Func<object, string[], object> _buildStructuredParams = (value, keys) =>
                     {
                         string flatKey = _flattenKeys(keys);
@@ -5131,12 +5131,12 @@ namespace HTM.Net.Research.Swarming
                         }
                     };
 
-                    structuredParams = (ModelDescription)Utils.rCopy(this._permutations,
+                    structuredParams = (PermutationModelParameters)Utils.rCopy(this._permutations,
                         _buildStructuredParams,
                         discardNoneKeys: false);
 
                     // Create the modelParams.
-                    modelParams = new ModelParams()
+                    modelParams = new ModelParams
                     {
                         structuredParams = structuredParams,
                         particleState = candidateParticle.getState()
@@ -5357,7 +5357,7 @@ namespace HTM.Net.Research.Swarming
                                    numRecords: 0);
 
             // Get the structured params, which we pass to the base description
-            ModelDescription structuredParams = modelParams.structuredParams;
+            PermutationModelParameters structuredParams = modelParams.structuredParams;
 
             if (this.logger.IsDebugEnabled)
             {

@@ -1,10 +1,12 @@
 using System;
+using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Taurus.HtmEngine.runtime;
 using HTM.Net.Research.Taurus.HtmEngine.Repository;
 using HTM.Net.Research.Taurus.MetricCollectors;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
+using ModelParams = HTM.Net.Research.Taurus.HtmEngine.runtime.ModelParams;
 
 namespace HTM.Net.Research.Taurus.HtmEngine.Adapters
 {
@@ -174,7 +176,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.Adapters
         /// <param name="metricId">unique identifier of the metric row</param>
         /// <param name="modelSpec">same as `modelSpec`` from `monitorMetric`</param>
         /// <param name="swarmParams">object returned by scalar_metric_utils.generateSwarmParams()</param>
-        private void StartMonitoringWithRetries(string metricId, ModelSpec modelSpec, BestSingleMetricAnomalyParamsDescription swarmParams)
+        private void StartMonitoringWithRetries(string metricId, ModelSpec modelSpec, IDescription swarmParams)
         {
             var metricObj = RepositoryFactory.Metric.GetMetric(metricId);
             if (metricObj.DataSource != "custom")

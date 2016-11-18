@@ -225,18 +225,22 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     #region Swarming model stuff
 
-    public class BestSingleMetricAnomalyParamsDescription : DescriptionBase
+    public class BestSingleMetricAnomalyParamsDescription : BaseDescription
     {
+
         public BestSingleMetricAnomalyParamsDescription()
         {
-            inferenceArgs = new Map<string, object>
+            control = new ControlModelDescription
             {
-                {"predictionSteps", new[] {1}},
-                {"predictedField", "c1"},
-                {"inputPredictedField", "auto"}
+                inferenceArgs = new InferenceArgsDescription
+                {
+                    predictionSteps = new[] { 1 },
+                    predictedField = "c1",
+                    inputPredictedField = InputPredictedField.auto
+                }
             };
 
-            var config = new DescriptionConfigModel
+            var config = new ConfigModelDescription
             {
                 // Type of model that the rest of these parameters apply to.
                 model = "CLA",
@@ -263,12 +267,12 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 predictAheadTime = null,
 
                 // Model parameter dictionary.
-                modelParams = new ModelDescriptionParamsDescrModel
+                modelParams = new ModelParamsDescription
                 {
                     // The type of inference that this model will perform
                     inferenceType = InferenceType.TemporalAnomaly,
 
-                    sensorParams = new SensorParamsDescrModel
+                    sensorParams = new SensorParamsDescription
                     {
                         // Sensor diagnostic output verbosity control;
                         // if > 0: sensor region will print out on screen what it"s sensing
@@ -326,7 +330,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                     spEnable = true,
 
-                    spParams = new SpatialParamsDescr
+                    spParams = new SpatialParamsDescription
                     {
                         // SP diagnostic output verbosity control;
                         // 0: silent; >=1: some info; >=2: more info;
@@ -378,7 +382,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                     // reconstructing missing sensor inputs (via SP).
                     tpEnable = true,
 
-                    tpParams = new TemporalParamsDescr
+                    tpParams = new TemporalParamsDescription
                     {
                         // TP diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
@@ -465,13 +469,13 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                     clEnable = false,
 
-                    clParams = new ClassifierParamsDescr
+                    clParams = new ClassifierParamsDescription
                     {
                         regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
 
                         // Classifier diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
-                        clVerbosity = 0,
+                        verbosity = 0,
 
                         // This controls how fast the classifier learns/forgets. Higher values
                         // make it adapt faster and forget older patterns faster.
@@ -479,7 +483,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
                         // This is set after the call to updateConfigFromSubConfig and is
                         // computed from the aggregationInfo and predictAheadTime.
-                        steps = 1,
+                        steps = new[] { 1 },
                     },
                     anomalyParams = new AnomalyParamsDescription
                     {
@@ -503,20 +507,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             {
                 int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
                 Debug.Assert(predictionSteps >= 1);
-                config.modelParams.clParams.steps = predictionSteps;
+                config.modelParams.clParams.steps = new[] { predictionSteps };
             }
 
 
         }
 
-        public void UpdateConfigFromSubConfig(DescriptionConfigModel config)
+        public void UpdateConfigFromSubConfig(ConfigModelDescription config)
         {
 
-        }
-
-        public override IDescription Clone()
-        {
-            throw new NotImplementedException();
         }
 
         public override Network.Network BuildNetwork()
@@ -529,8 +528,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             Parameters p = Parameters.GetAllDefaultParameters();
 
             // Spatial pooling parameters
-            SpatialParamsDescr spParams = modelConfig.modelParams.spParams;
-            TemporalParamsDescr tpParams = modelConfig.modelParams.tpParams;
+            SpatialParamsDescription spParams = modelConfig.modelParams.spParams;
+            TemporalParamsDescription tpParams = modelConfig.modelParams.tpParams;
 
             Parameters.ApplyParametersFromDescription(spParams, p);
             Parameters.ApplyParametersFromDescription(tpParams, p);
@@ -551,9 +550,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public double? MinResolution { get; set; }
 
         public Map<string, object> AnomalyLikelihoodParams { get; set; }
-        public DescriptionConfigModel ModelConfig { get; set; }
-        public Map<string, object> InferenceArgs { get; set; }
-        public Map<string, Tuple<FieldMetaType, SensorFlags>> InputSchema { get; set; }
+        public ConfigModelDescription ModelConfig { get; set; }
+        public InferenceArgsDescription InferenceArgs { get; set; }
+        public FieldMetaInfo[] InputSchema { get; set; }
 
         public static ModelParams FromDict(IDictionary<string, object> dict)
         {
@@ -575,8 +574,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 AnomalyLikelihoodParams = new Map<string, object>(AnomalyLikelihoodParams),
                 MinResolution = MinResolution,
                 ModelConfig = ModelConfig,
-                InferenceArgs = new Map<string, object>(InferenceArgs),
-                InputSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>(InputSchema)
+                InferenceArgs = InferenceArgs.Clone(),
+                InputSchema = (FieldMetaInfo[]) InputSchema.Clone()
             };
         }
     }
@@ -673,21 +672,22 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <summary>
         /// Handle the "defineModel" command
         /// </summary>
+        /// <param name="command">ModelCommand instance for the "defineModel" command</param>
         public void DefineModel(ModelCommand command)
         {
             // Save the model to persistent storage (the parameters)
 
             ModelDefinition newModelDefinition = new ModelDefinition
             {
-                ModelParams = new ModelParams()
+                ModelParams = new ModelParams
                 {
                     ModelConfig = command.Args.modelConfig,
-                    InferenceArgs = command.Args.inferenceArgs,
-                    InputSchema = command.Args.inputRecordSchema
+                    InferenceArgs = command.Args.control.inferenceArgs,
+                    InputSchema = command.Args.modelConfig.inputRecordSchema
                 }
             };
 
-            _checkpointMgr.Define(modelId: _modelId, definition: command.Args);
+            _checkpointMgr.Define(modelId: _modelId, definition: newModelDefinition);
         }
 
         /// <summary>
@@ -715,47 +715,54 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         }
 
         /// <summary>
-        /// Load the model and construct the input row encoder
-        /// Side-effect: self._model and self._inputRowEncoder are loaded; 
-        ///     self._modelLoadSec is set if profiling is turned on
+        /// Load the model and construct the input row encoder. On success,
+        /// the loaded model may be accessed via the `model` attribute
         /// </summary>
         private void LoadModel()
         {
-            if (_model == null)
+            if (_model != null) return;
+
+            ModelDefinition modelDefinition = null;
+            try
             {
-                IDescription modelDefinition = null;
-                try
-                {
-                    _model = _checkpointMgr.Load(_modelId);
-                    _hasCheckpoint = true;
-                }
-                catch (ModelNotFound)
-                {
-                    // So, we didn't have a checkpoint... try to create our model from model
-                    // definition params
-                    _hasCheckpoint = false;
-                    modelDefinition = _checkpointMgr.LoadModelDefinition(_modelId);
-                    //ModelParams modelParams = modelDefinition.modelParams;
-                    _model = ModelFactory.Create(modelConfig: modelDefinition);
-                    _model.enableLearning();
-                    _model.enableInference(modelDefinition.inferenceArgs);
-                }
-
-                // Construct the object for converting a flat input row into a format
-                // that is consumable by an OPF model
-                if (modelDefinition == null)
-                {
-                    modelDefinition = _checkpointMgr.LoadModelDefinition(_modelId);
-                }
-
-                var inputSchema = modelDefinition.inputRecordSchema;
-
-                var inputFieldsMeta = inputSchema;
-                _inputRowEncoder = new InputRowEncoder(inputFieldsMeta);
-
-                // TODO: check https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/model_swapper/model_runner.py
-                // that we need some extra lines
+                _model = _checkpointMgr.Load(_modelId);
+                _hasCheckpoint = true;
             }
+            catch (ModelNotFound)
+            {
+                // So, we didn't have a checkpoint... try to create our model from model
+                // definition params
+                _hasCheckpoint = false;
+
+                modelDefinition = _checkpointMgr.LoadModelDefinition(_modelId);
+
+                var modelParams = modelDefinition.ModelParams;
+
+                // TODO: when creating the model from params, do we need to call
+                // its model.setFieldStatistics() method? And where will the
+                // fieldStats come from, anyway?
+
+                //ModelParams modelParams = modelDefinition.modelParams;
+                _model = ModelFactory.Create(modelConfig: modelParams.ModelConfig);
+                _model.enableLearning();
+                _model.enableInference(modelParams.InferenceArgs);
+            }
+            
+            // Construct the object for converting a flat input row into a format
+            // that is consumable by an OPF model
+            if (modelDefinition == null)
+            {
+                modelDefinition = _checkpointMgr.LoadModelDefinition(_modelId);
+            }
+
+            var inputSchema = modelDefinition.inputRecordSchema;
+            
+            FieldMetaInfo[] inputFieldsMeta = inputSchema;
+            _inputRowEncoder = new InputRowEncoder(inputFieldsMeta);
+
+            // TODO: check https://github.com/numenta/numenta-apps/blob/9d1f35b6e6da31a05bf364cda227a4d6c48e7f9d/htmengine/htmengine/model_swapper/model_runner.py
+            // that we need some extra lines
+
         }
         /// <summary>
         /// Handle the "deleteModel" command
@@ -773,15 +780,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     internal class InputRowEncoder
     {
-        private Map<string, Tuple<FieldMetaType, SensorFlags>> _fieldMeta;
+        private FieldMetaInfo[] _fieldMeta;
         private List<string> _fieldNames;
         private List<string> _row;
         private ModelRecordEncoder _modelRecordEncoder;
 
-        public InputRowEncoder(Map<string, Tuple<FieldMetaType, SensorFlags>> inputFieldsMeta)
+        public InputRowEncoder(FieldMetaInfo[] inputFieldsMeta)
         {
             _fieldMeta = inputFieldsMeta;
-            _fieldNames = inputFieldsMeta.Keys.ToList();
+            _fieldNames = inputFieldsMeta.Select(m => m.name).ToList();
             _row = null;
         }
 
@@ -797,7 +804,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return _fieldNames;
         }
 
-        public Map<string, Tuple<FieldMetaType, SensorFlags>> GetFields()
+        public FieldMetaInfo[] GetFields()
         {
             return _fieldMeta;
         }
@@ -834,13 +841,13 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// </summary>
     internal class ModelRecordEncoder
     {
-        private Map<string, Tuple<FieldMetaType, SensorFlags>> _fields;
+        private FieldMetaInfo[] _fields;
         private TimeSpan? _aggregationPeriod;
         private int _sequenceId;
         private List<string> _fieldNames;
         private int? _timestampFieldIndex;
 
-        public ModelRecordEncoder(Map<string, Tuple<FieldMetaType, SensorFlags>> fields, TimeSpan? aggregationPeriod = null)
+        public ModelRecordEncoder(FieldMetaInfo[] fields, TimeSpan? aggregationPeriod = null)
         {
             if (fields == null || !fields.Any())
             {
@@ -849,14 +856,14 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             _fields = fields;
             _aggregationPeriod = aggregationPeriod;
             _sequenceId = -1;
-            _fieldNames = fields.Keys.ToList();
+            _fieldNames = fields.Select(m=>m.name).ToList();
 
             _timestampFieldIndex = GetFieldIndexBySpecial(fields, SensorFlags.Timestamp);
         }
 
-        private int? GetFieldIndexBySpecial(Map<string, Tuple<FieldMetaType, SensorFlags>> fields, SensorFlags sensorFlags)
+        private int? GetFieldIndexBySpecial(FieldMetaInfo[] fields, SensorFlags sensorFlags)
         {
-            return fields.Values.Select(t => t.Item2).ToList().IndexOf(sensorFlags);
+            return fields.Select(t => t.special).ToList().IndexOf(sensorFlags);
         }
 
         /// <summary>
@@ -900,8 +907,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public class ModelDefinition
     {
+        public FieldMetaInfo[] inputRecordSchema;
         public ModelParams ModelParams { get; set; }
-
 
     }
 
@@ -911,6 +918,13 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public string ModelId { get; set; }
 
         public IDescription Args { get; set; }
+    }
+
+    public class ModelCommandArgs
+    {
+        public ConfigModelDescription modelConfig { get; set; }
+        public InferenceArgsDescription inferenceArgs { get; set; }
+        public FieldMetaInfo[] inputRecordSchema { get; set; }
     }
 
     public class ModelInferenceResult
@@ -951,7 +965,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     public class CheckPointManager
     {
-        private static Dictionary<string, IDescription> _storedDefinitions = new Dictionary<string, IDescription>();
+        private static Dictionary<string, ModelDefinition> _storedDefinitions = new Dictionary<string, ModelDefinition>();
 
         /// <summary>
         /// Retrieve a model instance from checkpoint.
@@ -963,7 +977,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             throw new ModelNotFound();
         }
 
-        public IDescription LoadModelDefinition(string modelId)
+        public ModelDefinition LoadModelDefinition(string modelId)
         {
             var definition = _storedDefinitions
                 .Where(sd => sd.Key == modelId)
@@ -973,7 +987,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return definition;
         }
 
-        public void Define(string modelId, IDescription definition)
+        public void Define(string modelId, ModelDefinition definition)
         {
             if (!_storedDefinitions.ContainsKey(modelId))
                 _storedDefinitions.Add(modelId, definition);

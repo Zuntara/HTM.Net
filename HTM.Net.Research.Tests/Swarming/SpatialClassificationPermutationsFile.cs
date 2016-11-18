@@ -5,17 +5,17 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
-    public class SpatialClassificationPermutationsFile : PermutionFilterBase
+    public class SpatialClassificationPermutationsFile : BasePermutations
     {
         public SpatialClassificationPermutationsFile()
         {
             predictedField = "consumption";
 
-            permutations = new ModelDescription
+            permutations = new PermutationModelParameters
             {
-                modelParams = new ModelDescriptionParams
+                modelParams = new PermutationModelDescriptionParams
                 {
-                    sensorParams = new SensorParamsModel
+                    sensorParams = new PermutationSensorParams
                     {
                         encoders = new Map<string, object>
                         {
@@ -39,7 +39,7 @@ namespace HTM.Net.Research.Tests.Swarming
                             {"address",new PermuteEncoder(fieldName: "address", encoderClass: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
                         }
                     },
-                    tpParams = new TemporalParams
+                    tpParams = new PermutationTemporalPoolerParams
                     {
                         
                     },
@@ -54,7 +54,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
         #region Implementation of IPermutionFilter
 
-        public override IDictionary<string, object> dummyModelParams(ModelDescription perm)
+        public override IDictionary<string, object> dummyModelParams(PermutationModelParameters perm)
         {
             double errScore = 50;
 
@@ -100,7 +100,7 @@ namespace HTM.Net.Research.Tests.Swarming
             return dummyModelParams;
         }
 
-        public override bool permutationFilter(ModelDescription perm)
+        public override bool permutationFilter(PermutationModelParameters perm)
         {
             //int limit = int.Parse(Environment.GetEnvironmentVariable("NTA_TEST_maxvalFilter") ?? "300");
             //if ((double)perm.modelParams.sensorParams.encoders["consumption"].maxval > limit)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
@@ -165,7 +166,7 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestTemporalAnomalyModelFactory()
         {
-            IDescription modelConfig = new TemporalAnomalyModelDescription();
+            IDescription exp = new TemporalAnomalyModelDescription();
 
             var data = new List<Map<string, object>>
             {
@@ -201,9 +202,9 @@ namespace HTM.Net.Research.Tests.Opf
                 },
             };
 
-            var model = ModelFactory.Create(modelConfig);
+            var model = ModelFactory.Create(exp.modelConfig);
             model.enableLearning();
-            model.enableInference(modelConfig.inferenceArgs);
+            model.enableInference(exp.control.inferenceArgs);
 
             foreach (Map<string, object> row in data)
             {
@@ -213,11 +214,11 @@ namespace HTM.Net.Research.Tests.Opf
             }
         }
 
-        class TemporalAnomalyModelDescription : DescriptionBase
+        class TemporalAnomalyModelDescription : BaseDescription
         {
             public TemporalAnomalyModelDescription()
             {
-                var config = new DescriptionConfigModel()
+                var config = new ConfigModelDescription
                 {
                     model = "CLA",
                     aggregationInfo = new AggregationSettings
@@ -233,7 +234,7 @@ namespace HTM.Net.Research.Tests.Opf
                         weeks = 0,
                         years = 0
                     },
-                    modelParams = new ModelDescriptionParamsDescrModel
+                    modelParams = new ModelParamsDescription
                     {
                         anomalyParams = new AnomalyParamsDescription
                         {
@@ -242,15 +243,15 @@ namespace HTM.Net.Research.Tests.Opf
                             autoDetectWaitRecords = 5030
                         },
                         clEnable = false,
-                        clParams = new ClassifierParamsDescr
+                        clParams = new ClassifierParamsDescription
                         {
                             alpha = 0.035828933612158,
-                            clVerbosity = 0,
-                            regionName = "CLAClassifierRegion",
-                            steps = 1
+                            verbosity = 0,
+                            regionName = typeof(CLAClassifier).AssemblyQualifiedName,
+                            steps = new[] {1}
                         },
                         inferenceType = InferenceType.TemporalAnomaly,
-                        sensorParams = new SensorParamsDescrModel
+                        sensorParams = new SensorParamsDescription
                         {
                             encoders = new Map<string, Map<string, object>>
                             {
@@ -262,7 +263,7 @@ namespace HTM.Net.Research.Tests.Opf
                                     {
                                         {"fieldname", "c0"},
                                         {"name", "c0"},
-                                        {"timeOfDay", new Tuple(21,9.49122334747737)},
+                                        {"timeOfDay", new Tuple(21, 9.49122334747737)},
                                         {"type", "DateEncoder"}
                                     }
                                 },
@@ -274,7 +275,7 @@ namespace HTM.Net.Research.Tests.Opf
                                     {
                                         {"fieldname", "c1"},
                                         {"name", "c1"},
-                                        {"resolution",  0.8771929824561403},
+                                        {"resolution", 0.8771929824561403},
                                         //{"seed",  42},
                                         {"type", "RandomDistributedScalarEncoder"}
                                     }
@@ -284,12 +285,12 @@ namespace HTM.Net.Research.Tests.Opf
                             verbosity = 0
                         },
                         spEnable = true,
-                        spParams = new SpatialParamsDescr
+                        spParams = new SpatialParamsDescription
                         {
                             potentialPct = 0.8,
-                            columnCount = new[] { 2048 },
+                            columnCount = new[] {2048},
                             globalInhibition = true,
-                            inputWidth = new[] { 0 },
+                            inputWidth = new[] {0},
                             maxBoost = 1.0,
                             numActiveColumnsPerInhArea = 40,
                             seed = 1956,
@@ -299,14 +300,14 @@ namespace HTM.Net.Research.Tests.Opf
                             synPermInactiveDec = 0.0005,
                         },
                         tpEnable = true,
-                        tpParams = new TemporalParamsDescr
+                        tpParams = new TemporalParamsDescription
                         {
                             activationThreshold = 13,
                             cellsPerColumn = 32,
-                            columnCount = new[] { 2048 },
+                            columnCount = new[] {2048},
                             globalDecay = 0.0,
                             initialPerm = 0.21,
-                            inputWidth = new[] { 2048 },
+                            inputWidth = new[] {2048},
                             maxAge = 0,
                             maxSegmentsPerCell = 128,
                             maxSynapsesPerSegment = 32,
@@ -322,29 +323,28 @@ namespace HTM.Net.Research.Tests.Opf
                         trainSPNetOnlyIfRequested = false
                     },
                     predictAheadTime = null,
-                    version = 1
+                    version = 1,
+                    inputRecordSchema = new[]
+                    {
+                        new FieldMetaInfo("c0", FieldMetaType.DateTime, SensorFlags.Timestamp),
+                        new FieldMetaInfo("c1", FieldMetaType.Float, SensorFlags.Blank)
+                    }
                 };
 
                 modelConfig = config;
-                inferenceArgs = new Map<string, object>
+
+                control = new ControlModelDescription
                 {
-                    {"inputPredictedField", "auto" },
-                    {"predictedField", "c1" },
-                    {"predictionSteps", new[] {1} },
-                };
-                inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
-                {
-                    {"c0", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp) },
-                    {"c1", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank) },
+                    inferenceArgs = new InferenceArgsDescription
+                    {
+                        inputPredictedField = InputPredictedField.auto,
+                        predictedField = "c1",
+                        predictionSteps = new[] {1},
+                    }
                 };
             }
 
             #region Overrides of DescriptionBase
-
-            public override IDescription Clone()
-            {
-                throw new System.NotImplementedException();
-            }
 
             public override Network.Network BuildNetwork()
             {
@@ -353,15 +353,8 @@ namespace HTM.Net.Research.Tests.Opf
 
             public override Parameters GetParameters()
             {
-                Parameters p = Parameters.GetAllDefaultParameters();
-
-                // Spatial pooling parameters
-                SpatialParamsDescr spParams = this.modelConfig.modelParams.spParams;
-                TemporalParamsDescr tpParams = this.modelConfig.modelParams.tpParams;
-
-                Parameters.ApplyParametersFromDescription(spParams, p);
-                Parameters.ApplyParametersFromDescription(tpParams, p);
-
+                Parameters p = Parameters.Empty();
+                p.Union(modelConfig.GetParameters());
                 return p;
             }
 

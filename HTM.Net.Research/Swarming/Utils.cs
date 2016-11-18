@@ -20,7 +20,7 @@ namespace HTM.Net.Research.Swarming
     public class ModelParams
     {
         //public Dictionary<string, Dictionary<string, object>> structuredParams { get; set; }
-        public ModelDescription structuredParams { get; set; }
+        public PermutationModelParameters structuredParams { get; set; }
         public ParticleStateModel particleState { get; set; }
 
         /*
@@ -74,7 +74,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="predictionCacheMaxRecords"></param>
         /// <returns>completion reason and msg</returns>
         public static ModelCompletionStatus runModelGivenBaseAndParams(ulong? modelID, uint? jobID,
-            IDescription baseDescription, ModelDescription @params,
+            IDescription baseDescription, PermutationModelParameters @params,
             string predictedField, string[] reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
             string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
         {
@@ -100,7 +100,7 @@ namespace HTM.Net.Research.Swarming
             }
             catch (Exception ex)
             {
-                if(Debugger.IsAttached) Debugger.Break();
+                if (Debugger.IsAttached) Debugger.Break();
                 throw;
             }
             //try
@@ -610,33 +610,33 @@ namespace HTM.Net.Research.Swarming
         public OneFieldPermuationFilter()
         {
             predictedField = "consumption";
-            permutations = new ModelDescription
+            permutations = new PermutationModelParameters
             {
-                modelParams = new ModelDescriptionParams()
+                modelParams = new PermutationModelDescriptionParams()
                 {
-                    sensorParams = new SensorParamsModel
+                    sensorParams = new PermutationSensorParams()
                     {
                         encoders =
                         {
                             {
                                 "", new PermuteEncoder(
-                                    fieldName : "consumption",
-                                    encoderClass : "ScalarEncoder",
+                                    fieldName: "consumption",
+                                    encoderClass: "ScalarEncoder",
                                     kwArgs: new KWArgsModel
                                     {
-                                        {  "maxval" , new PermuteInt(100, 300, 1)},
-                                        {  "n" , new PermuteInt(13, 500, 1)},
-                                        {  "w" , 7},
-                                        {  "minval" , 0},
+                                        {"maxval", new PermuteInt(100, 300, 1)},
+                                        {"n", new PermuteInt(13, 500, 1)},
+                                        {"w", 7},
+                                        {"minval", 0},
                                     }
-                                )
+                                    )
                             }
-                        },
-                        tpParams = new TemporalParams
-                        {
-                            minThreshold = new PermuteInt(9, 12),
-                            activationThreshold = new PermuteInt(12, 16),
                         }
+                    },
+                    tpParams = new PermutationTemporalPoolerParams()
+                    {
+                        minThreshold = new PermuteInt(9, 12),
+                        activationThreshold = new PermuteInt(12, 16),
                     }
                 }
             };
@@ -647,14 +647,14 @@ namespace HTM.Net.Research.Swarming
         #region Implementation of IPermutionFilter
 
         public string predictedField { get; set; }
-        public ModelDescription permutations { get; set; }
+        public PermutationModelParameters permutations { get; set; }
         public string[] report { get; set; }
         public string minimize { get; set; }
-        public ModelDescription fastSwarmModelParams { get; set; }
+        public PermutationModelParameters fastSwarmModelParams { get; set; }
         public List<string> fixedFields { get; set; }
         public int? minParticlesPerSwarm { get; set; }
         public bool? killUselessSwarms { get; set; }
-        public string inputPredictedField { get; set; }
+        public InputPredictedField? inputPredictedField { get; set; }
         public bool? tryAll3FieldCombinations { get; set; }
         public bool? tryAll3FieldCombinationsWTimestamps { get; set; }
         public int? minFieldContribution { get; set; }
@@ -662,12 +662,12 @@ namespace HTM.Net.Research.Swarming
         public string maximize { get; set; }
         public int? maxModels { get; set; }
 
-        public IDictionary<string, object> dummyModelParams(ModelDescription perm)
+        public IDictionary<string, object> dummyModelParams(PermutationModelParameters perm)
         {
             throw new NotImplementedException();
         }
 
-        public bool permutationFilter(ModelDescription perm)
+        public bool permutationFilter(PermutationModelParameters perm)
         {
             throw new NotImplementedException();
         }
@@ -675,47 +675,10 @@ namespace HTM.Net.Research.Swarming
         #endregion
     }
 
-    public interface IPermutionFilter
-    {
-        /// <summary>
-        /// The name of the field being predicted.  Any allowed permutation MUST contain the prediction field.
-        ///  (generated from PREDICTION_FIELD)
-        /// </summary>
-        string predictedField { get; set; }
 
-        ModelDescription permutations { get; set; }
-
-        /// <summary>
-        /// Fields selected for final hypersearch report;
-        /// NOTE: These values are used as regular expressions by RunPermutations.py's report generator
-        /// (fieldname values generated from PERM_PREDICTED_FIELD_NAME)
-        /// </summary>
-        string[] report { get; set; }
-
-        /// <summary>
-        /// Permutation optimization setting: either minimize or maximize metric
-        /// used by RunPermutations.
-        /// </summary>
-        string minimize { get; set; }
-
-        ModelDescription fastSwarmModelParams { get; set; }
-        List<string> fixedFields { get; set; }
-        int? minParticlesPerSwarm { get; set; }
-        bool? killUselessSwarms { get; set; }
-        string inputPredictedField { get; set; }
-        bool? tryAll3FieldCombinations { get; set; }
-        bool? tryAll3FieldCombinationsWTimestamps { get; set; }
-        int? minFieldContribution { get; set; }
-        int? maxFieldBranching { get; set; }
-        string maximize { get; set; }
-        int? maxModels { get; set; }
-
-        IDictionary<string, object> dummyModelParams(ModelDescription perm);
-        bool permutationFilter(ModelDescription perm);
-    }
 
     [JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
-    public abstract class PermutionFilterBase : IPermutionFilter
+    public abstract class PermutionFilterBase2// : IPermutionFilter
     {
         public string Type { get; set; }
         public string predictedField { get; set; }
@@ -734,7 +697,7 @@ namespace HTM.Net.Research.Swarming
         public string maximize { get; set; }
         public int? maxModels { get; set; }
 
-        protected PermutionFilterBase()
+        protected PermutionFilterBase2()
         {
             Type = GetType().AssemblyQualifiedName;
         }
@@ -778,7 +741,7 @@ namespace HTM.Net.Research.Swarming
 
         public override bool CanConvert(Type objectType)
         {
-            return typeof(PermutionFilterBase).IsAssignableFrom(objectType);
+            return typeof(BasePermutations).IsAssignableFrom(objectType);
         }
         public override bool CanWrite { get { return false; } }
 
@@ -817,7 +780,7 @@ namespace HTM.Net.Research.Swarming
         public override bool CanConvert(Type objectType)
         {
             Debug.WriteLine("CanConvert json");
-            return typeof(DescriptionBase).IsAssignableFrom(objectType);
+            return typeof(BaseDescription).IsAssignableFrom(objectType);
         }
 
         #endregion

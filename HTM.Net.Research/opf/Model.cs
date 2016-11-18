@@ -19,7 +19,7 @@ namespace HTM.Net.Research.opf
         protected InferenceType __inferenceType;
         private bool _learningEnabled;
         private bool _inferenceEnabled;
-        private Map<string, object> _inferenceArgs;
+        private InferenceArgsDescription _inferenceArgs;
 
         /// <summary>
         /// Model constructor
@@ -31,7 +31,7 @@ namespace HTM.Net.Research.opf
             this.__inferenceType = inferenceType;
             this._learningEnabled = true;
             this._inferenceEnabled = true;
-            this._inferenceArgs = new Map<string, object>();
+            this._inferenceArgs = new InferenceArgsDescription();
         }
 
         public virtual ModelResult run(Map<string, object> inputRecord)
@@ -77,12 +77,12 @@ namespace HTM.Net.Research.opf
             return _learningEnabled;
         }
 
-        public void enableInference(Map<string, object> inferenceArgs = null)
+        public void enableInference(InferenceArgsDescription inferenceArgs = null)
         {
             _inferenceEnabled = true;
             _inferenceArgs = inferenceArgs;
         }
-        public Map<string, object> getInferenceArgs()
+        public InferenceArgsDescription getInferenceArgs()
         {
             return _inferenceArgs;
         }

@@ -45,7 +45,7 @@ namespace HTM.Net.Research.Swarming
         private bool _isMaturityEnabled;
         private string _optimizedMetricLabel;
         private string _cmpReason;
-        private DescriptionControlModel _modelControl;
+        private ControlModelDescription _modelControl;
         private opf.Model _model;
         private MetricsManager __metricMgr;
         private BatchedCsvStream<string[]> _inputSource;
@@ -194,7 +194,7 @@ namespace HTM.Net.Research.Swarming
             // Create the input data stream for this task
             var streamDef = this._modelControl.dataset;
 
-            string fileName = ((Map<string, object>)streamDef["streams"])["source"] as string;
+            string fileName = streamDef.streams[0].source;
 
             IStream<string> fileStream = new Stream<string>(YieldingFileReader.ReadAllLines(fileName, Encoding.UTF8));
             _inputSource = BatchedCsvStream<string>.Batch(fileStream, 20, false, 3);
@@ -204,7 +204,7 @@ namespace HTM.Net.Research.Swarming
             var fieldStats = this._getFieldStats();
             // -----------------------------------------------------------------------
             // Construct the model instance
-            this._model = ModelFactory.Create(_experimentDir /*modelDescription*/);
+            this._model = ModelFactory.Create(modelDescription);
             this._model.setFieldStatistics(fieldStats);
             this._model.enableLearning();
             this._model.enableInference(this._modelControl.inferenceArgs);

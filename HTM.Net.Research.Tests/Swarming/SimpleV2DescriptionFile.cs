@@ -12,11 +12,11 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
-    public class SimpleV2DescriptionFile : DescriptionBase
+    public class SimpleV2DescriptionFile : BaseDescription
     {
         public SimpleV2DescriptionFile()
         {
-            var config = new DescriptionConfigModel
+            var config = new ConfigModelDescription
             {
                 // Type of model that the rest of these parameters apply to.
                 model = "CLA",
@@ -49,12 +49,12 @@ namespace HTM.Net.Research.Tests.Swarming
                 predictAheadTime = null,
 
                 // Model parameter dictionary.
-                modelParams = new ModelDescriptionParamsDescrModel
+                modelParams = new ModelParamsDescription
                 {
                     // The type of inference that this model will perform
                     inferenceType = InferenceType.TemporalNextStep,
 
-                    sensorParams = new SensorParamsDescrModel
+                    sensorParams = new SensorParamsDescription
                     {
                         // Sensor diagnostic output verbosity control;
                         // if > 0: sensor region will print out on screen what it"s sensing
@@ -141,7 +141,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                     spEnable = true,
 
-                    spParams = new SpatialParamsDescr
+                    spParams = new SpatialParamsDescription
                     {
                         // SP diagnostic output verbosity control;
                         // 0: silent; >=1: some info; >=2: more info;
@@ -191,7 +191,7 @@ namespace HTM.Net.Research.Tests.Swarming
                     // reconstructing missing sensor inputs (via SP).
                     tpEnable = true,
 
-                    tpParams = new TemporalParamsDescr
+                    tpParams = new TemporalParamsDescription
                     {
                         // TP diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
@@ -278,13 +278,13 @@ namespace HTM.Net.Research.Tests.Swarming
 
                     clEnable = true,
 
-                    clParams = new ClassifierParamsDescr
+                    clParams = new ClassifierParamsDescription
                     {
                         regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
 
                         // Classifier diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
-                        clVerbosity = 0,
+                        verbosity = 0,
 
                         // This controls how fast the classifier learns/forgets. Higher values
                         // make it adapt faster and forget older patterns faster.
@@ -292,23 +292,22 @@ namespace HTM.Net.Research.Tests.Swarming
 
                         // This is set after the call to updateConfigFromSubConfig and is
                         // computed from the aggregationInfo and predictAheadTime.
-                        steps = 1,
+                        steps = new[] { 1 },
                     },
 
                     trainSPNetOnlyIfRequested = false,
+                },
+
+                inputRecordSchema = new[]
+                {
+                    new FieldMetaInfo( "address", FieldMetaType.String, SensorFlags.Blank) ,
+                    new FieldMetaInfo( "consumption", FieldMetaType.Float, SensorFlags.Blank),
+                    new FieldMetaInfo( "gym", FieldMetaType.String, SensorFlags.Blank),
+                    new FieldMetaInfo( "timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp)
                 }
             };
             // end of config dictionary
-
-
-
-            inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
-            {
-                { "address", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
-                { "consumption", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank) },
-                { "gym", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
-                { "timestamp", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp) },
-            };
+            
 
             // Adjust base config dictionary for any modifications if imported from a
             // sub-experiment
@@ -321,7 +320,7 @@ namespace HTM.Net.Research.Tests.Swarming
             {
                 int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
                 Debug.Assert(predictionSteps >= 1);
-                config.modelParams.clParams.steps = predictionSteps;
+                config.modelParams.clParams.steps = new[] { predictionSteps };
             }
 
             // Adjust config by applying ValueGetterBase-derived
@@ -329,25 +328,27 @@ namespace HTM.Net.Research.Tests.Swarming
             // to support value-getter-based substitutions from the sub-experiment (if any)
             //applyValueGettersToContainer(config);
 
-            control = new DescriptionControlModel
+            control = new ControlModelDescription
             {
                 // The environment that the current model is being run in
                 environment = "nupic",
 
                 // Input stream specification per py/nupicengine/cluster/database/StreamDef.json.
                 //
-                dataset = new Map<string, object>
+                dataset = new StreamDef
                 {
-                    { "info", "test_NoProviders"},
-                    {"streams", new Map<string, object>
+                    info = "test_NoProviders",
+                    streams = new StreamDef.StreamItem[]
+                    {
+                        new StreamDef.StreamItem
                         {
-                            { "columns", new[] {"*"}},
-                            { "info", "test data"},
-                            { "source", "test_data.csv"}
+                            columns = new[] {"*"},
+                            info = "test data",
+                            source = "test_data.csv"
                         }
-                    },
-                    {"version", 1}
+                    }
                 },
+
 
 
                 // Iteration count: maximum number of iterations.  Each iteration corresponds
@@ -363,11 +364,11 @@ namespace HTM.Net.Research.Tests.Swarming
                 // computed for this experiment
                 metrics = new[] { new MetricSpec(field: "consumption", inferenceElement: InferenceElement.Prediction, metric: "rmse") },
 
-                inferenceArgs = new Map<string, object>
+                inferenceArgs = new InferenceArgsDescription
                 {
-                    {"inputPredictedField", "auto" },
-                    {"predictedField", "consumption" },
-                    {"predictionSteps", new[] {1} },
+                    inputPredictedField = InputPredictedField.auto,
+                    predictedField = "consumption",
+                    predictionSteps = new[] { 1 }
                 },
 
                 // Logged Metrics: A sequence of regular expressions that specify which of
@@ -379,7 +380,7 @@ namespace HTM.Net.Research.Tests.Swarming
             };
         }
 
-        public void updateConfigFromSubConfig(DescriptionConfigModel config)
+        public void updateConfigFromSubConfig(ConfigModelDescription config)
         {
 
         }
@@ -396,8 +397,8 @@ namespace HTM.Net.Research.Tests.Swarming
             Parameters p = Parameters.GetAllDefaultParameters();
 
             // Spatial pooling parameters
-            SpatialParamsDescr spParams = this.modelConfig.modelParams.spParams;
-            TemporalParamsDescr tpParams = this.modelConfig.modelParams.tpParams;
+            var spParams = this.modelConfig.modelParams.spParams;
+            var tpParams = this.modelConfig.modelParams.tpParams;
 
             Parameters.ApplyParametersFromDescription(spParams, p);
             Parameters.ApplyParametersFromDescription(tpParams, p);
@@ -405,7 +406,7 @@ namespace HTM.Net.Research.Tests.Swarming
             return p;
         }
 
-        public override IDescription Clone()
+        public IDescription Clone()
         {
             return new SimpleV2DescriptionFile();
         }

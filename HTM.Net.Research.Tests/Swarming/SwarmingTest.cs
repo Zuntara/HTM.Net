@@ -144,7 +144,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// </param>
         /// <param name="maxRecords"></param>
         /// <returns></returns>
-        protected Map<string, object> _generateHSJobParams(Tuple<DescriptionBase, PermutionFilterBase> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
+        protected Map<string, object> _generateHSJobParams(Tuple<BaseDescription, BasePermutations> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
                            int? predictionCacheMaxRecords = null, string dataPath = null, int? maxRecords = 10)
         {
             Map<string, object> jobParams = null;
@@ -396,7 +396,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// the prediction cache.</param>
         /// <param name="kwargs"></param>
         /// <returns>(jobID, jobInfo, resultsInfoForAllModels, metricResults, minErrScore)</returns>
-        public PermutationsLocalResult RunPermutations(Tuple<DescriptionBase, PermutionFilterBase> expDirectory, string hsImp = "v2", int? maxModels = 2,
+        public PermutationsLocalResult RunPermutations(Tuple<BaseDescription, BasePermutations> expDirectory, string hsImp = "v2", int? maxModels = 2,
                       int maxNumWorkers = 4, bool onCluster = false, bool waitForCompletion = true,
                       int? continueJobId = null, string dataPath = null, int? maxRecords = null,
                       int? timeoutSec = null, bool ignoreErrModels = false,
@@ -552,7 +552,7 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestSimpleV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
         {
             //this._printTestHeader();
-            var expDir = new Tuple<DescriptionBase, PermutionFilterBase>(
+            var expDir = new Tuple<BaseDescription, BasePermutations>(
                 new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
             // Test it out
             //if (env is None)
@@ -592,7 +592,7 @@ namespace HTM.Net.Research.Tests.Swarming
         //[DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSpatialClassification()
         {
-            var expDir = new Tuple<DescriptionBase, PermutionFilterBase>(
+            var expDir = new Tuple<BaseDescription, BasePermutations>(
                 new SpatialClassificationDescriptionFile(), new SpatialClassificationPermutationsFile());
             // spatial_classification
             var permutationResult = this.RunPermutations(expDirectory: expDir,
@@ -676,7 +676,7 @@ namespace HTM.Net.Research.Tests.Swarming
             SimpleV2PermutationsFile file = new SimpleV2PermutationsFile();
 
             string json = Json.Serialize(file);
-            var deserialized = Json.Deserialize<PermutionFilterBase>(json);
+            var deserialized = Json.Deserialize<BasePermutations>(json);
             Assert.IsNotNull(deserialized);
             Assert.IsInstanceOfType(deserialized, typeof(SimpleV2PermutationsFile));
 
@@ -691,7 +691,7 @@ namespace HTM.Net.Research.Tests.Swarming
         [TestMethod]
         public void TestParamsDeserialisation()
         {
-            var expDir = new Tuple<DescriptionBase, PermutionFilterBase>(
+            var expDir = new Tuple<BaseDescription, BasePermutations>(
                 new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
 
             var jobParamsDict = this._generateHSJobParams(expDirectory: expDir,hsImp: "v2");

@@ -9,6 +9,9 @@ using Newtonsoft.Json.Linq;
 
 namespace HTM.Net.Research.Swarming
 {
+    // TODO:  PermutationTemporalPoolerParams  >  let float, double, int be assignable to a permute-variable, lock the variable to the type then.
+    // now we have to put object on the props instead of a type.
+
     /// <summary>
     /// "The base class of all PermuteXXX classes that can be used from within a permutation script.
     /// </summary>
@@ -609,7 +612,7 @@ namespace HTM.Net.Research.Swarming
         [Obsolete("Don' use")]
         public PermuteEncoder()
         {
-
+            kwArgs = new KWArgsModel();
         }
         public PermuteEncoder(string fieldName, string encoderClass, string name = null, KWArgsModel kwArgs = null)
         {
@@ -718,10 +721,10 @@ namespace HTM.Net.Research.Swarming
             }
 
             PermuteEncoder pe = new PermuteEncoder(fieldName, (string)encoder["type"], name, args);
-            pe.maxval = encoder.Get("maxval");
-            pe.minval = encoder.Get("minval");
-            pe.n = encoder["n"];
-            pe.w = encoder["w"];
+            pe.maxval = encoder.Get("maxval", this.maxval);
+            pe.minval = encoder.Get("minval", this.minval);
+            pe.n = encoder.Get("n", this.n);
+            pe.w = encoder.Get("w", this.w);
             return pe;
         }
     }

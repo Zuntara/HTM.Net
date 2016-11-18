@@ -9,7 +9,7 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Swarming.Descriptions
 {
-    public interface IDescription
+    public interface IDescription2
     {
         string Type { get; set; }
 
@@ -25,7 +25,7 @@ namespace HTM.Net.Research.Swarming.Descriptions
     }
 
     [JsonConverter(typeof(TypedDescriptionBaseJsonConverter))]
-    public abstract class DescriptionBase : IDescription
+    public abstract class DescriptionBase : IDescription2
     {
         protected DescriptionBase()
         {

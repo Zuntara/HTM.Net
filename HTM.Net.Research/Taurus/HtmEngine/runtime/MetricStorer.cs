@@ -5,7 +5,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
+using HTM.Net.Research.Data;
+using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Taurus.HtmEngine.Adapters;
 using HTM.Net.Research.Taurus.HtmEngine.Repository;
@@ -26,10 +29,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// Generate parameters for creating a model
         /// </summary>
         /// <param name="stats">dict with "min", "max" and optional "minResolution"; values must be integer, float or null.</param>
+        /// <param name="classifierEnabled"> A Boolean value to be given to the 'clEnable'
+        /// property of 'modelParams'. As the classifier generates multi-step best
+        /// predictions, setting this value to True will allow multi-step best
+        /// predictions to be populated in the metric_data table for the associated
+        /// metric of the model.</param>
         /// <returns>if either minVal or maxVal is None, returns None; otherwise returns
         /// swarmParams object that is suitable for passing to startMonitoring and
         /// startModel</returns>
-        public static BestSingleMetricAnomalyParamsDescription GenerateSwarmParams(MetricStatistic stats)
+        public static IDescription GenerateSwarmParams(MetricStatistic stats, bool classifierEnabled = false)
         {
             var minVal = stats.Min;
             var maxVal = stats.Max;
@@ -39,14 +47,16 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 return null;
             }
             // Create possible swarm parameters based on metric data
-            BestSingleMetricAnomalyParamsDescription swarmParams =
+            IDescription swarmParams =
                 GetScalarMetricWithTimeOfDayAnomalyParams(metricData: new[] { 0 }, minVal: minVal, maxVal: maxVal, minResolution: minResolution);
 
+            swarmParams.modelConfig.modelParams.clEnable = classifierEnabled;
+
             // 
-            swarmParams.inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
+            swarmParams.modelConfig.inputRecordSchema = new[]
             {
-                {"c0", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp )} ,
-                {"c1", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank ) },
+                new FieldMetaInfo("c0", FieldMetaType.DateTime, SensorFlags.Timestamp),
+                new FieldMetaInfo("c1", FieldMetaType.Float, SensorFlags.Blank)
             };
             /*
              swarmParams["inputRecordSchema"] = (
@@ -91,7 +101,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         ///  model.enableLearning()
         ///  model.enableInference(params["inferenceArgs"])
         /// </remarks>
-        private static BestSingleMetricAnomalyParamsDescription GetScalarMetricWithTimeOfDayAnomalyParams(int[] metricData, double? minVal, double? maxVal, double? minResolution)
+        private static IDescription GetScalarMetricWithTimeOfDayAnomalyParams(int[] metricData, double? minVal, double? maxVal, double? minResolution)
         {
             // Default values
             if (!minResolution.HasValue) minResolution = 0.001;
@@ -154,7 +164,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             {
                 if (encoder != null)
                 {
-                    if (encoder["type"] == "RandomDistributedScalarEncoder")
+                    if ((string)encoder["type"] == "RandomDistributedScalarEncoder")
                     {
                         var resolution = Math.Max(minResolution.Value,
                             (maxVal.Value - minVal.Value) / (double)encoder["numBuckets"]);
@@ -174,7 +184,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// <param name="swarmParams">swarmParams generated via scalar_metric_utils.generateSwarmParams() or None.</param>
         /// <param name="logger">logger object</param>
         /// <returns> True if model was started; False if not</returns>
-        public static bool StartMonitoring(string metricId, BestSingleMetricAnomalyParamsDescription swarmParams, ILog logger)
+        public static bool StartMonitoring(string metricId, IDescription swarmParams, ILog logger)
         {
             bool modelStarted = false;
             DateTime startTime = DateTime.Now;
@@ -239,10 +249,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 new Map<string, object>
                 {
                     {"status", MetricStatus.CreatePending},
-                    {"modelParams", JsonConvert.SerializeObject(swarmParams, new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    })}
+                    {"modelParams", Json.Serialize(swarmParams)}
                 });
 
             metricObj = RepositoryFactory.Metric.GetMetric(metricObj.Uid);
