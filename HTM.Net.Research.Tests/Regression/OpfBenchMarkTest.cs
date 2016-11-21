@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
@@ -43,11 +44,32 @@ namespace HTM.Net.Research.Tests.Regression
         public void RunSineOpf()
         {
             var config = BenchMarkSine();
-            config.maxModels = 2;
+            config.maxModels = 1;
 
-            PermutationModelParameters result = PermutationsRunner.RunWithConfig(config, null);
+            uint pr = PermutationsRunner.RunWithConfig(config, null);
+            var resultsDict = getResultsFromJobDB(pr);
 
-            Assert.IsNotNull(result, "no results found!");
+            Assert.IsNotNull(resultsDict, "no results found!");
+
+            Debug.WriteLine("RESULTS:");
+            Debug.WriteLine("");
+
+            foreach (var pair in resultsDict)
+            {
+                Debug.WriteLine($"Key     : {pair.Key}");
+                Debug.WriteLine($"  Value : {pair.Value}");
+            }
+        }
+
+        private Dictionary<string, object> getResultsFromJobDB(uint jobId)
+        {
+            var jobsDb = BaseClientJobDao.Create();
+            var jobInfo = jobsDb.jobInfo(jobId);
+            var res = jobInfo["results"] as string;
+            var results = Json.Deserialize<Dictionary<string, object>>(res);
+            var bestModel = results["bestModel"];
+
+            return results;
         }
 
 

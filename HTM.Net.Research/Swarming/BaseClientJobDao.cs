@@ -1364,7 +1364,7 @@ namespace HTM.Net.Research.Swarming
         public bool cancel { get; set; }
         public DateTime start_time { get; set; }
         public DateTime end_time { get; set; }
-        public string results { get; set; }
+        public string results { get; set; } // Dictionary<string,object> json
         [MaxLength(32)]
         public string _eng_job_type { get; set; }
         public int minimum_workers { get; set; }

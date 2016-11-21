@@ -36,7 +36,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
             report = new[] { ".*consumption.*" };
             minimize = "prediction:rmse:field=consumption";
-
+            
         }
 
         #region Implementation of IPermutionFilter

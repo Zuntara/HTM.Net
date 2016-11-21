@@ -32,7 +32,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="permWorkDir">Optional location of working directory (defaults to current working directory).</param>
         /// <param name="verbosity">Optional (1,2,3) increasing verbosity of output.</param>
         /// <returns> Model parameters</returns>
-        public static PermutationModelParameters RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options, string outDir = null, string outputLabel = "default",
+        public static uint RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options, string outDir = null, string outputLabel = "default",
             string permWorkDir = null, int verbosity = 1)
         {
             if (options == null) options = new Map<string, object>();
@@ -43,13 +43,13 @@ namespace HTM.Net.Research.Swarming
             return _runAction(options, exp);
         }
 
-        private static PermutationModelParameters _runAction(Map<string, object> options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private static uint _runAction(Map<string, object> options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
         {
             var returnValue = _runHyperSearch(options, exp);
             return returnValue;
         }
 
-        private static PermutationModelParameters _runHyperSearch(Map<string, object> runOptions, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ClaExperimentDescription, ClaPermutations> exp)
         {
             var search = new HyperSearchRunner(runOptions);
             // Save in global for the signal handler.
@@ -58,13 +58,13 @@ namespace HTM.Net.Research.Swarming
             // no options => just run
             search.runNewSearch(exp);
 
-            var modelParams = HyperSearchRunner.generateReport(
-                options: runOptions,
-                replaceReport: false,
-                hyperSearchJob: search.peekSearchJob(),
-                metricsKeys: search.getDiscoveredMetricKeys());
+            //var modelParams = HyperSearchRunner.generateReport(
+            //    options: runOptions,
+            //    replaceReport: false,
+            //    hyperSearchJob: search.peekSearchJob(),
+            //    metricsKeys: search.getDiscoveredMetricKeys());
 
-            return modelParams;
+            return search.peekSearchJob().getJobId().GetValueOrDefault();
         }
 
         private static Tuple<ClaExperimentDescription, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
