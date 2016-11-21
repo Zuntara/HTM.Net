@@ -236,10 +236,10 @@ namespace HTM.Net.Research.Swarming
 
     public class VarState
     {
-        public int position;
-        public double _position;
+        public int? position;
+        public double? _position;
         public double? velocity;
-        public double bestPosition;
+        public double? bestPosition;
         public double? bestResult;
 
         public VarState Clone()
@@ -725,7 +725,7 @@ namespace HTM.Net.Research.Swarming
                 double? bestScore = double.PositiveInfinity;
 
                 //for (i, (modelId, errScore)) in enumerate(genScores)
-                for(int i=0 ; i < genScores.Count; i++)
+                for (int i = 0; i < genScores.Count; i++)
                 //foreach (var item in genScores)
                 {
                     var modelId = genScores[i].Item1;
@@ -1296,7 +1296,7 @@ namespace HTM.Net.Research.Swarming
                         var otherPositions = new List<double>();
                         foreach (var particleState in newFarFrom)
                         {
-                            otherPositions.Add(particleState.varStates[varName].position);
+                            otherPositions.Add(particleState.varStates[varName].position.GetValueOrDefault());
                         }
                         this.permuteVars[varName].pushAwayFrom(otherPositions, this._rng);
 
@@ -1665,7 +1665,7 @@ namespace HTM.Net.Research.Swarming
             foreach (var pair in pState.varStates)
             //for (varName, value) in pState["varStates"].iteritems()
             {
-                result[pair.Key] = pair.Value.position;
+                result[pair.Key] = pair.Value.position.GetValueOrDefault();
             }
 
             return result;
@@ -2026,21 +2026,21 @@ namespace HTM.Net.Research.Swarming
         /// Dictionary where the keys are the field names and the values
         /// are how much each field contributed to the best score.
         /// </returns>
-        public Tuple<Dictionary<string, double>, Dictionary<string, double>> getFieldContributions()
+        public Tuple<Map<string, double>, Map<string, double>> getFieldContributions()
         {
             // in the fast swarm, there is only 1 sprint and field contributions are
             // not defined
             if (this._hsObj._fixedFields != null)
             {
-                return new Tuple<Dictionary<string, double>, Dictionary<string, double>>(
-                    new Dictionary<string, double>(), new Dictionary<string, double>());
+                return new Tuple<Map<string, double>, Map<string, double>>(
+                    new Map<string, double>(), new Map<string, double>());
             }
             // Get the predicted field encoder name
             string predictedEncoderName = this._hsObj._predictedFieldEncoder;
 
             // -----------------------------------------------------------------------
             // Collect all the single field scores
-            Dictionary<double?, string> fieldScores = new Dictionary<double?, string>();
+            List<Tuple<double?, string>> fieldScores = new List<Tuple<double?, string>>();
             //for (swarmId, info in this._state["swarms"].iteritems())
             foreach (var state in this._state.swarms)
             {
@@ -2065,7 +2065,7 @@ namespace HTM.Net.Research.Swarming
                     bestScore = tuple.Item2;
                 }
 
-                fieldScores.Add(bestScore, field);
+                fieldScores.Add(new Tuple<double?, string>(bestScore, field));
             }
 
 
@@ -2079,8 +2079,8 @@ namespace HTM.Net.Research.Swarming
                 Debug.Assert(fieldScores.Count == 1);
                 //(baseErrScore, baseField) = fieldScores[0];
                 var fieldScoreEl = fieldScores.ElementAt(0);
-                baseErrScore = fieldScoreEl.Key;
-                baseField = fieldScoreEl.Value;
+                baseErrScore = fieldScoreEl.Item1;
+                baseField = fieldScoreEl.Item2;
                 foreach (var state in this._state.swarms)
                 {
                     string swarmId = state.Key;
@@ -2095,7 +2095,7 @@ namespace HTM.Net.Research.Swarming
                     //[this.getEncoderNameFromKey(name) for name in encodersUsed];
                     fields.Remove(baseField);
 
-                    fieldScores.Add(info.bestErrScore, fields[0]);
+                    fieldScores.Add(new Tuple<double?, string>(info.bestErrScore, fields[0]));
                 }
             }
 
@@ -2104,25 +2104,25 @@ namespace HTM.Net.Research.Swarming
             else
             {
                 //fieldScores.Sort(reverse = true);
-                fieldScores = fieldScores.OrderByDescending(fs => fs.Key).ToDictionary(k => k.Key, v => v.Value);
+                fieldScores = fieldScores.OrderByDescending(fs => fs.Item1).ToList();
                 // If maxBranching was specified, pick the worst performing field within
                 //  the top maxBranching+1 fields as our base, which will give that field
                 //  a contribution of 0.
                 if (this._hsObj._maxBranching > 0 && fieldScores.Count > this._hsObj._maxBranching)
                 {
-                    baseErrScore = fieldScores[-this._hsObj._maxBranching - 1][0];
+                    baseErrScore = fieldScores[-this._hsObj._maxBranching - 1].Item1;
                 }
                 else
                 {
-                    baseErrScore = fieldScores[0][0];
+                    baseErrScore = fieldScores[0].Item1;
                 }
             }
 
 
             // -----------------------------------------------------------------------
             // Prepare and return the fieldContributions dict
-            var pctFieldContributionsDict = new Dictionary<string, double>();
-            var absFieldContributionsDict = new Dictionary<string, double>();
+            var pctFieldContributionsDict = new Map<string, double>();
+            var absFieldContributionsDict = new Map<string, double>();
 
             // If we have no base score, can't compute field contributions. This can
             //  happen when we exit early due to maxModels or being cancelled
@@ -2138,8 +2138,8 @@ namespace HTM.Net.Research.Swarming
                 //for (errScore, field) in fieldScores
                 foreach (var fieldScore in fieldScores)
                 {
-                    double? errScore = fieldScore.Key;
-                    string field = fieldScore.Value;
+                    double? errScore = fieldScore.Item1;
+                    string field = fieldScore.Item2;
 
                     double pctBetter = 0;
                     if (errScore != null)
@@ -2159,7 +2159,7 @@ namespace HTM.Net.Research.Swarming
 
             this.logger.Debug(string.Format("FieldContributions: {0}", pctFieldContributionsDict));
             //return pctFieldContributionsDict, absFieldContributionsDict;
-            return new Tuple<Dictionary<string, double>, Dictionary<string, double>>(
+            return new Tuple<Map<string, double>, Map<string, double>>(
                 pctFieldContributionsDict, absFieldContributionsDict);
         }
 
@@ -3122,12 +3122,12 @@ namespace HTM.Net.Research.Swarming
         public string hsVersion = "v2";
         public BaseDescription descriptionPyContents;
 
-        public void Populate(Map<string,object> jobParamsMap)
+        public void Populate(Map<string, object> jobParamsMap)
         {
             this.persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
             this.descriptionPyContents = (BaseDescription)jobParamsMap["descriptionPyContents"];
             this.permutationsPyContents = (BasePermutations)jobParamsMap["permutationsPyContents"];
-            this.maxModels = TypeConverter.Convert<int?>(jobParamsMap["maxModels"]);
+            this.maxModels = TypeConverter.Convert<int?>(jobParamsMap.Get("maxModels"));
             this.hsVersion = (string)jobParamsMap["hsVersion"];
         }
     }
@@ -3899,16 +3899,16 @@ namespace HTM.Net.Research.Swarming
             {
                 // If it does not have a separate encoder for the predicted field that
                 //  goes to the classifier, it is a legacy multi-step network
-                PermuteEncoder classifierOnlyEncoder = null;
-                throw new NotImplementedException("Check lines under");
-                //foreach (PermuteEncoder encoder in modelDescription.modelParams.sensorParams.encoders.Values)
-                //{
-                //    if (((bool?)encoder["classifierOnly"]).GetValueOrDefault() && encoder.fieldName == permFile.predictedField)
-                //    {
-                //        classifierOnlyEncoder = encoder;
-                //        break;
-                //    }
-                //}
+                Map<string, object> classifierOnlyEncoder = null;
+
+                foreach (var encoder in modelDescription.modelParams.sensorParams.encoders.Values)
+                {
+                    if ((bool)encoder.Get("classifierOnly", false) && (string)encoder["fieldName"] == permFile.predictedField)
+                    {
+                        classifierOnlyEncoder = encoder;
+                        break;
+                    }
+                }
 
                 if (classifierOnlyEncoder == null || this._inputPredictedField == InputPredictedField.yes)
                 {
@@ -4687,7 +4687,7 @@ namespace HTM.Net.Research.Swarming
                 var swarmSizes = swarmIds.Select(x => _resultsDB.numModels(x)).ToArray();
                 var swarmSizeAndIdList = ArrayUtils.Zip(swarmSizes, swarmIds);
                 //swarmSizeAndIdList.Sort();
-                swarmSizeAndIdList = swarmSizeAndIdList.OrderBy(t=> (int)t.Get(0)).ToList();
+                swarmSizeAndIdList = swarmSizeAndIdList.OrderBy(t => (int)t.Get(0)).ToList();
                 foreach (var pair in swarmSizeAndIdList)
                 {
                     string swarmId = (string)pair.Item2;
@@ -5426,7 +5426,7 @@ namespace HTM.Net.Research.Swarming
             catch (Exception e)
             {
                 this.logger.Warn(e);
-                if(Debugger.IsAttached) Debugger.Break();
+                if (Debugger.IsAttached) Debugger.Break();
                 throw;
             }
         }

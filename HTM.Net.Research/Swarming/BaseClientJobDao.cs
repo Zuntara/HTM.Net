@@ -637,6 +637,11 @@ namespace HTM.Net.Research.Swarming
         {
             throw new NotImplementedException();
         }
+
+        public virtual List<ModelTable> modelsInfo(List<ulong> modelIDs)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MemoryClientJobDao : BaseClientJobDao
@@ -761,7 +766,7 @@ namespace HTM.Net.Research.Swarming
         {
             Debug.Assert(modelIDs.Count >= 1, "modelIDs is empty");
 
-            List<ResultAndStatusModel> rows = _getMatchingRowsWithEntries(Models, m => modelIDs.Contains(m.model_id),
+            List<ResultAndStatusModel> rows = _getMatchingRowsWithRetries(Models, m => modelIDs.Contains(m.model_id),
                 m => new ResultAndStatusModel
                 {
                     modelId = m.model_id,
@@ -790,7 +795,7 @@ namespace HTM.Net.Research.Swarming
 
         public override List<NamedTuple> modelsGetParams(List<ulong> newModelIDs)
         {
-            var rows = _getMatchingRowsWithEntries(Models, m => newModelIDs.Contains(m.model_id),
+            var rows = _getMatchingRowsWithRetries(Models, m => newModelIDs.Contains(m.model_id),
                 m => new NamedTuple(new[] {"modelId", "params", "engParamsHash"},
                     new object[] { m.model_id, m.@params, m._eng_params_hash}));
 
@@ -829,6 +834,10 @@ namespace HTM.Net.Research.Swarming
                 {
                     model.model_checkpoint_id = (string) fieldPair.Value;
                 }
+                if (fieldPair.Key == "genDescription")
+                {
+                    model.gen_description = (string) fieldPair.Value;
+                }
             }
             
         }
@@ -841,6 +850,12 @@ namespace HTM.Net.Research.Swarming
                 throw new ArgumentOutOfRangeException("jobId", "no such job found");
             }
             return job.ToNamedTuple();
+        }
+
+        public override List<ModelTable> modelsInfo(List<ulong> modelIDs)
+        {
+            var rows = _getMatchingRowsWithRetries(Models, m => modelIDs.Contains(m.model_id), mt=>mt);
+            return rows;
         }
 
         public override string getConnectionID()
@@ -1197,7 +1212,7 @@ namespace HTM.Net.Research.Swarming
 
         #endregion
 
-        private List<T> _getMatchingRowsWithEntries<T>(List<ModelTable> models, Func<ModelTable, bool> fieldsToMatch, Func<ModelTable, T> selectFieldNames, 
+        private List<T> _getMatchingRowsWithRetries<T>(List<ModelTable> models, Func<ModelTable, bool> fieldsToMatch, Func<ModelTable, T> selectFieldNames, 
             int? maxRows = null)
         {
             try
@@ -1409,11 +1424,11 @@ namespace HTM.Net.Research.Swarming
         }
         public ulong model_id { get; set; }
         public uint job_id { get; set; }
-        public string @params { get; set; }
+        public string @params { get; set; } // ModelParams serialized
         public string status { get; set; }
         public string completion_reason { get; set; }
         public string completion_msg { get; set; }
-        public string results { get; set; }
+        public string results { get; set; } // Tuple serialized - Map<string,double?> /  Map<string,double?>
         public double? optimized_metric { get; set; }
         public uint update_counter { get; set; }
         public uint num_records { get; set; }

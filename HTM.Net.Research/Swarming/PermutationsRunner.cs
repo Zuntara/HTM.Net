@@ -1,9 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
@@ -29,21 +32,24 @@ namespace HTM.Net.Research.Swarming
         /// <param name="permWorkDir">Optional location of working directory (defaults to current working directory).</param>
         /// <param name="verbosity">Optional (1,2,3) increasing verbosity of output.</param>
         /// <returns> Model parameters</returns>
-        public static ConfigModelDescription RunWithConfig(SwarmDefinition swarmConfig, object options, string outDir = null, string outputLabel = "default",
+        public static PermutationModelParameters RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options, string outDir = null, string outputLabel = "default",
             string permWorkDir = null, int verbosity = 1)
         {
+            if (options == null) options = new Map<string, object>();
+            options["searchMethod"] = "v2";
+
             var exp = _generateExpFilesFromSwarmDescription(swarmConfig, outDir);
 
             return _runAction(options, exp);
         }
 
-        private static ConfigModelDescription _runAction(object options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private static PermutationModelParameters _runAction(Map<string, object> options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
         {
             var returnValue = _runHyperSearch(options, exp);
             return returnValue;
         }
 
-        private static ConfigModelDescription _runHyperSearch(object runOptions, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private static PermutationModelParameters _runHyperSearch(Map<string, object> runOptions, Tuple<ClaExperimentDescription, ClaPermutations> exp)
         {
             var search = new HyperSearchRunner(runOptions);
             // Save in global for the signal handler.
@@ -53,10 +59,10 @@ namespace HTM.Net.Research.Swarming
             search.runNewSearch(exp);
 
             var modelParams = HyperSearchRunner.generateReport(
-                runOptions: runOptions,
-                replaceReports: false,
+                options: runOptions,
+                replaceReport: false,
                 hyperSearchJob: search.peekSearchJob(),
-                metricKeys: search.getDiscoveredMetricKeys());
+                metricsKeys: search.getDiscoveredMetricKeys());
 
             return modelParams;
         }
@@ -73,12 +79,12 @@ namespace HTM.Net.Research.Swarming
     internal class HyperSearchRunner
     {
         private BaseClientJobDao __cjDAO;
-        private object _options;
+        private Map<string, object> _options;
         private HyperSearchJob __searchJob;
         private HashSet<string> __foundMetrcsKeySet;
         private Task[] _workers;
 
-        public HyperSearchRunner(object options)
+        public HyperSearchRunner(Map<string, object> options)
         {
             __cjDAO = BaseClientJobDao.Create();
             _options = options;
@@ -125,24 +131,160 @@ namespace HTM.Net.Research.Swarming
 
         private void monitorSearchJob()
         {
-            throw new NotImplementedException();
+            //Debug.Assert(__searchJob != null);
+            //var jobId = __searchJob.getJobId();
+            //DateTime startTime = DateTime.Now;
+            //DateTime lastUpdateTime = startTime;
+
+            //// Monitor HyperSearch and report progress
+            //int expectedNumModels = __searchJob.getExpectedNumModels(searchMethod: _options["searchMethod"] as string);
+            //int lastNumFinished = 0;
+            //HashSet<int> finishedModelIDs = new HashSet<int>();
+            //var finishedModelStats = _ModelStats();
+
+            //// Keep track of the worker state, results, and milestones from the job record.
+            //var lastWorkerState = null;
+            //var lastJobResults = null;
+            //var lastModelMilestones = null;
+            //var lastEngStatus = null;
+            //bool hyperSearchFinished = false;
+
+            //while (!hyperSearchFinished)
+            //{
+            //    JobStatus jobInfo = __searchJob.getJobStatus(_workers);
+
+            //    // Check for job completion BEFORE processing models; NOTE: this permits us
+            //    // to process any models that we may not have accounted for in the
+            //    // previous iteration.
+            //    hyperSearchFinished = jobInfo.isFinished();
+
+            //    // Look for newly completed models, and process them
+            //    var modelIDs = __searchJob.queryModelIDs();
+            //    Debug.WriteLine($"Current number of models is {modelIDs.Count} ({finishedModelIDs.Count} of them completed)");
+
+            //    if (modelIDs.Count > 0)
+            //    {
+
+            //    }
+            //}
         }
 
 
-
-        public static ConfigModelDescription generateReport(object runOptions, bool replaceReports, object hyperSearchJob, object metricKeys)
+        /// <summary>
+        /// Prints all available results in the given HyperSearch job and emits
+        /// model information to the permutations report csv.
+        /// </summary>
+        /// <param name="options">NupicRunPermutations options dict</param>
+        /// <param name="replaceReport"></param>
+        /// <param name="hyperSearchJob"></param>
+        /// <param name="metricKeys"></param>
+        /// <returns></returns>
+        public static PermutationModelParameters generateReport(Map<string, object> options, bool replaceReport, HyperSearchJob hyperSearchJob,
+            HashSet<string> metricsKeys)
         {
-            throw new NotImplementedException();
+            if (hyperSearchJob == null)
+            {
+                throw new NotImplementedException("No support for loading last jobs yet.");
+            }
+
+            var modelIDs = hyperSearchJob.queryModelIDs();
+            int? bestModel = null;
+
+            // If metricsKeys was not provided, pre-scan modelInfos to create the list;
+            // this is needed by _ReportCSVWriter
+            // Also scan the parameters to generate a list of encoders and search
+            // parameters
+            HashSet<string> metricstmp = new HashSet<string>();
+            HashSet<string> searchVar = new HashSet<string>();
+            foreach (_NupicModelInfo modelInfo in _iterModels(modelIDs))
+            {
+                if (modelInfo.isFinished())
+                {
+                    var vars = modelInfo.getParamLabels().Keys;
+                    searchVar.UnionWith(vars);
+                    var metrics = modelInfo.getReportMetrics();
+                    metricstmp.UnionWith(metrics.Keys);
+                }
+            }
+            if (metricsKeys == null)
+            {
+                metricsKeys = metricstmp;
+            }
+            // Create a csv report writer
+            //var reportWriter = new _ReportCSVWriter(hyperSearchJob: hyperSearchJob,
+            //    metricsKeys: metricsKeys,
+            //    searchVar: searchVar,
+            //    outputDirAbsPath: options.Get("permWorkDir") as string,
+            //    outputLabel: options.Get("outputLabel") as string,
+            //    replaceReport: replaceReport);
+
+            // Tallies of experiment dispositions
+            var modelStats = new ModelStats();
+
+            Console.WriteLine("\nResults from all experiments:");
+            Console.WriteLine("----------------------------------------------------------------");
+
+            // Get common optimization metric info from permutations script
+            //var searchParams = hyperSearchJob.getParams();
+            int i = 0;
+            PermutationModelParameters lastModel = null;
+            foreach (_NupicModelInfo modelInfo in _iterModels(modelIDs))
+            {
+                Console.WriteLine("modelInfo:\n" + modelInfo);
+
+                var genDescrFile = modelInfo.getGeneratedDescriptionFile();
+                Console.WriteLine("genDescrFile:\n" + genDescrFile);
+                lastModel = Json.Deserialize<PermutationModelParameters>(genDescrFile);
+                i++;
+            }
+            return lastModel;
         }
 
-        public object peekSearchJob()
+        private static IEnumerable<_NupicModelInfo> _iterModels(List<ulong> modelIDs)
         {
-            throw new NotImplementedException();
+            var modelInfos = BaseClientJobDao.Create().modelsInfo(modelIDs);
+            foreach (var modelID in modelIDs)
+            {
+                ModelTable rawInfo = modelInfos.Single(mi => mi.model_id == modelID);
+                yield return new _NupicModelInfo(rawInfo);
+            }
         }
 
-        public object getDiscoveredMetricKeys()
+        public HyperSearchJob peekSearchJob()
         {
-            throw new NotImplementedException();
+            Debug.Assert(__searchJob != null);
+            return __searchJob;
+        }
+
+        public HashSet<string> getDiscoveredMetricKeys()
+        {
+            return __foundMetrcsKeySet;
+        }
+    }
+
+    internal class _ReportCSVWriter
+    {
+        private HyperSearchJob __searchJob;
+        private uint? __searchJobID;
+        private List<string> __sortedMetricsKeys;
+        private string __outputDirAbsPath;
+        private string __outputLabel;
+        private bool __replaceReport;
+        private HashSet<string> __sortedVariableNames;
+
+        public _ReportCSVWriter(HyperSearchJob hyperSearchJob, HashSet<string> metricsKeys, HashSet<string> searchVar, string outputDirAbsPath, string outputLabel, bool replaceReport)
+        {
+            __searchJob = hyperSearchJob;
+            __searchJobID = hyperSearchJob.getJobId();
+            __sortedMetricsKeys = metricsKeys.OrderBy(k => k).ToList();
+            __outputDirAbsPath = Path.GetFullPath(outputDirAbsPath);
+            __outputLabel = outputLabel;
+            __replaceReport = replaceReport;
+            __sortedVariableNames = searchVar;
+            // These are set up by __openAndInitCSVFile
+            //__csvFileObj = null;
+            //__reportCSVPath = null;
+            //__backupCSVPath = null;
         }
     }
 
@@ -151,12 +293,12 @@ namespace HTM.Net.Research.Swarming
         public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
         {
             string hsVersion = "v2";
-            int maxModels = 1;
+            //int maxModels = 1;
 
             var @params = new Map<string, object>
             {
                 {"hsVersion", hsVersion },
-                {"maxModels", maxModels },
+                //{"maxModels", maxModels },
             };
             @params["persistentJobGUID"] = Guid.NewGuid().ToString().Replace("-", "");
 
@@ -167,12 +309,14 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
+
+
     /// <summary>
     /// Our Nupic Job abstraction
     /// </summary>
     internal abstract class NuPicJob
     {
-        private uint? __nupicJobID;
+        protected uint? __nupicJobID;
         private Map<string, object> __params;
 
         public NuPicJob(uint? nupicJobID)
@@ -191,6 +335,216 @@ namespace HTM.Net.Research.Swarming
         {
 
         }
+
+        public uint? getJobId()
+        {
+            return base.__nupicJobID;
+        }
+
+        public int getExpectedNumModels(string searchMethod)
+        {
+            throw new NotImplementedException();
+        }
+
+        public JobStatus getJobStatus(Task[] workers)
+        {
+            var jobInfo = new JobStatus(__nupicJobID, workers);
+            return jobInfo;
+        }
+
+        public List<ulong> queryModelIDs()
+        {
+            uint? jobId = getJobId();
+            List<Tuple<ulong, uint>> modelCOunterPairs = BaseClientJobDao.Create().modelsGetUpdateCounters(jobId);
+            var modelIDs = modelCOunterPairs.Select(x => x.Item1).ToList();
+            return modelIDs;
+        }
+    }
+
+    internal class JobStatus
+    {
+        private NamedTuple __jobInfo;
+
+        public JobStatus(uint? nupicJobID, Task[] workers)
+        {
+            NamedTuple jobInfo = BaseClientJobDao.Create().jobInfo(nupicJobID);
+
+            if (workers != null)
+            {
+                int runningCount = 0;
+                foreach (var worker in workers)
+                {
+                    var state = worker.Status;
+                    if (state == TaskStatus.Running)
+                        runningCount += 1;
+                }
+                string status;
+                if (runningCount > 0)
+                {
+                    status = BaseClientJobDao.STATUS_RUNNING;
+                }
+                else
+                {
+                    status = BaseClientJobDao.STATUS_COMPLETED;
+                }
+                jobInfo["status"] = status;
+            }
+            __jobInfo = jobInfo;
+        }
+
+        public string statusAsString()
+        {
+            return __jobInfo["status"] as string;
+        }
+
+        public bool isFinished()
+        {
+            bool done = (string)__jobInfo["status"] == BaseClientJobDao.STATUS_NOTSTARTED;
+            return done;
+        }
+    }
+
+    /// <summary>
+    /// This class represents information obtained from ClientJobManager about a model
+    /// </summary>
+    internal class _NupicModelInfo
+    {
+        private ModelTable __rawInfo;
+        private ModelParams __cachedParams;
+        private Tuple __cachedResults;
+
+        public _NupicModelInfo(ModelTable rawInfo)
+        {
+            __rawInfo = rawInfo;
+            // Cached model metrics (see __unwrapResults())
+            __cachedResults = null;
+            Debug.Assert(__rawInfo.@params != null);
+            // Cached model params (see __unwrapParams())
+            __cachedParams = null;
+        }
+
+        public ulong getModelID()
+        {
+            return __rawInfo.model_id;
+        }
+
+        public string getModelDescription()
+        {
+            Map<string, object> paramSettings = getParamLabels();
+            // Form a csv friendly string representation of this model
+            List<string> items = new List<string>();
+            foreach (var paramSetting in paramSettings)
+            {
+                items.Add($"{paramSetting.Key}_{paramSetting.Value}");
+            }
+            return string.Join(".", items);
+        }
+
+        public string getGeneratedDescriptionFile()
+        {
+            return __rawInfo.gen_description;
+        }
+
+        public Map<string, object> getParamLabels()
+        {
+            var @params = __unwrapParams();
+            // Hypersearch v2 stores the flattened parameter settings in "particleState"
+            if (@params.particleState != null)
+            {
+                var retVal = new Map<string, object>();
+
+                var queue = @params.particleState.varStates
+                    .Select(vs => new { pair = vs, retval = new Map<string, object>() })
+                    .ToList();
+                while (queue.Count > 0)
+                {
+                    var varState = queue.First();
+                    queue.RemoveAt(0);
+                    var pair = varState.pair;
+                    var output = varState.retval;
+                    var k = pair.Key;
+                    var v = pair.Value;
+                    if (v.position.HasValue && v.bestPosition.HasValue && v.velocity.HasValue)
+                    {
+                        output[k] = v.position;
+                    }
+                    else
+                    {
+                        if (!output.ContainsKey(k))
+                        {
+                            output[k] = new Map<string, object>();
+                        }
+                        queue.Add(new { pair = pair, retval = (Map<string, object>)output[k] });
+                    }
+                }
+                return retVal;
+            }
+            return null;
+        }
+
+        public int getNumRecords()
+        {
+            return (int)__rawInfo.num_records;
+        }
+
+        public Map<string, double?> getReportMetrics()
+        {
+            return (Map<string, double?>)__unwrapResults().Item1;
+        }
+
+        public Map<string, double?> getOptimizationMetrics()
+        {
+            return (Map<string, double?>)__unwrapResults().Item2;
+        }
+
+        private ModelParams __unwrapParams()
+        {
+            if (__cachedParams == null)
+            {
+                __cachedParams = Json.Deserialize<ModelParams>(__rawInfo.@params);
+                Debug.Assert(__cachedParams != null, $"{__rawInfo.@params} resulted in null");
+            }
+            return __cachedParams;
+        }
+
+        private Tuple __unwrapResults()
+        {
+            if (__cachedResults == null)
+            {
+                if (__rawInfo.results != null)
+                {
+                    var resultList = Json.Deserialize<Tuple>(__rawInfo.results);
+                    __cachedResults = resultList;
+                }
+                else
+                {
+                    __cachedResults = new Tuple(new Map<string, double?>(), new Map<string, double?>());
+                }
+            }
+            return __cachedResults;
+        }
+
+        public bool isFinished()
+        {
+            bool finished = __rawInfo.status == BaseClientJobDao.STATUS_COMPLETED;
+            return finished;
+        }
+
+        #region Overrides of Object
+
+        public override string ToString()
+        {
+            return $"_NupicModelInfo(jobID={__rawInfo.job_id}, modelID={__rawInfo.model_id}, status={__rawInfo.status}, completionReason={__rawInfo.completion_reason}, updateCounter={__rawInfo.update_counter}, numRecords={__rawInfo.num_records})";
+        }
+
+        #endregion
+
+
+    }
+
+    internal class ModelStats
+    {
+
     }
 
     public class ExpGenerator
@@ -204,6 +558,7 @@ namespace HTM.Net.Research.Swarming
 
         public Tuple<ClaExperimentDescription, ClaPermutations> Generate()
         {
+            if (Options.streamDef == null) throw new InvalidOperationException("define 'streamDef' for datasource");
             // If the user specified nonTemporalClassification, make sure prediction steps is 0
             int[] predictionSteps = Options.inferenceArgs.predictionSteps;
             if (Options.inferenceType == InferenceType.NontemporalClassification)
@@ -539,6 +894,9 @@ namespace HTM.Net.Research.Swarming
             // Generate the metric replacement tokens
             _generateMetricsSubstitutions(Options, tokenReplacements);
 
+            // Generate input record schema
+            _generateInputRecordSchema(Options, tokenReplacements);
+
             // -----------------------------------------------------------------------
             // Generate Control dictionary
 
@@ -621,7 +979,7 @@ namespace HTM.Net.Research.Swarming
             {
                 var predFieldTuple = _getPredictedField(options);
                 string predictedFieldName = predFieldTuple.Item1;
-                string predictedFieldType = predFieldTuple.Item2;
+                FieldMetaType? predictedFieldType = predFieldTuple.Item2;
                 bool isCategory = _isCategory(predictedFieldType);
                 string[] metricNames = isCategory ? new[] { "avg_err" } : new[] { "aae", "altMAPE" };
                 string trivialErrorMetric = isCategory ? "avg_err" : "altMAPE";
@@ -757,9 +1115,9 @@ namespace HTM.Net.Research.Swarming
             return new Tuple<MetricSpec[], string>(metricSpecs.ToArray(), optimizeMetricLabel);
         }
 
-        private bool _isCategory(string fieldType)
+        private bool _isCategory(FieldMetaType? fieldType)
         {
-            if (fieldType == "string") return true;
+            if (fieldType == FieldMetaType.String) return true;
             return false;
         }
 
@@ -821,11 +1179,11 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="options"></param>
         /// <returns></returns>
-        private Tuple<string, string> _getPredictedField(SwarmDefinition options)
+        private Tuple<string, FieldMetaType?> _getPredictedField(SwarmDefinition options)
         {
             if (options.inferenceArgs == null || options.inferenceArgs.predictedField == null)
             {
-                return new Tuple<string, string>(null, null);
+                return new Tuple<string, FieldMetaType?>(null, null);
             }
             string predictedField = options.inferenceArgs.predictedField;
             var includedFields = options.includedFields;
@@ -836,7 +1194,7 @@ namespace HTM.Net.Research.Swarming
                 throw new InvalidOperationException($"Predicted field {predictedField} does not exist in included fields.");
             }
             var predictedFieldType = predictedFieldInfo.fieldType;
-            return new Tuple<string, string>(predictedField, predictedFieldType);
+            return new Tuple<string, FieldMetaType?>(predictedField, predictedFieldType);
         }
 
 
@@ -868,10 +1226,10 @@ namespace HTM.Net.Research.Swarming
             {
                 var encoderDict = new Map<string, object>();
                 string fieldName = fieldInfo.fieldName;
-                string fieldType = fieldInfo.fieldType;
+                FieldMetaType? fieldType = fieldInfo.fieldType;
 
                 // scalar?
-                if (fieldType == "float" || fieldType == "int")
+                if (fieldType == FieldMetaType.Float || fieldType == FieldMetaType.Integer)
                 {
                     // n=100 is reasonably hardcoded value for n when used by description.py
                     // The swarming will use PermuteEncoder below, where n is variable and
@@ -934,7 +1292,7 @@ namespace HTM.Net.Research.Swarming
                 }
 
                 // String?
-                else if (fieldType == "string")
+                else if (fieldType == FieldMetaType.String)
                 {
                     encoderDict = new Map<string, object>
                     {
@@ -952,7 +1310,7 @@ namespace HTM.Net.Research.Swarming
                 }
 
                 // DateTime?
-                else if (fieldType == "datetime")
+                else if (fieldType == FieldMetaType.DateTime)
                 {
                     // First, the time of day representation
                     encoderDict = new Map<string, object>
@@ -1057,16 +1415,19 @@ namespace HTM.Net.Research.Swarming
             {
                 foreach (var pair in encoderDict)
                 {
-                    if (pair.Key == "name") continue;
+                    string key = pair.Key;
+                    if (key == "fieldname") key = "fieldName";
+                    else if (key == "type") key = "encoderClass";
+                    if (key == "name") continue;
 
-                    if (pair.Key == "n" && (string)encoderDict["type"] != "SDRCategoryEncoder")
+                    if (key == "n" && (string)encoderDict["type"] != "SDRCategoryEncoder")
                     {
                         enc.n = new PermuteInt((int)encoderDict["w"] + 1, (int)encoderDict["w"] + 500);
                     }
                     else
                     {
                         // Set other props on encoder
-                        typeof(PermuteEncoder).GetProperty(pair.Key).SetValue(enc, pair.Value);
+                        typeof(PermuteEncoder).GetProperty(key).SetValue(enc, pair.Value);
                     }
                 }
             }
@@ -1163,6 +1524,25 @@ namespace HTM.Net.Research.Swarming
                 }
             }
             return enc;
+        }
+
+        private void _generateInputRecordSchema(SwarmDefinition options, Map<string, object> tokenReplacements)
+        {
+            if (options.includedFields == null)
+            {
+                throw new InvalidOperationException("'includedFields' are missing from swarm definition.");
+            }
+
+            FieldMetaInfo[] infos = new FieldMetaInfo[options.includedFields.Count];
+            for (int i = 0; i < options.includedFields.Count; i++)
+            {
+                var includedField = options.includedFields[i];
+
+                FieldMetaInfo fmi = new FieldMetaInfo(includedField.fieldName, includedField.fieldType, includedField.specialType);
+                infos[i] = fmi;
+            }
+
+            tokenReplacements["$INPUT_RECORD_SCHEMA"] = infos;
         }
     }
 
@@ -1275,14 +1655,9 @@ namespace HTM.Net.Research.Swarming
 
         public virtual Parameters GetParameters()
         {
-            Parameters p = Parameters.GetAllDefaultParameters();
+            Parameters p = Parameters.Empty();
 
-            // Spatial pooling parameters
-            SpatialParamsDescription spParams = this.modelConfig.modelParams.spParams;
-            TemporalParamsDescription tpParams = this.modelConfig.modelParams.tpParams;
-
-            Parameters.ApplyParametersFromDescription(spParams, p);
-            Parameters.ApplyParametersFromDescription(tpParams, p);
+            p.Union(modelConfig.GetParameters());
 
             return p;
         }
@@ -1355,7 +1730,7 @@ namespace HTM.Net.Research.Swarming
                     clEnable = true,
                     clParams = new ClassifierParamsDescription
                     {
-                        regionName = "SDRClassifierRegion",
+                        regionName = typeof(SDRClassifier).AssemblyQualifiedName,
                         verbosity = 0,
                         alpha = 0.001
                     },
@@ -1427,6 +1802,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         public ModelParamsDescription modelParams { get; set; }
 
+        [TokenReplace("$INPUT_RECORD_SCHEMA")]
         public FieldMetaInfo[] inputRecordSchema { get; set; }
 
         public Map<string, object> GetDictionary()
@@ -1498,6 +1874,7 @@ namespace HTM.Net.Research.Swarming
     public class SensorParamsDescription
     {
         [TokenReplace("$ENCODER_SPECS")]
+        [ParameterMapping("fieldEncodings")]
         public Map<string, Map<string, object>> encoders { get; set; }
         public int verbosity { get; set; }
         [TokenReplace("$SENSOR_AUTO_RESET")]
@@ -1535,18 +1912,20 @@ namespace HTM.Net.Research.Swarming
         public Parameters GetParameters()
         {
             Parameters p = Parameters.Empty();
+            Parameters.ApplyParametersFromDescription(sensorParams, p);
             if (spEnable)
             {
                 Parameters.ApplyParametersFromDescription(spParams, p);
-                //p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
             }
             if (tpEnable)
             {
                 Parameters.ApplyParametersFromDescription(tpParams, p);
-                //p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
             }
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
-            p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, Type.GetType(clParams.regionName));
+            if (!string.IsNullOrWhiteSpace(clParams.regionName))
+            {
+                p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, Type.GetType(clParams.regionName, true));
+            }
 
             return p;
         }
@@ -1574,7 +1953,6 @@ namespace HTM.Net.Research.Swarming
         [TokenReplace("$SP_PERM_CONNECTED")]
         public double synPermConnected { get; set; }
         [ParameterMapping]
-
         [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
         public double synPermActiveInc { get; set; }
         [ParameterMapping]
@@ -1822,6 +2200,11 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public class SwarmDefinition
     {
+        public SwarmDefinition()
+        {
+            includedFields = new List<SwarmDefIncludedField>();
+        }
+
         public Map<string, object> customErrorMetric;
 
         /// <summary>
@@ -1943,10 +2326,7 @@ namespace HTM.Net.Research.Swarming
         public bool runBaseLines { get; set; }
 
 
-        public SwarmDefinition()
-        {
 
-        }
 
         public SwarmDefinition Clone()
         {
@@ -1958,7 +2338,7 @@ namespace HTM.Net.Research.Swarming
         public class SwarmDefIncludedField
         {
             /// <summary>
-            /// A way to customize which spaces (absolute, delta) are evaluted when runDelta is True.
+            /// A way to customize which spaces (absolute, delta) are evaluated when runDelta is True.
             /// </summary>
             public string space { get; set; }
             /// <summary>
@@ -1980,12 +2360,16 @@ namespace HTM.Net.Research.Swarming
             /// <summary>
             /// Field type. Can be one of 'string', 'int', 'float'or 'datetime'
             /// </summary>
-            public string fieldType { get; set; }
+            public FieldMetaType fieldType { get; set; }
             /// <summary>
             /// Encoder type, for example 'ScalarEncoder, AdaptiveScalarEncoder, etc.
             /// </summary>
             public string encoderType { get; set; }
-
+            /// <summary>
+            /// Type of the field for the network (learn, blank, reset, sequence, ...)
+            /// Default Blank
+            /// </summary>
+            public SensorFlags specialType { get; set; } = SensorFlags.Blank;
         }
 
         public class SwarmDefComputeInterval

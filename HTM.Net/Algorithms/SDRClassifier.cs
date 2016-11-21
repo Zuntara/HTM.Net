@@ -213,7 +213,9 @@ namespace HTM.Net.Algorithms
                 retVal = Infer<T>(patternNZ, classification);
             }
 
-            if (learn && classification["bucketIdx"] != null)
+            //------------------------------------------------------------------------
+            //Learning:
+            if (learn && classification.Get("bucketIdx") != null)
             {
                 // Get classification info
                 int bucketIdx = (int)classification["bucketIdx"];

@@ -67,7 +67,7 @@ namespace HTM.Net.Research.Swarming
         /// for int vars, returns position to nearest int
         /// </summary>
         /// <returns>current position</returns>
-        public virtual double getPosition()
+        public virtual double? getPosition()
         {
             throw new System.NotImplementedException();
         }
@@ -88,7 +88,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="globalBestPosition">global best position for this colony</param>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual double newPosition(double? globalBestPosition, MersenneTwister rng)
+        public virtual double? newPosition(double? globalBestPosition, MersenneTwister rng)
         {
             throw new System.NotImplementedException();
         }
@@ -105,12 +105,12 @@ namespace HTM.Net.Research.Swarming
         public double min;
         public double max;
         public double? stepSize;
-        public double _position;
+        public double? _position;
         public double? _velocity;
         public double _inertia;
         public double _cogRate;
         public double _socRate;
-        public double _bestPosition;
+        public double? _bestPosition;
         public double? _bestResult;
 
         [Obsolete("Don' use")]
@@ -177,7 +177,7 @@ namespace HTM.Net.Research.Swarming
             this._bestResult = varState.bestResult;
         }
 
-        public override double getPosition()
+        public override double? getPosition()
         {
             if (!this.stepSize.HasValue)
             {
@@ -185,7 +185,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Find nearest step
-            double numSteps = (this._position - this.min) / this.stepSize.Value;
+            double numSteps = (this._position.GetValueOrDefault() - this.min) / this.stepSize.Value;
             numSteps = Math.Round(numSteps);
             double position = this.min + (numSteps * this.stepSize.Value);
             position = Math.Max(this.min, position);
@@ -222,7 +222,7 @@ namespace HTM.Net.Research.Swarming
             }
         }
 
-        public override double newPosition(double? globalBestPosition, MersenneTwister rng)
+        public override double? newPosition(double? globalBestPosition, MersenneTwister rng)
         {
             // First, update the velocity. The new velocity is given as:
             // v = (inertia * v)  + (cogRate * r1 * (localBest-pos))
@@ -246,8 +246,8 @@ namespace HTM.Net.Research.Swarming
             this._position += this._velocity.GetValueOrDefault();
 
             // Clip it
-            this._position = Math.Max(this.min, this._position);
-            this._position = Math.Min(this.max, this._position);
+            this._position = Math.Max(this.min, this._position.GetValueOrDefault());
+            this._position = Math.Min(this.max, this._position.GetValueOrDefault());
 
             // Return it
             return this.getPosition();
@@ -348,10 +348,10 @@ namespace HTM.Net.Research.Swarming
 
         #region Overrides of PermuteFloat
 
-        public override double getPosition()
+        public override double? getPosition()
         {
-            double position = base.getPosition();
-            position = Math.Round(position);
+            double? position = base.getPosition();
+            position = Math.Round(position.GetValueOrDefault());
             return position;
         }
 
@@ -431,12 +431,12 @@ namespace HTM.Net.Research.Swarming
 
         public override void setState(VarState varState)
         {
-            this._positionIdx = this.choices.ToList().IndexOf(varState._position);
-            this._bestPositionIdx = this.choices.ToList().IndexOf(varState.bestPosition);
+            this._positionIdx = this.choices.ToList().IndexOf(varState._position.GetValueOrDefault());
+            this._bestPositionIdx = this.choices.ToList().IndexOf(varState.bestPosition.GetValueOrDefault());
             this._bestResult = varState.bestResult;
         }
 
-        public override double getPosition()
+        public override double? getPosition()
         {
             return (double)this.choices[this._positionIdx];
         }
@@ -447,7 +447,7 @@ namespace HTM.Net.Research.Swarming
             // TODO: figure this out
         }
 
-        public override double newPosition(double? globalBestPosition, MersenneTwister rng)
+        public override double? newPosition(double? globalBestPosition, MersenneTwister rng)
         {
             // Compute the mean score per choice.
             int numChoices = this.choices.Length;
@@ -602,6 +602,7 @@ namespace HTM.Net.Research.Swarming
         public string fieldName { get; set; }
         public KWArgsModel kwArgs { get; set; }
         public string encoderClass { get; set; }
+        public bool classifierOnly { get; set; }
         public object maxval { get; set; } // int or permuteint
         public object radius { get; set; } // float or permutefloat
         public object n { get; set; } // int or permuteint

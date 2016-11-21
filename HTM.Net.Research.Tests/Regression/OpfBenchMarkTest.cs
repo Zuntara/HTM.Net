@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
+using log4net.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Research.Tests.Regression
@@ -15,7 +18,7 @@ namespace HTM.Net.Research.Tests.Regression
             inferenceArgs = new InferenceArgsDescription
             {
                 predictedField = null,
-                predictionSteps = new[] { 0 }
+                predictionSteps = new[] { 1 }
             }
         };
 
@@ -25,6 +28,13 @@ namespace HTM.Net.Research.Tests.Regression
     [TestClass]
     public class OpfBenchMarkTest : OPFBenchmarkBase
     {
+        [TestInitialize]
+        public void Initialize()
+        {
+            // Initialize log4net.
+            XmlConfigurator.Configure();
+        }
+
         /// <summary>
         /// Try running a basic experiment and permutations
         /// </summary>
@@ -33,10 +43,63 @@ namespace HTM.Net.Research.Tests.Regression
         public void RunSineOpf()
         {
             var config = BenchMarkSine();
+            config.maxModels = 2;
 
-            PermutationsRunner.RunWithConfig(config, null);
+            PermutationModelParameters result = PermutationsRunner.RunWithConfig(config, null);
+
+            Assert.IsNotNull(result, "no results found!");
         }
 
+
+        [TestMethod]
+        public void TestParameterGenerationFromDescriptionViaSwarmDefinition()
+        {
+            SwarmDefinition def = EXP_COMMON.Clone();
+            
+            def.streamDef = new StreamDef
+            {
+                streams = new[]
+                {
+                    new StreamDef.StreamItem
+                    {
+                        columns = new[] {"Sine", "angle"},
+                        info = "sine.csv",
+                        source = "sine.csv"
+                    }
+                }
+            };
+            def.includedFields = new List<SwarmDefinition.SwarmDefIncludedField>
+            {
+                new SwarmDefinition.SwarmDefIncludedField
+                {
+                    fieldName = "Sine",
+                    fieldType = FieldMetaType.Float,
+                    minValue = -1.0,
+                    maxValue = 1.0,
+                },
+                new SwarmDefinition.SwarmDefIncludedField
+                {
+                    fieldName = "angle",
+                    fieldType = FieldMetaType.Float,
+                    minValue = 0.0,
+                    maxValue = 25.0,
+                }
+            };
+            def.inferenceArgs.predictedField = "Sine";
+
+            var description = new ExpGenerator(def).Generate().Item1;
+
+            Parameters p = description.GetParameters();
+
+            Assert.IsNotNull(p);
+
+            Console.WriteLine(p.ToString());
+
+            Assert.IsNotNull(p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP), "No encoders found in parameter definition");
+            Map<string, Map<string, object>> encodings = (Map<string, Map<string, object>>) p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP);
+            Assert.AreEqual(3, encodings.Count, "Encoder count is incorrect");
+
+        }
 
         public SwarmDefinition BenchMarkSine()
         {
@@ -56,24 +119,24 @@ namespace HTM.Net.Research.Tests.Regression
                 version = 1
             };
 
-            SwarmDefinition expDesc = (SwarmDefinition)EXP_COMMON.Clone();
+            SwarmDefinition expDesc = EXP_COMMON.Clone();
             expDesc.inferenceArgs.predictedField = "Sine";
             expDesc.streamDef = streamDef;
             expDesc.includedFields = new List<SwarmDefinition.SwarmDefIncludedField>
             {
                 new SwarmDefinition.SwarmDefIncludedField
                 {
-                    fieldName= "Sine",
-                    fieldType= "float",
-                    minValue= -1.0,
-                    maxValue= 1.0,
+                    fieldName = "Sine",
+                    fieldType = FieldMetaType.Float,
+                    minValue = -1.0,
+                    maxValue = 1.0,
                 },
                 new SwarmDefinition.SwarmDefIncludedField
                 {
-                    fieldName= "angle",
-                    fieldType= "float",
-                    minValue=0.0,
-                    maxValue=25.0,
+                    fieldName = "angle",
+                    fieldType = FieldMetaType.Float,
+                    minValue = 0.0,
+                    maxValue = 25.0,
                 }
             };
             expDesc.iterationCount = __recordsToProcess;

@@ -58,7 +58,7 @@ namespace HTM.Net.Research.Swarming
         private bool _isKilled;
         private bool _isCanceled;
         private bool _isMature;
-        private Queue<object> __predictionCache;
+        private Queue<ModelResult> __predictionCache;
 
         /// <summary>
         /// 
@@ -140,7 +140,7 @@ namespace HTM.Net.Research.Swarming
 
             // In-memory cache for predictions. Predictions are written here for speed
             // when they don't need to be written to a persistent store
-            this.__predictionCache = new Queue<object>();
+            this.__predictionCache = new Queue<ModelResult>();
 
             // Flag to see if this is the best model in the job (as determined by the
             // model chooser logic). This is essentially a cache of the value in the

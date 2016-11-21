@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.opf
 {
@@ -98,8 +99,11 @@ namespace HTM.Net.Research.opf
                     return new MetricRMSE(metricSpec);
                 case "aae":
                     return new MetricAAE(metricSpec);
+                case "altMAPE":
+                    return new MetricAltMAPE(metricSpec);
                 case "avg_err":
                     return new MetricAveError(metricSpec);
+                case "multistep":
                 case "multiStep":
                     return new MetricMultiStep(metricSpec);
             }
@@ -151,7 +155,7 @@ namespace HTM.Net.Research.opf
         private string id;
         protected int verbosity;
         private int window;
-        private Deque<double> history;
+        protected Deque<object> history;
         private double accumulatedError;
         protected double? aggregateError;
         protected int steps;
@@ -225,7 +229,7 @@ namespace HTM.Net.Research.opf
                 {
                     Debug.Assert(TypeConverter.Convert<int>(metricSpec.Params["window"]) >= 1);
                     this.window = TypeConverter.Convert<int>(metricSpec.Params["window"]);
-                    this.history = new Deque<double>(-1);
+                    this.history = new Deque<object>(-1);
                 }
 
                 // Get the name of the sub-metric to chain to from addInstance()
@@ -306,9 +310,9 @@ namespace HTM.Net.Research.opf
 
         #endregion
 
-        public abstract double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer, ModelResult result);
+        public abstract double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<object> historyBuffer, ModelResult result);
 
-        public abstract double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps);
+        public abstract double? aggregate(double accumulatedError, Deque<object> historyBuffer, int steps);
     }
 
     /// <summary>
@@ -324,7 +328,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<object> historyBuffer,
             ModelResult result)
         {
             var error = Math.Pow(groundTruth.GetValueOrDefault() - TypeConverter.Convert<double?>(prediction).GetValueOrDefault(), 2);
@@ -335,14 +339,14 @@ namespace HTM.Net.Research.opf
                 historyBuffer.Append(error);
                 if (historyBuffer.Length > (int)this.spec.Params["window"])
                 {
-                    accumulatedError -= historyBuffer.TakeFirst();
+                    accumulatedError -= (double)historyBuffer.TakeFirst();
                 }
             }
 
             return accumulatedError;
         }
 
-        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        public override double? aggregate(double accumulatedError, Deque<object> historyBuffer, int steps)
         {
             var n = steps;
             if (historyBuffer != null)
@@ -365,7 +369,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<object> historyBuffer,
             ModelResult result)
         {
             double error = Math.Abs(groundTruth.GetValueOrDefault() - TypeConverter.Convert<double?>(prediction).GetValueOrDefault());
@@ -374,15 +378,15 @@ namespace HTM.Net.Research.opf
             if (historyBuffer != null)
             {
                 historyBuffer.Append(error);
-                if (historyBuffer.Length > (int)spec.Params["window"])
+                if (historyBuffer.Length > TypeConverter.Convert<int>(spec.Params["window"]))
                 {
-                    accumulatedError -= historyBuffer.TakeFirst();
+                    accumulatedError -= (double)historyBuffer.TakeFirst();
                 }
             }
             return accumulatedError;
         }
 
-        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        public override double? aggregate(double accumulatedError, Deque<object> historyBuffer, int steps)
         {
             int n = steps;
             if (historyBuffer != null)
@@ -452,7 +456,7 @@ namespace HTM.Net.Research.opf
                     // them.
                     if (stepPrediction is IDictionary && !(subErrorMetric is CustomErrorMetric))
                     {
-                        stepPrediction = ((IDictionary<object, object>) stepPrediction)
+                        stepPrediction = ((IDictionary<object, object>)stepPrediction)
                             .OrderByDescending(p => p.Value)
                             .Select(p => p.Key)
                             .First();
@@ -479,20 +483,20 @@ namespace HTM.Net.Research.opf
             }
 
             // Return average aggregate error across all step sizes
-            this.aggregateError = aggErrSum/_subErrorMetrics.Count;
+            this.aggregateError = aggErrSum / _subErrorMetrics.Count;
 
             steps += 1;
 
             return this.aggregateError;
         }
 
-        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<object> historyBuffer,
             ModelResult result)
         {
             throw new NotImplementedException();
         }
 
-        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        public override double? aggregate(double accumulatedError, Deque<object> historyBuffer, int steps)
         {
             throw new NotImplementedException();
         }
@@ -515,7 +519,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double? aggregate(double accumulatedError, Deque<double> historyBuffer, int steps)
+        public override double? aggregate(double accumulatedError, Deque<object> historyBuffer, int steps)
         {
             int n = steps;
             if (historyBuffer != null)
@@ -525,7 +529,7 @@ namespace HTM.Net.Research.opf
             return accumulatedError / (double)n;
         }
 
-        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<double> historyBuffer,
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<object> historyBuffer,
             ModelResult result)
         {
             double error = groundTruth != TypeConverter.Convert<double?>(prediction).GetValueOrDefault() ? 1.0 : 0.0;
@@ -534,13 +538,100 @@ namespace HTM.Net.Research.opf
             if (historyBuffer != null)
             {
                 historyBuffer.Append(error);
-                if (historyBuffer.Length > (int)spec.Params["window"])
+                if (historyBuffer.Length > TypeConverter.Convert<int>(spec.Params["window"]))
                 {
-                    accumulatedError -= historyBuffer.TakeFirst();
+                    accumulatedError -= (double)historyBuffer.TakeFirst();
                 }
             }
 
             return accumulatedError;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Computes the "Alternative" Mean Absolute Percent Error.
+    /// 
+    /// A generic MAPE computes the percent error for each sample, and then gets
+    /// an average.This can suffer from samples where the actual value is very small
+    /// or zero - this one sample can drastically alter the mean.
+    /// 
+    /// This metric on the other hand first computes the average of the actual values
+    /// and the averages of the errors before dividing. This washes out the effects of
+    /// a small number of samples with very small actual values.
+    /// </summary>
+    public class MetricAltMAPE : AggregateMetric
+    {
+        private double? _accumulatedGroundTruth;
+        private double _accumulatedError;
+
+        public MetricAltMAPE(MetricSpec metricSpec) : base(metricSpec)
+        {
+            _accumulatedGroundTruth = 0;
+            _accumulatedError = 0;
+        }
+
+        #region Overrides of AggregateMetric
+
+        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        {
+            // If missing data
+            if(!groundTruth .HasValue)
+                return aggregateError;
+
+            var error = Math.Abs(groundTruth.Value - TypeConverter.Convert<double?>(prediction).GetValueOrDefault());
+            if (verbosity > 0)
+            {
+                Debug.WriteLine($"MetricAltMAPE:");
+                Debug.WriteLine($"\tgroundTruth: {groundTruth}");
+                Debug.WriteLine($"\tPrediction: {prediction}");
+                Debug.WriteLine($"\tError: {error}");
+            }
+
+            // Update the accumulated groundTruth and aggregate error
+            if (history != null)
+            {
+                history.Append(new Tuple(groundTruth, error));
+                if (history.Length > TypeConverter.Convert<int>(spec.Params["window"]))
+                {
+                    Tuple tLeft = (Tuple) history.TakeFirst();
+                    _accumulatedGroundTruth -= (double?) tLeft.Item1;
+                    _accumulatedError -= (double) tLeft.Item2;
+                }
+            }
+            _accumulatedGroundTruth += Math.Abs(groundTruth.GetValueOrDefault());
+            _accumulatedError += error;
+
+            // Compute aggregate pct error
+            if (_accumulatedGroundTruth > 0)
+            {
+                aggregateError = 100.0*_accumulatedError/_accumulatedGroundTruth;
+            }
+            else
+            {
+                aggregateError = 0;
+            }
+
+            if (verbosity > 1)
+            {
+                Debug.WriteLine($" accumGT: {_accumulatedGroundTruth}");
+                Debug.WriteLine($" accumError: {_accumulatedError}");
+                Debug.WriteLine($" aggregateError: {aggregateError}");
+            }
+            steps += 1;
+            return aggregateError;
+        }
+
+        public override double accumulate(double? groundTruth, object prediction, double accumulatedError, Deque<object> historyBuffer,
+            ModelResult result)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double? aggregate(double accumulatedError, Deque<object> historyBuffer, int steps)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

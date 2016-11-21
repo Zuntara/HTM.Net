@@ -43,10 +43,10 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     Console.WriteLine(var);
                 }
-                positions.Add(pos);
+                positions.Add(pos.GetValueOrDefault());
 
                 // Set the result so that the local best is at lBestPosition.
-                double result = 1.0 - Math.Abs(pos - lBestPosition);
+                double result = 1.0 - Math.Abs(pos.GetValueOrDefault() - lBestPosition);
 
                 if (foundBestResult == null || result > foundBestResult)
                 {
@@ -95,7 +95,7 @@ namespace HTM.Net.Research.Tests.Swarming
             double pos = 0;
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                pos = var.getPosition();
+                pos = var.getPosition().GetValueOrDefault();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -163,7 +163,7 @@ namespace HTM.Net.Research.Tests.Swarming
             // Check the without results the choices are chosen uniformly.
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
-                double choice = pc.newPosition(null, rng);
+                double choice = pc.newPosition(null, rng).GetValueOrDefault();
                 counts2[(int)choice] += 1;
             }
             // Make sure that as the error goes up, the number of times the choice is
@@ -207,7 +207,7 @@ namespace HTM.Net.Research.Tests.Swarming
                 // Check the without results the choices are chosen uniformly.
                 foreach (var nothing2 in ArrayUtils.Range(0, 1000))
                 {
-                    double choice = pc.newPosition(null, rng);
+                    double choice = pc.newPosition(null, rng).GetValueOrDefault();
                     counts2[(int)choice] += 1;
                 }
                 // Make sure that as the error goes up, the number of times the choice is

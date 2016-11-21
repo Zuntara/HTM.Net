@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
@@ -81,109 +82,112 @@ namespace HTM.Net.Research.Swarming
             //// --------------------------------------------------------------------------
             //// Create a temp directory for the experiment and the description files
             //string experimentDir = tempfile.mkdtemp();
-            ModelCompletionStatus completionStatus;
+
+
             try
             {
-                var runner = new OpfModelRunner(
-                    modelID: modelID,
-                    jobID: jobID,
-                    predictedField: predictedField,
-                    experimentDir: baseDescription,
-                    reportKeyPatterns: reportKeys,
-                    optimizeKeyPattern: optimizeKey,
-                    jobsDAO: jobsDAO,
-                    modelCheckpointGUID: modelCheckpointGUID,
-                    predictionCacheMaxRecords: predictionCacheMaxRecords);
+                //logger.Info("Using experiment directory: %s" % (experimentDir));
 
-                completionStatus = runner.run();
-                return completionStatus;
+                //    // Create the decription.py from the overrides in params
+                //    string paramsFilePath = Path.Combine(experimentDir, "description.py");
+                //    StreamWriter paramsFile = open(paramsFilePath, 'wb');
+                //    //paramsFile.write(_paramsFileHead());
+
+                string expDescription = Json.Serialize(@params);
+
+                //    //items.sort();
+                //    //for (key, value) in items
+                //    foreach (var keyValue in @params.OrderBy(k => k.Key))
+                //    {
+                //        string quotedKey = _quoteAndEscape(key);
+
+                //        if (keyValue.Value is string)
+                //        {
+                //            paramsFile.WriteLine("  {0} : '{1}',\n", quotedKey, keyValue.Value);
+                //        }
+                //        else
+                //        {
+                //            paramsFile.WriteLine("  {0} : {1},\n", quotedKey, keyValue.Value);
+                //        }
+                //    }
+
+                //    //paramsFile.WriteLine(_paramsFileTail());
+                //    paramsFile.Close();
+
+
+                //    // Write out the base description
+                //    StreamWriter baseParamsFile = open(Path.Combine(experimentDir, "base.py"), 'wb');
+                //    baseParamsFile.WriteLine(baseDescription);
+                //    baseParamsFile.Close();
+
+
+                //    // Store the experiment's sub-description file into the model table
+                //    //  for reference
+                //    fd = open(paramsFilePath);
+                //    expDescription = fd.read();
+                //    fd.close();
+                jobsDAO.modelSetFields(modelID, new Map<string, object> {{"genDescription", expDescription}});
+
+                // Run the experiment now
+                ModelCompletionStatus completionStatus;
+                try
+                {
+                    var runner = new OpfModelRunner(
+                        modelID: modelID,
+                        jobID: jobID,
+                        predictedField: predictedField,
+                        experimentDir: baseDescription,
+                        reportKeyPatterns: reportKeys,
+                        optimizeKeyPattern: optimizeKey,
+                        jobsDAO: jobsDAO,
+                        modelCheckpointGUID: modelCheckpointGUID,
+                        predictionCacheMaxRecords: predictionCacheMaxRecords);
+
+                    completionStatus = runner.run();
+                    return completionStatus;
+                }
+                catch (Exception ex)
+                {
+                    if (Debugger.IsAttached) Debugger.Break();
+                    throw;
+                }
+
+                //    try
+                //    {
+                //        runner = OPFModelRunner(
+                //          modelID = modelID,
+                //          jobID = jobID,
+                //          predictedField = predictedField,
+                //          experimentDir = experimentDir,
+                //          reportKeyPatterns = reportKeys,
+                //          optimizeKeyPattern = optimizeKey,
+                //          jobsDAO = jobsDAO,
+                //          modelCheckpointGUID = modelCheckpointGUID,
+                //          logLevel = logLevel,
+                //          predictionCacheMaxRecords = predictionCacheMaxRecords);
+
+                //        signal.signal(signal.SIGINT, runner.handleWarningSignal);
+
+                //        completionStatus = runner.run();
+                //    }
+
+                //    catch (InvalidConnectionException)
+                //    {
+                //        raise;
+                //    }
+                //    catch (Exception e)
+                //    {
+
+                //        completionStatus = _handleModelRunnerException(jobID,
+                //                                       modelID, jobsDAO, experimentDir, logger, e);
+                //    }
             }
-            catch (Exception ex)
+            finally
             {
-                if (Debugger.IsAttached) Debugger.Break();
-                throw;
+                //    // delete our temporary directory tree
+                //    Directory.Delete(experimentDir);
+                //    //signal.signal(signal.SIGINT, signal.default_int_handler);
             }
-            //try
-            //{
-            //    logger.Info("Using experiment directory: %s" % (experimentDir));
-
-            //    // Create the decription.py from the overrides in params
-            //    string paramsFilePath = Path.Combine(experimentDir, "description.py");
-            //    StreamWriter paramsFile = open(paramsFilePath, 'wb');
-            //    //paramsFile.write(_paramsFileHead());
-
-            //    //items = @params.items();
-            //    //items.sort();
-            //    //for (key, value) in items
-            //    foreach (var keyValue in @params.OrderBy(k => k.Key))
-            //    {
-            //        string quotedKey = _quoteAndEscape(key);
-
-            //        if (keyValue.Value is string)
-            //        {
-            //            paramsFile.WriteLine("  {0} : '{1}',\n", quotedKey, keyValue.Value);
-            //        }
-            //        else
-            //        {
-            //            paramsFile.WriteLine("  {0} : {1},\n", quotedKey, keyValue.Value);
-            //        }
-            //    }
-
-            //    //paramsFile.WriteLine(_paramsFileTail());
-            //    paramsFile.Close();
-
-
-            //    // Write out the base description
-            //    StreamWriter baseParamsFile = open(Path.Combine(experimentDir, "base.py"), 'wb');
-            //    baseParamsFile.WriteLine(baseDescription);
-            //    baseParamsFile.Close();
-
-
-            //    // Store the experiment's sub-description file into the model table
-            //    //  for reference
-            //    fd = open(paramsFilePath);
-            //    expDescription = fd.read();
-            //    fd.close();
-            //    jobsDAO.modelSetFields(modelID, { 'genDescription': expDescription});
-
-            //    // Run the experiment now
-            //    try
-            //    {
-            //        runner = OPFModelRunner(
-            //          modelID = modelID,
-            //          jobID = jobID,
-            //          predictedField = predictedField,
-            //          experimentDir = experimentDir,
-            //          reportKeyPatterns = reportKeys,
-            //          optimizeKeyPattern = optimizeKey,
-            //          jobsDAO = jobsDAO,
-            //          modelCheckpointGUID = modelCheckpointGUID,
-            //          logLevel = logLevel,
-            //          predictionCacheMaxRecords = predictionCacheMaxRecords);
-
-            //        signal.signal(signal.SIGINT, runner.handleWarningSignal);
-
-            //        completionStatus = runner.run();
-            //    }
-
-            //    catch (InvalidConnectionException)
-            //    {
-            //        raise;
-            //    }
-            //    catch (Exception e)
-            //    {
-
-            //        completionStatus = _handleModelRunnerException(jobID,
-            //                                       modelID, jobsDAO, experimentDir, logger, e);
-            //    }
-            //}
-
-            //finally
-            //{
-            //    // delete our temporary directory tree
-            //    Directory.Delete(experimentDir);
-            //    //signal.signal(signal.SIGINT, signal.default_int_handler);
-            //}
 
             //// Return completion reason and msg
             //return completionStatus;

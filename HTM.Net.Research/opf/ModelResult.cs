@@ -9,7 +9,7 @@ namespace HTM.Net.Research.opf
         public Map<string, object> rawInput;
         public SensorInput sensorInput;
         public Map<InferenceElement, object> inferences;
-        public object metrics;
+        public Map<string,double?> metrics;
         public int? predictedFieldIdx;
         public string predictedFieldName;
         public object classifierInput;
@@ -18,7 +18,7 @@ namespace HTM.Net.Research.opf
             Map<string, object> rawInput = null,
             SensorInput sensorInput = null,
             Map<InferenceElement, object> inferences = null,
-            object metrics = null,
+            Map<string, double?> metrics = null,
             int? predictedFieldIdx = null,
             string predictedFieldName = null,
             object classifierInput = null)
@@ -33,6 +33,15 @@ namespace HTM.Net.Research.opf
             this.classifierInput = classifierInput;
         }
 
+        #region Overrides of Object
+
+        public override string ToString()
+        {
+            return $"ModelResult(\tpredictionNumber={predictionNumber}\n\trawInput={rawInput}\n\tsensorInput={sensorInput}\n\tinferences={inferences}" +
+                   $"\n\tmetrics={metrics}\n\tpredictedFieldIdx={predictedFieldIdx}\n\tpredictedFieldName={predictedFieldName}\n\tclassifierInput={classifierInput}\n)";
+        }
+
+        #endregion
 
         public ModelResult Clone()
         {
