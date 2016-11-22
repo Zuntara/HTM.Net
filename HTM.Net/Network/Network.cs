@@ -390,24 +390,22 @@ namespace HTM.Net.Network
             return _regions.Count > 1;
         }
 
-        /**
-         * Returns the String identifier for this {@code Network}
-         * @return
-         */
+        /// <summary>
+        /// Returns the String identifier for this  <see cref="Network"/>
+        /// </summary>
         public string GetName()
         {
             return _name;
         }
 
-        /**
-         * If {@link Network.Mode} == {@link Mode#AUTO}, calling this 
-         * method will start the main engine thread which pulls in data
-         * from the connected {@link Sensor}(s).
-         * 
-         * <em>Warning:</em> Calling this method with any other Mode than 
-         * {@link Mode#AUTO} will result in an {@link UnsupportedOperationException}
-         * being thrown.
-         */
+        /// <summary>
+        /// If <see cref="Mode"/> ==  <see cref="Mode.AUTO"/>, calling this 
+        /// method will start the main engine thread which pulls in data
+        /// from the connected <see cref="Sensor{T}"/>
+        /// 
+        /// <em>Warning:</em> Calling this method with any other Mode than 
+        /// <see cref="Mode.AUTO"/> will result in an exception.
+        /// </summary>
         public void Start()
         {
             if (_regions.Count < 1)

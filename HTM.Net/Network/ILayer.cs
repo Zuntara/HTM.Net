@@ -177,7 +177,7 @@ namespace HTM.Net.Network
         /// Returns the classifier assigned to this layer
         /// </summary>
         /// <returns></returns>
-        IClassifier GetClassifier(MultiEncoder encoder, string name);
+        IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName);
 
         ICheckPointOp<byte[]> GetCheckPointOperator();
     }

@@ -86,8 +86,8 @@ namespace HTM.Net.Tests.Algorithms
             {
                 retVal = _compute(classifier, i, new[] { 1, 5 }, 0, 10);
             }
-            Assert.AreEqual(retVal.GetActualValue(0), 10);
-            Assert.IsTrue(retVal.GetStat(1,0) > 0.9, "value of 1 must be greater then 0.9 and is " + retVal.GetStat(1, 0));
+            Assert.AreEqual(10.0, retVal.GetActualValue(0));
+            Assert.AreEqual(1.0, retVal.GetStat(1, 0), 0.1, "value of 1 must be greater then 0.9 and is " + retVal.GetStat(1, 0));
         }
 
         /// <summary>
@@ -185,7 +185,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestComputeComplex()
         {
-            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1);
+            var classifier = new SDRClassifier(new[] { 1 }, 1.0, 0.1, 0);
             int recordNum = 0;
             classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
                 new[] { 1, 5, 9 }, true, true);
@@ -211,16 +211,15 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(6, result.GetActualValueCount());
             double[] actValues = result.GetActualValues();
 
-            Assert.AreEqual((double)actValues[4], 35.520000457763672, 0.0001);
-            Assert.AreEqual((double)actValues[5], 42.020000457763672, 0.0001);
-            double[] resultDoubles = (double[])result.GetStats(1);
-            Assert.AreEqual(6, resultDoubles.Length);
-            Assert.AreEqual(resultDoubles[0], 0.034234, 0.0001);
-            Assert.AreEqual(resultDoubles[1], 0.034234, 0.0001);
-            Assert.AreEqual(resultDoubles[2], 0.034234, 0.0001);
-            Assert.AreEqual(resultDoubles[3], 0.034234, 0.0001);
-            Assert.AreEqual(resultDoubles[4], 0.093058, 0.0001);
-            Assert.AreEqual(resultDoubles[5], 0.770004, 0.0001);
+            Assert.AreEqual(35.520000457763672, (double)actValues[4], 0.0001);
+            Assert.AreEqual(42.020000457763672, (double)actValues[5], 0.0001);
+            Assert.AreEqual(6, result.GetStatCount(1));
+            Assert.AreEqual(0.034234, result.GetStat(1, 0), 0.0001);
+            Assert.AreEqual(0.034234, result.GetStat(1, 1), 0.0001);
+            Assert.AreEqual(0.034234, result.GetStat(1, 2), 0.0001);
+            Assert.AreEqual(0.034234, result.GetStat(1, 3), 0.0001);
+            Assert.AreEqual(0.093058, result.GetStat(1, 4), 0.0001);
+            Assert.AreEqual(0.770004, result.GetStat(1, 5), 0.0001);
         }
 
         [TestMethod]
@@ -273,15 +272,15 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 1 }, 10.0);
 
-            _compute(classifier, 0, new[] {1, 5}, 9, 9);
-            _compute(classifier, 1, new[] {1, 5}, 9, 9);
-            var retVal = _compute(classifier, 2, new[] {3, 5}, 2, 2);
+            _compute(classifier, 0, new[] { 1, 5 }, 9, 9);
+            _compute(classifier, 1, new[] { 1, 5 }, 9, 9);
+            var retVal = _compute(classifier, 2, new[] { 3, 5 }, 2, 2);
 
             // Since overlap - should be previous with high likelihood
             double[] actValues = retVal.GetActualValues();
-            Assert.AreEqual(actValues[9], 9);
+            Assert.AreEqual(9, actValues[9]);
             double[] resultDoubles = retVal.GetStats(1);
-            Assert.IsTrue(resultDoubles[9]>0.9);
+            Assert.IsTrue(resultDoubles[9] > 0.9, $"resultDoubles[9] > 0.9  =  {resultDoubles[9]}");
 
             retVal = _compute(classifier, 3, new[] { 3, 5 }, 2, 2);
             resultDoubles = retVal.GetStats(1);
@@ -293,7 +292,7 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestMultistepSingleValue()
         {
-            var classifier = new SDRClassifier(new[] { 1,2 });
+            var classifier = new SDRClassifier(new[] { 1, 2 });
 
             Classification<double> retVal = null;
             for (int i = 0; i < 10; i++)
@@ -305,8 +304,8 @@ namespace HTM.Net.Tests.Algorithms
             double[] actValues = retVal.GetActualValues();
 
             Assert.AreEqual((double)actValues[0], 10);
-            double[] resultDoubles1 = (double[]) retVal.GetStats(1);
-            double[] resultDoubles2 = (double[]) retVal.GetStats(2);
+            double[] resultDoubles1 = (double[])retVal.GetStats(1);
+            double[] resultDoubles2 = (double[])retVal.GetStats(2);
 
             Assert.AreEqual(resultDoubles1[0], 1);
             Assert.AreEqual(resultDoubles2[0], 1);
@@ -333,14 +332,14 @@ namespace HTM.Net.Tests.Algorithms
         {
             var classifier = new SDRClassifier(new[] { 0, 1 }, 1.0, 0.1, 0);
 
-            int[] sdr1 = new[] {1, 3, 5};
-            int[] sdr2 = new[] {2, 4, 6};
+            int[] sdr1 = new[] { 1, 3, 5 };
+            int[] sdr2 = new[] { 2, 4, 6 };
             int recordNum = 0;
 
             for (int i = 0; i < 100; i++)
             {
                 classifier.Compute<double>(recordNum: recordNum, patternNZ: sdr1,
-                    classification: new Map<string, object> {{"bucketIdx", 0}, {"actValue", 0}}, 
+                    classification: new Map<string, object> { { "bucketIdx", 0 }, { "actValue", 0 } },
                     learn: true, infer: false);
                 recordNum++;
 
@@ -364,7 +363,7 @@ namespace HTM.Net.Tests.Algorithms
 
         private Classification<double> _compute(SDRClassifier classifier, int recordNum, int[] pattern, int bucket, double value)
         {
-            var classification = new Map<string, object> {{"bucketIdx", bucket}, {"actValue", value}};
+            var classification = new Map<string, object> { { "bucketIdx", bucket }, { "actValue", value } };
             return classifier.Compute<double>(recordNum, classification, pattern, true, true);
         }
     }

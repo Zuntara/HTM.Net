@@ -200,6 +200,9 @@ namespace HTM.Net.Encoders
                 case "forced":
                     builder.Forced((bool)value);
                     break;
+                case "classifieronly":
+                    builder.ClassifierOnly((bool) value);
+                    break;
                 case "fieldname":
                 case "name":
                     builder.Name((string)value);

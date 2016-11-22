@@ -1730,7 +1730,7 @@ namespace HTM.Net.Research.Swarming
                     clEnable = true,
                     clParams = new ClassifierParamsDescription
                     {
-                        regionName = typeof(SDRClassifier).AssemblyQualifiedName,
+                        regionName = typeof(CLAClassifier).AssemblyQualifiedName,
                         verbosity = 0,
                         alpha = 0.001
                     },

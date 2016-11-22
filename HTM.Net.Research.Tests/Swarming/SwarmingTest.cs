@@ -7,6 +7,7 @@ using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Tests.Regression;
 using HTM.Net.Util;
 using log4net.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -498,7 +499,7 @@ namespace HTM.Net.Research.Tests.Swarming
                 // Get model info
                 var cjDAO = BaseClientJobDao.Create();
                 var modelParams = cjDAO.modelsGetParams(new List<ulong> { minModelID })[0]["params"];
-                //Console.WriteLine("Model params for best model: \n{0}", pprint.pformat(json.loads(modelParams)));
+                Console.WriteLine("Model params for best model: \n{0}", Json.Deserialize<ModelParams>(modelParams as string));
                 Console.WriteLine("Best model result: {0}", minErrScore);
             }
 
@@ -583,6 +584,42 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\sine.csv")]
+        public void TestSineOpfInternal()
+        {
+            var config = OpfBenchMarkTest.BenchMarkSine(-1);
+            config.maxModels = 1;
+
+            // Convert config to parameters
+            // set encoders in place
+            var description = new ExpGenerator(config).Generate();
+
+            var expDir = new Tuple<BaseDescription, BasePermutations>(
+                description.Item1, description.Item2);
+            // Test it out
+            //if (env is None)
+            //{
+            //    env = dict();
+            //}
+            //env["NTA_TEST_numIterations"] = "99";
+            //env["NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow"] = "%d" % (g_repeatableSwarmMaturityWindow);
+
+            //(jobID, jobInfo, resultInfos, metricResults, minErrScore) 
+            var permutationResult = this.RunPermutations(expDirectory: expDir,
+                                   hsImp: "v2",
+                                   //loggingLevel = g_myEnv.options.logLevel,
+                                   onCluster: false,
+                                   //env = env,
+                                   maxModels: null,
+                                   kwargs: null);
+
+
+            Assert.AreEqual(20, permutationResult.minErrScore);
+            Assert.IsTrue(permutationResult.results.Count < 350);
+            //this.assertLess(len(resultInfos), 350);
         }
 
         /// <summary>

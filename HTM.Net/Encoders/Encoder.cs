@@ -21,6 +21,7 @@ namespace HTM.Net.Encoders
         void SetPeriodic(bool periodic);
         void SetClipInput(bool clipInput);
         void SetForced(bool forced);
+        void SetClassifierOnly(bool classifierOnly);
         void SetName(string name);
         void SetFieldStats(string fieldName, Map<string, Map<string, object>> fieldStatistics);
 
@@ -134,6 +135,7 @@ namespace HTM.Net.Encoders
         /** if true, skip some safety checks (for compatibility reasons), default false */
         protected bool forced;
         /** Encoder name - an optional string which will become part of the description */
+        protected bool classifierOnly;
         protected string name = "";
         protected int padding;
         protected int nInternal;
@@ -445,6 +447,11 @@ namespace HTM.Net.Encoders
         public void SetForced(bool b)
         {
             this.forced = b;
+        }
+
+        public void SetClassifierOnly(bool classifierOnly)
+        {
+            this.classifierOnly = classifierOnly;
         }
 
         /**
@@ -1411,7 +1418,7 @@ namespace HTM.Net.Encoders
             protected double resolution;
             protected bool periodic;
             protected bool clipInput;
-            protected bool forced;
+            protected bool forced, classifierOnly;
             protected string name;
 
             protected IEncoder encoder;
@@ -1433,6 +1440,7 @@ namespace HTM.Net.Encoders
                 encoder.SetClipInput(clipInput);
                 encoder.SetForced(forced);
                 encoder.SetName(name);
+                encoder.SetClassifierOnly(classifierOnly);
 
                 return (IEncoder)encoder;
             }
@@ -1482,6 +1490,13 @@ namespace HTM.Net.Encoders
                 this.forced = forced;
                 return this;
             }
+
+            public IBuilder ClassifierOnly(bool classifierOnly)
+            {
+                this.classifierOnly = classifierOnly;
+                return this;
+            }
+
             public virtual IBuilder Name(string name)
             {
                 this.name = name;
@@ -1501,6 +1516,7 @@ namespace HTM.Net.Encoders
         IBuilder Periodic(bool value);
         IBuilder ClipInput(bool value);
         IBuilder Forced(bool value);
+        IBuilder ClassifierOnly(bool value);
         IBuilder Name(string value);
 
         IEncoder Build();

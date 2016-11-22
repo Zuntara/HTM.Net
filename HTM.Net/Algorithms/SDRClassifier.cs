@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
@@ -78,7 +80,7 @@ namespace HTM.Net.Algorithms
         //private Map<int, int> _activeBitHistory;
         private int _maxInputIdx;
         private int _maxBucketIdx;
-        private readonly Map<int, double[][]> _weightMatrix;
+        private readonly Map<int, SparseMatrix> _weightMatrix;
         private readonly List<object> _actualValues;
         private string g_debugPrefix = "SDRClassifier";
 
@@ -86,7 +88,7 @@ namespace HTM.Net.Algorithms
         /// SDRClassifier no-arg constructor with defaults
         /// </summary>
         public SDRClassifier()
-            : this(new []{1})
+            : this(new[] { 1 })
         {
 
         }
@@ -142,12 +144,11 @@ namespace HTM.Net.Algorithms
             _maxBucketIdx = 0;
 
             // The connection weight matrix 
-            _weightMatrix = new Map<int, double[][]>();
+            _weightMatrix = new Map<int, SparseMatrix>();
 
             foreach (int step in steps)
             {
-                //_weightMatrix[step] = DenseMatrix.Create(_maxInputIdx + 1, _maxBucketIdx + 1, 0);
-                _weightMatrix[step] = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, _maxBucketIdx + 1);
+                _weightMatrix[step] = SparseMatrix.Create(_maxInputIdx + 1, _maxBucketIdx + 1, 0);
             }
             //for step in this.steps: 
             //    this._weightMatrix[step] = numpy.zeros(shape = (this._maxInputIdx + 1,
@@ -186,7 +187,7 @@ namespace HTM.Net.Algorithms
             }
 
             // Store pattern in our history
-            _patternNZHistory.Append(new Tuple(_learnIteration, patternNZ));
+            _patternNZHistory.Append(new Tuple(_learnIteration, new HashSet<int>(patternNZ)));
 
             // To allow multi-class classification, we need to be able to run learning
             // without inference being on. So initialize retval outside
@@ -199,8 +200,18 @@ namespace HTM.Net.Algorithms
                 int newMaxInputIdx = patternNZ.Max();
                 foreach (int nSteps in Steps)
                 {
-                    var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
-                    _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
+                    if (_weightMatrix[nSteps].NonZerosCount > 0)
+                    {
+                        for (int i = _maxInputIdx; i < newMaxInputIdx; i++)
+                        {
+                            _weightMatrix[nSteps] = (SparseMatrix) _weightMatrix[nSteps]
+                                .InsertRow(_weightMatrix[nSteps].RowCount, SparseVector.Create(_maxBucketIdx + 1, 0));
+                        }
+                    }
+                    else
+                    {
+                        _weightMatrix[nSteps] = SparseMatrix.Create(newMaxInputIdx+1, _maxBucketIdx + 1, 0);
+                    }
                 }
                 _maxInputIdx = newMaxInputIdx;
             }
@@ -226,8 +237,9 @@ namespace HTM.Net.Algorithms
                 {
                     foreach (int nSteps in Steps)
                     {
-                        var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
-                        _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 1);
+                        _weightMatrix[nSteps] = (SparseMatrix)_weightMatrix[nSteps]
+                            .Append(SparseMatrix.Create(_weightMatrix[nSteps].RowCount, bucketIdx - _maxBucketIdx, 0));
+
                     }
                     _maxBucketIdx = bucketIdx;
                 }
@@ -271,7 +283,7 @@ namespace HTM.Net.Algorithms
                 foreach (var tuple in _patternNZHistory)
                 {
                     var iteration = (int)tuple.Get(0);
-                    var learnPatternNZ = (int[])tuple.Get(1);
+                    var learnPatternNZ = (HashSet<int>)tuple.Get(1);
 
                     var error = CalculateError(classification);
 
@@ -280,8 +292,8 @@ namespace HTM.Net.Algorithms
                     {
                         foreach (int bit in learnPatternNZ)
                         {
-                            var multipliedRow = ArrayUtils.Multiply(error[nSteps], Alpha);
-                            _weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
+                            var multipliedRow = error[nSteps]*Alpha;// ArrayUtils.Multiply(error[nSteps], Alpha);
+                            _weightMatrix[nSteps].SetRow(bit, _weightMatrix[nSteps].Row(bit).Add(multipliedRow));
                         }
                     }
                 }
@@ -362,12 +374,12 @@ namespace HTM.Net.Algorithms
             var actValues = _actualValues.Select(x => (T)(x ?? TypeConverter.Convert<T>(defaultValue))).ToArray();
             Classification<T> retVal = new Classification<T>();
             retVal.SetActualValues(actValues);
-           //NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
+            //NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
 
             foreach (var nSteps in Steps)
             {
-                var predictDist = InferSingleStep(patternNz, _weightMatrix[nSteps]);
-                retVal.SetStats(nSteps, predictDist);
+                var predictDist = InferSingleStep(new HashSet<int>(patternNz), _weightMatrix[nSteps]);
+                retVal.SetStats(nSteps, predictDist.ToArray());
                 //retVal[nSteps.ToString()] = predictDist;
             }
 
@@ -380,27 +392,17 @@ namespace HTM.Net.Algorithms
         /// <param name="patternNz">list of the active indices from the output below</param>
         /// <param name="weightMatrix">array of the weight matrix</param>
         /// <returns>array of the predicted class label distribution</returns>
-        private double[] InferSingleStep(int[] patternNz, double[][] weightMatrix)
+        private Vector<double> InferSingleStep(HashSet<int> patternNz, SparseMatrix weightMatrix)
         {
-            var filtered = weightMatrix.Where((row, index) => patternNz.Contains(index)).ToList();
-            int cols = filtered.Max(f => f.Length);
+            //var filtered = weightMatrix.Where((row, index) => patternNz.Contains(index)).ToList();
+            var filtered = weightMatrix.EnumerateRowsIndexed().AsParallel().Where(t => patternNz.Contains(t.Item1)).Select(t=>t.Item2).ToList();
+            Vector<double> outputActivation = SparseMatrix.Build.SparseOfRowVectors(filtered).ColumnSums();
 
-            double[] summed = new double[cols];
-            for (int i = 0; i < cols; i++)
-            {
-                for (int y = 0; y < filtered.Count; y++)
-                {
-                    summed[i] += filtered[y][i];
-                }
-            }
-            //List<double> summed = patternNz.Select(index => weightMatrix[index].Sum()).ToList();
-            var outputActivation = summed;
-            
             //var outputActivation = weightMatrix[patternNZ].sum(axis: 0); // axis 0 = cols, axis 1 = rows
-
             // softmax normalization
-            var expOutputActivation = ArrayUtils.Exp(outputActivation).ToArray();// numpy.exp(outputActivation);
-            var predictDist = ArrayUtils.Divide(expOutputActivation, expOutputActivation.Sum()); //expOutputActivation / expOutputActivation.Sum();
+            Vector<double> expOutputActivation = outputActivation.PointwiseExp();
+            //var predictDist = ArrayUtils.Divide(expOutputActivation, expOutputActivation.Sum()); //expOutputActivation / expOutputActivation.Sum();
+            Vector<double> predictDist = expOutputActivation/expOutputActivation.Sum();
             return predictDist;
         }
 
@@ -414,22 +416,22 @@ namespace HTM.Net.Algorithms
         /// </param>
         /// <returns>dict containing error. 
         /// The key is the number of steps The value is a numpy array of error at the output layer</returns>
-        private IDictionary<int, double[]> CalculateError(IDictionary<string, object> classification)
+        private IDictionary<int, Vector<double>> CalculateError(IDictionary<string, object> classification)
         {
-            IDictionary<int, double[]> error = new Map<int, double[]>();
+            IDictionary<int, Vector<double>> error = new Map<int, Vector<double>>();
 
-            var targetDist = new double[_maxBucketIdx + 1]; //numpy.zeros(self._maxBucketIdx + 1);
+            var targetDist = SparseVector.Create(_maxBucketIdx + 1, 0); //numpy.zeros(self._maxBucketIdx + 1);
             targetDist[(int)classification["bucketIdx"]] = 1.0;
 
             foreach (Tuple tuple in _patternNZHistory)
             {
                 int iteration = (int)tuple.Get(0);
-                int[] learnPatternNZ = (int[])tuple.Get(1);
+                HashSet<int> learnPatternNZ = (HashSet<int>)tuple.Get(1);
                 var nSteps = _learnIteration - iteration;
                 if (Steps.Contains(nSteps))
                 {
                     var predictDist = InferSingleStep(learnPatternNZ, _weightMatrix[nSteps]);
-                    error[nSteps] = ArrayUtils.Subtract(targetDist, predictDist);// targetDist - predictDist;
+                    error[nSteps] = targetDist - predictDist;// targetDist - predictDist;
                 }
             }
 

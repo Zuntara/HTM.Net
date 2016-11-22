@@ -9,7 +9,7 @@ namespace HTM.Net.Algorithms
 
         int Verbosity { get; }
 
-        double Alpha { get; }
+        double Alpha { get; set; }
 
         int[] Steps { get; }
     }

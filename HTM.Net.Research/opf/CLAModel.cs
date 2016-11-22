@@ -478,10 +478,10 @@ namespace HTM.Net.Research.opf
             var inference = (ManualInput)_netInfo.net.GetHead().GetHead().GetInference();
             var dataRow = inference.GetLayerInput();
             return new SensorInput(
-                dataRow: dataRow, 
-                dataDict: new Map<string, object>(inputRecord), 
+                dataRow: dataRow,
+                dataDict: new Map<string, object>(inputRecord),
                 dataEncodings: inference.GetEncoding().Select(e => (object)e).ToList(),
-                sequenceReset: null, 
+                sequenceReset: null,
                 category: null);// todo : fetch inputREcordCategory
         }
         ///// <summary>
@@ -1123,7 +1123,7 @@ namespace HTM.Net.Research.opf
             Parameters p = _modelConfig.GetParameters();
             // --------------------------------------------------
             // Create the network
-            var n = new Network.Network("CLANetwork", p);
+            var n = new Network.Network("CLANetwork", parameters);
 
             // --------------------------------------------------
             // Add the Sensor
@@ -1131,7 +1131,7 @@ namespace HTM.Net.Research.opf
             n.Add(topRegion);
             //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
             //sensor = n.regions['sensor'].getSelf();
-            
+
             var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();// _modelConfig.inputRecordSchema.Select(m=>m.name).ToList();
             var dataTypes = _modelConfig.inputRecordSchema.Select(v => v.type).ToList();
             var sensorFlags = _modelConfig.inputRecordSchema.Select(v => v.special).ToList();
@@ -1220,8 +1220,8 @@ namespace HTM.Net.Research.opf
             bool spEnable = _modelConfig.modelParams.spEnable;
             bool tpEnable = _modelConfig.modelParams.tpEnable;
             bool clEnable = _modelConfig.modelParams.clEnable;
-            var spParams =  _modelConfig.modelParams.spParams;
-            var tpParams =  _modelConfig.modelParams.tpParams;
+            var spParams = _modelConfig.modelParams.spParams;
+            var tpParams = _modelConfig.modelParams.tpParams;
 
             // SP is not enabled for spatial classification network
             if (spEnable)

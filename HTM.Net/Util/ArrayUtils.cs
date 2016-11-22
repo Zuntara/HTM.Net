@@ -3341,10 +3341,10 @@ namespace HTM.Net.Util
         public static T[][] CreateJaggedArray<T>(int rows, int cols)
         {
             T[][] array = new T[rows][];
-            for (int i = 0; i < rows; i++)
+            Parallel.For(0, rows, i =>
             {
                 array[i] = new T[cols];
-            }
+            });
             return array;
         }
 
