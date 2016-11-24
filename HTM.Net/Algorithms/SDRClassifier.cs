@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -64,7 +65,7 @@ namespace HTM.Net.Algorithms
     ///   Architectures and Applications, pp 227-236, Springer-Verlag, 1990 
     /// 
     /// </summary>
-    public class SDRClassifier : IClassifier
+    public class SDRClassifier : Persistable, IClassifier
     {
         public int[] Steps { get; set; }
         public double Alpha { get; set; }
@@ -74,11 +75,11 @@ namespace HTM.Net.Algorithms
         private int _learnIteration;
         private int? _recordNumMinusLearnIteration;
         private static readonly int VERSION = 1;
-        private readonly Deque<Tuple> _patternNZHistory;
+        private Deque<Tuple> _patternNZHistory;
         //private Map<int, int> _activeBitHistory;
         private int _maxInputIdx;
         private int _maxBucketIdx;
-        private readonly Map<int, double[][]> _weightMatrix;
+        private Map<int, double[][]> _weightMatrix;
         private readonly List<object> _actualValues;
         private string g_debugPrefix = "SDRClassifier";
 
@@ -371,6 +372,38 @@ namespace HTM.Net.Algorithms
 
             return retVal;
         }
+
+        /// <summary>
+        /// Applies the network parameters on this classifier
+        /// </summary>
+        /// <param name="p"></param>
+        public void ApplyParameters(Parameters p)
+        {
+            double pAlpha = (double)p.GetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, Alpha);
+            int[] pSteps = (int[])p.GetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, Steps);
+
+            Alpha = pAlpha;
+            if (!Arrays.AreEqual(Steps,pSteps))
+            {
+                // Max // of steps of prediction we need to support
+                int maxSteps = pSteps.Max() + 1;
+
+                // History of the last _maxSteps activation patterns. We need to keep 
+                // these so that we can associate the current iteration's classification 
+                // with the activationPattern from N steps ago 
+                _patternNZHistory = new Deque<Tuple>(maxSteps);
+
+                // Reset weight matrix following the parameters
+                _weightMatrix = new Map<int, double[][]>();
+                foreach (int step in pSteps)
+                {
+                    //_weightMatrix[step] = DenseMatrix.Create(_maxInputIdx + 1, _maxBucketIdx + 1, 0);
+                    _weightMatrix[step] = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, _maxBucketIdx + 1);
+                }
+            }
+            Steps = pSteps;
+        }
+
         /// <summary>
         /// Perform inference for a single step. Given an SDR input and a weight
         /// matrix, return a predicted distribution.

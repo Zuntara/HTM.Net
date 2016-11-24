@@ -1301,6 +1301,7 @@ namespace HTM.Net.Network
             {
                 names[i] = et.GetFieldName();
                 ca[i] = (IClassifier) Activator.CreateInstance(classificationType); //new CLAClassifier();
+                ca[i].ApplyParameters(this.Params);
                 i++;
             }
             var result = new NamedTuple(names, (object[])ca);
