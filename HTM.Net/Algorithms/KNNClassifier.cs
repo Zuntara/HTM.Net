@@ -1215,45 +1215,45 @@ namespace HTM.Net.Algorithms
                 return retVal;
             }
 
-            /**
-             * The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b>
-             * @param k
-             * @return this Builder
-             */
+            /// <summary>
+            /// The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b>
+            /// </summary>
+            /// <param name="k"></param>
+            /// <returns></returns>
             public Builder K(int k)
             {
                 _fieldHolder._k = k;
                 return this;
             }
 
-            /**
-             * If true, patterns must match exactly when assigning class labels
-             * @param b
-             * @return this Builder
-             */
+            /// <summary>
+            /// If true, patterns must match exactly when assigning class labels
+            /// </summary>
+            /// <param name="b"></param>
+            /// <returns></returns>
             public Builder Exact(bool b)
             {
                 _fieldHolder._exact = b;
                 return this;
             }
 
-            /**
-             * When distance method is "norm", this specifies the p value of the Lp-norm
-             * @param distanceNorm
-             * @return this Builder
-             */
+            /// <summary>
+            /// When distance method is "norm", this specifies the p value of the Lp-norm
+            /// </summary>
+            /// <param name="distanceNorm"></param>
+            /// <returns></returns>
             public Builder DistanceNorm(double distanceNorm)
             {
                 _fieldHolder._distanceNorm = distanceNorm;
                 return this;
             }
 
-            /**
-             * The method used to compute distance between input patterns and prototype patterns.
-             * see({@link DistanceMethod})
-             * @param method
-             * @return
-             */
+            /// <summary>
+            /// The method used to compute distance between input patterns and prototype patterns.
+            /// See <see cref="DistanceMethod"/>
+            /// </summary>
+            /// <param name="method"></param>
+            /// <returns></returns>
             public Builder DistanceMethod(DistanceMethod method)
             {
                 _fieldHolder.distanceMethod = method;
