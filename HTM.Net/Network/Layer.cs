@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -31,7 +30,7 @@ namespace HTM.Net.Network
     /// A Layer that includes an <see cref="IEncoder"/> is always initially configured with
     /// a <see cref="MultiEncoder"/>. The child encoders contained within the MultiEncoder
     /// are configured from the Map included with the specified Parameters, keyed by
-    /// {@link Parameters.KEY#FIELD_ENCODING_MAP}.
+    /// <see cref="Parameters.KEY.FIELD_ENCODING_MAP"/>.
     /// </p>
     /// <p>
     /// A field encoding map consists of one map for each of the fields to be
@@ -55,7 +54,7 @@ namespace HTM.Net.Network
     ///      inner.put("forced", forced);
     ///      // These are meta info to aid in Encoder construction
     ///      inner.put("fieldName", fieldName);
-    ///      inner.put("fieldType", fieldType); (see {@link FieldMetaType} for type examples)
+    ///      inner.put("fieldType", fieldType); (see <see cref="FieldMetaType"/> for type examples)
     ///      inner.put("encoderType", encoderType); (i.e. ScalarEncoder, SDRCategoryEncoder, DateEncoder...etc.)
     ///      
     ///      Map&lt;String, Object&gt; inner2 = new HashMap&lt;&gt;();
@@ -70,7 +69,7 @@ namespace HTM.Net.Network
     ///      inner.put("forced", forced);
     ///      // These are meta info to aid in Encoder construction
     ///      inner.put("fieldName", fieldName);
-    ///      inner.put("fieldType", fieldType); (see {@link FieldMetaType} for type examples)
+    ///      inner.put("fieldType", fieldType); (see <see cref="FieldMetaType"/> for type examples)
     ///      inner.put("encoderType", encoderType); (i.e. ScalarEncoder, SDRCategoryEncoder, DateEncoder...etc.)
     ///      
     ///      fieldEncodings.put("consumption", inner);  // Where "consumption" is an example field name (field name is "generic" in above code)
@@ -1295,7 +1294,8 @@ namespace HTM.Net.Network
             foreach (EncoderTuple et in encoder.GetEncoders(encoder))
             {
                 names[i] = et.GetFieldName();
-                ca[i] = (IClassifier)Activator.CreateInstance(classificationType); //new CLAClassifier();
+                ca[i] = (IClassifier) Activator.CreateInstance(classificationType); //new CLAClassifier();
+                ca[i].ApplyParameters(this.Params);
                 i++;
             }
             var result = new NamedTuple(names, (object[])ca);

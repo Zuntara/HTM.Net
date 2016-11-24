@@ -1441,7 +1441,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
-            Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
+            ILayer l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
 
             l.Subscribe(Observer.Create<IInference>(
                // OnNext
@@ -1461,17 +1461,6 @@ namespace HTM.Net.Tests.Network
 
                })
            );
-            //l.Subscribe(new Observer<Inference>()
-            //{
-            //    public void onCompleted() { }
-            //    public void onError(Throwable e) { System.out.println("error: " + e.Message); Console.WriteLine(e); }
-
-            //    public void onNext(Inference i)
-            //    {
-            //        Assert.IsNotNull(i);
-            //        Assert.AreEqual(36, i.GetSdr().Length);
-            //    }
-            //});
 
             // Now push some fake data through so that "onNext" is called above
             Map<string, object> multiInput = new Map<string, object>();

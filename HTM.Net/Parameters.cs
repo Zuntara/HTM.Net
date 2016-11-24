@@ -28,6 +28,7 @@ namespace HTM.Net
         private static readonly ParametersMap DEFAULTS_SPATIAL;
         private static readonly ParametersMap DEFAULTS_ENCODER;
         private static readonly ParametersMap DEFAULTS_KNN;
+        private static readonly ParametersMap DEFAULTS_CLASSIFIER;
 
         static Parameters()
         {
@@ -99,10 +100,18 @@ namespace HTM.Net
             defaultEncoderParams.Add(KEY.FIELD_TYPE, "int");
             defaultEncoderParams.Add(KEY.ENCODER, "ScalarEncoder");
             defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
-            defaultEncoderParams.Add(KEY.AUTO_CLASSIFY, false);
-            defaultEncoderParams.Add(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
+
+            ///////////  Classifier Parameters ///////////
+            ParametersMap defaultClassifierParams = new ParametersMap();
+            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY, false);
+            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
+            defaultClassifierParams.Add(KEY.CLASSIFIER_ALPHA, 0.001);
+            defaultClassifierParams.Add(KEY.CLASSIFIER_STEPS, new[] { 1 });
+
+            DEFAULTS_CLASSIFIER = defaultClassifierParams;
+            defaultParams.AddAll(DEFAULTS_CLASSIFIER);
 
             ////////////////// KNNClassifier Defaults ///////////////////
             ParametersMap defaultKNNParams = new ParametersMap();
@@ -309,6 +318,8 @@ namespace HTM.Net
             /// </summary>
             public static readonly KEY AUTO_CLASSIFY = new KEY("hasClassifiers", typeof(bool));
             public static readonly KEY AUTO_CLASSIFY_TYPE = new KEY("defaultClassifierType", typeof(IClassifier));
+            public static readonly KEY CLASSIFIER_ALPHA = new KEY("classifierAlpha", typeof(double));
+            public static readonly KEY CLASSIFIER_STEPS = new KEY("classifierSteps", typeof(int[]));
 
 
             // How many bits to use if encoding the respective date fields.
@@ -620,7 +631,7 @@ namespace HTM.Net
                     }
                     if (value is double? && !key.CheckRange((double?)value))
                     {
-                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, 
+                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
                             "Can not set Parameters Property '{0}' because of value '{1:0.00}' not in range. Range[{2:0.00}-{3:0.00}]"
                             , key.GetFieldName(), value, key.GetMin(), key.GetMax()));
                     }

@@ -36,19 +36,10 @@ namespace HTM.Net.Algorithms
     /// the classifications for T+3. The 'steps' constructor argument specifies the
     /// list of time-steps you want.
     /// </summary>
-    //@JsonSerialize(using=CLAClassifierSerializer.class)
-    //@JsonDeserialize(using=CLAClassifierDeserializer.class)
     [Serializable]
     public class CLAClassifier : Persistable, IClassifier
     {
-        public int Verbosity { get; set; }
-
-        /// <summary>
-        /// The alpha used to compute running averages of the bucket duty
-        /// cycles for each activation pattern bit.A lower alpha results
-        /// in longer term memory.
-        /// </summary>
-        public double Alpha { get; set; } = 0.001;
+        #region Fields
 
         private readonly double _actValueAlpha;
         /// <summary>
@@ -66,17 +57,13 @@ namespace HTM.Net.Algorithms
         /// each bucket index during inference 
         /// </summary>
         private int _maxBucketIdx;
-        /// <summary>
-        /// The sequence different steps of multi-step predictions
-        /// </summary>
-        public int[] Steps { get; set; }
 
         /// <summary>
         /// History of the last _maxSteps activation patterns. We need to keep
         /// these so that we can associate the current iteration's classification
         /// with the activationPattern from N steps ago
         /// </summary>
-        private readonly Deque<Tuple> _patternNzHistory;
+        private Deque<Tuple> _patternNzHistory;
 
         /// <summary>
         /// These are the bit histories. Each one is a BitHistory instance, stored in
@@ -94,6 +81,10 @@ namespace HTM.Net.Algorithms
         private readonly List<object> _actualValues;
 
         private string g_debugPrefix = "CLAClassifier";
+
+        #endregion
+
+        #region Constructor(s)
 
         /// <summary>
         /// CLAClassifier no-arg constructor with defaults
@@ -132,6 +123,10 @@ namespace HTM.Net.Algorithms
             this.Verbosity = verbosity;
             _patternNzHistory = new Deque<Tuple>(ArrayUtils.Max(steps.ToArray()) + 1);
         }
+
+        #endregion
+
+        #region Methods
 
         /// <summary>
         /// Process one input sample.
@@ -208,7 +203,8 @@ namespace HTM.Net.Algorithms
                 {
                     defaultValue = 0;
                 }
-                else {
+                else
+                {
                     defaultValue = classification.GetOrDefault("actValue", null);
                 }
 
@@ -254,7 +250,8 @@ namespace HTM.Net.Algorithms
                     {
                         sumVotes = ArrayUtils.Divide(sumVotes, total);
                     }
-                    else {
+                    else
+                    {
                         // If all buckets have zero probability then simply make all of the
                         // buckets equally likely. There is no actual prediction for this
                         // timestep so any of the possible predictions are just as good.
@@ -301,7 +298,8 @@ namespace HTM.Net.Algorithms
                             _actValueAlpha * (TypeConverter.Convert<double>(actValue)));
                         _actualValues[bucketIdx] = TypeConverter.Convert<T>(val);
                     }
-                    else {
+                    else
+                    {
                         _actualValues[bucketIdx] = TypeConverter.Convert<T>(actValue);
                     }
                 }
@@ -379,6 +377,23 @@ namespace HTM.Net.Algorithms
         }
 
         /// <summary>
+        /// Applies the network parameters on this classifier
+        /// </summary>
+        /// <param name="p"></param>
+        public void ApplyParameters(Parameters p)
+        {
+            double pAlpha = (double)p.GetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, Alpha);
+            int[] pSteps = (int[])p.GetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, Steps);
+
+            Alpha = pAlpha;
+            if (!Arrays.AreEqual(Steps, pSteps))
+            {
+                _patternNzHistory = new Deque<Tuple>(ArrayUtils.Max(pSteps) + 1);
+            }
+            Steps = pSteps;
+        }
+
+        /// <summary>
         /// Return a string with pretty-print of an array using the given format for each element
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -391,64 +406,30 @@ namespace HTM.Net.Algorithms
             StringBuilder sb = new StringBuilder("[ ");
             foreach (T t in arr)
             {
-                sb.Append(string.Format("{0:#.00}s", t));
+                sb.Append($"{t:#.00}s");
             }
             sb.Append(" ]");
             return sb.ToString();
         }
 
-        public string Serialize()
-        {
-            string json = null;
-            //ObjectMapper mapper = new ObjectMapper();
-            try
-            {
-                json = JsonConvert.SerializeObject(this, new JsonSerializerSettings
-                {
-                    ContractResolver = new PrivateContractResolver()
-                });
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+        #endregion
 
-            return json;
-        }
+        #region Properties
 
-        public static CLAClassifier DeSerialize(string jsonStrategy)
-        {
-            //ObjectMapper om = new ObjectMapper();
-            CLAClassifier c = null;
-            try
-            {
-                c = JsonConvert.DeserializeObject<CLAClassifier>(jsonStrategy, new JsonSerializerSettings
-                {
-                    ContractResolver = new PrivateContractResolver()
-                });
-                //Object o = om.readValue(jsonStrategy, typeof(CLAClassifier));
-                //c = (CLAClassifier)o;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+        public int Verbosity { get; set; }
 
-            return c;
-        }
-    }
+        /// <summary>
+        /// The alpha used to compute running averages of the bucket duty
+        /// cycles for each activation pattern bit.A lower alpha results
+        /// in longer term memory.
+        /// </summary>
+        public double Alpha { get; set; } = 0.001;
 
-    public class PrivateContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
-    {
-        protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
-        {
-            var props = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                            .Select(p => base.CreateProperty(p, memberSerialization))
-                        .Union(type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                                   .Select(f => base.CreateProperty(f, memberSerialization)))
-                        .ToList();
-            props.ForEach(p => { p.Writable = true; p.Readable = true; });
-            return props;
-        }
+        /// <summary>
+        /// The sequence different steps of multi-step predictions
+        /// </summary>
+        public int[] Steps { get; set; }
+
+        #endregion
     }
 }
