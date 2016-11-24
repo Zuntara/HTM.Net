@@ -92,9 +92,21 @@ namespace HTM.Net.Research.Swarming
                 //    string paramsFilePath = Path.Combine(experimentDir, "description.py");
                 //    StreamWriter paramsFile = open(paramsFilePath, 'wb');
                 //    //paramsFile.write(_paramsFileHead());
-
+                
                 string expDescription = Json.Serialize(@params);
 
+                var cloneDescr = baseDescription.Clone();
+
+                // Override parameter values
+                cloneDescr.modelConfig.modelParams.clParams.alpha = (double) @params.modelParams.clParams.alpha;
+                if (@params.modelParams.spParams.synPermInactiveDec != null)
+                {
+                    cloneDescr.modelConfig.modelParams.spParams.synPermInactiveDec = (double) @params.modelParams.spParams.synPermInactiveDec;
+                }
+                cloneDescr.modelConfig.modelParams.tpParams.activationThreshold = TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold);
+                cloneDescr.modelConfig.modelParams.tpParams.minThreshold = TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold);
+                cloneDescr.modelConfig.modelParams.tpParams.pamLength = TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
+                
                 //    //items.sort();
                 //    //for (key, value) in items
                 //    foreach (var keyValue in @params.OrderBy(k => k.Key))
@@ -637,7 +649,7 @@ namespace HTM.Net.Research.Swarming
                             }
                         }
                     },
-                    tpParams = new PermutationTemporalPoolerParams()
+                    tpParams = new PermutationTemporalPoolerParams
                     {
                         minThreshold = new PermuteInt(9, 12),
                         activationThreshold = new PermuteInt(12, 16),

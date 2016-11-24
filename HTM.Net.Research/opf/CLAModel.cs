@@ -800,7 +800,7 @@ namespace HTM.Net.Research.opf
             {
                 throw new InvalidOperationException("Input row does not contain a value for the predicted field configured for this model. Missing value for " + predictedFieldName);
             }
-            double absoluteValue = (double)rawInput[predictedFieldName];
+            double absoluteValue = TypeConverter.Convert<double>(rawInput[predictedFieldName]);
             int bucketIdx = this._classifierInputEncoder.GetBucketIndices(absoluteValue)[0];
 
             double actualValue;
@@ -852,6 +852,7 @@ namespace HTM.Net.Research.opf
                 recordNum = this.__numRunCalls;
             }
             IClassifier classifierImpl = classifierLayer.GetClassifier(sensor.GetEncoder(), predictedFieldName);
+            classifierImpl.Alpha = _modelConfig.modelParams.clParams.alpha;
             Classification<double> clResults = classifierImpl.Compute<double>(recordNum: recordNum, patternNonZero: patternNZ.ToArray(),
                 classification: classificationIn, learn: needLearning, infer: true);
 
@@ -1098,7 +1099,7 @@ namespace HTM.Net.Research.opf
 
             if (this._predictedFieldName != null && this._classifierInputEncoder != null)
             {
-                absoluteValue = (double?)inputRecord[this._predictedFieldName];
+                absoluteValue = TypeConverter.Convert<double?>(inputRecord[this._predictedFieldName]);
                 bucketIdx = _classifierInputEncoder.GetBucketIndices(absoluteValue.GetValueOrDefault())[0];
             }
 
@@ -1120,7 +1121,7 @@ namespace HTM.Net.Research.opf
         /// <returns>NetworkInfo instance</returns>
         internal NetworkInfo CreateClaNetwork(Parameters parameters)
         {
-            Parameters p = _modelConfig.GetParameters();
+            //Parameters p = _modelConfig.GetParameters();
             // --------------------------------------------------
             // Create the network
             var n = new Network.Network("CLANetwork", parameters);
@@ -1132,7 +1133,7 @@ namespace HTM.Net.Research.opf
             //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
             //sensor = n.regions['sensor'].getSelf();
 
-            var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();// _modelConfig.inputRecordSchema.Select(m=>m.name).ToList();
+            var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();
             var dataTypes = _modelConfig.inputRecordSchema.Select(v => v.type).ToList();
             var sensorFlags = _modelConfig.inputRecordSchema.Select(v => v.special).ToList();
             var pubBuilder = Publisher.GetBuilder()
@@ -1403,10 +1404,14 @@ namespace HTM.Net.Research.opf
         /// <returns>List of FieldMetaInfo objects</returns>
         public override List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false)
         {
+            //var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();// _modelConfig.inputRecordSchema.Select(m=>m.name).ToList();
+            var sensorFlags = _modelConfig.inputRecordSchema.OrderBy(v => v.name).Select(v => v.special).ToList();
+
             MultiEncoder encoder = _getEncoder();
 
             var fieldNames = encoder.GetScalarNames();
-            var fieldTypes = encoder.GetDecoderOutputFieldTypes();
+            //var fieldTypes = encoder.GetDecoderOutputFieldTypes();
+            var fieldTypes = _modelConfig.inputRecordSchema.OrderBy(v => v.name).Select(v => v.type).ToList();
             Debug.Assert(fieldNames.Count == fieldTypes.Count);
 
             // Also include the classifierOnly field?
@@ -1417,11 +1422,11 @@ namespace HTM.Net.Research.opf
                 var addFieldTypes = clEncoder.GetDecoderOutputFieldTypes();
                 Debug.Assert(addFieldNames.Count == addFieldTypes.Count);
                 fieldNames.AddRange(addFieldNames);
-                fieldTypes.UnionWith(addFieldTypes);
+                fieldTypes.AddRange(addFieldTypes);
             }
 
-            var fieldMetaList = ArrayUtils.Zip(fieldNames, fieldTypes)
-                .Select(t => new FieldMetaInfo((string)t.Get(0), (FieldMetaType)t.Get(1), SensorFlags.Blank))
+            var fieldMetaList = ArrayUtils.Zip(fieldNames, fieldTypes, sensorFlags)
+                .Select(t => new FieldMetaInfo((string)t.Get(0), (FieldMetaType)t.Get(1), (SensorFlags)t.Get(2)))
                 .ToList();
 
             return fieldMetaList;

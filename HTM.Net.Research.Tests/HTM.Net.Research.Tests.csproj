@@ -198,6 +198,9 @@
     <None Include="Resources\rec-center-hourly.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Resources\Swarming\linear.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Resources\Swarming\sine.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

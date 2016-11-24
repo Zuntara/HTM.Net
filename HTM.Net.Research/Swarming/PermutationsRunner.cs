@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +10,6 @@ using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
-using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Tuple = HTM.Net.Util.Tuple;
@@ -909,10 +907,10 @@ namespace HTM.Net.Research.Swarming
             ClaPermutations perms = new ClaPermutations();
             TokenReplacer.ReplaceIn(perms, tokenReplacements);
 
-            Debug.WriteLine("");
-            Debug.WriteLine(JsonConvert.SerializeObject(descr, Formatting.Indented));
-            Debug.WriteLine("");
-            Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
+            //Debug.WriteLine("");
+            //Debug.WriteLine(JsonConvert.SerializeObject(descr, Formatting.Indented));
+            //Debug.WriteLine("");
+            //Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
 
             return new Tuple<ClaExperimentDescription, ClaPermutations>(descr, perms);
         }
@@ -1637,6 +1635,8 @@ namespace HTM.Net.Research.Swarming
         ControlModelDescription control { get; set; }
 
         Parameters GetParameters();
+
+        IDescription Clone();
     }
 
     [JsonConverter(typeof(TypedDescriptionBaseJsonConverter))]
@@ -1660,6 +1660,11 @@ namespace HTM.Net.Research.Swarming
             p.Union(modelConfig.GetParameters());
 
             return p;
+        }
+
+        public IDescription Clone()
+        {
+            return Json.Deserialize<BaseDescription>(Json.Serialize(this));
         }
 
         /// <summary>
@@ -1756,10 +1761,7 @@ namespace HTM.Net.Research.Swarming
 
         }
 
-        public ClaExperimentDescription Clone()
-        {
-            return Json.Deserialize<ClaExperimentDescription>(Json.Serialize(this));
-        }
+        
 
         public void updateConfigFromSubConfig(ConfigModelDescription config)
         {
@@ -1953,9 +1955,9 @@ namespace HTM.Net.Research.Swarming
         [TokenReplace("$SP_PERM_CONNECTED")]
         public double synPermConnected { get; set; }
         [ParameterMapping]
-        [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
         public double synPermActiveInc { get; set; }
         [ParameterMapping]
+        [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
         public double synPermInactiveDec { get; set; }
         [ParameterMapping]
         public double maxBoost { get; set; }
@@ -2171,7 +2173,7 @@ namespace HTM.Net.Research.Swarming
     public class PermutationSpatialPoolerParams
     {
         [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
-        public PermuteVariable synPermInactiveDec { get; set; }
+        public object synPermInactiveDec { get; set; }
     }
 
     [Serializable]

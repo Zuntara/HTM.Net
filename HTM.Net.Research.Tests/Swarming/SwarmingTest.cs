@@ -9,9 +9,12 @@ using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Tests.Regression;
 using HTM.Net.Util;
+using log4net;
 using log4net.Config;
+using log4net.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
@@ -331,7 +334,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // ----------------------------------------------------------------------
             // Make sure all models completed successfully
-            var models = cjDAO.modelsGetUpdateCounters((uint?) jobID);
+            var models = cjDAO.modelsGetUpdateCounters((uint?)jobID);
             //modelIDs =  [model.modelId for model in models];
             var modelIDs = models.Select(m => (ulong)m.Item1).ToList();
             List<ResultAndStatusModel> results;
@@ -347,9 +350,13 @@ namespace HTM.Net.Research.Tests.Swarming
             var metricResults = new List<double?>();
             foreach (var result in results)
             {
+                if (result.resultsSerialized != null)
+                {
+                    result.results = Json.Deserialize<Tuple>(result.resultsSerialized);
+                }
                 if (result.results != null)
                 {
-                    metricResults.Add(((Map<string,double?>)result.results.Get(1)).Values.First());
+                    metricResults.Add(((Map<string, double?>)result.results.Get(1)).Values.First());
                 }
                 else
                 {
@@ -363,7 +370,7 @@ namespace HTM.Net.Research.Tests.Swarming
             }
 
             // Print worker completion message
-            var jobInfo = cjDAO.jobInfo((uint?) jobID);
+            var jobInfo = cjDAO.jobInfo((uint?)jobID);
 
             return new PermutationsLocalResult
             {
@@ -579,18 +586,21 @@ namespace HTM.Net.Research.Tests.Swarming
         }
 
         // nupic/src/nupic/datafiles/swarming/test_data.csv
-        [TestMethod]
-        [DeploymentItem("Resources\\swarming\\test_data.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
         }
 
         [TestMethod]
-        [DeploymentItem("Resources\\swarming\\sine.csv")]
-        public void TestSineOpfInternal()
+        [DeploymentItem("Resources\\swarming\\linear.csv")]
+        public void TestLinearOpfInternal()
         {
-            var config = OpfBenchMarkTest.BenchMarkSine(-1);
+            ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level = Level.Info;
+            ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
+
+            var config = BenchMarkLinear(-1);
             config.maxModels = 1;
 
             // Convert config to parameters
@@ -622,6 +632,48 @@ namespace HTM.Net.Research.Tests.Swarming
             //this.assertLess(len(resultInfos), 350);
         }
 
+        public SwarmDefinition BenchMarkLinear(int recordsToProcess)
+        {
+            StreamDef streamDef = new StreamDef
+            {
+                info = "test_NoProviders",
+                streams = new[]
+                {
+                    new StreamDef.StreamItem
+                    {
+                        columns = new[] { "number" },
+                        info = "linear.csv",
+                        source = "linear.csv"
+                    }
+                },
+                version = 1
+            };
+
+            SwarmDefinition expDesc = new SwarmDefinition
+            {
+                inferenceType = InferenceType.MultiStep,
+                inferenceArgs = new InferenceArgsDescription
+                {
+                    predictedField = "number",
+                    predictionSteps = new[] {1}
+                },
+                streamDef = streamDef,
+                includedFields = new List<SwarmDefinition.SwarmDefIncludedField>
+                {
+                    new SwarmDefinition.SwarmDefIncludedField
+                    {
+                        fieldName = "number",
+                        fieldType = FieldMetaType.Integer,
+                        minValue = 0,
+                        maxValue = 10
+                    }
+                },
+                iterationCount = recordsToProcess
+            };
+
+            return expDesc;
+        }
+
         /// <summary>
         /// Try running a spatial classification swarm
         /// </summary>
@@ -650,7 +702,7 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestDescriptionSerialization()
         {
             SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
-            
+
             string json = JsonConvert.SerializeObject(file, Formatting.Indented, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.All
@@ -663,7 +715,7 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.IsNotNull(deserialized);
             Assert.IsInstanceOfType(deserialized, typeof(SimpleV2DescriptionFile));
 
-            
+
         }
 
         [TestMethod]
@@ -682,7 +734,7 @@ namespace HTM.Net.Research.Tests.Swarming
         //    SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
 
         //    CLAModel model = new CLAModel(file);
-            
+
         //    Assert.IsNotNull(model);
         //}
 
@@ -717,7 +769,7 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.IsNotNull(deserialized);
             Assert.IsInstanceOfType(deserialized, typeof(SimpleV2PermutationsFile));
 
-            SimpleV2PermutationsFile des = (SimpleV2PermutationsFile) deserialized;
+            SimpleV2PermutationsFile des = (SimpleV2PermutationsFile)deserialized;
             Assert.AreEqual(7, ((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
             Assert.IsInstanceOfType(((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
 
@@ -731,12 +783,12 @@ namespace HTM.Net.Research.Tests.Swarming
             var expDir = new Tuple<BaseDescription, BasePermutations>(
                 new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
 
-            var jobParamsDict = this._generateHSJobParams(expDirectory: expDir,hsImp: "v2");
+            var jobParamsDict = this._generateHSJobParams(expDirectory: expDir, hsImp: "v2");
             jobParamsDict.Update(null);
 
             string jobParamsJson = Json.Serialize(jobParamsDict);
 
-            var jobParams = Json.Deserialize<Map<string,object>>(jobParamsJson);
+            var jobParams = Json.Deserialize<Map<string, object>>(jobParamsJson);
 
             HyperSearchSearchParams p = new HyperSearchSearchParams();
             p.Populate(jobParams);

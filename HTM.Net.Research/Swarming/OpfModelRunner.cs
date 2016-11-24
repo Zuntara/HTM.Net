@@ -509,9 +509,10 @@ namespace HTM.Net.Research.Swarming
         {
             if (__predictionCache == null) return;
 
-            _logger.Error("OPF Model runner __flushPredictionCache not yet implemented!");
-            _logger.Error(Arrays.ToString(__predictionCache));
+            _logger.Error("OPF Model runner __flushPredictionCache not yet fully implemented!");
+            //_logger.Error(Arrays.ToString(__predictionCache));
             //throw new NotImplementedException("flushing not yet implemented");
+            __predictionCache.Clear();
         }
 
         /// <summary>

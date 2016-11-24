@@ -471,9 +471,13 @@ namespace HTM.Net.Encoders
                 double parsed = double.Parse((string)o, NumberFormatInfo.InvariantInfo);
                 EncodeIntoArray(parsed, tempArray);
             }
+            else if (o is double)
+            {
+                EncodeIntoArray((double) o, tempArray);
+            }
             else
             {
-                EncodeIntoArray((double)o, tempArray);
+                EncodeIntoArray((int)o, tempArray);
             }
         }
 
