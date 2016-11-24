@@ -42,6 +42,14 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 predictAheadTime = null,
 
+                inputRecordSchema = new []
+                {
+                    new FieldMetaInfo("address", FieldMetaType.String, SensorFlags.Blank), 
+                    new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank), 
+                    new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp), 
+                    new FieldMetaInfo("consumption", FieldMetaType.Float, SensorFlags.Blank), 
+                },
+
                 // Model parameter dictionary.
                 modelParams = new ModelParamsDescription
                 {

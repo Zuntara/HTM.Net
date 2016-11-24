@@ -28,69 +28,69 @@ namespace HTM.Net.Encoders
          */
         public static void Assemble(MultiEncoder encoder, Map<string, Map<string, object>> encoderSettings)
         {
-            if (encoder is MultiEncoder)
+            if (encoderSettings == null || !encoderSettings.Any())
             {
-                if (encoderSettings == null || !encoderSettings.Any())
+                throw new ArgumentException("Cannot initialize this Sensor's MultiEncoder with a null settings");
+            }
+
+            // Sort the encoders so that they end up in a controlled order
+            List<string> sortedFields = new List<string>(encoderSettings.Keys);
+            sortedFields.Sort();
+
+            foreach (string field in sortedFields)
+            {
+                Map<string, object> @params = encoderSettings[field];
+                if (@params == null) continue;
+                if (!@params.ContainsKey("fieldName") && !@params.ContainsKey("fieldname"))
                 {
-                    throw new ArgumentException(
-                        "Cannot initialize this Sensor's MultiEncoder with a null settings");
+                    throw new ArgumentException("Missing fieldname for encoder " + field);
+                }
+                string fieldName = (string)(@params.Get("fieldName") ?? @params.Get("fieldname"));
+
+                if (!@params.ContainsKey("encoderType") && !@params.ContainsKey("type"))
+                {
+                    throw new ArgumentException("Missing type for encoder " + field);
                 }
 
-                // Sort the encoders so that they end up in a controlled order
-                List<string> sortedFields = new List<string>(encoderSettings.Keys);
-                sortedFields.Sort();
+                string encoderType = (string)(@params.Get("encoderType") ?? @params.Get("type"));
+                IBuilder builder = encoder.GetBuilder(encoderType);
 
-                foreach (string field in sortedFields)
+                if (encoderType.Equals("SDRCategoryEncoder"))
                 {
-                    Map<string, object> @params = encoderSettings[field];
-                    if (@params == null) continue;
-                    if (!@params.ContainsKey("fieldName") && !@params.ContainsKey("fieldname"))
+                    // Add mappings for category list
+                    ConfigureCategoryBuilder(encoder, @params, builder);
+                }
+                else if (encoderType.Equals("DateEncoder"))
+                {
+                    // Extract date specific mappings out of the map so that we can
+                    // pre-configure the DateEncoder with its needed directives.
+                    ConfigureDateBuilder(encoder, field, encoderSettings, (DateEncoder.Builder)builder);
+                }
+                else if (encoderType.Equals("GeospatialCoordinateEncoder"))
+                {
+                    // Extract Geo specific mappings out of the map so that we can
+                    // pre-configure the GeospatialCoordinateEncoder with its needed directives.
+                    ConfigureGeoBuilder(encoder, field, encoderSettings, (GeospatialCoordinateEncoder.Builder)builder);
+                }
+                else
+                {
+                    foreach (string param in @params.Keys)
                     {
-                        throw new ArgumentException("Missing fieldname for encoder " + field);
-                    }
-                    string fieldName = (string)(@params.Get("fieldName") ?? @params.Get("fieldname"));
-
-                    if (!@params.ContainsKey("encoderType") && !@params.ContainsKey("type"))
-                    {
-                        throw new ArgumentException("Missing type for encoder " + field);
-                    }
-
-                    string encoderType = (string)(@params.Get("encoderType") ?? @params.Get("type"));
-                    IBuilder builder = encoder.GetBuilder(encoderType);
-
-                    if (encoderType.Equals("SDRCategoryEncoder"))
-                    {
-                        // Add mappings for category list
-                        ConfigureCategoryBuilder(encoder, @params, builder);
-                    }
-                    else if (encoderType.Equals("DateEncoder"))
-                    {
-                        // Extract date specific mappings out of the map so that we can
-                        // pre-configure the DateEncoder with its needed directives.
-                        ConfigureDateBuilder(encoder, field, encoderSettings, (DateEncoder.Builder)builder);
-                    }
-                    else if (encoderType.Equals("GeospatialCoordinateEncoder"))
-                    {
-                        // Extract Geo specific mappings out of the map so that we can
-                        // pre-configure the GeospatialCoordinateEncoder with its needed directives.
-                        ConfigureGeoBuilder(encoder, field, encoderSettings, (GeospatialCoordinateEncoder.Builder)builder);
-                    }
-                    else
-                    {
-                        foreach (string param in @params.Keys)
+                        if (param.Equals("kwArgs")) // for permutation file in swarming
                         {
-                            if (!param.Equals("fieldName") && !param.Equals("encoderType") && !param.Equals("type") &&
-                                !param.Equals("fieldType") && !param.Equals("fieldEncodings"))
-                            {
-
-                                encoder.SetValue(builder, param, @params[param]);
-                            }
+                            continue;   // ignore , already added
+                        }
+                        if (!param.Equals("fieldName") && !param.Equals("encoderType") && !param.Equals("type") &&
+                            !param.Equals("fieldType") && !param.Equals("fieldEncodings"))
+                        {
+                            encoder.SetValue(builder, param, @params[param]);
                         }
                     }
-
-                    encoder.AddEncoder(field, fieldName, builder.Build());
                 }
+
+                encoder.AddEncoder(field, fieldName, builder.Build());
             }
+
         }
 
         private static void ConfigureCategoryBuilder(MultiEncoder multiEncoder,

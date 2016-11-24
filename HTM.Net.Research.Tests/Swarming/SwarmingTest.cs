@@ -593,8 +593,8 @@ namespace HTM.Net.Research.Tests.Swarming
             TestSimpleV2Internal();
         }
 
-        [TestMethod]
-        [DeploymentItem("Resources\\swarming\\linear.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\swarming\\linear.csv")]
         public void TestLinearOpfInternal()
         {
             ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level = Level.Info;
@@ -688,8 +688,8 @@ namespace HTM.Net.Research.Tests.Swarming
         /// <summary>
         /// Try running a spatial classification swarm
         /// </summary>
-        [TestMethod]
-        [DeploymentItem("Resources\\swarming\\test_data.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSpatialClassification()
         {
             var expDir = new Tuple<BaseDescription, BasePermutations>(

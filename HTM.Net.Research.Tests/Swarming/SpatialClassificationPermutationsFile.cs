@@ -25,7 +25,7 @@ namespace HTM.Net.Research.Tests.Swarming
                             {"_classifierInput", new Map<string,object>
                                 {
                                     { "fieldName", "consumption"},
-                                    { "encoderClass", "ScalarEncoder"},
+                                    { "encoderType", "ScalarEncoder"},
                                     { "kwArgs", new KWArgsModel
                                         {
                                             {"maxval", new PermuteInt(100, 300, 25)},

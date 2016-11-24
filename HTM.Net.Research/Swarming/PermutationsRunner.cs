@@ -1414,7 +1414,7 @@ namespace HTM.Net.Research.Swarming
                 {
                     string key = pair.Key;
                     if (key == "fieldname") key = "fieldName";
-                    else if (key == "type") key = "encoderClass";
+                    else if (key == "type") key = "encoderType";
                     if (key == "name") continue;
 
                     if (key == "n" && (string)encoderDict["type"] != "SDRCategoryEncoder")
@@ -1439,7 +1439,7 @@ namespace HTM.Net.Research.Swarming
                         string key = pair.Key;
                         object value = pair.Value;
                         if (key == "fieldname") key = "fieldName";
-                        else if (key == "type") key = "encoderClass";
+                        else if (key == "type") key = "encoderType";
                         else if (key == "name") continue;
 
                         if (key == "n")
@@ -1470,7 +1470,7 @@ namespace HTM.Net.Research.Swarming
                         string key = pair.Key;
                         object value = pair.Value;
                         if (key == "fieldname") key = "fieldName";
-                        else if (key == "type") key = "encoderClass";
+                        else if (key == "type") key = "encoderType";
                         else if (key == "name") continue;
 
                         // Set other props on encoder

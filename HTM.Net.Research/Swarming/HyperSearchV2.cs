@@ -3554,7 +3554,7 @@ namespace HTM.Net.Research.Swarming
                     if (updated)
                     {
                         //string permContents = new StreamReader(permutationsScript).ReadToEnd();
-                        string permContents = Json.Serialize(permutationsScript);
+                        string permContents = permutationsScript;
                         this._cjDAO.jobSetFieldIfEqual(jobID: this._jobID,
                                                        fieldName: "genPermutations",
                                                        curValue: null,
@@ -5137,18 +5137,11 @@ namespace HTM.Net.Research.Swarming
                     };
 
                     // And the hashes.
-                    MD5 m = MD5.Create();
+                    //MD5 m = MD5.Create();
                     //m.update(sortedJSONDumpS(structuredParams));
                     //m.update(this._baseDescriptionHash);
                     //paramsHash = m.digest();
-                    paramsHash = GetMd5Hash(MD5.Create(), JsonConvert.SerializeObject(structuredParams, new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    })
-                        + JsonConvert.SerializeObject(_baseDescriptionHash, new JsonSerializerSettings
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        }));
+                    paramsHash = GetMd5Hash(MD5.Create(), Json.Serialize(structuredParams) + Json.Serialize(_baseDescriptionHash));
                     string particleInst = string.Format("{0}.{1}", modelParams.particleState.id, modelParams.particleState.genIdx);
                     particleHash = GetMd5Hash(MD5.Create(), particleInst);// hashlib.md5(particleInst).digest();
 
