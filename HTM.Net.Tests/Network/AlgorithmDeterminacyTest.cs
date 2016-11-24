@@ -189,7 +189,6 @@ namespace HTM.Net.Tests.Network
                         .Add(new TemporalMemory())
                         .Add(sensor)));
 
-            network.Start();
 
             network.Observe().Subscribe(Observer.Create<IInference>(
                 output =>
@@ -198,6 +197,7 @@ namespace HTM.Net.Tests.Network
                 Console.WriteLine,
                 () => { }
             ));
+            network.Start();
 
             int[] input1 = new int[] { 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0 };
             int[] input2 = new int[] { 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 };

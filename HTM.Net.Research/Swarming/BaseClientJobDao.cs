@@ -818,25 +818,29 @@ namespace HTM.Net.Research.Swarming
                 {
                     model._eng_params_hash = (string) fieldPair.Value;
                 }
-                if (fieldPair.Key == "engParticleHash")
+                else if (fieldPair.Key == "engParticleHash")
                 {
                     model._eng_particle_hash = (string) fieldPair.Value;
                 }
-                if (fieldPair.Key == "engStop")
+                else if (fieldPair.Key == "engStop")
                 {
                     model._eng_stop = (string) fieldPair.Value;
                 }
-                if (fieldPair.Key == "engWorkerConnId")
+                else if (fieldPair.Key == "engWorkerConnId")
                 {
                     model._eng_worker_conn_id = (string) fieldPair.Value;
                 }
-                if (fieldPair.Key == "modelCheckpointId")
+                else if (fieldPair.Key == "modelCheckpointId")
                 {
                     model.model_checkpoint_id = (string) fieldPair.Value;
                 }
-                if (fieldPair.Key == "genDescription")
+                else if (fieldPair.Key == "genDescription")
                 {
                     model.gen_description = (string) fieldPair.Value;
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknown field: " + fieldPair.Key);
                 }
             }
             
@@ -910,7 +914,7 @@ namespace HTM.Net.Research.Swarming
                 job._eng_worker_state = newValue;
                 return true;
             }
-            return false;
+            throw new InvalidOperationException($"Field {fieldName} to be mapped in jobSetFieldIfEqual");
         }
         /// <summary>
         /// Look through the models table for an orphaned model, which is a model

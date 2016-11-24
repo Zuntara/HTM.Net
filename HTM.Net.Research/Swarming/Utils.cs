@@ -92,21 +92,51 @@ namespace HTM.Net.Research.Swarming
                 //    string paramsFilePath = Path.Combine(experimentDir, "description.py");
                 //    StreamWriter paramsFile = open(paramsFilePath, 'wb');
                 //    //paramsFile.write(_paramsFileHead());
-                
+
                 string expDescription = Json.Serialize(@params);
 
                 var cloneDescr = baseDescription.Clone();
 
                 // Override parameter values
-                cloneDescr.modelConfig.modelParams.clParams.alpha = (double) @params.modelParams.clParams.alpha;
-                if (@params.modelParams.spParams.synPermInactiveDec != null)
+                if (@params?.modelParams?.clParams?.alpha != null)
                 {
-                    cloneDescr.modelConfig.modelParams.spParams.synPermInactiveDec = (double) @params.modelParams.spParams.synPermInactiveDec;
+                    cloneDescr.modelConfig.modelParams.clParams.alpha = (double)@params.modelParams.clParams.alpha;
                 }
-                cloneDescr.modelConfig.modelParams.tpParams.activationThreshold = TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold);
-                cloneDescr.modelConfig.modelParams.tpParams.minThreshold = TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold);
-                cloneDescr.modelConfig.modelParams.tpParams.pamLength = TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
-                
+                if (@params?.modelParams?.spParams?.synPermInactiveDec != null)
+                {
+                    cloneDescr.modelConfig.modelParams.spParams.synPermInactiveDec =
+                        (double)@params.modelParams.spParams.synPermInactiveDec;
+                }
+                cloneDescr.modelConfig.modelParams.tpParams.activationThreshold =
+                    TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold);
+                cloneDescr.modelConfig.modelParams.tpParams.minThreshold =
+                    TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold);
+                cloneDescr.modelConfig.modelParams.tpParams.pamLength =
+                    TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
+
+                Debug.WriteLine($">> clParams.alpha = {@params?.modelParams?.clParams?.alpha}");
+                Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.tpParams.activationThreshold}");
+                Debug.WriteLine($">> tpParams.minThreshold = {@params.modelParams.tpParams.minThreshold}");
+                Debug.WriteLine($">> tpParams.pamLength = {@params.modelParams.tpParams.pamLength}");
+
+                foreach (var encoderDict in cloneDescr.modelConfig.modelParams.sensorParams.encoders)
+                {
+                    string encoderName = encoderDict.Key;
+                    Map<string, object> encoderValues = encoderDict.Value;
+
+                    var permutedEncoder = (Map<string, object>)@params.modelParams.sensorParams.encoders[encoderName];
+                    if (permutedEncoder == null) continue;
+                    foreach (var pair in permutedEncoder)
+                    {
+                        // overload permuted encoder values when they are there
+                        if (pair.Value != null)
+                        {
+                            Debug.WriteLine($">> sensorParams.{pair.Key} = {pair.Value}");
+                            encoderValues[pair.Key] = pair.Value;
+                        }
+                    }
+                }
+
                 //    //items.sort();
                 //    //for (key, value) in items
                 //    foreach (var keyValue in @params.OrderBy(k => k.Key))
@@ -138,7 +168,7 @@ namespace HTM.Net.Research.Swarming
                 //    fd = open(paramsFilePath);
                 //    expDescription = fd.read();
                 //    fd.close();
-                jobsDAO.modelSetFields(modelID, new Map<string, object> {{"genDescription", expDescription}});
+                jobsDAO.modelSetFields(modelID, new Map<string, object> { { "genDescription", expDescription } });
 
                 // Run the experiment now
                 ModelCompletionStatus completionStatus;
@@ -148,7 +178,7 @@ namespace HTM.Net.Research.Swarming
                         modelID: modelID,
                         jobID: jobID,
                         predictedField: predictedField,
-                        experimentDir: baseDescription,
+                        experimentDir: cloneDescr,
                         reportKeyPatterns: reportKeys,
                         optimizeKeyPattern: optimizeKey,
                         jobsDAO: jobsDAO,
@@ -160,6 +190,7 @@ namespace HTM.Net.Research.Swarming
                 }
                 catch (Exception ex)
                 {
+                    Debug.WriteLine(ex);
                     if (Debugger.IsAttached) Debugger.Break();
                     throw;
                 }
@@ -193,6 +224,11 @@ namespace HTM.Net.Research.Swarming
                 //        completionStatus = _handleModelRunnerException(jobID,
                 //                                       modelID, jobsDAO, experimentDir, logger, e);
                 //    }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ERROR: " + ex);
+                if (Debugger.IsAttached) Debugger.Break();
             }
             finally
             {

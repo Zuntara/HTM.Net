@@ -1503,20 +1503,20 @@ namespace HTM.Net.Network.Sensor
         /// '_sequenceId': the value from the sequenceId field (if any)
         /// </summary>
         /// <returns></returns>
-        public Map<string, object> GetNextRecordDict()
+        public Tuple<Map<string, object>, string[]> GetNextRecordDict()
         {
             var values = GetNextRecord();
             if (values == null)
             {
                 return null;
             }
-            if (!values.Any()) return new Map<string, object>();
+            if (!values.Any()) return new Tuple<Map<string, object>, string[]>(new Map<string, object>(), new string[0]);
 
             if (_modelRecordEncoder == null)
             {
                 _modelRecordEncoder = new ModelRecordEncoder(GetFields(), GetAggregationMonthsAndSeconds());
             }
-            return _modelRecordEncoder.Encode(values.Skip(1).ToList()); // skip record number in input
+            return new Tuple<Map<string, object>, string[]>(_modelRecordEncoder.Encode(values.Skip(1).ToList()), values.Select(t=>t?.ToString()).ToArray()); // skip record number in input
         }
     }
 

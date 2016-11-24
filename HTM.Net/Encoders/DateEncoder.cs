@@ -424,7 +424,7 @@ namespace HTM.Net.Encoders
         public DateTime Parse(string dateTimeStr)
         {
             DateTime date;
-            if (DateTime.TryParseExact(dateTimeStr, customFormatter.FullDateTimePattern, customFormatter, DateTimeStyles.AssumeLocal, out date))
+            if (DateTime.TryParse(dateTimeStr, CultureInfo.GetCultureInfo("nl-be").DateTimeFormat, DateTimeStyles.None, out date))
             {
                 return date;
             }

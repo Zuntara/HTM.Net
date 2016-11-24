@@ -168,9 +168,9 @@ namespace HTM.Net.Research.Tests.Opf
         {
             IDescription exp = new TemporalAnomalyModelDescription();
 
-            var data = new List<Map<string, object>>
+            var data = new List<Tuple<Map<string, object>, string[]>>
             {
-                new Map<string, object>
+                new Tuple<Map<string, object>, string[]>(new Map<string, object>
                 {
                     {"_category", new object[] {null}},
                     {"_reset", 0},
@@ -179,8 +179,8 @@ namespace HTM.Net.Research.Tests.Opf
                     {"_timestampRecordIdx", null},
                     {"c0", new DateTime(2013, 12, 5, 0, 0, 0)},
                     {"c1", 5.0}
-                },
-                new Map<string, object>
+                }, new[] {"0", "05/12/2013", "5.0"}),
+                new Tuple<Map<string, object>, string[]>(new Map<string, object>
                 {
                     {"_category", new object[] {null}},
                     {"_reset", 0},
@@ -189,8 +189,8 @@ namespace HTM.Net.Research.Tests.Opf
                     {"_timestampRecordIdx", null},
                     {"c0", new DateTime(2013, 12, 6, 0, 0, 0)},
                     {"c1", 6.0}
-                },
-                new Map<string, object>
+                }, new[] {"1", "05/12/2013", "6.0"}),
+                new Tuple<Map<string, object>, string[]>(new Map<string, object>
                 {
                     {"_category", new object[] {null}},
                     {"_reset", 0},
@@ -199,14 +199,14 @@ namespace HTM.Net.Research.Tests.Opf
                     {"_timestampRecordIdx", null},
                     {"c0", new DateTime(2013, 12, 7, 0, 0, 0)},
                     {"c1", 7.0}
-                },
+                }, new[] {"2", "05/12/2013", "7.0"}),
             };
 
             var model = ModelFactory.Create(exp.modelConfig);
             model.enableLearning();
             model.enableInference(exp.control.inferenceArgs);
 
-            foreach (Map<string, object> row in data)
+            foreach (var row in data)
             {
                 var result = model.run(row);
                 Assert.IsInstanceOfType(result, typeof(ModelResult));
@@ -337,7 +337,7 @@ namespace HTM.Net.Research.Tests.Opf
                 {
                     inferenceArgs = new InferenceArgsDescription
                     {
-                        inputPredictedField = InputPredictedField.auto,
+                        inputPredictedField = InputPredictedField.Auto,
                         predictedField = "c1",
                         predictionSteps = new[] {1},
                     }

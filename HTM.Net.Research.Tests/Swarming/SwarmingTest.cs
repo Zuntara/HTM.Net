@@ -601,7 +601,7 @@ namespace HTM.Net.Research.Tests.Swarming
             ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
             var config = BenchMarkLinear(-1);
-            config.maxModels = 1;
+            config.maxModels = 2;
 
             // Convert config to parameters
             // set encoders in place
@@ -668,6 +668,17 @@ namespace HTM.Net.Research.Tests.Swarming
                         maxValue = 10
                     }
                 },
+                //metrics = new[]
+                //{
+                //    new MetricSpec(field: "consumption",
+                //        inferenceElement: InferenceElement.MultiStepBestPredictions,
+                //        metric: "multiStep", @params: new Map<string, object>
+                //        {
+                //            {"window", 1000},
+                //            {"steps", new[] {0}},
+                //            {"errorMetric", "avg_err"}
+                //        })
+                //},
                 iterationCount = recordsToProcess
             };
 
@@ -677,8 +688,8 @@ namespace HTM.Net.Research.Tests.Swarming
         /// <summary>
         /// Try running a spatial classification swarm
         /// </summary>
-        //[TestMethod]
-        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSpatialClassification()
         {
             var expDir = new Tuple<BaseDescription, BasePermutations>(

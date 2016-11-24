@@ -392,7 +392,7 @@ namespace HTM.Net.Research.Swarming
                 // failed. The runModelXXX code in hypesearch.utils, if it sees an
                 // exception of type utils.JobFailException, will cancel the job and
                 // copy the error message into the job record.
-                Map<string, object> inputRecord;
+                Tuple<Map<string, object>, string[]> inputRecord;
                 try
                 {
                     inputRecord = _inputSource.GetNextRecordDict();
@@ -413,7 +413,7 @@ namespace HTM.Net.Research.Swarming
                     break;
                 }
 
-                if (!inputRecord.Any())
+                if (!inputRecord.Item1.Any())
                 {
                     throw new InvalidOperationException("Got an empty record from FileSource");
                 }

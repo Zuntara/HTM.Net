@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Swarming
 {
@@ -601,20 +602,23 @@ namespace HTM.Net.Research.Swarming
         public string name;
         public string fieldName { get; set; }
         public KWArgsModel kwArgs { get; set; }
+
         public string encoderClass { get; set; }
-        public bool classifierOnly { get; set; }
-        public object maxval { get; set; } // int or permuteint
-        public object radius { get; set; } // float or permutefloat
-        public object n { get; set; } // int or permuteint
-        public object w { get; set; } // int or permuteint
-        public object minval { get; set; } // int or permuteint
-        public bool clipInput { get; set; }
+
+        public bool classifierOnly { get { return (bool)kwArgs.Get("classifierOnly", false); } set { kwArgs["classifierOnly"] = value; } }
+        public object maxval { get { return kwArgs.Get("maxval", null); } set { kwArgs["maxval"] = value; } } // int or permuteint
+        public object radius { get { return kwArgs.Get("radius", null); } set { kwArgs["radius"] = value; } } // float or permutefloat
+        public object n { get { return kwArgs.Get("n", null); } set { kwArgs["n"] = value; } } // int or permuteint
+        public object w { get { return kwArgs.Get("w", null); } set { kwArgs["w"] = value; } } // int or permuteint
+        public object minval { get { return kwArgs.Get("minxval", null); } set { kwArgs["minval"] = value; } } // int or permuteint
+        public bool clipInput { get { return (bool)kwArgs.Get("clipInput", false); } set { kwArgs["clipInput"] = value; } }
 
         [Obsolete("Don' use")]
         public PermuteEncoder()
         {
             kwArgs = new KWArgsModel();
         }
+
         public PermuteEncoder(string fieldName, string encoderClass, string name = null, KWArgsModel kwArgs = null)
         {
             this.fieldName = fieldName;
@@ -626,7 +630,7 @@ namespace HTM.Net.Research.Swarming
             this.encoderClass = encoderClass;
 
             // Possible values in kwArgs include: w, n, minval, maxval, etc.
-            this.kwArgs = kwArgs;
+            this.kwArgs = kwArgs ?? new KWArgsModel();
         }
 
         #region Overrides of Object
@@ -649,7 +653,86 @@ namespace HTM.Net.Research.Swarming
         public object this[string key]
         {
             get { return kwArgs[key]; }
+            set { kwArgs[key] = value; }
         }
+
+        ///// <summary>
+        ///// Return a dict that can be used to construct this encoder. This dict
+        ///// can be passed directly to the addMultipleEncoders() method of the
+        ///// multi encoder.
+        ///// </summary>
+        ///// <param name="encoderName">name of the encoder</param>
+        ///// <param name="flattenedChosenValues">
+        ///// dict of the flattened permutation variables. Any
+        ///// variables within this dict whose key starts
+        ///// with encoderName will be substituted for
+        ///// encoder constructor args which are being
+        ///// permuted over.
+        ///// </param>
+        ///// <returns></returns>
+        //public PermuteEncoder getEncoderFlattened_old(string encoderName, Map<string, object> flattenedChosenValues)
+        //{
+        //    Map<string, object> encoder = new Map<string, object>();
+        //    //encoder.Add("fieldname", this.fieldName);
+        //    //encoder.Add("name", this.name);
+        //    //encoder = dict(fieldname = this.fieldName,name = this.name);
+
+        //    // Get the position of each encoder argument
+        //    //for (encoderArg, value in this.kwArgs.iteritems())
+        //    foreach (var pair in this.kwArgs)
+        //    {
+        //        var encoderArg = pair.Key;
+        //        var value = pair.Value;
+        //        // If a permuted variable, get its chosen value.
+        //        if (value is PermuteVariable)
+        //        {
+        //            value = flattenedChosenValues[string.Format("{0}:{1}", encoderName, encoderArg)];
+        //        }
+
+        //        encoder[encoderArg] = value;
+        //    }
+
+        //    // Special treatment for DateEncoder timeOfDay and dayOfWeek stuff. In the
+        //    //  permutations file, the class can be one of:
+        //    //    DateEncoder.timeOfDay
+        //    //    DateEncoder.dayOfWeek
+        //    //    DateEncoder.season
+        //    // If one of these, we need to intelligently set the constructor args.
+        //    if (this.encoderClass.Contains("."))
+        //    {
+        //        // (encoder['type'], argName) = this.encoderClass.Split('.');
+        //        string[] splitted = this.encoderClass.Split('.');
+        //        encoder["type"] = splitted[0];
+        //        string argName = splitted[1];
+        //        Tuple<object, object> argValue = new Tuple<object, object>(encoder["w"], encoder["radius"]);
+        //        encoder[argName] = argValue;
+        //        encoder.Remove("w");
+        //        encoder.Remove("radius");
+        //    }
+        //    else
+        //    {
+        //        encoder["type"] = this.encoderClass;
+        //    }
+
+        //    var args = new KWArgsModel();
+
+        //    foreach (var pair in encoder)
+        //    {
+        //        if (pair.Key == "type") continue;
+        //        if (pair.Key == "maxval") continue;
+        //        if (pair.Key == "minval") continue;
+        //        if (pair.Key == "n") continue;
+        //        if (pair.Key == "w") continue;
+        //        args.Add(pair.Key, pair.Value);
+        //    }
+
+        //    PermuteEncoder pe = new PermuteEncoder(fieldName, (string)encoder["type"], name, args);
+        //    pe.maxval = encoder.Get("maxval", this.maxval);
+        //    pe.minval = encoder.Get("minval", this.minval);
+        //    pe.n = encoder.Get("n", this.n);
+        //    pe.w = encoder.Get("w", this.w);
+        //    return pe;
+        //}
 
         /// <summary>
         /// Return a dict that can be used to construct this encoder. This dict
@@ -665,12 +748,11 @@ namespace HTM.Net.Research.Swarming
         /// permuted over.
         /// </param>
         /// <returns></returns>
-        public PermuteEncoder getEncoderFlattened(string encoderName, Map<string, object> flattenedChosenValues)
+        public Map<string, object> getDict(string encoderName, Map<string, object> flattenedChosenValues)
         {
             Map<string, object> encoder = new Map<string, object>();
-            //encoder.Add("fieldname", this.fieldName);
-            //encoder.Add("name", this.name);
-            //encoder = dict(fieldname = this.fieldName,name = this.name);
+            encoder.Add("fieldname", this.fieldName);
+            encoder.Add("name", this.name);
 
             // Get the position of each encoder argument
             //for (encoderArg, value in this.kwArgs.iteritems())
@@ -681,7 +763,7 @@ namespace HTM.Net.Research.Swarming
                 // If a permuted variable, get its chosen value.
                 if (value is PermuteVariable)
                 {
-                    value = flattenedChosenValues[string.Format("{0}:{1}", encoderName, encoderArg)];
+                    value = flattenedChosenValues[$"{encoderName}:{encoderArg}"];
                 }
 
                 encoder[encoderArg] = value;
@@ -699,7 +781,8 @@ namespace HTM.Net.Research.Swarming
                 string[] splitted = this.encoderClass.Split('.');
                 encoder["type"] = splitted[0];
                 string argName = splitted[1];
-                Tuple<object, object> argValue = new Tuple<object, object>(encoder["w"], encoder["radius"]);
+
+                Tuple argValue = new Tuple(encoder.Get("w", this.w), encoder.Get("radius", this.radius));
                 encoder[argName] = argValue;
                 encoder.Remove("w");
                 encoder.Remove("radius");
@@ -709,24 +792,25 @@ namespace HTM.Net.Research.Swarming
                 encoder["type"] = this.encoderClass;
             }
 
-            var args = new KWArgsModel();
+            //var args = new KWArgsModel();
 
-            foreach (var pair in encoder)
-            {
-                if(pair.Key == "type")continue;
-                if(pair.Key == "maxval") continue;
-                if(pair.Key == "minval") continue;
-                if(pair.Key == "n")continue;
-                if(pair.Key == "w")continue;
-                args.Add(pair.Key, pair.Value);
-            }
+            //foreach (var pair in encoder)
+            //{
+            //    if (pair.Key == "type") continue;
+            //    if (pair.Key == "maxval") continue;
+            //    if (pair.Key == "minval") continue;
+            //    if (pair.Key == "n") continue;
+            //    if (pair.Key == "w") continue;
+            //    args.Add(pair.Key, pair.Value);
+            //}
 
-            PermuteEncoder pe = new PermuteEncoder(fieldName, (string)encoder["type"], name, args);
-            pe.maxval = encoder.Get("maxval", this.maxval);
-            pe.minval = encoder.Get("minval", this.minval);
-            pe.n = encoder.Get("n", this.n);
-            pe.w = encoder.Get("w", this.w);
-            return pe;
+            //PermuteEncoder pe = new PermuteEncoder(fieldName, (string)encoder["type"], name, args);
+            //pe.maxval = encoder.Get("maxval", this.maxval);
+            //pe.minval = encoder.Get("minval", this.minval);
+            //pe.n = encoder.Get("n", this.n);
+            //pe.w = encoder.Get("w", this.w);
+            //return pe;
+            return encoder;
         }
     }
 

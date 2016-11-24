@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using HTM.Net.Data;
 using HTM.Net.Research.Data;
@@ -34,7 +35,7 @@ namespace HTM.Net.Research.opf
             this._inferenceArgs = new InferenceArgsDescription();
         }
 
-        public virtual ModelResult run(Map<string, object> inputRecord)
+        public virtual ModelResult run(Tuple<Map<string, object>, string[]> inputRecord)
         {
             int? predictionNumber;
             if (_numPredictions.HasValue)
@@ -46,7 +47,7 @@ namespace HTM.Net.Research.opf
             {
                 predictionNumber = null;
             }
-            var result = new ModelResult(predictionNumber: predictionNumber, rawInput: inputRecord);
+            var result = new ModelResult(predictionNumber: predictionNumber, rawInput: inputRecord.Item1);
             return result;
         }
 

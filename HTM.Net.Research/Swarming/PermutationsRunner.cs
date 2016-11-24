@@ -308,7 +308,6 @@ namespace HTM.Net.Research.Swarming
     }
 
 
-
     /// <summary>
     /// Our Nupic Job abstraction
     /// </summary>
@@ -584,13 +583,13 @@ namespace HTM.Net.Research.Swarming
             if (Options.inferenceType == InferenceType.NontemporalClassification)
             {
                 if (Options.inferenceArgs.inputPredictedField.HasValue &&
-                    (Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.yes ||
-                     Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.auto))
+                    (Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.Yes ||
+                     Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.Auto))
                 {
                     throw new InvalidOperationException(
                         "When the inference type is NontemporalClassification  inputPredictedField must be set to 'no'");
                 }
-                Options.inferenceArgs.inputPredictedField = InputPredictedField.no;
+                Options.inferenceArgs.inputPredictedField = InputPredictedField.No;
             }
 
             // Process the swarmSize setting, if provided
@@ -600,7 +599,7 @@ namespace HTM.Net.Research.Swarming
             {
                 if (Options.inferenceArgs.inputPredictedField == null)
                 {
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.auto;
+                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
                 }
             }
             else if (swarmSize.Value == SwarmDefinition.SwarmSize.Small)
@@ -612,7 +611,7 @@ namespace HTM.Net.Research.Swarming
                 if (Options.maxModels == null)
                     Options.maxModels = 1;
                 if (Options.inferenceArgs.inputPredictedField == null)
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.yes;
+                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Yes;
             }
             else if (swarmSize.Value == SwarmDefinition.SwarmSize.Medium)
             {
@@ -623,7 +622,7 @@ namespace HTM.Net.Research.Swarming
                 if (Options.maxModels == null)
                     Options.maxModels = 200;
                 if (Options.inferenceArgs.inputPredictedField == null)
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.auto;
+                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
             }
             else if (swarmSize.Value == SwarmDefinition.SwarmSize.Large)
             {
@@ -631,7 +630,7 @@ namespace HTM.Net.Research.Swarming
                     Options.minParticlesPerSwarm = 15;
                 Options.tryAll3FieldCombinationsWTimestamps = true;
                 if (Options.inferenceArgs.inputPredictedField == null)
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.auto;
+                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
             }
 
             // Get token replacements
@@ -1368,7 +1367,7 @@ namespace HTM.Net.Research.Swarming
                     encoderDictList.Add(clEncoderDict);
 
                     // If the predicted field needs to be excluded, take it out of the encoder lists
-                    if (options.inferenceArgs.inputPredictedField == InputPredictedField.no)
+                    if (options.inferenceArgs.inputPredictedField == InputPredictedField.No)
                     {
                         encoderDictList.Remove(encoderDict);
                     }
@@ -1923,6 +1922,10 @@ namespace HTM.Net.Research.Swarming
             {
                 Parameters.ApplyParametersFromDescription(tpParams, p);
             }
+            if (clEnable)
+            {
+                Parameters.ApplyParametersFromDescription(clParams, p);
+            }
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
             if (!string.IsNullOrWhiteSpace(clParams.regionName))
             {
@@ -1968,10 +1971,10 @@ namespace HTM.Net.Research.Swarming
     {
         [ParameterMapping]
         [TokenReplace("$PERM_TP_CHOICES_minThreshold")]
-        public int minThreshold { get; set; }
+        public object minThreshold { get; set; }
         [ParameterMapping]
         [TokenReplace("$PERM_TP_CHOICES_activationThreshold")]
-        public int activationThreshold { get; set; }
+        public object activationThreshold { get; set; }
         [ParameterMapping("tmVerbosity")]
         public int verbosity { get; set; }
         [ParameterMapping("columnDimensions")]
@@ -1986,9 +1989,9 @@ namespace HTM.Net.Research.Swarming
         public string temporalImp { get; set; }
         [ParameterMapping("maxNewSynapseCount")]
         public int newSynapseCount { get; set; }
-        //[ParameterMapping]
+        [ParameterMapping("maxSynapsesPerSegment")]
         public int maxSynapsesPerSegment { get; set; }
-        //[ParameterMapping]
+        [ParameterMapping("maxSegmentsPerCell")]
         public int maxSegmentsPerCell { get; set; }
         [ParameterMapping("initialPermanence")]
         public double initialPerm { get; set; }
@@ -2004,7 +2007,7 @@ namespace HTM.Net.Research.Swarming
         public string outputType { get; set; }
         //[ParameterMapping]
         [TokenReplace("$PERM_TP_CHOICES_pamLength")]
-        public int pamLength { get; set; }
+        public object pamLength { get; set; }
     }
 
     [Serializable]
@@ -2012,8 +2015,10 @@ namespace HTM.Net.Research.Swarming
     {
         public string regionName { get; set; }
         public int verbosity { get; set; }
+        [ParameterMapping("classifierAlpha")]
         public double alpha { get; set; }
         [TokenReplace("$PREDICTION_STEPS")]
+        [ParameterMapping("classifierSteps")]
         public int[] steps { get; set; }
     }
 
@@ -2147,7 +2152,7 @@ namespace HTM.Net.Research.Swarming
     public class PermutationModelParameters
     {
         [TokenReplace("$PERM_AGGREGATION_CHOICES")]
-        public PermuteVariable aggregationInfo { get; set; }
+        public AggregationSettings aggregationInfo { get; set; }
         public PermutationModelDescriptionParams modelParams { get; set; }
     }
 
@@ -2429,7 +2434,9 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public enum InputPredictedField
     {
-        auto, yes, no
+        Auto,
+        Yes,
+        No
     }
 
     /// <summary>

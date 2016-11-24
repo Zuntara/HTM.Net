@@ -3814,7 +3814,7 @@ namespace HTM.Net.Research.Swarming
             //  field only (the legacy mode of swarming).
             // When set to "auto", the first sprint tries all possible fields (one at a
             //  time) in the first sprint.
-            this._inputPredictedField = permFile.inputPredictedField ?? InputPredictedField.yes; //vars.Get("inputPredictedField", "yes");
+            this._inputPredictedField = permFile.inputPredictedField ?? InputPredictedField.Yes; //vars.Get("inputPredictedField", "yes");
 
             // Try all possible 3-field combinations? Normally, we start with the best
             //  2-field combination as a base. When this flag is set though, we try
@@ -3910,7 +3910,7 @@ namespace HTM.Net.Research.Swarming
                     }
                 }
 
-                if (classifierOnlyEncoder == null || this._inputPredictedField == InputPredictedField.yes)
+                if (classifierOnlyEncoder == null || this._inputPredictedField == InputPredictedField.Yes)
                 {
                     // If we don't have a separate encoder for the classifier (legacy
                     //  MultiStep) or the caller explicitly wants to include the predicted
@@ -4899,10 +4899,7 @@ namespace HTM.Net.Research.Swarming
             Dictionary<string, object> jobResults;
             if (jobResultsStr != null)
             {
-                jobResults = (Dictionary<string, object>)JsonConvert.DeserializeObject(jobResultsStr, new JsonSerializerSettings
-                {
-                    TypeNameHandling = TypeNameHandling.All
-                });
+                jobResults = Json.Deserialize<Dictionary<string, object>>(jobResultsStr);
             }
             else
             {
@@ -4910,7 +4907,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Update the fieldContributions field.
-            if (pctFieldContributions != jobResults.Get("fieldContributions", null))
+            if (!pctFieldContributions.Equals((Map<string,Double>)jobResults.Get("fieldContributions")))
             {
                 jobResults["fieldContributions"] = pctFieldContributions;
                 jobResults["absoluteFieldContributions"] = absFieldContributions;
@@ -4918,10 +4915,7 @@ namespace HTM.Net.Research.Swarming
                 bool isUpdated = this._cjDAO.jobSetFieldIfEqual(this._jobID,
                                                              fieldName: "results",
                                                              curValue: jobResultsStr,
-                                                             newValue: JsonConvert.SerializeObject(jobResults, new JsonSerializerSettings
-                                                             {
-                                                                 TypeNameHandling = TypeNameHandling.All
-                                                             }));
+                                                             newValue: Json.Serialize(jobResults));
                 if (isUpdated)
                 {
                     this.logger.Info("Successfully updated the field contributions:" + pctFieldContributions);
@@ -5111,7 +5105,7 @@ namespace HTM.Net.Research.Swarming
                             if (useEncoders.Contains(flatKey) && value is PermuteEncoder)
                             {
                                 // Form encoder dict, substituting in chosen permutation values.
-                                return ((PermuteEncoder)value).getEncoderFlattened(flatKey, position);
+                                return ((PermuteEncoder)value).getDict(flatKey, position);
                             }
                             // Encoder not used.
                             else

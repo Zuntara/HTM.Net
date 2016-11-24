@@ -1,8 +1,10 @@
-﻿using HTM.Net.Network.Sensor;
+﻿using System;
+using HTM.Net.Network.Sensor;
 using HTM.Net.Util;
 
 namespace HTM.Net.Data
 {
+    [Serializable]
     public class FieldMetaInfo
     {
         public FieldMetaInfo(string name, FieldMetaType type, SensorFlags special)
@@ -18,6 +20,7 @@ namespace HTM.Net.Data
         public SensorFlags special { get;  }
     }
 
+    [Serializable]
     public class AggregationSettings
     {
         public double years { get; set; }

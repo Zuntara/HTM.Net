@@ -366,7 +366,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 inferenceArgs = new InferenceArgsDescription
                 {
-                    inputPredictedField = InputPredictedField.auto,
+                    inputPredictedField = InputPredictedField.Auto,
                     predictedField = "consumption",
                     predictionSteps = new[] { 1 }
                 },

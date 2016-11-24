@@ -47,7 +47,7 @@ namespace HTM.Net.Util
         bool EndOfStream { get; }
     }
 
- [Serializable]
+    [Serializable]
     internal class StreamIdentifier
     {
         public static int GeneralId = 0;
@@ -86,7 +86,7 @@ namespace HTM.Net.Util
         {
             // Used by derived classes
             _id = StreamIdentifier.GeneralId++;
-        } 
+        }
 
         public Stream(IEnumerable<TModel> source)
         {
@@ -313,7 +313,7 @@ namespace HTM.Net.Util
 
     public class ComputedStream<TModel> : Stream<TModel>
     {
-        public ComputedStream(IEnumerable<TModel> source, Action beforeReadAction) 
+        public ComputedStream(IEnumerable<TModel> source, Action beforeReadAction)
         {
             if (source == null) throw new ArgumentNullException("source");
             _baseStream = new ComputedStreamCollection<TModel>(_id, source, beforeReadAction, IncrementCurrentlyRead);
@@ -321,7 +321,7 @@ namespace HTM.Net.Util
             _streamState = new StreamState();
         }
 
-        public ComputedStream(IObservable<TModel> input, Action beforeReadAction) 
+        public ComputedStream(IObservable<TModel> input, Action beforeReadAction)
         {
             LinkedList<TModel> obsContent = new LinkedList<TModel>();
             _baseStream = new ComputedStreamCollection<TModel>(_id, obsContent, beforeReadAction, IncrementCurrentlyRead);
@@ -456,6 +456,7 @@ namespace HTM.Net.Util
         void SetAfterReadAction(Action afterReadAction);
         void SetOffsetting(int offset);
         void Terminate();
+        IEnumerable<TResult> Select<TResult>(Func<TModel, TResult> select);
     }
 
     [Serializable]
@@ -587,7 +588,7 @@ namespace HTM.Net.Util
         }
     }
 
- [Serializable]
+    [Serializable]
     public class MappedStreamCollection<TFrom, TTo> : StreamCollection<TTo>
     {
         private readonly LinkedList<TTo> _source;
@@ -653,19 +654,19 @@ namespace HTM.Net.Util
     {
         private readonly Action _beforeRead;
 
-        protected ComputedStreamCollection(int streamId, Action beforeRead, Action afterRead = null) 
+        protected ComputedStreamCollection(int streamId, Action beforeRead, Action afterRead = null)
             : base(streamId, afterRead)
         {
             _beforeRead = beforeRead;
         }
 
-        public ComputedStreamCollection(int streamId, IEnumerable<TModel> source, Action beforeRead, Action afterRead = null) 
+        public ComputedStreamCollection(int streamId, IEnumerable<TModel> source, Action beforeRead, Action afterRead = null)
             : base(streamId, source, afterRead)
         {
             _beforeRead = beforeRead;
         }
 
-        public ComputedStreamCollection(int streamId, LinkedList<TModel> source, Action beforeRead, Action afterRead = null) 
+        public ComputedStreamCollection(int streamId, LinkedList<TModel> source, Action beforeRead, Action afterRead = null)
             : base(streamId, source, afterRead)
         {
             _beforeRead = beforeRead;

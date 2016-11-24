@@ -236,7 +236,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 {
                     predictionSteps = new[] { 1 },
                     predictedField = "c1",
-                    inputPredictedField = InputPredictedField.auto
+                    inputPredictedField = InputPredictedField.Auto
                 }
             };
 
@@ -705,7 +705,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             }
             // Convert a flat input row into a format that is consumable by an OPF model
             _inputRowEncoder.AppendRecord(row.Data);
-            Map<string, object> inputRecord = _inputRowEncoder.GetNextRecordDict();
+            var inputRecord = _inputRowEncoder.GetNextRecordDict();
             // Infer
             ModelResult r = _model.run(inputRecord);
 
@@ -817,11 +817,11 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             return row;
         }
 
-        public Map<string, object> GetNextRecordDict()
+        public Tuple<Map<string, object>, string[]> GetNextRecordDict()
         {
             var values = GetNextRecord();
             if (values == null) return null;
-            if (!values.Any()) return new Map<string, object>();
+            if (!values.Any()) return new Tuple<Map<string, object>, string[]>(new Map<string, object>(), new string[0]);
             if (_modelRecordEncoder == null)
             {
                 _modelRecordEncoder = new ModelRecordEncoder(fields: GetFields(),
@@ -875,7 +875,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="inputRow">sequence of values corresponding to a single input metric data row</param>
         /// <returns></returns>
-        public Map<string, object> Encode(List<string> inputRow)
+        public Tuple<Map<string, object>, string[]> Encode(List<string> inputRow)
         {
             var result = new Map<string, object>(ArrayUtils.Zip(_fieldNames, inputRow).ToDictionary(k => k.Get(0) as string, v => v.Get(1)));
 
@@ -894,7 +894,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             result["_category"] = null;
             result["_reset"] = 0;
             result["_sequenceId"] = null;
-            return result;
+            return new Tuple<Map<string, object>, string[]>(result, inputRow.ToArray());
         }
 
         private string ComputeTimestampRecordIdx(string recordTs)
