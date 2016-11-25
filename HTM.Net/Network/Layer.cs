@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
@@ -115,39 +117,67 @@ namespace HTM.Net.Network
     /// </summary>
     /// <typeparam name="T"></typeparam>
     [Serializable]
-    public class Layer2<T> : BaseRxLayer
+    public class Layer<T> : Persistable, ILayer
     {
+        #region Fields
+
         [NonSerialized]
-        protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer2<T>));
+        protected static readonly ILog Logger = LogManager.GetLogger(typeof(Layer<T>));
 
         protected int numColumns;
+
+        protected Network ParentNetwork;
+        protected Region ParentRegion;
+
+        protected Parameters Params;
+        protected SensorParams SensorParams;
+        protected Connections Connections;
+        protected IHTMSensor Sensor;
+        protected MultiEncoder Encoder;
+        protected SpatialPooler SpatialPooler;
+        protected TemporalMemory TemporalMemory;
+        protected bool? AutoCreateClassifiers;
+        protected Anomaly AnomalyComputer;
+
+        [NonSerialized]
+        protected ConcurrentQueue<IObserver<IInference>> _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+        [NonSerialized]
+        protected Subject<object> Publisher = null;
+
+        [NonSerialized]
+        private IDisposable _subscription; //Subscription 
+        [NonSerialized]
+        private IObservable<IInference> _userObservable;
+
+        protected IInference CurrentInference;
+
         protected FunctionFactory _factory;
 
         /// <summary>
-        /// Active columns in the <see cref="SpatialPooler"/> at time "t"
+        /// Used to track and document the # of records processed
         /// </summary>
-        protected int[] FeedForwardActiveColumns;
+        protected int _recordNum = -1;
         /// <summary>
-        /// Active column indexes from the <see cref="SpatialPooler"/> at time "t"
+        /// Keeps track of number of records to skip on restart
         /// </summary>
-        protected int[] FeedForwardSparseActives;
-        /// <summary>
-        /// Predictive <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t - 1"
-        /// </summary>
-        protected HashSet<Cell> PreviousPredictiveCells;
-        /// <summary>
-        /// Predictive <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t"
-        /// </summary>
-        protected HashSet<Cell> PredictiveCells;
-        /// <summary>
-        /// Active <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t"
-        /// </summary>
-        protected HashSet<Cell> ActiveCells;
+        protected int _skip = -1;
 
+        protected string Name;
+
+        private bool _isClosed;
         private bool _isHalted;
+        private bool _isPostSerialized;
+        private bool _isLearn = true;
 
-        private Layer2<IInference> _next;
-        private Layer2<IInference> _previous;
+        private Layer<IInference> _next;
+        private Layer<IInference> _previous;
+
+        [NonSerialized]
+        protected List<IObserver<IInference>> _observers = new List<IObserver<IInference>>();
+        [NonSerialized]
+        private CheckPointOperator _checkPointOp;
+        [NonSerialized]
+        protected List<IObserver<byte[]>> _checkPointOpObservers = new List<IObserver<byte[]>>();
 
         /// <summary>
         /// Retains the order of added items - for use with interposed <see cref="IObservable{T}"/>
@@ -165,13 +195,26 @@ namespace HTM.Net.Network
         /// </summary>
         private List<EncoderTuple> _encoderTuples;
 
-        private NamedTuple _classifiers;
+        [NonSerialized]
+        protected Map<Type, IObservable<ManualInput>> ObservableDispatch = new Map<Type, IObservable<ManualInput>>();
+
+        /// <summary>
+        /// Gets or sets the layer's current thread
+        /// </summary>
+        [NonSerialized]
+        protected Task LayerThread;
+
+        protected LayerMask AlgoContentMask = 0;
+
+        #endregion
+
+        #region Constructor(s)
 
         /// <summary>
         /// Creates a new <see cref="ILayer"/> using the <see cref="Network"/> level <see cref="Parameters"/>
         /// </summary>
         /// <param name="n">the parent <see cref="Network"/></param>
-        public Layer2(Network n)
+        public Layer(Network n)
             : this(n, n.GetParameters())
         {
 
@@ -182,7 +225,7 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="n">the parent <see cref="Network"/></param>
         /// <param name="p">the <see cref="Parameters"/> to use with this <see cref="ILayer"/></param>
-        public Layer2(Network n, Parameters p)
+        public Layer(Network n, Parameters p)
             : this("[Layer " + TimeUtils.CurrentTimeMillis() + "]", n, p)
         {
 
@@ -194,9 +237,16 @@ namespace HTM.Net.Network
         /// <param name="name">the name identifier of this <see cref="ILayer"/></param>
         /// <param name="n">the parent <see cref="Network"/></param>
         /// <param name="p">the <see cref="Parameters"/> to use with this <see cref="ILayer"/></param>
-        public Layer2(string name, Network n, Parameters p)
-            : base(name, n, p)
+        public Layer(string name, Network n, Parameters p)
         {
+            Name = name;
+            ParentNetwork = n;
+            Params = p;
+
+            Connections = new Connections();
+
+            AutoCreateClassifiers = (bool)p.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
+
             _factory = new FunctionFactory(this);
 
             ObservableDispatch = CreateDispatchMap();
@@ -211,18 +261,53 @@ namespace HTM.Net.Network
         /// <param name="tm">(optional) <see cref="TemporalMemory"/></param>
         /// <param name="autoCreateClassifiers">(optional) Indicates that the <see cref="Parameters"/> object contains the configurations necessary to create the required encoders.</param>
         /// <param name="a">(optional) An <see cref="Anomaly"/> computer.</param>
-        public Layer2(Parameters @params, MultiEncoder e, SpatialPooler sp, TemporalMemory tm, bool? autoCreateClassifiers, Anomaly a)
-            : base(@params, e, sp, tm, autoCreateClassifiers, a)
+        public Layer(Parameters @params, MultiEncoder e, SpatialPooler sp, TemporalMemory tm, bool? autoCreateClassifiers, Anomaly a)
         {
+            // Make sure we have a valid parameters object
+            if (@params == null)
+            {
+                throw new InvalidOperationException("No parameters specified.");
+            }
+
+            // Check to see if the Parameters include the encoder configuration.
+            if (@params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) == null && e != null)
+            {
+                throw new InvalidOperationException("The passed in Parameters must contain a field encoding map " + "specified by org.numenta.nupic.Parameters.KEY.FIELD_ENCODING_MAP");
+            }
+
+            Params = @params;
+            Encoder = e;
+            SpatialPooler = sp;
+            TemporalMemory = tm;
+            AutoCreateClassifiers = autoCreateClassifiers;
+            AnomalyComputer = a;
+
+            Connections = new Connections();
             _factory = new FunctionFactory(this);
 
             ObservableDispatch = CreateDispatchMap();
 
+            InitializeMask();
+
             if (Logger.IsDebugEnabled)
             {
-                Logger.Debug(string.Format("Layer successfully created containing: {0}{1}{2}{3}{4}", (Encoder == null ? "" : "MultiEncoder,"), (SpatialPooler == null ? "" : "SpatialPooler,"), (TemporalMemory == null ? ""
-                                : "TemporalMemory,"), (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."), (AnomalyComputer == null ? "" : "Anomaly")));
+                Logger.DebugFormat("Layer successfully created containing: {0}{1}{2}{3}{4}",
+                    (Encoder == null ? "" : "MultiEncoder,"),
+                    (SpatialPooler == null ? "" : "SpatialPooler,"),
+                    (TemporalMemory == null ? "" : "TemporalMemory,"),
+                    (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."),
+                    (AnomalyComputer == null ? "" : "Anomaly"));
             }
+        }
+
+        #endregion
+
+        #region Serialisation
+
+        public override object PreSerialize()
+        {
+            _isPostSerialized = false;
+            return this;
         }
 
         public override object PostDeSerialize()
@@ -231,7 +316,7 @@ namespace HTM.Net.Network
 
             FunctionFactory old = _factory;
             _factory = new FunctionFactory(this);
-            _factory.Inference = (ManualInput) old.Inference.PostDeSerialize(old.Inference);
+            _factory.Inference = (ManualInput)old.Inference.PostDeSerialize(old.Inference);
 
             _checkPointOpObservers = new List<IObserver<byte[]>>();
 
@@ -250,19 +335,81 @@ namespace HTM.Net.Network
             }
             // Flag which lets us know to skip or do certain setups during initialization.
             _isPostSerialized = true;
-            
+
             _observers = new List<IObserver<IInference>>();
 
             return this;
         }
+
+        #endregion
+
+        #region Getters and Setters
+
+        /// <summary>
+        /// Sets the parent <see cref="Network"/> on this <see cref="Layer{T}"/>
+        /// </summary>
+        /// <param name="network"></param>
+        public void SetNetwork(Network network)
+        {
+            ParentNetwork = network;
+        }
+
+        /// <summary>
+        /// Returns the parent network
+        /// </summary>
+        /// <returns></returns>
+        public Network GetNetwork()
+        {
+            return ParentNetwork;
+        }
+
+        /// <summary>
+        /// Sets the parent region which contains this <see cref="Layer{T}"/>
+        /// </summary>
+        /// <param name="r"></param>
+        public void SetRegion(Region r)
+        {
+            ParentRegion = r;
+        }
+
+        /// <summary>
+        /// Returns the parent region
+        /// </summary>
+        /// <returns></returns>
+        public Region GetRegion()
+        {
+            return ParentRegion;
+        }
+
+        /// <summary>
+        /// Returns the spatial pooler if it's there
+        /// </summary>
+        /// <returns></returns>
+        public SpatialPooler GetSpatialPooler()
+        {
+            return SpatialPooler;
+        }
+
+        /// <summary>
+        /// Returns the Temporal Memory if it's there
+        /// </summary>
+        /// <returns></returns>
+        public TemporalMemory GetTemporalMemory()
+        {
+            return TemporalMemory;
+        }
+
+        #endregion
+
+        #region Methods
 
         /// <summary>
         /// Finalizes the initialization in one method call so that side effect
         /// operations to share objects and other special initialization tasks can
         /// happen all at once in a central place for maintenance ease.
         /// </summary>
-        /// <returns></returns>
-        public override ILayer Close()
+        /// <returns>Layer instance</returns>
+        public virtual ILayer Close()
         {
             if (IsClosed())
             {
@@ -280,10 +427,12 @@ namespace HTM.Net.Network
                 if (ParentNetwork != null && ParentRegion != null)
                 {
                     ParentNetwork.SetSensorRegion(ParentRegion);
+
                     object supplier;
                     if ((supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
                     {
-                        if (supplier is PublisherSupplier) {
+                        if (supplier is PublisherSupplier)
+                        {
                             ((PublisherSupplier)supplier).SetNetwork(ParentNetwork);
                             ParentNetwork.SetPublisher(((PublisherSupplier)supplier).Get());
                         }
@@ -297,13 +446,14 @@ namespace HTM.Net.Network
             {
                 if (Encoder.GetEncoders(Encoder) == null || Encoder.GetEncoders(Encoder).Count < 1)
                 {
-                    if (Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) == null || ((Map<string, Map<string, object>>)Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)).Count < 1)
+                    var fieldEncodingMap = Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) as Map<string, Map<string, object>>;
+                    if (fieldEncodingMap == null || fieldEncodingMap.Count < 1)
                     {
                         Logger.Error("No field encoding map found for specified MultiEncoder");
                         throw new InvalidOperationException("No field encoding map found for specified MultiEncoder");
                     }
 
-                    Encoder.AddMultipleEncoders((Map<string, Map<string, object>>)Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP));
+                    Encoder.AddMultipleEncoders(fieldEncodingMap);
                 }
 
                 // Make the declared column dimensions match the actual input
@@ -331,9 +481,10 @@ namespace HTM.Net.Network
 
             AutoCreateClassifiers = AutoCreateClassifiers != null && (AutoCreateClassifiers.GetValueOrDefault() | (bool)Params.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY));
 
-            if (AutoCreateClassifiers != null && AutoCreateClassifiers.GetValueOrDefault() && (_factory.Inference.GetClassifiers() == null || _factory.Inference.GetClassifiers().Count < 1))
+            if (AutoCreateClassifiers != null && AutoCreateClassifiers.GetValueOrDefault()
+                && (_factory.Inference.GetClassifiers() == null || _factory.Inference.GetClassifiers().Count < 1))
             {
-                _factory.Inference.SetClassifiers(MakeClassifiers(Encoder == null ? ParentNetwork.GetEncoder() : Encoder));
+                _factory.Inference.SetClassifiers(MakeClassifiers(Encoder == null ? ParentNetwork?.GetEncoder() : Encoder));
 
                 // Note classifier addition by setting content mask
                 AlgoContentMask |= LayerMask.ClaClassifier;
@@ -351,7 +502,6 @@ namespace HTM.Net.Network
                   && ParentRegion.Equals(ParentNetwork.GetSensorRegion()) && Encoder == null
                   && SpatialPooler != null)
             {
-
                 ILayer curr = this;
                 while ((curr = curr.GetPrevious()) != null)
                 {
@@ -390,8 +540,6 @@ namespace HTM.Net.Network
 
             this.numColumns = Connections.GetNumColumns();
 
-            FeedForwardActiveColumns = new int[Connections.GetNumColumns()];
-
             _isClosed = true;
 
             Logger.Debug("Layer " + Name + " content initialize mask = " + AlgoContentMask); // Integer.toBinaryString(algo_content_mask)
@@ -405,7 +553,7 @@ namespace HTM.Net.Network
         /// or a <see cref="SpatialPooler"/> - from this <see cref="Region"/> or a previous <see cref="Region"/>.
         /// </summary>
         /// <returns>the length of the input vector</returns>
-        public override int CalculateInputWidth()
+        internal int CalculateInputWidth()
         {
             // If no previous Layer, check upstream region for its output layer's output.
             if (_previous == null)
@@ -413,16 +561,17 @@ namespace HTM.Net.Network
                 if (ParentRegion.GetUpstreamRegion() != null)
                 {
                     // Upstream region with TM
-                    if ((ParentRegion.GetUpstreamRegion().GetHead().GetMask() & LayerMask.TemporalMemory) == LayerMask.TemporalMemory)
+                    Layer<T> upstreamLayer = (Layer<T>) ParentRegion.GetUpstreamRegion().GetHead();
+                    if ((upstreamLayer.GetMask() & LayerMask.TemporalMemory) == LayerMask.TemporalMemory)
                     {
-                        var @out = (ParentRegion.GetUpstreamRegion().GetHead().GetConnections().GetCellsPerColumn() *
-                                    (ParentRegion.GetUpstreamRegion().GetHead().GetConnections().GetMemory().GetMaxIndex() + 1));
+                        var @out = (upstreamLayer.GetConnections().GetCellsPerColumn() *
+                                    (upstreamLayer.GetConnections().GetMemory().GetMaxIndex() + 1));
 
                         return @out;
                     }
                     // Upstream region but no TM, so input is the upstream region's SP
 
-                    return new SparseBinaryMatrix(ParentRegion.GetUpstreamRegion().GetHead().GetConnections().GetColumnDimensions()).GetMaxIndex() + 1;
+                    return new SparseBinaryMatrix(upstreamLayer.GetConnections().GetColumnDimensions()).GetMaxIndex() + 1;
                 }
                 // No previous Layer, and no upstream region
                 // layer contains a TM so compute by cells;
@@ -433,7 +582,8 @@ namespace HTM.Net.Network
                 // layer only contains a SP
                 return Connections.GetNumInputs();
             }
-            else {
+            else
+            {
                 // There is a previous Layer and that layer contains a TM so compute by cells;
                 if ((_previous.AlgoContentMask & LayerMask.TemporalMemory) == LayerMask.TemporalMemory)
                 {
@@ -443,6 +593,24 @@ namespace HTM.Net.Network
                 // Previous Layer but it has no TM so use the previous' column output (from SP)
                 return new SparseBinaryMatrix(_previous.GetConnections().GetColumnDimensions()).GetMaxIndex() + 1;
             }
+        }
+
+        /// <summary>
+        /// For internal use only. Returns a flag indicating whether this <see cref="Layer{T}"/>
+        /// contains a <see cref="Algorithms.TemporalMemory"/>
+        /// </summary>
+        internal bool HasTemporalMemory()
+        {
+            return (AlgoContentMask & LayerMask.TemporalMemory) == LayerMask.TemporalMemory;
+        }
+
+        /// <summary>
+        /// For internal use only. Returns a flag indicating whether this <see cref="Layer{T}"/>
+        /// contains a <see cref="Algorithms.SpatialPooler"/>
+        /// </summary>
+        internal bool HasSpatialPooler()
+        {
+            return (AlgoContentMask & LayerMask.SpatialPooler) == LayerMask.SpatialPooler;
         }
 
         /// <summary>
@@ -476,7 +644,8 @@ namespace HTM.Net.Network
                     retVal[i] = 1;
                 retVal[(int)numColDims - 1] = (int)flatSize;
             }
-            else {
+            else
+            {
                 for (int i = 0; i < numColDims; i++)
                     retVal[i] = (int)sliceArrangement;
             }
@@ -485,16 +654,73 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
+        /// Returns an <see cref="IObservable{IInference}"/> that can be subscribed to, or otherwise
+        /// operated upon by another Observable or by an Observable chain.
+        /// </summary>
+        /// <returns>this <see cref="ILayer"/>'s output <see cref="IObservable{IInference}"/></returns>
+        public IObservable<IInference> Observe()
+        {
+            // This will be called again after the Network is halted so we have to prepare
+            // for rebuild of the Observer chain
+            if (IsHalted())
+            {
+                ClearSubscriberObserverLists();
+            }
+
+            if (_userObservable == null)
+            {
+                _userObservable = Observable.Create<IInference>(t1 =>
+                {
+                    if (_observers == null)
+                    {
+                        _observers = new List<IObserver<IInference>>();
+                    }
+                    _observers.Add(t1);
+                    return () => { }; // why is this?
+                });
+            }
+
+            return _userObservable;
+        }
+
+        /// <summary>
+        /// Called by the <see cref="ILayer"/> client to receive output <see cref="IInference"/>s from the configured algorithms.
+        /// </summary>
+        /// <param name="subscriber">a <see cref="IObserver{IInference}"/> to be notified as data is published.</param>
+        /// <returns>A Subscription disposable</returns>
+        public IDisposable Subscribe(IObserver<IInference> subscriber)
+        {
+            // This will be called again after the Network is halted so we have to prepare
+            // for rebuild of the Observer chain
+            if (IsHalted())
+            {
+                ClearSubscriberObserverLists();
+            }
+
+            if (subscriber == null)
+            {
+                throw new InvalidOperationException("Subscriber cannot be null.");
+            }
+            if (_subscribers == null)
+            {
+                _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+            }
+            _subscribers.Enqueue(subscriber);
+
+            return CreateSubscription(subscriber);
+        }
+
+        /// <summary>
         /// Allows the user to define the <see cref="Connections"/> object data structure
         /// to use. Or possibly to share connections between two <see cref="ILayer"/>s
         /// </summary>
         /// <param name="c">the <see cref="Connections"/> object to use.</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Using(Connections c)
+        public ILayer Using(Connections c)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
             Connections = c;
             return this;
@@ -514,11 +740,11 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="p">the <see cref="Parameters"/> to use in this <see cref="ILayer"/></param>
         /// <returns>this <see cref="ILayer"/></returns>
-        public override ILayer Using(Parameters p)
+        public ILayer Using(Parameters p)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
             Params = p;
             return this;
@@ -532,11 +758,11 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="sensor">the <see cref="HTMSensor{T}"/></param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Add(ISensor sensor)
+        public ILayer Add(ISensor sensor)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
 
             Sensor = (IHTMSensor)sensor;
@@ -557,11 +783,11 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="encoder">the added MultiEncoder</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Add(MultiEncoder encoder)
+        public ILayer Add(MultiEncoder encoder)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
 
             Encoder = encoder;
@@ -573,11 +799,11 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="sp">the added SpatialPooler</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Add(SpatialPooler sp)
+        public ILayer Add(SpatialPooler sp)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
 
             // Preserve addition order
@@ -593,11 +819,11 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="tm">the added TemporalMemory</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Add(TemporalMemory tm)
+        public ILayer Add(TemporalMemory tm)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
 
             // Preserve addition order
@@ -614,11 +840,11 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="anomalyComputer">the Anomaly instance</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Add(Anomaly anomalyComputer)
+        public ILayer Add(Anomaly anomalyComputer)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
 
             // Preserve addition order
@@ -640,21 +866,75 @@ namespace HTM.Net.Network
         /// <param name="func">a <see cref="Func{ManualInput, ManualInput}"/> function to be performed at the point 
         /// of insertion within the <see cref="ILayer"/>'s declaration.</param>
         /// <returns>this Layer instance (in fluent-style)</returns>
-        public override ILayer Add(Func<ManualInput, ManualInput> func)
+        public ILayer Add(Func<ManualInput, ManualInput> func)
         {
             if (_isClosed)
             {
-                throw new InvalidOperationException("Layer already \"closed\"");
+                throw new LayerAlreadyClosedException();
             }
             if (func == null)
             {
-                throw new InvalidOperationException("Cannot add a null Function");
+                throw new ArgumentNullException(nameof(func), "Cannot add a null Function");
             }
 
             _hasGenericProcess = true;
             // Preserve addition order
             _addedItems.Add(func);
             return this;
+        }
+
+        /// <summary>
+        /// Adds the ability to alter a given parameter in place during a fluent
+        /// creation statement. This {@code Layer}'s {@link Parameters} object is
+        /// copied and then the specified key/value pair are set on the internal
+        /// copy. This call does not affect the original Parameters object so that
+        /// local modifications may be made without having to reset them afterward
+        /// for subsequent use with another network structure.
+        /// </summary>
+        /// <param name="key">The parameter key</param>
+        /// <param name="value">The value of the parameter</param>
+        /// <returns>this Layer instance (in fluent-style)</returns>
+        public ILayer AlterParameter(Parameters.KEY key, object value)
+        {
+            if (IsClosed())
+            {
+                throw new LayerAlreadyClosedException();
+            }
+
+            // Preserve any input dimensions that might have been set prior to this
+            // in
+            // previous layers
+            int[] inputDims = (int[])Params.GetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS);
+
+            Params = Params.Copy();
+            Params.SetParameterByKey(key, value);
+            Params.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, inputDims);
+
+            if (key == Parameters.KEY.AUTO_CLASSIFY)
+            {
+                AutoCreateClassifiers = value != null && ((bool)value);
+                // Note the addition of a classifier
+                AlgoContentMask |= LayerMask.ClaClassifier;
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Returns the configured <see cref="ISensor"/> if any exists in this <see cref="ILayer"/>, or null if one does not.
+        /// </summary>
+        /// <returns>any existing HTMSensor applied to this <see cref="ILayer"/></returns>
+        public ISensor GetSensor()
+        {
+            return Sensor;
+        }
+
+        /// <summary>
+        /// Returns the <see cref="Model.Connections"/> object being used by this <see cref="ILayer"/>
+        /// </summary>
+        /// <returns>this <see cref="ILayer"/>'s <see cref="Model.Connections"/></returns>
+        public Connections GetConnections()
+        {
+            return Connections;
         }
 
         /// <summary>
@@ -670,7 +950,7 @@ namespace HTM.Net.Network
         /// </summary>
         /// <typeparam name="TInput"></typeparam>
         /// <param name="t">the input object who's type is generic.</param>
-        public override void Compute<TInput>(TInput t)
+        public virtual void Compute<TInput>(TInput t)
         {
             if (!_isClosed)
             {
@@ -690,12 +970,13 @@ namespace HTM.Net.Network
         /// <summary>
         /// Stops the processing of this <see cref="ILayer"/>'s processing thread.
         /// </summary>
-        public override void Halt()
+        public void Halt()
         {
             object supplier = null;
             if (Sensor != null && (supplier = Sensor.GetSensorParams().Get("ONSUB")) != null)
             {
-                if (supplier is PublisherSupplier) {
+                if (supplier is PublisherSupplier)
+                {
                     ((PublisherSupplier)supplier).ClearSuppliedInstance();
                 }
             }
@@ -715,9 +996,26 @@ namespace HTM.Net.Network
         /// <summary>
         /// Returns a flag indicating whether this layer's processing thread has been halted or not.
         /// </summary>
-        public override bool IsHalted()
+        public bool IsHalted()
         {
             return _isHalted;
+        }
+
+        /// <summary>
+        /// Sets the learning mode.
+        /// </summary>
+        /// <param name="learningMode">true when in learning mode, false otherwise</param>
+        public void SetLearn(bool learningMode)
+        {
+            _isLearn = learningMode;
+        }
+
+        /// <summary>
+        /// Returns the learning mode setting.
+        /// </summary>
+        public bool IsLearn()
+        {
+            return _isLearn;
         }
 
         /// <summary>
@@ -731,7 +1029,7 @@ namespace HTM.Net.Network
         /// "Terminal" meaning that it cannot be restarted and its output stream
         /// cannot be accessed again.
         /// </summary>
-        public override void Start()
+        public void Start()
         {
             if (_isHalted)
             {
@@ -763,9 +1061,15 @@ namespace HTM.Net.Network
             }
 
             StartLayerThread();
+
+            Logger.Debug($"Start called on Layer thread {LayerThread.Id}");
         }
 
-        public override void Restart(bool startAtIndex)
+        /// <summary>
+        /// Restarts this <see cref="ILayer"/>
+        /// </summary>
+        /// <param name="startAtIndex">flag indicating whether the Layer should be started and run from the previous save point or not.</param>
+        public void Restart(bool startAtIndex)
         {
             _isHalted = false;
 
@@ -794,7 +1098,7 @@ namespace HTM.Net.Network
                 }
 
                 ObservableDispatch = CreateDispatchMap();
-                
+
                 this.Encoder = Encoder ?? Sensor.GetEncoder();
 
                 _skip = startAtIndex ?
@@ -812,7 +1116,7 @@ namespace HTM.Net.Network
 
                 StartLayerThread();
 
-                Logger.Debug($"Re-Start called on Layer thread {LayerThread}");
+                Logger.Debug($"Re-Start called on Layer thread {LayerThread.Id}");
             }
         }
 
@@ -820,7 +1124,7 @@ namespace HTM.Net.Network
         /// Sets a pointer to the "next" Layer in this <see cref="ILayer"/>'s <see cref="IObservable{T}"/> sequence.
         /// </summary>
         /// <param name="l"></param>
-        public void Next(Layer2<IInference> l)
+        public void Next(Layer<IInference> l)
         {
             _next = l;
         }
@@ -828,7 +1132,7 @@ namespace HTM.Net.Network
         /// <summary>
         /// Returns the next Layer following this Layer in order of process flow.
         /// </summary>
-        public override ILayer GetNext()
+        public ILayer GetNext()
         {
             return _next;
         }
@@ -837,7 +1141,7 @@ namespace HTM.Net.Network
         /// Sets a pointer to the "previous" Layer in this <see cref="ILayer"/>'s <see cref="IObservable{T}"/> sequence.
         /// </summary>
         /// <param name="l"></param>
-        public void Previous(Layer2<IInference> l)
+        public void Previous(Layer<IInference> l)
         {
             _previous = l;
         }
@@ -845,9 +1149,42 @@ namespace HTM.Net.Network
         /// <summary>
         /// Returns the previous Layer preceding this Layer in order of process flow.
         /// </summary>
-        public override ILayer GetPrevious()
+        public ILayer GetPrevious()
         {
             return _previous;
+        }
+
+        /// <summary>
+        /// Returns a flag indicating whether this <see cref="BaseLayer"/> is configured 
+        /// with a <see cref="ISensor"/> which requires starting up.
+        /// </summary>
+        /// <returns>true when a sensor is found</returns>
+        public bool HasSensor()
+        {
+            return Sensor != null;
+        }
+
+        /// <summary>
+        /// Returns the <see cref="Task"/> from which this <see cref="ILayer"/> is currently outputting data.
+        /// 
+        /// </summary>
+        public Task GetLayerThread()
+        {
+            if (LayerThread != null)
+            {
+                return LayerThread;
+            }
+
+            throw new InvalidOperationException("No thread found? normally current thread is returned but this is an issue with 'Tasks'");
+        }
+
+        /// <summary>
+        /// Returns the <see cref="Parameters"/> used to configure this layer.
+        /// </summary>
+        /// <returns></returns>
+        public Parameters GetParameters()
+        {
+            return Params;
         }
 
         /// <summary>
@@ -856,7 +1193,7 @@ namespace HTM.Net.Network
         /// <returns>the binary vector representing the current prediction.</returns>
         public HashSet<Cell> GetPredictiveCells()
         {
-            return PredictiveCells;
+            return CurrentInference.GetPredictiveCells();
         }
 
         /// <summary>
@@ -865,7 +1202,7 @@ namespace HTM.Net.Network
         /// <returns>the binary vector representing the current prediction.</returns>
         public HashSet<Cell> GetPreviousPredictiveCells()
         {
-            return PreviousPredictiveCells;
+            return CurrentInference.GetPreviousPredictiveCells();
         }
 
         /// <summary>
@@ -876,7 +1213,7 @@ namespace HTM.Net.Network
         /// <returns>the array of active column indexes</returns>
         public int[] GetFeedForwardActiveColumns()
         {
-            return FeedForwardActiveColumns;
+            return CurrentInference.GetFeedForwardActiveColumns();
         }
 
         /// <summary>
@@ -885,17 +1222,7 @@ namespace HTM.Net.Network
         /// <returns></returns>
         public HashSet<Cell> GetActiveCells()
         {
-            return ActiveCells;
-        }
-
-        /// <summary>
-        /// Sets the sparse form of the <see cref="SpatialPooler"/> column activations and returns the specified array.
-        /// </summary>
-        /// <param name="activesInSparseForm">the sparse column activations</param>
-        private int[] SetFeedForwardSparseActives(int[] activesInSparseForm)
-        {
-            FeedForwardSparseActives = activesInSparseForm;
-            return FeedForwardSparseActives;
+            return CurrentInference.GetActiveCells();
         }
 
         /// <summary>
@@ -903,7 +1230,127 @@ namespace HTM.Net.Network
         /// </summary>
         public int[] GetFeedForwardSparseActives()
         {
-            return FeedForwardSparseActives;
+            return CurrentInference.GetFeedForwardSparseActives();
+        }
+
+        /// <summary>
+        /// Returns the<see cref="Model.Connections"/> object being used as the structural matrix and state.
+        /// </summary>
+        public Connections GetMemory()
+        {
+            return Connections;
+        }
+
+        /// <summary>
+        /// Returns the count of records historically inputted into this
+        /// </summary>
+        /// <returns>the current record input count</returns>
+        public int GetRecordNum()
+        {
+            return _recordNum;
+        }
+
+        /// <summary>
+        /// Returns a flag indicating whether this <see cref="ILayer"/> has had
+        /// its <see cref="Close()"/> method called, or not.
+        /// </summary>
+        public bool IsClosed()
+        {
+            return _isClosed;
+        }
+
+        /// <summary>
+        /// Resets the internal record count to zero
+        /// </summary>
+        public ILayer ResetRecordNum()
+        {
+            _recordNum = 0;
+            return this;
+        }
+
+        /// <summary>
+        /// Resets the <see cref="TemporalMemory"/> if it exists.
+        /// </summary>
+        public virtual void Reset()
+        {
+            if (TemporalMemory == null)
+            {
+                Logger.Debug("Attempt to reset Layer: " + GetName() + "without TemporalMemory");
+            }
+            else
+            {
+                TemporalMemory.Reset(Connections);
+                ResetRecordNum();
+            }
+        }
+
+        /// <summary>
+        /// Increments the current record sequence number.
+        /// </summary>
+        public ILayer Increment()
+        {
+            if (_skip > -1)
+            {
+                --_skip;
+            }
+            else
+            {
+                ++_recordNum;
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the name and returns this <see cref="ILayer"/>.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public ILayer SetName(string name)
+        {
+            Name = name;
+            return this;
+        }
+
+        /// <summary>
+        /// Returns the String identifier of this <see cref="ILayer"/>
+        /// </summary>
+        /// <returns></returns>
+        public string GetName()
+        {
+            return Name;
+        }
+
+        /// <summary>
+        /// Returns the last computed <see cref="IInference"/> of this <see cref="Layer{T}"/>
+        /// </summary>
+        /// <returns>the last computed inference.</returns>
+        public IInference GetInference()
+        {
+            return CurrentInference;
+        }
+
+        /// <summary>
+        /// Returns the resident <see cref="MultiEncoder"/> or the encoder residing in this
+        /// <see cref="ILayer"/>'s <see cref="ISensor"/>, if any.
+        /// </summary>
+        public MultiEncoder GetEncoder()
+        {
+            if (Encoder != null)
+            {
+                return Encoder;
+            }
+            if (HasSensor())
+            {
+                return Sensor.GetEncoder();
+            }
+
+            MultiEncoder e = ParentNetwork.GetEncoder();
+            if (e != null)
+            {
+                return e;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -935,7 +1382,7 @@ namespace HTM.Net.Network
         /// <summary>
         /// Returns a double[] containing a prediction confidence measure for each
         /// bucket (unique entry as determined by an encoder). In order to relate the
-        /// probability to an actual value, call <see cref="GetAllValues(string,int)"/>
+        /// probability to an actual value, call <see cref="GetAllValues{V}(string,int)"/>
         /// which returns an array containing the actual values submitted to this
         /// <see cref="ILayer"/> - the indexes of each probability will match the index of
         /// each actual value entered.
@@ -998,54 +1445,84 @@ namespace HTM.Net.Network
                 Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
             }
 
-            Debug.Assert(c != null, "c != null");
             return c.GetMostProbableBucketIndex(step);
         }
 
+        #endregion
+
+        #region Private Methods
+
         /// <summary>
-        /// Resets the <see cref="TemporalMemory"/> if it exists.
+        /// Notify all subscribers through the delegate that stream processing has been completed or halted.
         /// </summary>
-        public override void Reset()
+        internal void NotifyComplete()
         {
-            if (TemporalMemory == null)
+            foreach (IObserver<IInference> o in _subscribers)
             {
-                Logger.Debug("Attempt to reset Layer: " + GetName() + "without TemporalMemory");
+                o.OnCompleted();
             }
-            else {
-                TemporalMemory.Reset(Connections);
-                ResetRecordNum();
+            foreach (IObserver<IInference> o in _observers)
+            {
+                o.OnCompleted();
             }
+            Publisher.OnCompleted();
         }
 
         /// <summary>
-        /// We cannot create the <see cref="IObservable{T}"/> sequence all at once because the
-        /// first step is to transform the input type to the type the rest of the
-        /// sequence uses (<see cref="IObservable{IInference}"/>). This can only happen
-        /// during the actual call to <see cref="Compute{T}(T)"/> which presents the
-        /// input type - so we create a map of all types of expected inputs, and then
-        /// connect the sequence at execution time; being careful to only incur the
-        /// cost of sequence assembly on the first call to <see cref="Compute{T}(T)"/>.
-        /// After the first call, we dispose of this map and its contents.
+        /// Called internally to propagate the specified <see cref="Exception"/> up the network hierarchy
         /// </summary>
-        /// <returns>the map of input types to <see cref="Transformer"/></returns>
-        protected override Map<Type, IObservable<ManualInput>> CreateDispatchMap()
+        /// <param name="e">the exception to notify users of</param>
+        private void NotifyError(Exception e)
         {
-            Map<Type, IObservable<ManualInput>> obsDispatch = new Map<Type, IObservable<ManualInput>>();
-
-            Publisher = new Subject<object>(); //PublishSubject.create();
-
-            obsDispatch.Add(typeof(IDictionary), _factory.CreateMultiMapFunc(Publisher.Select(t => t)));
-            obsDispatch.Add(typeof(ManualInput), _factory.CreateManualInputFunc(Publisher.Select(t => t)));
-            obsDispatch.Add(typeof(string[]), _factory.CreateEncoderFunc(Publisher.Select(t => t)));
-            obsDispatch.Add(typeof(int[]), _factory.CreateVectorFunc(Publisher.Select(t => t)));
-            obsDispatch.Add(typeof(ImageDefinition), _factory.CreateImageFunc(Publisher.Select(t => t)));
-
-            return obsDispatch;
+            foreach (IObserver<IInference> o in _subscribers)
+            {
+                o.OnError(e);
+            }
+            foreach (IObserver<IInference> o in _observers)
+            {
+                o.OnError(e);
+            }
+            Publisher.OnError(e);
         }
 
-        // ////////////////////////////////////////////////////////////
-        // PRIVATE METHODS AND CLASSES BELOW HERE //
-        // ////////////////////////////////////////////////////////////
+        /// <summary>
+        /// Returns the content mask used to indicate what algorithm contents this <see cref="BaseLayer"/> has. 
+        /// This is used to determine whether the <see cref="IInference"/> object passed between layers should share values.
+        /// </summary>
+        /// <remarks>
+        /// If any algorithms are repeated then <see cref="IInference"/>s will
+        /// <em><b>NOT</b></em> be shared between layers. <see cref="Region"/>s
+        /// <em><b>NEVER</b></em> share <see cref="IInference"/>s
+        /// </remarks>
+        internal LayerMask GetMask()
+        {
+            return AlgoContentMask;
+        }
+
+        /// <summary>
+        /// Initializes the algorithm content mask used for detection of repeated algorithms 
+        /// among <see cref="Layer{T}"/>s in a <see cref="Region"/>
+        /// See <see cref="GetMask()"/> for more information.
+        /// </summary>
+        private void InitializeMask()
+        {
+            AlgoContentMask |= (SpatialPooler == null ? 0 : LayerMask.SpatialPooler);
+            AlgoContentMask |= (TemporalMemory == null ? 0 : LayerMask.TemporalMemory);
+            AlgoContentMask |= (AutoCreateClassifiers == null || !AutoCreateClassifiers.GetValueOrDefault() ? LayerMask.None : LayerMask.ClaClassifier);
+            AlgoContentMask |= (AnomalyComputer == null ? 0 : LayerMask.AnomalyComputer);
+        }
+
+        /// <summary>
+        /// Returns a flag indicating whether we've connected the first observable in
+        /// the sequence (which lazily does the input type of {T} to
+        /// <see cref="IInference"/> transformation) to the Observables connecting the rest
+        /// of the algorithm components.
+        /// </summary>
+        /// <returns>flag indicating all observables connected. True if so, false if not</returns>
+        private bool DispatchCompleted()
+        {
+            return ObservableDispatch == null;
+        }
 
         /// <summary>
         /// Connects the first observable which does the transformation of input
@@ -1064,10 +1541,14 @@ namespace HTM.Net.Network
             // Add the rest of the chain observables for the other added algorithms.
             sequence = FillInSequence(sequence);
 
-            // Adds the delegate observer to the subscribers
-            // Subscribes the sequence to the delegate subscriber
-            // Clears the input types to transfers map
-            CompleteSequenceDispatch(sequence);
+            // All subscribers and observers are notified from a single delegate.
+            if (_subscribers == null) _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+            _subscribers.Enqueue(GetDelegateObserver());
+            _subscription = sequence.Subscribe(GetDelegateSubscriber());
+
+            // The map of input types to transformers is no longer needed.
+            ObservableDispatch.Clear();
+            ObservableDispatch = null;
 
             // Handle global network sensor access.
             if (Sensor == null && ParentNetwork != null && ParentNetwork.IsTail(this))
@@ -1081,6 +1562,32 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
+        /// We cannot create the <see cref="IObservable{T}"/> sequence all at once because the
+        /// first step is to transform the input type to the type the rest of the
+        /// sequence uses (<see cref="IObservable{IInference}"/>). This can only happen
+        /// during the actual call to <see cref="Compute{T}(T)"/> which presents the
+        /// input type - so we create a map of all types of expected inputs, and then
+        /// connect the sequence at execution time; being careful to only incur the
+        /// cost of sequence assembly on the first call to <see cref="Compute{T}(T)"/>.
+        /// After the first call, we dispose of this map and its contents.
+        /// </summary>
+        /// <returns>the map of input types to <see cref="Transformer"/></returns>
+        private Map<Type, IObservable<ManualInput>> CreateDispatchMap()
+        {
+            Map<Type, IObservable<ManualInput>> observableDispatch = new Map<Type, IObservable<ManualInput>>();
+
+            Publisher = new Subject<object>(); //PublishSubject.create();
+
+            observableDispatch.Add(typeof(IDictionary), _factory.CreateMultiMapFunc(Publisher.Select(t => t)));
+            observableDispatch.Add(typeof(ManualInput), _factory.CreateManualInputFunc(Publisher.Select(t => t)));
+            observableDispatch.Add(typeof(string[]), _factory.CreateEncoderFunc(Publisher.Select(t => t)));
+            observableDispatch.Add(typeof(int[]), _factory.CreateVectorFunc(Publisher.Select(t => t)));
+            observableDispatch.Add(typeof(ImageDefinition), _factory.CreateImageFunc(Publisher.Select(t => t)));
+
+            return observableDispatch;
+        }
+
+        /// <summary>
         /// If this Layer has a Sensor, map its encoder's buckets
         /// </summary>
         /// <param name="sequence"></param>
@@ -1089,7 +1596,8 @@ namespace HTM.Net.Network
         {
             if (HasSensor())
             {
-                if (GetSensor().GetMetaInfo().GetFieldTypes().Any(ft => ft == FieldMetaType.SparseArray || ft == FieldMetaType.DenseArray || ft == FieldMetaType.Coord || ft == FieldMetaType.Geo))
+                if (GetSensor().GetMetaInfo().GetFieldTypes()
+                    .Any(ft => ft == FieldMetaType.SparseArray || ft == FieldMetaType.DenseArray || ft == FieldMetaType.Coord || ft == FieldMetaType.Geo))
                 {
                     if (AutoCreateClassifiers.GetValueOrDefault())
                     {
@@ -1103,22 +1611,123 @@ namespace HTM.Net.Network
                     DoEncoderBucketMapping(m, ((IHTMSensor)GetSensor()).GetInputMap());
                     return m;
                 });
-                //if (GetSensor().GetMetaInfo().GetFieldTypes().stream().anyMatch(ft-> {
-                //    return ft == FieldMetaType.SARR || ft == FieldMetaType.DARR || ft == FieldMetaType.COORD || ft == FieldMetaType.GEO;
-                //})) {
-                //    if (autoCreateClassifiers)
-                //    {
-                //        throw new InvalidOperationException("Cannot autoclassify with raw array input or " + " Coordinate based encoders... Remove auto classify setting.");
-                //    }
-                //    return sequence;
-                //}
-                //sequence = sequence.map(m-> {
-                //    doEncoderBucketMapping(m, getSensor().GetInputMap());
-                //    return m;
-                //});
             }
 
             return sequence;
+        }
+
+        /// <summary>
+        /// This method is necessary to be able to retrieve the mapped <see cref="IObservable{ManualInput}"/> types 
+        /// to input types or their subclasses if any.
+        /// </summary>
+        /// <typeparam name="TInput"></typeparam>
+        /// <param name="t">the input type. The "expected" types are:
+        /// <ul>
+        ///     <li><see cref="Map{K,V}"/></li>
+        ///     <li><see cref="ManualInput"/></li>
+        ///     <li>String[]</li>
+        ///     <li>int[]</li>
+        /// </ul>
+        /// or their subclasses.
+        /// </param>
+        /// <returns></returns>
+        private IObservable<ManualInput> ResolveObservableSequence<TInput>(TInput t)
+        {
+            IObservable<ManualInput> sequenceStart = null;
+
+            if (ObservableDispatch == null)
+            {
+                ObservableDispatch = CreateDispatchMap();
+            }
+
+            if (ObservableDispatch != null)
+            {
+                if (t is ManualInput)
+                {
+                    sequenceStart = ObservableDispatch[typeof(ManualInput)];
+                }
+                else if (t is IDictionary)
+                {
+                    sequenceStart = ObservableDispatch[typeof(IDictionary)];
+                }
+                else if (t.GetType().IsArray)
+                {
+                    if (t is string[])
+                    {
+                        sequenceStart = ObservableDispatch[typeof(string[])];
+                    }
+                    else if (t is int[])
+                    {
+                        sequenceStart = ObservableDispatch[typeof(int[])];
+                    }
+                }
+                else if (t is ImageDefinition)
+                {
+                    sequenceStart = ObservableDispatch[typeof(ImageDefinition)];
+                }
+                else
+                {
+                    throw new ArgumentException("Input type is not mappable to IInference, there is no dispatcher defined. " + t.GetType().Name, nameof(t));
+                }
+            }
+
+            // Insert skip observable operator if initializing with an advanced record number
+            // (i.e. Serialized Network)
+            if (_recordNum > 0 && _skip != -1)
+            {
+                sequenceStart = sequenceStart.Skip(_recordNum + 1);
+
+                int? skipCount;
+                if ((skipCount = (int?)Params.GetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY)) != null)
+                {
+                    // No need to "warm up" the SpatialPooler if we're deserializing an SP
+                    // that has been running... However "skipCount - recordNum" is there so 
+                    // we make sure the Network has run at least long enough to satisfy the 
+                    // original requested "primer delay".
+                    Params.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, Math.Max(0, skipCount.GetValueOrDefault() - _recordNum));
+                }
+            }
+
+            sequenceStart = sequenceStart.Where(m =>
+            {
+                if (_checkPointOpObservers.Any() && ParentNetwork != null)
+                {
+                    // Execute check point logic
+                    DoCheckPoint();
+                }
+
+                return true;
+            });
+
+            return sequenceStart;
+        }
+
+        /// <summary>
+        /// Executes the check point logic, handles the return of the serialized byte array
+        /// by delegating the call to <see cref="IObserver{T}"/>where T = byte[] of all the currently queued
+        /// Observers; then clears the list of Observers.
+        /// </summary>
+        private void DoCheckPoint()
+        {
+            byte[] bytes = ParentNetwork.InternalCheckPointOp();
+
+            if (bytes != null)
+            {
+                Logger.Debug("Layer [" + GetName() + "] checkPointed file: " +
+                    Persistence.Get().GetLastCheckPointFileName());
+            }
+            else
+            {
+                Logger.Debug("Layer [" + GetName() + "] checkPoint   F A I L E D   at: " + (new DateTime()));
+            }
+
+            foreach (IObserver<byte[]> o in _checkPointOpObservers)
+            {
+                o.OnNext(bytes);
+                o.OnCompleted();
+            }
+
+            _checkPointOpObservers.Clear();
         }
 
         /// <summary>
@@ -1144,7 +1753,6 @@ namespace HTM.Net.Network
                 IEncoder e = t.GetEncoder();
 
                 int bucketIdx;
-
                 object o;
                 if (encoderInputMap.GetType().FullName.Contains("InputMap"))
                 {
@@ -1169,7 +1777,8 @@ namespace HTM.Net.Network
                 {
                     bucketIdx = e.GetBucketIndices((int)o)[0];
                 }
-                else {
+                else
+                {
                     bucketIdx = e.GetBucketIndices((string)o)[0];
                 }
 
@@ -1188,7 +1797,6 @@ namespace HTM.Net.Network
         /// <returns>the completed <see cref="IObservable{T}"/> sequence.</returns>
         private IObservable<ManualInput> FillInSequence(IObservable<ManualInput> o)
         {
-
             // Route to ordered dispatching if required.
             if (_hasGenericProcess)
             {
@@ -1204,7 +1812,8 @@ namespace HTM.Net.Network
                     o = o.Select(_factory.CreateSpatialFunc(SpatialPooler)).Skip(skipCount.GetValueOrDefault());
                     //o = o.map(factory.CreateSpatialFunc(spatialPooler)).skip(skipCount);
                 }
-                else {
+                else
+                {
                     o = o.Select(_factory.CreateSpatialFunc(SpatialPooler));
                 }
             }
@@ -1253,7 +1862,8 @@ namespace HTM.Net.Network
                     {
                         o = o.Select(_factory.CreateSpatialFunc(SpatialPooler)).Skip(skipCount.GetValueOrDefault());
                     }
-                    else {
+                    else
+                    {
                         o = o.Select(_factory.CreateSpatialFunc(SpatialPooler));
                     }
                 }
@@ -1279,13 +1889,141 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
+        /// Called internally to create a subscription on behalf of the specified <see cref="IObserver{IInference}"/>
+        /// </summary>
+        /// <param name="sub">the LayerObserver (subscriber).</param>
+        /// <returns></returns>
+        private IDisposable CreateSubscription(IObserver<IInference> sub)
+        {
+            ISubject<IInference> subject = new Subject<IInference>();
+            return subject.Subscribe(sub);
+
+            //return new Subscription()
+            //{
+
+            //    private Observer<Inference> observer = sub;
+
+            //    @Override
+            //    public void unsubscribe()
+            //    {
+            //        subscribers.remove(observer);
+            //        if (subscribers.isEmpty())
+            //        {
+            //            subscription.unsubscribe();
+            //        }
+            //    }
+
+            //    @Override
+            //    public boolean isUnsubscribed()
+            //    {
+            //        return subscribers.contains(observer);
+            //    }
+            //};
+        }
+
+        /// <summary>
+        /// Returns the <see cref="IObserver{IInference}"/>'s subscriber which delegates to all
+        /// the <see cref="Layer{T}"/> subsribers.
+        /// </summary>
+        /// <returns></returns>
+        private IObserver<IInference> GetDelegateSubscriber()
+        {
+            //return new Observer<IInference>()
+            return Observer.Create<IInference>
+                (
+                    i =>
+                    {
+                        // OnNext
+                        CurrentInference = i;
+                        foreach (var o in _subscribers)
+                        {
+                            o.OnNext(i);
+                        }
+                    },
+                    e =>
+                    {
+                        // OnError
+                        foreach (var o in _subscribers)
+                        {
+                            o.OnError(e);
+                        }
+                    },
+                    () =>
+                    {
+                        // OnCompleted
+                        foreach (var o in _subscribers)
+                        {
+                            o.OnCompleted();
+                        }
+                    }
+                );
+        }
+
+        /// <summary>
+        /// Returns the <see cref="IObserver{IInference}"/>'s subscriber which delegates to all
+        /// the <see cref="Layer{T}"/> subsribers.
+        /// </summary>
+        /// <returns></returns>
+        protected IObserver<IInference> GetDelegateObserver()
+        {
+            return Observer.Create<IInference>
+                (
+                    i =>
+                    {
+                        // Next
+                        CurrentInference = i;
+                        foreach (var o in _observers)
+                        {
+                            o.OnNext(i);
+                        }
+                    },
+                    e =>
+                    {
+                        // Error
+                        foreach (var o in _observers)
+                        {
+                            o.OnError(e);
+                            Console.WriteLine(e);
+                        }
+                    },
+                    () =>
+                    {
+                        // Completed
+                        foreach (var o in _observers)
+                        {
+                            o.OnCompleted();
+                        }
+                    }
+                );
+        }
+
+        /// <summary>
+        /// Clears the subscriber and observer lists so they can be rebuilt during restart or deserialization.
+        /// </summary>
+        private void ClearSubscriberObserverLists()
+        {
+            if (_observers == null) _observers = new List<IObserver<IInference>>();
+            if (_subscribers == null) _subscribers = new ConcurrentQueue<IObserver<IInference>>();
+            if (!_subscribers.IsEmpty)
+            {
+                // Clear the subscribers
+                while (!_subscribers.IsEmpty)
+                {
+                    IObserver<IInference> obs;
+                    _subscribers.TryDequeue(out obs);
+                }
+            }
+
+            _userObservable = null;
+        }
+
+        /// <summary>
         /// Creates the <see cref="NamedTuple"/> of names to encoders used in the observable sequence.
         /// </summary>
         /// <param name="encoder"></param>
         /// <returns></returns>
         private NamedTuple MakeClassifiers(MultiEncoder encoder)
         {
-            if (_classifiers != null) return _classifiers;
             Type classificationType = (Type)Params.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE);
 
             string[] names = new string[encoder.GetEncoders(encoder).Count];
@@ -1294,19 +2032,12 @@ namespace HTM.Net.Network
             foreach (EncoderTuple et in encoder.GetEncoders(encoder))
             {
                 names[i] = et.GetFieldName();
-                ca[i] = (IClassifier) Activator.CreateInstance(classificationType); //new CLAClassifier();
+                ca[i] = (IClassifier)Activator.CreateInstance(classificationType); //new CLAClassifier();
                 ca[i].ApplyParameters(this.Params);
                 i++;
             }
             var result = new NamedTuple(names, (object[])ca);
-            _classifiers = result;
             return result;
-        }
-
-        public override IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName)
-        {
-            if (_classifiers == null) MakeClassifiers(encoder);
-            return _classifiers[predictedFieldName] as IClassifier;
         }
 
         /// <summary>
@@ -1314,7 +2045,7 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="input">the current input vector</param>
         /// <returns></returns>
-        internal virtual int[] SpatialInput(int[] input)
+        protected virtual int[] SpatialInput(int[] input)
         {
             if (input == null)
             {
@@ -1327,7 +2058,7 @@ namespace HTM.Net.Network
             }
 
             int[] activeColumns = new int[numColumns];
-            SpatialPooler.Compute(Connections, input, activeColumns, IsLearn || (Sensor != null && Sensor.GetMetaInfo().IsLearn()));
+            SpatialPooler.Compute(Connections, input, activeColumns, _isLearn || (Sensor != null && Sensor.GetMetaInfo().IsLearn()));
 
             return activeColumns;
         }
@@ -1338,7 +2069,7 @@ namespace HTM.Net.Network
         /// <param name="input"> the current input vector</param>
         /// <param name="mi">the current input inference container</param>
         /// <returns></returns>
-        internal virtual int[] TemporalInput(int[] input, ManualInput mi)
+        protected virtual int[] TemporalInput(int[] input, ManualInput mi)
         {
             ComputeCycle cc;
             if (Sensor != null)
@@ -1350,21 +2081,23 @@ namespace HTM.Net.Network
 
                 cc = TemporalMemory.Compute(Connections, input, Sensor.GetMetaInfo().IsLearn());
             }
-            else {
-                cc = TemporalMemory.Compute(Connections, input, IsLearn);
+            else
+            {
+                cc = TemporalMemory.Compute(Connections, input, _isLearn);
             }
 
-            PreviousPredictiveCells = PredictiveCells;
-
             // Store the predictive columns
-            mi.SetPredictiveCells(PredictiveCells = cc.PredictiveCells());
+            mi.SetPredictiveCells(cc.PredictiveCells());
             // Store activeCells
-            mi.SetActiveCells(ActiveCells = cc.ActiveCells());
+            mi.SetActiveCells(cc.ActiveCells());
             // Store the Compute Cycle
             mi.SetComputeCycle(cc);
-            return SDR.AsCellIndices(ActiveCells = cc.ActiveCells());
+            return SDR.AsCellIndices(cc.ActiveCells());
         }
 
+        /// <summary>
+        /// Starts this<see cref="ILayer"/>'s thread
+        /// </summary>
         protected void StartLayerThread()
         {
             LayerThread = new Task(() =>
@@ -1373,20 +2106,11 @@ namespace HTM.Net.Network
 
                 //////////////////////////
 
-                var outputStream = (IBaseStream)Sensor.GetOutputStream();
+                //var outputStream = (IBaseStream)Sensor.GetOutputStream();
 
-                int[] intArray = null;
-                object inputObject;
-                while (!outputStream.EndOfStream)
-                {
-                    inputObject = outputStream.ReadUntyped();
-                    if (inputObject is int[])
-                    {
-                        intArray = (int[])inputObject;
-                    }
-                    bool doComputation = false;
-                    bool computed = false;
-                    try
+                // Applies "terminal" function, at this point the input stream is "sealed"
+                ((IStream<int[]>)Sensor.GetOutputStream())
+                    .Filter(i =>
                     {
                         if (_isHalted)
                         {
@@ -1395,49 +2119,93 @@ namespace HTM.Net.Network
                             {
                                 _next.Halt();
                             }
+                            return false;
                         }
-                        else
+                        if (!Thread.CurrentThread.IsAlive)
                         {
-                            doComputation = true;
+                            NotifyError(new ApplicationException("Unknown exception whil filtering input"));
                         }
-                    }
-                    catch (Exception e)
+                        return true;
+                    })
+                    .ForEach(intArray =>
                     {
-                        Console.WriteLine(e);
-                        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
-                        throw;
-                    }
-
-                    if (!doComputation) continue;
-
-                    try
-                    {
-
-                        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
-                        if (intArray != null) _factory.Inference.SetEncoding(intArray);
+                        _factory.Inference.SetEncoding(intArray);
 
                         Compute(intArray);
-                        computed = true;
 
-                        // Notify all downstream observers that the stream is closed
-                        if (!Sensor.EndOfStream())
-                        {
-                            NotifyComplete();
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        if (Debugger.IsAttached) Debugger.Break();
-                        NotifyError(e);
-                    }
+                        
 
-                    if (!computed)
-                    {
-                        // Wait a little while, because new work can come
-                        Thread.Sleep(5000);
-                    }
+                    }, false);
+
+                // Notify all downstream observers that the stream is closed
+                if (Sensor.EndOfStream())
+                {
+                    NotifyComplete();
                 }
+
+                //int[] intArray = null;
+                //object inputObject;
+                //while (!outputStream.EndOfStream)
+                //{
+                //    inputObject = outputStream.ReadUntyped();
+                //    if (inputObject is int[])
+                //    {
+                //        intArray = (int[])inputObject;
+                //    }
+                //    bool doComputation = false;
+                //    bool computed = false;
+                //    try
+                //    {
+                //        if (_isHalted)
+                //        {
+                //            NotifyComplete();
+                //            if (_next != null)
+                //            {
+                //                _next.Halt();
+                //            }
+                //        }
+                //        else
+                //        {
+                //            doComputation = true;
+                //        }
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        Console.WriteLine(e);
+                //        NotifyError(new ApplicationException("Unknown Exception while filtering input", e));
+                //        throw;
+                //    }
+
+                //    if (!doComputation) continue;
+
+                //    try
+                //    {
+
+                //        //Debug.WriteLine("Computing in the foreach loop: " + Arrays.ToString(intArray));
+                //        if (intArray != null) _factory.Inference.SetEncoding(intArray);
+
+                //        Compute(intArray);
+                //        computed = true;
+
+                //        // Notify all downstream observers that the stream is closed
+                //        if (!Sensor.EndOfStream())
+                //        {
+                //            NotifyComplete();
+                //        }
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        Console.WriteLine(e);
+                //        if (Debugger.IsAttached) Debugger.Break();
+                //        NotifyError(e);
+                //    }
+
+                //    if (!computed)
+                //    {
+                //        // Wait a little while, because new work can come
+                //        Thread.Sleep(5000);
+                //    }
+                //}
 
                 Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
                 //////////////////////////
@@ -1498,10 +2266,116 @@ namespace HTM.Net.Network
             Logger.Debug($"Start called on Layer thread {LayerThread}");
         }
 
-
-        public FunctionFactory GetFunctionFactory()
+        /// <summary>
+        /// Returns an <see cref="IObservable{T}"/> operator that when subscribed to, invokes an operation
+        /// that stores the state of this {@code Network} while keeping the Network up and running.
+        /// The Network will be stored at the pre-configured location (in binary form only, not JSON).
+        /// </summary>
+        /// <returns>the <see cref="ICheckPointOp{T}"/> operator</returns>
+        public ICheckPointOp<byte[]> GetCheckPointOperator()
         {
-            return _factory;
+            if (_checkPointOp == null)
+            {
+                _checkPointOp = new CheckPointOperator(this);
+            }
+            return (ICheckPointOp<byte[]>)_checkPointOp;
+        }
+
+        /// <summary>
+        /// Re-initializes the <see cref="IHTMSensor"/> following deserialization or restart after halt.
+        /// </summary>
+        private void RecreateSensors()
+        {
+            if (Sensor != null)
+            {
+                // Recreate the Sensor and its underlying Stream
+                Type sensorKlass = Sensor.GetType();
+                if (sensorKlass.FullName.IndexOf("File") != -1)
+                {
+                    Object path = Sensor.GetSensorParams().Get("PATH");
+                    Sensor = (IHTMSensor)Sensor<FileSensor>.Create(
+                         FileSensor.Create, SensorParams.Create(SensorParams.Keys.Path, "", path));
+                }
+                else if (sensorKlass.FullName.IndexOf("Observ") != -1)
+                {
+                    Object supplierOfObservable = Sensor.GetSensorParams().Get("ONSUB");
+                    Sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(
+                         ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, "", supplierOfObservable));
+                }
+                else if (sensorKlass.FullName.IndexOf("URI") != -1)
+                {
+                    //    Object url = Sensor.GetSensorParams().Get("URI");
+                    //    Sensor = (IHTMSensor)Sensor.Create(
+                    //         UriSensor.Create, SensorParams.Create(SensorParams.Keys.Uri, "", url));
+                    throw new NotImplementedException("Need to code the URI sensor first");
+                }
+            }
+        }
+
+        #endregion
+
+        #region Nested Types
+
+        //////////////////////////////////////////////////////////////
+        //   Inner Class Definition for CheckPointer (Observable)   //
+        //////////////////////////////////////////////////////////////
+
+        /**
+         * <p>
+         * Implementation of the CheckPointOp interface which serves to checkpoint
+         * and register a listener at the same time. The {@link rx.Observer} will be
+         * notified with the byte array of the {@link Network} being serialized.
+         * </p><p>
+         * The layer thread automatically tests for the list of observers to 
+         * contain > 0 elements, which indicates a check point operation should
+         * be executed.
+         * </p>
+         * 
+         * @param <T>       {@link rx.Observer}'s return type
+         */
+        internal class CheckPointOperator : ICheckPointOp<byte[]>
+        {
+            [NonSerialized]
+            private IObservable<byte[]> _instance;
+
+            internal CheckPointOperator(ILayer l)
+            //: this()
+            {
+                _instance = Observable.Create<byte[]>(o =>
+                {
+                    if (l.GetLayerThread() != null)
+                    {
+                        // The layer thread automatically tests for the list of observers to 
+                        // contain > 0 elements, which indicates a check point operation should
+                        // be executed.
+                        ((Layer<T>)l)._checkPointOpObservers.Add(o);
+                    }
+                    else
+                    {
+                        ((Layer<T>)l).DoCheckPoint();
+                    }
+                    return Observable.Empty<byte[]>().Subscribe();
+                });
+
+            }
+
+            /**
+             * Constructs this {@code CheckPointOperator}
+             * @param f     a subscriber function
+             */
+            //protected CheckPointOperator(rx.Observable.OnSubscribe<T> f)
+            //{
+            //    super(f);
+            //}
+
+            /**
+             * Queues the specified {@link rx.Observer} for notification upon
+             * completion of a check point operation.
+             */
+            public IDisposable CheckPoint(IObserver<byte[]> t)
+            {
+                return _instance.Subscribe(t);
+            }
         }
 
         //////////////////////////////////////////////////////////////
@@ -1527,11 +2401,11 @@ namespace HTM.Net.Network
         [Serializable]
         public class FunctionFactory
         {
-            internal Layer2<T> Layer { get; set; }
+            internal Layer<T> Layer { get; set; }
 
             public ManualInput Inference = new ManualInput();
 
-            public FunctionFactory(Layer2<T> layer)
+            public FunctionFactory(Layer<T> layer)
             {
                 Layer = layer;
             }
@@ -1882,28 +2756,16 @@ namespace HTM.Net.Network
             {
                 return t1 =>
                 {
+                    int[] sdr = t1.GetSdr();
                     if (!ArrayUtils.IsSparse(t1.GetSdr()))
                     {
                         // Set on Layer, then set sparse actives as the sdr,
                         // then set on Manual Input (t1)
-                        t1 = t1.SetSdr(Layer.SetFeedForwardSparseActives(ArrayUtils.Where(t1.GetSdr(), ArrayUtils.WHERE_1))).SetFeedForwardSparseActives(t1.GetSdr());
+                        sdr = ArrayUtils.Where(sdr, ArrayUtils.WHERE_1);
+                        t1 = t1.SetSdr(sdr).SetFeedForwardSparseActives(sdr);
                     }
-                    return t1.SetSdr(Layer.TemporalInput(t1.GetSdr(), t1));
+                    return t1.SetSdr(Layer.TemporalInput(sdr, t1));
                 };
-                //    return new Func<ManualInput, ManualInput>() {
-
-                //    @Override
-                //    public ManualInput call(ManualInput t1)
-                //{
-                //    if (!ArrayUtils.isSparse(t1.GetSDR()))
-                //    {
-                //        // Set on Layer, then set sparse actives as the sdr,
-                //        // then set on Manual Input (t1)
-                //        t1 = t1.sdr(feedForwardSparseActives(ArrayUtils.where(t1.GetSDR(), ArrayUtils.WHERE_1))).feedForwardSparseActives(t1.GetSDR());
-                //    }
-                //    return t1.sdr(temporalInput(t1.GetSDR(), t1));
-                //}
-                //    };
             }
 
             public Func<ManualInput, ManualInput> CreateClassifierFunc()
@@ -1912,16 +2774,16 @@ namespace HTM.Net.Network
                 IDictionary<string, object> inputMap = new CustomGetDictionary<string, object>(k => k.Equals("bucketIdx") ? bucketIdx : actValue);
                 return t1 =>
                 {
-                    var ci = t1.GetClassifierInput();
+                    Map<string, object> ci = t1.GetClassifierInput();
                     int recordNum = Layer.GetRecordNum();
                     foreach (string key in ci.Keys)
                     {
-                        NamedTuple inputs = (NamedTuple) ci[key];
+                        NamedTuple inputs = (NamedTuple)ci[key];
                         bucketIdx = inputs.Get("bucketIdx");
                         actValue = inputs.Get("inputValue");
 
                         IClassifier c = (IClassifier)t1.GetClassifiers().Get(key);
-                        Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
+                        Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn(), true);
 
                         t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);
                     }
@@ -1994,36 +2856,9 @@ namespace HTM.Net.Network
 
         }
 
-        /**
-         * Re-initializes the {@link HTMSensor} following deserialization or restart
-         * after halt.
-         */
-        private void RecreateSensors()
-        {
-            if (Sensor != null)
-            {
-                // Recreate the Sensor and its underlying Stream
-                Type sensorKlass = Sensor.GetType();
-                if (sensorKlass.FullName.IndexOf("File") != -1)
-                {
-                    Object path = Sensor.GetSensorParams().Get("PATH");
-                    Sensor = (IHTMSensor)Sensor<FileSensor>.Create(
-                         FileSensor.Create, SensorParams.Create(SensorParams.Keys.Path, "", path));
-                }
-                else if (sensorKlass.FullName.IndexOf("Observ") != -1)
-                {
-                    Object supplierOfObservable = Sensor.GetSensorParams().Get("ONSUB");
-                    Sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(
-                         ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, "", supplierOfObservable));
-                }
-                //else if (sensorKlass.FullName.IndexOf("URI") != -1)
-                //{
-                //    Object url = Sensor.GetSensorParams().Get("URI");
-                //    Sensor = (IHTMSensor)Sensor.Create(
-                //         UriSensor.Create, SensorParams.Create(SensorParams.Keys.Uri, "", url));
-                //}
-            }
-        }
+        #endregion
+
+        #region Equality Members
 
         public override int GetHashCode()
         {
@@ -2031,12 +2866,12 @@ namespace HTM.Net.Network
             int result = 1;
             result = prime * result + ((Name == null) ? 0 : Name.GetHashCode());
             result = prime * result + _recordNum;
-            result = prime * result + (int) AlgoContentMask;
+            result = prime * result + (int)AlgoContentMask;
             result = prime * result + ((CurrentInference == null) ? 0 : CurrentInference.GetHashCode());
             result = prime * result + (_hasGenericProcess ? 1231 : 1237);
             result = prime * result + (_isClosed ? 1231 : 1237);
             result = prime * result + (_isHalted ? 1231 : 1237);
-            result = prime * result + (IsLearn ? 1231 : 1237);
+            result = prime * result + (_isLearn ? 1231 : 1237);
             result = prime * result + ((ParentRegion == null) ? 0 : ParentRegion.GetHashCode());
             result = prime * result + ((SensorParams == null) ? 0 : SensorParams.GetHashCode());
             return result;
@@ -2051,7 +2886,7 @@ namespace HTM.Net.Network
                 return false;
             if (GetType() != obj.GetType())
                 return false;
-            Layer2<T> other = (Layer2<T>)obj;
+            Layer<T> other = (Layer<T>)obj;
             if (Name == null)
             {
                 if (other.Name != null)
@@ -2076,7 +2911,7 @@ namespace HTM.Net.Network
                 return false;
             if (_isHalted != other._isHalted)
                 return false;
-            if (IsLearn != other.IsLearn)
+            if (_isLearn != other._isLearn)
                 return false;
             if (ParentRegion == null)
             {
@@ -2092,9 +2927,10 @@ namespace HTM.Net.Network
             }
             else if (!SensorParams.Equals(other.SensorParams))
                 return false;
-   
+
             return true;
         }
-    }
 
+        #endregion
+    }
 }
