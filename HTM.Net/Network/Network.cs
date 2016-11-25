@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Algorithms;
@@ -6,7 +7,6 @@ using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
 using log4net;
-using log4net.Repository.Hierarchy;
 
 namespace HTM.Net.Network
 {
@@ -20,7 +20,6 @@ namespace HTM.Net.Network
     /// </p>
     /// </summary>
     /// <remarks>
-    /// <p>
     /// Networks in HTM.java are extremely easy to compose. For instance, here is an example 
     /// of a network which contains everything:
     /// <pre>
@@ -127,11 +126,12 @@ namespace HTM.Net.Network
     /// @see NetworkAPIDemo
     /// </remarks>
     [Serializable]
-    public class Network : Persistable
+    public class Network : Persistable, IEnumerable<Region>
     {
+        #region Fields
+
         [NonSerialized]
         public readonly static ILog Logger = LogManager.GetLogger(typeof(Network));
-        public enum Mode { MANUAL, AUTO, REACTIVE };
 
         private readonly string _name;
         private readonly Parameters _parameters;
@@ -147,9 +147,16 @@ namespace HTM.Net.Network
 
         private readonly List<Region> _regions = new List<Region>();
 
+        /// <summary>
+        /// Stored check pointer function
+        /// </summary>
         private Func<Network, byte[]> _checkPointFunction;
 
         private bool _shouldDoHalt = true;
+
+        //public enum Mode { MANUAL, AUTO, REACTIVE }; 
+
+        #endregion
 
         /// <summary>
         /// Creates a new <see cref="Network"/>
@@ -158,21 +165,21 @@ namespace HTM.Net.Network
         /// <param name="parameters"></param>
         public Network(string name, Parameters parameters)
         {
-            if (name == null || string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(name))
             {
-                throw new InvalidOperationException("All Networks must have a name. " +
-                    "Increases digestion, and overall happiness!");
+                throw new ArgumentException("All Networks must have a name. Increases digestion, and overall happiness!");
             }
             _name = name;
             _parameters = parameters;
             if (parameters == null)
             {
-                throw new ArgumentException("Network Parameters were null.");
+                throw new ArgumentNullException(nameof(parameters), "Network Parameters were null.");
             }
         }
 
         /// <summary>
         /// Creates and returns an implementation of <see cref="Network"/>
+        /// Warning: name cannot be null or empty
         /// </summary>
         /// <param name="name"></param>
         /// <param name="parameters"></param>
@@ -182,12 +189,10 @@ namespace HTM.Net.Network
             return new Network(name, parameters);
         }
 
-        /**
-         * Creates and returns a child <see cref="Region"/> of this {@code Network}
-         * 
-         * @param   name    The String identifier for the specified <see cref="Region"/>
-         * @return
-         */
+        /// <summary>
+        /// Creates and returns a child <see cref="Region"/> of this <see cref='Network'/>
+        /// </summary>
+        /// <param name="name">The String identifier for the specified <see cref="Region"/></param>
         public static Region CreateRegion(string name)
         {
             CheckName(name);
@@ -196,20 +201,25 @@ namespace HTM.Net.Network
             return r;
         }
 
-        /**
-         * Creates a {@link Layer} to hold algorithmic components and returns
-         * it.
-         * 
-         * @param name  the String identifier for the specified {@link Layer}
-         * @param p     the {@link Parameters} to use for the specified {@link Layer}
-         * @return
-         */
+        /// <summary>
+        /// Creates a <see cref="Layer{T}"/> to hold algorithmic components and returns it.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="name"></param>
+        /// <param name="p">the <see cref="Parameters"/> to use for the specified <see cref="Layer{T}"/></param>
+        /// <returns></returns>
         public static Layer<T> CreateLayer<T>(string name, Parameters p)
         {
             CheckName(name);
             return new Layer<T>(name, null, p);
         }
 
+        /// <summary>
+        /// Creates a <see cref="ILayer"/> to hold algorithmic components and returns it.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="p">the <see cref="Parameters"/> to use for the specified <see cref="ILayer"/></param>
+        /// <returns></returns>
         public static ILayer CreateLayer(string name, Parameters p)
         {
             CheckName(name);
@@ -230,7 +240,7 @@ namespace HTM.Net.Network
             {
                 if (_regions.Count == 1)
                 {
-                    this._tail = _regions.First();
+                    _tail = _regions.First();
                 }
                 _tail.Close();
             }
@@ -262,71 +272,68 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * INTERNAL METHOD: DO NOT CALL
-         * 
-         * Called from {@link Layer} to execute a check point from within the scope of 
-         * this {@link Network}
-         * checkPointFunction
-         * @return  the serialized {@code Network} in byte array form.
-         */
+        /// <summary>
+        /// INTERNAL METHOD: DO NOT CALL
+        /// 
+        /// Called from <see cref="ILayer"/> to execute a check point from within the scope of 
+        /// this {@link Network}
+        /// checkPointFunction
+        /// </summary>
+        /// <returns>the serialized <see cref="Network"/> in byte array form.</returns>
         internal byte[] InternalCheckPointOp()
         {
             _shouldDoHalt = false;
-            byte[] serializedBytes = (byte[])_checkPointFunction(this);
+            byte[] serializedBytes = _checkPointFunction(this);
             _shouldDoHalt = true;
             return serializedBytes;
         }
 
-        /**
-         * Sets the reference to the check point function.
-         * @param f function which executes check point logic.
-         */
-        public void SetCheckPointFunction<T>(Func<Network, byte[]> f)
+        /// <summary>
+        /// Sets the reference to the check point function.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="f">function which executes check point logic.</param>
+        public void SetCheckPointFunction(Func<Network, byte[]> f)
         {
-            this._checkPointFunction = f;
+            _checkPointFunction = f;
         }
 
-        /**
-         * USED INTERNALLY, DO NOT CALL
-         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
-         * that stores the state of this {@code Network} while keeping the Network up and running.
-         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
-         * 
-         * @return  the {@link CheckPointOp} operator 
-         */
+        /// <summary>
+        /// USED INTERNALLY, DO NOT CALL
+        /// Returns an <see cref="IObservable{T}"/> operator that when subscribed to, invokes an operation
+        /// that stores the state of this <see cref="Network"/> while keeping the Network up and running.
+        /// The Network will be stored at the pre-configured location (in binary form only, not JSON).
+        /// </summary>
+        /// <returns>the <see cref="ICheckPointOp{T}"/> operator </returns>
         internal ICheckPointOp<byte[]> GetCheckPointOperator()
         {
             Logger.Debug("Network [" + GetName() + "] called checkPoint() at: " + (new DateTime()));
 
             if (_regions.Count == 1)
             {
-                this._tail = _regions.First();
+                _tail = _regions.First();
             }
             return _tail.GetCheckPointOperator();
         }
 
-        /**
-         * Restarts this {@code Network}. The network will run from the previous save point
-         * of the stored Network.
-         * 
-         * @see {@link #restart(boolean)} for a start at "saved-index" behavior explanation. 
-         */
+        /// <summary>
+        /// Restarts this <see cref="Network"/>. The network will run from the previous save point of the stored Network.
+        /// 
+        /// <see cref="Restart(bool)"/> for a start at "saved-index" behavior explanation. 
+        /// </summary>
         public void Restart()
         {
             Restart(true);
         }
 
-        /**
-         * Restarts this {@code Network}. If the "startAtIndex" flag is true, the Network
-         * will start from the last record number (plus 1) at which the Network was saved -
-         * continuing on from where it left off. The Network will achieve this by rebuilding
-         * the underlying Stream (if necessary, i.e. not for {@link ObservableSensor}s) and skipping 
-         * the number of records equal to the stored record number plus one, continuing from where it left off.
-         * 
-         * @param startAtIndex  flag indicating whether to start this {@code Network} from
-         *                      its previous save point.
-         */
+        /// <summary>
+        /// Restarts this <see cref="Network"/>. If the "startAtIndex" flag is true, the Network
+        /// will start from the last record number (plus 1) at which the Network was saved -
+        /// continuing on from where it left off. The Network will achieve this by rebuilding
+        /// the underlying Stream (if necessary, i.e. not for <see cref="ObservableSensor{T}"/>s) and skipping 
+        /// the number of records equal to the stored record number plus one, continuing from where it left off.
+        /// </summary>
+        /// <param name="startAtIndex">flag indicating whether to start this <see cref="Network"/> from its previous save point.</param>
         public void Restart(bool startAtIndex)
         {
             if (_regions.Count < 1)
@@ -342,33 +349,30 @@ namespace HTM.Net.Network
             }
 
             // Record thread start
-            this._isThreadRunning = tail.Restart(startAtIndex);
+            _isThreadRunning = tail.Restart(startAtIndex);
         }
 
-        /**
-         * <p>
-         * DO NOT CALL THIS METHOD!
-         * </p><p>
-         * Called internally by an {@link ObservableSensor}'s factory method's creation of a new 
-         * {@code ObservableSensor}. This would usually happen following a halt or
-         * deserialization.
-         * </p>
-         * @param p  the new Publisher created upon reconstitution of a new ObservableSensor  
-         */
-
+        /// <summary>
+        /// <p>
+        /// DO NOT CALL THIS METHOD!
+        /// </p><p>
+        /// Called internally by an <see cref="ObservableSensor{T}"/>'s factory method's creation of a new 
+        /// <see cref="ObservableSensor{T}"/>. This would usually happen following a halt or
+        /// deserialization.
+        /// </p>
+        /// </summary>
+        /// <param name="p">the new Publisher created upon reconstitution of a new <see cref="ObservableSensor{T}"/> </param>
         internal void SetPublisher(Publisher p)
         {
-            this._publisher = p;
+            _publisher = p;
             _publisher.SetNetwork(this);
         }
 
-        /**
-         * Returns the new {@link Publisher} created after halt or deserialization
-         * of this {@code Network}, when a new Publisher must be created.
-         * 
-         * @return      the new Publisher created after deserialization or halt.
-         * @see #getPublisherSupplier()
-         */
+        /// <summary>
+        /// Returns the new <see cref="Publisher"/> created after halt or deserialization
+        /// of this <see cref="Network"/>, when a new Publisher must be created.
+        /// </summary>
+        /// <returns>the new Publisher created after deserialization or halt.</returns>
         public Publisher GetPublisher()
         {
             if (_publisher == null)
@@ -379,12 +383,10 @@ namespace HTM.Net.Network
             return _publisher;
         }
 
-        /**
-        * Returns a flag indicating whether this {@code Network} contain multiple
-        * {@link Region}s.
-        * 
-        * @return  true if so, false if not.
-        */
+        /// <summary>
+        /// Returns a flag indicating whether this <see cref="Network"/> contain multiple <see cref="Region"/>s.
+        /// </summary>
+        /// <returns>true if so, false if not.</returns>
         public bool IsMultiRegion()
         {
             return _regions.Count > 1;
@@ -399,12 +401,9 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
-        /// If <see cref="Mode"/> ==  <see cref="Mode.AUTO"/>, calling this 
+        /// Calling this 
         /// method will start the main engine thread which pulls in data
         /// from the connected <see cref="Sensor{T}"/>
-        /// 
-        /// <em>Warning:</em> Calling this method with any other Mode than 
-        /// <see cref="Mode.AUTO"/> will result in an exception.
         /// </summary>
         public void Start()
         {
@@ -425,49 +424,55 @@ namespace HTM.Net.Network
         }
 
         /// <summary>
-        /// Closes all <see cref="Region"/> objects in this <see cref="Network"/>
+        /// Returns a flag indicating that the <see cref="Network"/> has an <see cref="IObservable{T}"/> running on a thread.
         /// </summary>
-        /// <returns></returns>
-        public Network Close()
-        {
-            _regions.ForEach(r => r.Close());
-            return this;
-        }
-
-        /**
-         * Returns a flag indicating that the {@code Network} has an <see cref="IObservable{T}"/>
-         * running on a thread.
-         * 
-         * @return  a flag indicating if threaded.
-         */
+        /// <returns>a flag indicating if threaded.</returns>
         public bool IsThreadedOperation()
         {
             return _isThreadRunning;
         }
 
-        /**
-         * Halts this {@code Network}, stopping all threads and closing
-         * all {@link SensorFactory} connections to incoming data, freeing up 
-         * any resources associated with the input connections.
-         */
+        /// <summary>
+        /// Halts this <see cref="Network"/>, stopping all threads and closing
+        /// all <see cref="ISensorFactory{T}"/> connections to incoming data, freeing up 
+        /// any resources associated with the input connections.
+        /// </summary>
         public void Halt()
         {
+            // Call onComplete if using an ObservableSensor to complete the stream output.
+            _publisher?.OnComplete();
+
             if (_regions.Count == 1)
             {
-                _tail = _regions[0];
+                _tail = _regions.First();
             }
             _tail.Halt();
         }
 
-        /**
-         * Pauses all underlying {@code Network} nodes, maintaining any 
-         * connections (leaving them open until they possibly time out).
-         * Does nothing to prevent any sensor connections from timing out
-         * on their own. 
-         */
-        public void Pause()
+        /// <summary>
+        /// Returns a flag indicating whether this Network has a Region whose tail (input <see cref="ILayer"/>) is halted.
+        /// </summary>
+        /// <returns>true if so, false if not</returns>
+        public bool IsHalted()
         {
-            throw new InvalidOperationException("Pausing is not (yet) supported.");
+            if (_regions.Count == 1)
+            {
+                _tail = _regions.First();
+            }
+            return _tail.IsHalted();
+        }
+
+        /// <summary>
+        /// Returns the index of the last record processed.
+        /// </summary>
+        /// <returns>the last recordNum processed</returns>
+        public int GetRecordNum()
+        {
+            if (_regions.Count == 1)
+            {
+                _tail = _regions.First();
+            }
+            return _tail.GetTail().GetRecordNum();
         }
 
         /// <summary>
@@ -483,31 +488,18 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * Returns the learning mode setting.
-         * @return
-         */
+        /// <summary>
+        /// Returns the learning mode setting.
+        /// </summary>
+        /// <returns></returns>
         public bool IsLearn()
         {
             return _isLearn;
         }
 
-        /**
-         * Returns the current {@link Mode} with which this <see cref="Network"/> is 
-         * currently configured.
-         * 
-         * @return
-         */
-        public Mode? GetMode()
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        /**
-         * Finds any <see cref="Region"/> containing a {@link Layer} which contains a {@link TemporalMemory} 
-         * and resets them.
-         */
+        /// <summary>
+        /// Finds any <see cref="Region"/> containing a <see cref="ILayer"/> which contains a <see cref="TemporalMemory"/> and resets them.
+        /// </summary>
         public void Reset()
         {
             foreach (Region r in _regions)
@@ -516,9 +508,9 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * Resets the recordNum in all <see cref="Region"/>s.
-         */
+        /// <summary>
+        /// Resets the recordNum in all <see cref="Region"/>s.
+        /// </summary>
         public void ResetRecordNum()
         {
             foreach (Region r in _regions)
@@ -527,11 +519,10 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * Returns an <see cref="IObservable{T}"/> capable of emitting <see cref="IInference"/>s
-         * which contain the results of this {@code Network}'s processing chain.
-         * @return
-         */
+        /// <summary>
+        /// Returns an <see cref="IObservable{T}"/> capable of emitting <see cref="IInference"/>s
+        /// which contain the results of this <see cref="Network"/>'s processing chain.
+        /// </summary>
         public IObservable<IInference> Observe()
         {
             if (_regions.Count == 1)
@@ -554,12 +545,10 @@ namespace HTM.Net.Network
             return _head;
         }
 
-        /**
-         * Returns the bottom-most (first in execution order from
-         * bottom to top) <see cref="Region"/> in this {@code Network}
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the bottom-most (first in execution order from
+        /// bottom to top) <see cref="Region"/> in this <see cref="Network"/>
+        /// </summary>
         public Region GetTail()
         {
             if (_regions.Count == 1)
@@ -569,42 +558,53 @@ namespace HTM.Net.Network
             return _tail;
         }
 
-        /**
-         * For internal Use: Returns a boolean flag indicating whether
-         * the specified {@link Layer} is the tail of the Network.
-         * @param l     the layer to test   
-         * @return  true if so, false if not
-         */
-        public bool IsTail(ILayer layer)
+        /// <summary>
+        /// For internal Use: Returns a boolean flag indicating whether
+        /// the specified <see cref="ILayer"/> is the tail of the Network.
+        /// </summary>
+        /// <param name="layer">the layer to test   </param>
+        /// <returns>true if so, false if not</returns>
+        internal bool IsTail(ILayer layer)
         {
             if (_regions.Count == 1)
             {
-                this._tail = _regions.First();
+                _tail = _regions.First();
             }
             return Equals(_tail.GetTail(), layer);
         }
 
-        /**
-         * Returns a {@link Iterator} capable of walking the tree of regions
-         * from the root <see cref="Region"/> down through all the child Regions. In turn,
-         * a <see cref="Region"/> may be queried for a {@link Iterator} which will return
-         * an iterator capable of traversing the Region's contained {@link Layer}s.
-         * 
-         * @return
-         */
-        public List<Region>.Enumerator Iterator()
+        /// <summary>
+        /// Returns a {@link Iterator} capable of walking the tree of regions
+        /// from the root <see cref="Region"/> down through all the child Regions. In turn,
+        /// a <see cref="Region"/> may be queried for a {@link Iterator} which will return
+        /// an iterator capable of traversing the Region's contained <see cref="ILayer"/>s.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerator IEnumerable.GetEnumerator()
         {
-            return GetRegions().GetEnumerator();
+            return GetEnumerator();
         }
 
-        /**
-         * Used to manually input data into a <see cref="Network"/>, the other way 
-         * being the call to {@link Network#start()} for a Network that contains a
-         * Region that contains a {@link Layer} which in turn contains a {@link Sensor} <em>-OR-</em>
-         * subscribing a receiving Region to this Region's output Observable.
-         * 
-         * @param input One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)
-         */
+        /// <summary>
+        /// Returns a {@link Iterator} capable of walking the tree of regions
+        /// from the root <see cref="Region"/> down through all the child Regions. In turn,
+        /// a <see cref="Region"/> may be queried for a {@link Iterator} which will return
+        /// an iterator capable of traversing the Region's contained <see cref="ILayer"/>s.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerator<Region> GetEnumerator()
+        {
+            return _regions.GetEnumerator();
+        }
+
+        /// <summary>
+        /// Used to manually input data into a <see cref="Network"/>, the other way 
+        /// being the call to <see cref="Start"/> for a Network that contains a
+        /// Region that contains a <see cref="ILayer"/> which in turn contains a <see cref="ISensor"/> <em>-OR-</em>
+        /// subscribing a receiving Region to this Region's output Observable.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="input">One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)</param>
         public void Compute<T>(T input)
         {
             if (_tail == null && _regions.Count == 1)
@@ -617,19 +617,18 @@ namespace HTM.Net.Network
                 AddDummySubscriber();
             }
 
-            _tail.Compute(input);
+            _tail?.Compute(input);
         }
 
-        /**
-         * Used to manually input data into a <see cref="Network"/> in a synchronous way, the other way 
-         * being the call to {@link Network#start()} for a Network that contains a
-         * Region that contains a {@link Layer} which in turn contains a {@link Sensor} <em>-OR-</em>
-         * subscribing a receiving Region to this Region's output Observable.
-         * 
-         * @param input One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)
-         */
+        /// <summary>
+        /// Used to manually input data into a <see cref="Network"/>, the other way 
+        /// being the call to <see cref="Start"/> for a Network that contains a
+        /// Region that contains a <see cref="ILayer"/> which in turn contains a <see cref="ISensor"/> <em>-OR-</em>
+        /// subscribing a receiving Region to this Region's output Observable.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="input">One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)</param>
         public IInference ComputeImmediate<T>(T input)
-        //where T : IInference
         {
             if (_isThreadRunning)
             {
@@ -646,24 +645,20 @@ namespace HTM.Net.Network
                 AddDummySubscriber();
             }
 
+            if(_tail == null)throw new InvalidOperationException("Network is not closed?");
+            if(_head == null)throw new InvalidOperationException("Network is not closed?");
             _tail.Compute(input);
             return _head.GetHead().GetInference();
         }
 
-        /**
-         * Added when a synchronous call is made and there is no subscriber. No
-         * Subscriber leads to the observable chain not being constructed, therefore
-         * we must always have at least one subscriber.
-         */
+        /// <summary>
+        /// Added when a synchronous call is made and there is no subscriber. No
+        /// Subscriber leads to the observable chain not being constructed, therefore
+        /// we must always have at least one subscriber.
+        /// </summary>
         internal void AddDummySubscriber()
         {
             Observe().Subscribe(output => { }, e => Console.WriteLine(e));
-
-            //        Observe().Subscribe(new Subscriber<IInference>() {
-            //        @Override public void onCompleted() { }
-            //    @Override public void onError(Throwable e) { e.printStackTrace(); }
-            //    @Override public void onNext(IInference i) { }
-            //});
         }
 
         /// <summary>
@@ -708,11 +703,11 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Adds a <see cref="Region"/> to this {@code Network}
-         * @param region
-         * @return
-         */
+        /// <summary>
+        /// Adds a <see cref="Region"/> to this <see cref="Network"/>
+        /// </summary>
+        /// <param name="region"></param>
+        /// <returns>The current network</returns>
         public Network Add(Region region)
         {
             _regions.Add(region);
@@ -720,101 +715,100 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Returns a {@link List} view of the contained <see cref="Region"/>s.
-         * @return
-         */
+        /// <summary>
+        /// Closes all <see cref="Region"/> objects in this <see cref="Network"/>
+        /// </summary>
+        /// <returns></returns>
+        public Network Close()
+        {
+            _regions.ForEach(r => r.Close());
+            return this;
+        }
+
+        /// <summary>
+        /// Returns a list of the contained <see cref="Region"/>s.
+        /// </summary>
         public List<Region> GetRegions()
         {
             return new List<Region>(_regions);
         }
 
-        /**
-         * Sets a reference to the <see cref="Region"/> which contains the {@link Sensor}
-         * (if any).
-         * 
-         * @param r
-         */
+        /// <summary>
+        /// Sets a reference to the <see cref="Region"/> which contains the <see cref="ISensor"/> (if any).
+        /// </summary>
+        /// <param name="r"></param>
         public void SetSensorRegion(Region r)
         {
             _sensorRegion = r;
         }
 
-        /**
-         * Returns a reference to the <see cref="Region"/> which contains the {@link Sensor}
-         * 
-         * @return  the Region which contains the Sensor
-         */
+        /// <summary>
+        /// Returns a reference to the <see cref="Region"/> which contains the <see cref="ISensor"/>
+        /// </summary>
+        /// <returns>the Region which contains the Sensor</returns>
         public Region GetSensorRegion()
         {
             return _sensorRegion;
         }
 
-        /**
-         * Returns the <see cref="Region"/> with the specified name
-         * or null if it doesn't exist within this {@code Network}
-         * @param regionName
-         * @return
-         */
+        /// <summary>
+        /// Returns the <see cref="Region"/> with the specified name or null if it doesn't exist within this <see cref="Network"/>
+        /// </summary>
+        /// <param name="regionName">Region name to look for</param>
+        /// <returns></returns>
         public Region Lookup(string regionName)
         {
             return _regions.FirstOrDefault(r => r.GetName().Equals(regionName));
         }
 
-        /**
-         * Returns the network-level {@link Parameters}.
-         * @return
-         */
+        /// <summary>
+        /// Returns the network-level <see cref="Parameters"/>.
+        /// </summary>
         public Parameters GetParameters()
         {
             return _parameters;
         }
 
-        /**
-         * Sets the reference to this {@code Network}'s Sensor
-         * @param sensor
-         */
+        /// <summary>
+        /// Sets the reference to this <see cref="Network"/>'s Sensor
+        /// </summary>
+        /// <param name="otherSensor"></param>
         public void SetSensor(ISensor otherSensor)
         {
             _sensor = otherSensor;
             _sensor.InitEncoder(_parameters);
         }
 
-        /**
-         * Returns the encoder present in one of this {@code Network}'s
-         * {@link Sensor}s
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the encoder present in one of this <see cref="Network"/>'s
+        /// </summary>
         public ISensor GetSensor()
         {
             return _sensor;
         }
 
-        /**
-         * Sets the {@link MultiEncoder} on this Network
-         * @param e
-         */
+        /// <summary>
+        ///  Sets the <see cref="MultiEncoder"/> on this Network
+        /// </summary>
+        /// <param name="e"></param>
         public void SetEncoder(MultiEncoder e)
         {
             _encoder = e;
         }
 
-        /**
-         * Returns the {@link MultiEncoder} with which this Network is configured.
-         * @return
-         */
+        /// <summary>
+        /// Returns the <see cref="MultiEncoder"/> with which this Network is configured.
+        /// </summary>
+        /// <returns></returns>
         public MultiEncoder GetEncoder()
         {
             return _encoder;
         }
 
-        /**
-         * Checks the name for suitability within a given network, 
-         * checking for reserved characters and such.
-         * 
-         * @param name
-         */
+        /// <summary>
+        /// Checks the name for suitability within a given network, checking for reserved characters and such.
+        /// </summary>
+        /// <param name="name"></param>
         private static void CheckName(string name)
         {
             if (name == null) throw new ArgumentNullException(nameof(name));
@@ -823,6 +817,7 @@ namespace HTM.Net.Network
                 throw new ArgumentException("\":\" is a reserved character.");
             }
         }
+
 
         public override int GetHashCode()
         {
@@ -877,7 +872,5 @@ namespace HTM.Net.Network
                 return false;
             return true;
         }
-
-        
     }
 }

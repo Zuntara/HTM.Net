@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using DeepEqual.Syntax;
@@ -621,8 +622,9 @@ namespace HTM.Net
                 {
                     if (!(value is Type) && !key.GetFieldType().IsInstanceOfType(value))
                     {
-                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
-                            , key.GetFieldName(), key.GetFieldType()));
+                        throw new ArgumentException(
+                            $"Can not set Parameters Property '{key.GetFieldName()}' because of type mismatch. " +
+                            $"The required type is class {key.GetFieldType()} and the given class is {value.GetType().Name}");
                     }
                     if ((value is Type) && !key.GetFieldType().IsAssignableFrom((Type)value))
                     {
@@ -746,7 +748,8 @@ namespace HTM.Net
                 KEY foundKey = KEY.GetKeyByFieldName(paramFieldName);
                 if (foundKey != null)
                 {
-                    pInstance.SetParameterByKey(foundKey, propertyInfo.GetValue(descriptionObj));
+                    var parValue = propertyInfo.GetValue(descriptionObj);
+                    pInstance.SetParameterByKey(foundKey, parValue);
                 }
                 else
                 {

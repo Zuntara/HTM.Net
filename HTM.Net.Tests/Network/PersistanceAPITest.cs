@@ -588,7 +588,7 @@ namespace HTM.Net.Tests.Network
             DeepCompare(layer, serializedLayer);
 
             // Now change one attribute and see that they are not equal
-            serializedLayer.ResetRecordNum();
+            ((Layer<IInference>)layer).ResetRecordNum();
             Assert.AreNotEqual(serializedLayer, layer);
         }
         //////////////////////  End Layers  ///////////////////////

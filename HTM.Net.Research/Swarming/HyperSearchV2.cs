@@ -3967,7 +3967,7 @@ namespace HTM.Net.Research.Swarming
             this._permutations = permFile.permutations; //vars["permutations"];
             this._flattenedPermutations = new Dictionary<string, PermuteVariable>();
 
-            Action<object, string[]> _flattenPermutations = (value, keys) =>
+            Action<object, string[]> flattenPermutations = (value, keys) =>
             {
                 if (keys.Contains(":"))
                 {
@@ -4013,7 +4013,7 @@ namespace HTM.Net.Research.Swarming
                 }
             };
 
-            Utils.rApply(this._permutations, _flattenPermutations);
+            Utils.rApply(this._permutations, flattenPermutations);
         }
         /// <summary>
         /// Computes the number of models that are expected to complete as part of this instances's HyperSearch.

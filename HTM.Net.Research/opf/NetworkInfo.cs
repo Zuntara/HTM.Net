@@ -16,9 +16,9 @@ namespace HTM.Net.Research.opf
             this.statCollectors = statsCollectors;
         }
 
-        public ILayer GetLayer()
+        public Layer<IInference> GetLayer()
         {
-            return net.GetHead().GetHead();
+            return (Layer<IInference>) net.GetHead().GetHead();
         }
     }
 }

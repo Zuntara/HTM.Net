@@ -44,7 +44,7 @@ namespace HTM.Net.Tests.Network
             try
             {
                 network.Reset();
-                Assert.IsTrue(network.Lookup("r1").Lookup("l1").HasTemporalMemory());
+                Assert.IsTrue(((Layer<IInference>)network.Lookup("r1").Lookup("l1")).HasTemporalMemory());
             }
             catch (Exception e)
             {
@@ -57,7 +57,7 @@ namespace HTM.Net.Tests.Network
             try
             {
                 network.Reset();
-                Assert.IsFalse(network.Lookup("r1").Lookup("l1").HasTemporalMemory());
+                Assert.IsFalse(((Layer<IInference>)network.Lookup("r1").Lookup("l1")).HasTemporalMemory());
             }
             catch (Exception e)
             {
@@ -90,10 +90,10 @@ namespace HTM.Net.Tests.Network
 
             network.Compute(new[] { 2, 3, 4 });
             network.Compute(new[] { 2, 3, 4 });
-            Assert.AreEqual(1, network.Lookup("r1").Lookup("l1").GetRecordNum());
+            Assert.AreEqual(1, ((Layer<IInference>)network.Lookup("r1").Lookup("l1")).GetRecordNum());
 
             network.ResetRecordNum();
-            Assert.AreEqual(0, network.Lookup("r1").Lookup("l1").GetRecordNum());
+            Assert.AreEqual(0, ((Layer<IInference>)network.Lookup("r1").Lookup("l1")).GetRecordNum());
         }
 
         [TestMethod]
@@ -1021,10 +1021,8 @@ namespace HTM.Net.Tests.Network
                 manual.OnNext("7/12/10 13:10,35.3,40.6457;-73.7" + x + "692;" + x); //5 = meters per second
             }
 
-
-
             manual.OnComplete();
-
+            
             ILayer l = network.Lookup("r1").Lookup("1");
             try
             {
@@ -1036,9 +1034,7 @@ namespace HTM.Net.Tests.Network
                 Assert.Fail();
             }
 
-
-            Assert.IsTrue(_completed);
-
+            Assert.IsTrue(_completed, "onComplete is not called!");
         }
 
         string _errorMessage = null;
@@ -1123,12 +1119,12 @@ namespace HTM.Net.Tests.Network
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("2", p)
+                    .Add(Net.Network.Network.CreateLayer("2", p)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())))
                 .Add(Net.Network.Network.CreateRegion("r2")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                    .Add(Net.Network.Network.CreateLayer("1", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
@@ -1137,7 +1133,7 @@ namespace HTM.Net.Tests.Network
                 .Connect("r1", "r2");
 
             Region r1 = network.Lookup("r1");
-            ILayer layer2 = r1.Lookup("2");
+            Layer<IInference> layer2 = (Layer<IInference>) r1.Lookup("2");
 
             int width = layer2.CalculateInputWidth();
             Assert.AreEqual(65536, width);
@@ -1165,7 +1161,7 @@ namespace HTM.Net.Tests.Network
                 .Connect("r1", "r2");
 
             Region r1 = network.Lookup("r1");
-            ILayer layer2 = r1.Lookup("2");
+            Layer<IInference> layer2 = (Layer<IInference>)r1.Lookup("2");
 
             int width = layer2.CalculateInputWidth();
             Assert.AreEqual(2048, width);
@@ -1188,7 +1184,7 @@ namespace HTM.Net.Tests.Network
                                 .Close()));
 
             Region r1 = network.Lookup("r1");
-            ILayer layer2 = r1.Lookup("2");
+            Layer<IInference> layer2 = (Layer<IInference>)r1.Lookup("2");
 
             int width = layer2.CalculateInputWidth();
             Assert.AreEqual(65536, width);
@@ -1210,7 +1206,7 @@ namespace HTM.Net.Tests.Network
                                     .Close()));
 
             Region r1 = network.Lookup("r1");
-            ILayer layer2 = r1.Lookup("2");
+            Layer<IInference> layer2 = (Layer<IInference>)r1.Lookup("2");
 
             int width = layer2.CalculateInputWidth();
             Assert.AreEqual(8, width);
@@ -1231,7 +1227,7 @@ namespace HTM.Net.Tests.Network
                         .Close()));
 
             Region r1 = network.Lookup("r1");
-            ILayer layer2 = r1.Lookup("2");
+            Layer<IInference> layer2 = (Layer<IInference>)r1.Lookup("2");
 
             int width = layer2.CalculateInputWidth();
             Assert.AreEqual(8, width);
@@ -1256,8 +1252,7 @@ namespace HTM.Net.Tests.Network
                     .Connect("1", "2"));
 
             Region r1 = network.Lookup("r1");
-            ILayer layer1 = r1.Lookup("1");
-
+            Layer<IInference> layer1 = (Layer<IInference>)r1.Lookup("1");
             int width = layer1.CalculateInputWidth();
             Assert.AreEqual(65536, width);
         }
@@ -1279,7 +1274,7 @@ namespace HTM.Net.Tests.Network
                     .Connect("1", "2"));
 
             Region r1 = network.Lookup("r1");
-            ILayer layer1 = r1.Lookup("1");
+            Layer<IInference> layer1 = (Layer<IInference>)r1.Lookup("1");
 
             int width = layer1.CalculateInputWidth();
             Assert.AreEqual(2048, width);

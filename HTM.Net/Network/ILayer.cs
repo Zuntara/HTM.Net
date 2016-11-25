@@ -9,7 +9,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Network
 {
-    public interface ILayer : IPersistable
+    public interface ILayer2 : IPersistable
     {
         /// <summary>
         /// Returns the String identifier of this <see cref="ILayer"/>

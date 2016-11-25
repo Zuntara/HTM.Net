@@ -9,7 +9,7 @@ namespace HTM.Net.Util
     public interface IStream
     {
         IEnumerator GetEnumerator();
-        void IncrementCurrentlyRead();
+        void IncrementCurrentlyRead(object value);
         IStream GetParentStream();
         int Count();
     }
@@ -30,7 +30,7 @@ namespace HTM.Net.Util
         event Action<bool> TerminalChanged;
 
         IStream<T> Filter(Func<T, bool> predicate);
-        void ForEach(Action<T> action);
+        void ForEach(Action<T> action, bool makeTerminal = true);
         IStream<TMapped> Map<TMapped>(Func<T, TMapped> mapping);
         void Write(T current);
         T Read();
@@ -147,12 +147,12 @@ namespace HTM.Net.Util
             return output;
         }
 
-        public void ForEach(Action<TModel> action)
+        public void ForEach(Action<TModel> action, bool makeTerminal = true)
         {
             // do an action for each item in the queue that's left
             Debug.WriteLine(_id + " > Doing foreach");
 
-            MakeTerminal();
+            if(makeTerminal) MakeTerminal();
 
             TModel obj;
             while ((obj = Read()) != null)
@@ -231,9 +231,9 @@ namespace HTM.Net.Util
             get { return _streamState.EndOfStream; }
         }
 
-        public void MakeTerminal()
+        public void MakeTerminal(bool fromFanout = false)
         {
-            DoStreamReadingForTermination();
+            DoStreamReadingForTermination(fromFanout);
             _streamState.IsTerminal = true;
             TerminalChanged?.Invoke(true);
         }
@@ -258,12 +258,27 @@ namespace HTM.Net.Util
             return _currentlyRead - _offset;
         }
 
-        private void DoStreamReadingForTermination()
+        private void DoStreamReadingForTermination(bool fromFanout)
         {
             lock (_streamState.SyncRoot)
             {
-                _baseStream.Terminate();
-                _streamState.Count = _currentlyRead;
+                if (!fromFanout)
+                {
+                    _baseStream.Terminate(false);
+                    _streamState.Count = _currentlyRead;
+                }
+                else
+                {
+                    var currentAfterReadAction = _baseStream.GetAfterReadAction();
+                    _baseStream.SetAfterReadAction(o =>
+                    {
+                        IncrementCurrentlyRead(o);
+                        UpdateChildStreams((TModel)o);
+                    });
+                    _baseStream.Terminate(true);
+                    _baseStream.SetAfterReadAction(currentAfterReadAction);
+                    _streamState.Count = _currentlyRead;
+                }
             }
         }
 
@@ -278,7 +293,7 @@ namespace HTM.Net.Util
             }
         }
 
-        public void IncrementCurrentlyRead()
+        public void IncrementCurrentlyRead(object value)
         {
             //Debug.WriteLine("{0} > Incrementing read count with one.", _id);
             _currentlyRead++;
@@ -287,6 +302,11 @@ namespace HTM.Net.Util
         public IStream GetParentStream()
         {
             return _parentStream;
+        }
+
+        internal IStreamCollection<TModel> GetBaseStream()
+        {
+            return _baseStream;
         }
 
         public StreamState GetStreamState()
@@ -347,7 +367,7 @@ namespace HTM.Net.Util
         }
     }
 
-    public class FanOutStream<TModel> : IStream<TModel>, IBaseStream
+    public class FanOutStream<TModel> : IStream<TModel>, IStream, IBaseStream
     {
         private StreamState _streamState;
         private readonly int _id;
@@ -366,10 +386,28 @@ namespace HTM.Net.Util
 
         public IStream<TModel> Filter(Func<TModel, bool> predicate)
         {
+            Debug.WriteLine(_id + " > Adding fanout filter");
+            // This is a terminal function, read all we have
+            //_parentStream.MakeTerminal(true);
+
+            // Filter the list, supply again as a data source to the next stream
+            var output = new Stream<TModel>(GetYieldingFilteredSource(predicate));
+
+            return output;
+
             throw new NotImplementedException("Filter not supported on fanout streams at the moment");
         }
 
-        public void ForEach(Action<TModel> action)
+        private IEnumerable<TModel> GetYieldingFilteredSource(Func<TModel, bool> predicate)
+        {
+            TModel value;
+            while ((value = Read()) != null)
+            {
+                if (predicate(value)) yield return value;
+            }
+        }
+
+        public void ForEach(Action<TModel> action, bool makeTerminal = true)
         {
             throw new NotImplementedException("ForEach not supported on fanout streams at the moment");
         }
@@ -382,6 +420,16 @@ namespace HTM.Net.Util
         public IEnumerator GetEnumerator()
         {
             throw new NotSupportedException("No need to get an enumerator here!");
+        }
+
+        public void IncrementCurrentlyRead(object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IStream GetParentStream()
+        {
+            return _parentStream;
         }
 
         public void Write(TModel current)
@@ -453,9 +501,10 @@ namespace HTM.Net.Util
 
     public interface IStreamCollection<TModel> : IEnumerable<TModel>, IEnumerator<TModel>
     {
-        void SetAfterReadAction(Action afterReadAction);
+        Action<object> GetAfterReadAction();
+        void SetAfterReadAction(Action<object> afterReadAction);
         void SetOffsetting(int offset);
-        void Terminate();
+        void Terminate(bool fromFanout);
         IEnumerable<TResult> Select<TResult>(Func<TModel, TResult> select);
     }
 
@@ -463,20 +512,20 @@ namespace HTM.Net.Util
     public class StreamCollection<TModel> : IStreamCollection<TModel>
     {
         protected readonly int _streamId;
-        protected Action _afterRead;
+        protected Action<object> _afterRead;
         private readonly LinkedList<TModel> _source;
         protected readonly bool _lazyRead;
         private readonly IEnumerator<TModel> _lazyEnumerator;
         protected int _offsetting;
 
-        protected StreamCollection(int streamId, Action afterRead = null)
+        protected StreamCollection(int streamId, Action<object> afterRead = null)
         {
             _lazyRead = true;
             _streamId = streamId;
             _afterRead = afterRead;
         }
 
-        public StreamCollection(int streamId, IEnumerable<TModel> source, Action afterRead = null)
+        public StreamCollection(int streamId, IEnumerable<TModel> source, Action<object> afterRead = null)
         {
             Debug.WriteLine(streamId + " Creating stream collection from enum list (pull)");
             _lazyRead = true;
@@ -486,7 +535,7 @@ namespace HTM.Net.Util
             _lazyEnumerator = source.GetEnumerator();
         }
 
-        public StreamCollection(int streamId, LinkedList<TModel> source, Action afterRead = null)
+        public StreamCollection(int streamId, LinkedList<TModel> source, Action<object> afterRead = null)
         {
             Debug.WriteLine(streamId + " Creating stream collection from linked list (obs)");
             _streamId = streamId;
@@ -495,16 +544,23 @@ namespace HTM.Net.Util
             _lazyRead = false;
         }
 
-        public virtual void Terminate()
+        public virtual void Terminate(bool fromFanout)
         {
             // Pull all elements from the lazy enumerator into our linked list
-            if (_lazyRead)
+            if (_lazyRead && !fromFanout)
             {
-                Debug.WriteLine(_streamId + " > Terminating stream");
+                Debug.WriteLine(_streamId + " > Terminating stream (lazy read)");
                 while (_lazyEnumerator.MoveNext())
                 {
                     _source.AddLast(_lazyEnumerator.Current);
                 }
+            }
+            else if (_lazyRead && fromFanout)
+            {
+                while (MoveNext())
+                {
+                    // read the entire stream, populate child streams along the way
+                };
             }
         }
 
@@ -546,7 +602,7 @@ namespace HTM.Net.Util
             {
                 Current = _source.First.Value;
                 _source.RemoveFirst();
-                _afterRead?.Invoke();
+                _afterRead?.Invoke(Current);
                 Count++;
                 return true;
             }
@@ -582,9 +638,14 @@ namespace HTM.Net.Util
             _offsetting = Math.Max(0, offset - Count);
         }
 
-        public void SetAfterReadAction(Action incrementCurrentlyRead)
+        public void SetAfterReadAction(Action<object> incrementCurrentlyRead)
         {
             _afterRead = incrementCurrentlyRead;
+        }
+
+        public Action<object> GetAfterReadAction()
+        {
+            return _afterRead;
         }
     }
 
@@ -595,7 +656,7 @@ namespace HTM.Net.Util
         private readonly Func<TFrom, TTo> _select;
         private readonly IEnumerator<TFrom> _lazyEnumerator;
 
-        public MappedStreamCollection(int streamId, IEnumerable<TFrom> source, Func<TFrom, TTo> select, Action afterRead = null)
+        public MappedStreamCollection(int streamId, IEnumerable<TFrom> source, Func<TFrom, TTo> select, Action<object> afterRead = null)
             : base(streamId, afterRead)
         {
             Debug.WriteLine(streamId + " Creating stream collection from enum list (mapped pull)");
@@ -627,7 +688,7 @@ namespace HTM.Net.Util
             {
                 Current = _source.First.Value;
                 _source.RemoveFirst();
-                _afterRead?.Invoke();
+                _afterRead?.Invoke(Current);
                 Count++;
                 return true;
             }
@@ -636,7 +697,7 @@ namespace HTM.Net.Util
             return false;
         }
 
-        public override void Terminate()
+        public override void Terminate(bool fromFanout)
         {
             // Pull all elements from the lazy enumerator into our linked list
             if (_lazyRead)
@@ -654,19 +715,19 @@ namespace HTM.Net.Util
     {
         private readonly Action _beforeRead;
 
-        protected ComputedStreamCollection(int streamId, Action beforeRead, Action afterRead = null)
+        protected ComputedStreamCollection(int streamId, Action beforeRead, Action<object> afterRead = null)
             : base(streamId, afterRead)
         {
             _beforeRead = beforeRead;
         }
 
-        public ComputedStreamCollection(int streamId, IEnumerable<TModel> source, Action beforeRead, Action afterRead = null)
+        public ComputedStreamCollection(int streamId, IEnumerable<TModel> source, Action beforeRead, Action<object> afterRead = null)
             : base(streamId, source, afterRead)
         {
             _beforeRead = beforeRead;
         }
 
-        public ComputedStreamCollection(int streamId, LinkedList<TModel> source, Action beforeRead, Action afterRead = null)
+        public ComputedStreamCollection(int streamId, LinkedList<TModel> source, Action beforeRead, Action<object> afterRead = null)
             : base(streamId, source, afterRead)
         {
             _beforeRead = beforeRead;

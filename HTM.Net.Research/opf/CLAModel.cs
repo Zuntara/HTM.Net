@@ -455,10 +455,11 @@ namespace HTM.Net.Research.opf
         /// <returns></returns>
         private IClassifier _getClassifierRegion()
         {
-            if (_netInfo.net != null /*&& (bool)_netInfo.net.GetParameters().GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false)*/)
+            if (_netInfo.net != null && _hasCL /*&& (bool)_netInfo.net.GetParameters().GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false)*/)
             {
                 var layer = _netInfo.GetLayer();
-                return layer.GetClassifier(layer.GetSensor().GetEncoder(), _predictedFieldName);
+                var classifier = (IClassifier) layer.GetInference().GetClassifiers()[_predictedFieldName];
+                return classifier;
             }
             return null;
         }

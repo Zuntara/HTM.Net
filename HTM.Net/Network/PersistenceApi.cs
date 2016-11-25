@@ -418,7 +418,7 @@ namespace HTM.Net.Network
 
             public ICheckPointOp<byte[]> CheckPointer(Network network)
             {
-                network.SetCheckPointFunction<Network>(GetCheckPointFunction<Network>(network));
+                network.SetCheckPointFunction(GetCheckPointFunction<Network>(network));
                 return network.GetCheckPointOperator();
             }
 

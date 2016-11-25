@@ -593,8 +593,8 @@ namespace HTM.Net.Research.Tests.Swarming
             TestSimpleV2Internal();
         }
 
-        //[TestMethod]
-        //[DeploymentItem("Resources\\swarming\\linear.csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\linear.csv")]
         public void TestLinearOpfInternal()
         {
             ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level = Level.Info;
@@ -784,7 +784,7 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.AreEqual(7, ((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
             Assert.IsInstanceOfType(((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
 
-            Assert.AreEqual(7, ((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
+            Assert.AreEqual((long)7, ((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
             Assert.IsInstanceOfType(((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
         }
 

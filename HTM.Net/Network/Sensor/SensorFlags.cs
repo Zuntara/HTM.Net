@@ -35,35 +35,36 @@
     public enum SensorFlags
     {
         /// <summary>
+        /// Blank
+        /// </summary>
+        B = 0,
+        Blank = B,
+        /// <summary>
         /// Reset
         /// </summary>
-        R,
+        R = 1,
         Reset = R,
         /// <summary>
         /// Sequence
         /// </summary>
-        S,
+        S = 2,
         Sequence = S,
         /// <summary>
         /// Timestamp
         /// </summary>
-        T,
+        T = 3,
         Timestamp = T,
         /// <summary>
         /// Category
         /// </summary>
-        C,
+        C = 4,
         Category = C,
         /// <summary>
         /// Learn
         /// </summary>
-        L,
-        Learn = L,
-        /// <summary>
-        /// Blank
-        /// </summary>
-        B,
-        Blank = B
+        L = 5,
+        Learn = L
+
         //R("reset"), S("sequence"), T("timestamp"), C("category"), L("learn"), B("blank");
     }
 

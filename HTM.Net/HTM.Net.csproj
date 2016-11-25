@@ -106,10 +106,7 @@
     <Compile Include="Model\Connections.cs" />
     <Compile Include="Model\Persistable.cs" />
     <Compile Include="Monitor\MonitoredTemporalMemory.cs" />
-    <Compile Include="Network\BaseLayer.cs" />
-    <Compile Include="Network\BaseRxLayer.cs" />
     <Compile Include="Network\CustomGetDictionary.cs" />
-    <Compile Include="Network\ILayer.cs" />
     <Compile Include="Network\LayerMask.cs" />
     <Compile Include="Network\PersistenceApi.cs" />
     <Compile Include="Network\PublisherSupplier.cs" />
@@ -118,6 +115,7 @@
     <Compile Include="Network\Sensor\Optional.cs" />
     <Compile Include="Network\Sensor\YieldingFileReader.cs" />
     <Compile Include="Network\Transformer.cs" />
+    <Compile Include="Network\UberLayer.cs" />
     <Compile Include="Serialize\SerialConfig.cs" />
     <Compile Include="Serialize\SerializerCore.cs" />
     <Compile Include="Util\ArrayExtentions.cs" />
@@ -180,7 +178,6 @@
     <Compile Include="Util\Tuple.cs" />
     <Compile Include="FieldMetaType.cs" />
     <Compile Include="Network\IInference.cs" />
-    <Compile Include="Network\Layer.cs" />
     <Compile Include="Model\Cell.cs" />
     <Compile Include="Model\Column.cs" />
     <Compile Include="Model\DistalDendrite.cs" />

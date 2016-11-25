@@ -458,6 +458,55 @@ namespace HTM.Net.Tests.Util
             Assert.AreEqual(j++.ToString(), enumerator.Current);
         }
 
+        [TestMethod]
+        public void TestFanoutStream_Copy_Filter()
+        {
+            string[] source = { "1", "2", "3" };
+
+            Stream<string> stream = new Stream<string>(GetDataSourceYielding(source));
+            IStream<string> copy1 = stream.Copy();
+            IStream<string> copy2 = stream.Copy();
+
+            var filtered = copy1.Filter(s => s == "2");
+
+            Assert.AreEqual("2", filtered.Read());
+
+            Assert.AreEqual("1", copy2.Read());
+            Assert.AreEqual("2", copy2.Read());
+            Assert.AreEqual("3", copy2.Read());
+
+            Assert.AreEqual(null, stream.Read());
+            Assert.AreEqual(null, filtered.Read());
+            Assert.AreEqual(null, copy1.Read());
+            Assert.AreEqual(null, copy2.Read());
+        }
+
+        [TestMethod]
+        public void TestFanoutStream_Copy_Filter_Foreach()
+        {
+            string[] source = { "1", "2", "3" };
+
+            Stream<string> stream = new Stream<string>(GetDataSourceYielding(source));
+            IStream<string> copy1 = stream.Copy();
+            IStream<string> copy2 = stream.Copy();
+
+            int passedForeach = 0;
+            copy1.Filter(s => s == "2").ForEach(s =>
+            {
+                passedForeach++;
+            });
+
+            Assert.AreEqual(1, passedForeach);
+
+            Assert.AreEqual("1", copy2.Read());
+            Assert.AreEqual("2", copy2.Read());
+            Assert.AreEqual("3", copy2.Read());
+
+            Assert.AreEqual(null, stream.Read());
+            Assert.AreEqual(null, copy1.Read());
+            Assert.AreEqual(null, copy2.Read());
+        }
+
         private IEnumerable<string> GetDataSourceYielding(string[] source)
         {
             foreach (string s in source)

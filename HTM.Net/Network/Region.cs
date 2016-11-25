@@ -8,76 +8,87 @@ using log4net;
 
 namespace HTM.Net.Network
 {
-    /**
-     * <p>
-     * Regions are collections of {@link Layer}s, which are in turn collections
-     * of algorithmic components. Regions can be connected to each other to establish
-     * a hierarchy of processing. To connect one Region to another, typically one 
-     * would do the following:
-     * </p><p>
-     * <pre>
-     *      Parameters p = Parameters.getDefaultParameters(); // May be altered as needed
-     *      Network n = Network.create("Test Network", p);
-     *      Region region1 = n.createRegion("r1"); // would typically add Layers to the Region after this
-     *      Region region2 = n.createRegion("r2"); 
-     *      region1.connect(region2);
-     * </pre>
-     * <b>--OR--</b>
-     * <pre>
-     *      n.connect(region1, region2);
-     * </pre>
-     * <b>--OR--</b>
-     * <pre>
-     *      Network.lookup("r1").connect(Network.lookup("r2"));
-     * </pre>    
-     * 
-     * @author cogmission
-     *
-     */
+    /// <summary>
+    /// <p>
+    /// Regions are collections of <see cref="ILayer"/>s, which are in turn collections
+    /// of algorithmic components. Regions can be connected to each other to establish
+    /// a hierarchy of processing. To connect one Region to another, typically one 
+    /// would do the following:
+    /// </p>
+    /// <pre>
+    ///      Parameters p = Parameters.GetDefaultParameters(); // May be altered as needed
+    ///      Network n = Network.Create("Test Network", p);
+    ///      Region region1 = n.CreateRegion("r1"); // would typically add Layers to the Region after this
+    ///      Region region2 = n.CreateRegion("r2"); 
+    ///      region1.Connect(region2);
+    /// </pre>
+    /// <b>--OR--</b>
+    /// <pre>
+    ///      n.Connect(region1, region2);
+    /// </pre>
+    /// <b>--OR--</b>
+    /// <pre>
+    ///      Network.Lookup("r1").Connect(Network.Lookup("r2"));
+    /// </pre>    
+    /// </summary>
     [Serializable]
     public class Region : Persistable
     {
+        #region Fields
+
+        private const long SerialVersionUid = 1;
+
         [NonSerialized]
-        private static readonly ILog LOGGER = LogManager.GetLogger(typeof(Region));
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(Region));
 
-        private Network network;
-        private Region upstreamRegion;
-        private Region downstreamRegion;
-        private Map<string, Layer<IInference>> layers = new Map<string, Layer<IInference>>();
+        private Network _parentNetwork;
+        private Region _upstreamRegion;
+        private Region _downstreamRegion;
+        private ILayer _tail;
+        private ILayer _head;
+
+        private readonly Map<string, Layer<IInference>> _layers = new Map<string, Layer<IInference>>();
+
         [NonSerialized]
-        private IObservable<IInference> regionObservable;
-        private ILayer tail;
-        private ILayer head;
+        private IObservable<IInference> _regionObservable;
 
-        /** Marker flag to indicate that assembly is finished and Region initialized */
-        private bool assemblyClosed;
+        /// <summary>
+        /// Marker flag to indicate that assembly is finished and Region initialized
+        /// </summary>
+        private bool _assemblyClosed;
 
-        /** stores tlearn setting */
-        private bool isLearn = true;
+        /// <summary>
+        /// stores the learn setting
+        /// </summary>
+        private bool _isLearn = true;
 
-        /** Temporary variables used to determine endpoints of observable chain */
-        private HashSet<Layer<IInference>> sources;
-        private HashSet<Layer<IInference>> sinks;
+        // Temporary variables used to determine endpoints of observable chain
+        private HashSet<Layer<IInference>> _sources;
+        private HashSet<Layer<IInference>> _sinks;
 
-        /** Stores the overlap of algorithms state for <see cref="IInference"/> sharing determination */
-        internal LayerMask flagAccumulator = 0;
-        /** 
-         * Indicates whether algorithms are repeated, if true then no, if false then yes
-         * (for <see cref="IInference"/> sharing determination) see {@link Region#connect(Layer, Layer)} 
-         * and {@link Layer#getMask()}
-         */
-        internal bool layersDistinct = true;
+        /// <summary>
+        /// Stores the overlap of algorithms state for <see cref="IInference"/> sharing determination
+        /// </summary>
+        internal LayerMask _flagAccumulator = 0;
 
-        private object input;
+        /// <summary>
+        /// Indicates whether algorithms are repeated, if true then no, if false then yes
+        /// (for <see cref="IInference"/> sharing determination) see <see cref="ConfigureConnection{I,O}"/> {@link Region#connect(Layer, Layer)} 
+        /// and <see cref="Layer{T}.GetMask"/>
+        /// </summary>
+        internal bool _layersDistinct = true;
 
-        private string name;
+        private object _input;
 
-        /**
-         * Constructs a new {@code Region}
-         * 
-         * @param name          A unique identifier for this Region (uniqueness is enforced)
-         * @param network       The containing <see cref="Network"/> 
-         */
+        private readonly string _name; 
+
+        #endregion
+
+        /// <summary>
+        /// Constructs a new <see cref="Region"/>
+        /// </summary>
+        /// <param name="name">A unique identifier for this Region (uniqueness is enforced)</param>
+        /// <param name="network">The containing <see cref="Network"/> </param>
         public Region(string name, Network network)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -86,25 +97,39 @@ namespace HTM.Net.Network
                                                     "...not that anyone here advocates name calling!");
             }
 
-            this.name = name;
-            this.network = network;
+            _name = name;
+            _parentNetwork = network;
         }
 
+        /// <summary>
+        /// <em>FOR INTERNAL USE ONLY</em>
+        /// Called prior to this object being serialized. Any
+        /// preparation required for serialization should be done
+        /// in this method.
+        /// </summary>
+        /// <returns></returns>
         public override object PreSerialize()
         {
-            layers.Values.ToList().ForEach(l => l.PreSerialize());
+            _layers.Values.ToList().ForEach(l => l.PreSerialize());
             return this;
         }
 
+        /// <summary>
+        /// <em>FOR INTERNAL USE ONLY</em>
+        /// Called following deserialization to execute logic required
+        /// to "fix up" any inconsistencies within the object being
+        /// reified.
+        /// </summary>
+        /// <returns></returns>
         public override object PostDeSerialize()
         {
-            layers.Values.ToList().ForEach(l => l.PostDeSerialize());
+            _layers.Values.ToList().ForEach(l => l.PostDeSerialize());
 
             // Connect Layer Observable chains (which are transient so we must 
             // rebuild them and their subscribers)
             if (IsMultiLayer())
             {
-                Layer<IInference> curr = (Layer<IInference>)head;
+                Layer<IInference> curr = (Layer<IInference>)_head;
                 Layer<IInference> prev = (Layer<IInference>)curr.GetPrevious();
                 do
                 {
@@ -114,14 +139,14 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Sets the parent <see cref="Network"/> of this {@code Region}
-         * @param network
-         */
+        /// <summary>
+        /// Sets the parent <see cref="Network"/> of this <see cref="Region"/>
+        /// </summary>
+        /// <param name="network"></param>
         public void SetNetwork(Network network)
         {
-            this.network = network;
-            foreach (Layer<IInference> l in layers.Values)
+            _parentNetwork = network;
+            foreach (Layer<IInference> l in _layers.Values)
             {
                 l.SetNetwork(network);
                 // Set the sensor & encoder reference for global access.
@@ -137,35 +162,32 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * Returns a flag indicating whether this {@code Region} contain multiple
-         * {@link Layer}s.
-         * 
-         * @return  true if so, false if not.
-         */
+        /// <summary>
+        /// Returns a flag indicating whether this <see cref="Region"/> contain multiple <see cref="ILayer"/>s.
+        /// </summary>
+        /// <returns>true if so, false if not.</returns>
         public bool IsMultiLayer()
         {
-            return layers.Count > 1;
+            return _layers.Count > 1;
         }
 
-        /**
-         * Closes the Region and completes the finalization of its assembly.
-         * After this call, any attempt to mutate the structure of a Region
-         * will result in an {@link IllegalStateException} being thrown.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Closes the Region and completes the finalization of its assembly.
+        /// After this call, any attempt to mutate the structure of a Region
+        /// will result in an <see cref="InvalidOperationException"/> being thrown.
+        /// </summary>
+        /// <returns></returns>
         public Region Close()
         {
-            if (layers.Count < 1)
+            if (_layers.Count < 1)
             {
-                LOGGER.Warn("Closing region: " + name + " before adding contents.");
+                Logger.Warn("Closing region: " + _name + " before adding contents.");
                 return this;
             }
 
             CompleteAssembly();
 
-            ILayer l = tail;
+            ILayer l = _tail;
             do
             {
                 l.Close();
@@ -174,239 +196,252 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Returns a flag indicating whether this {@code Region} has had
-         * its {@link #close} method called, or not.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns a flag indicating whether this <see cref="Region"/> has 
+        /// had its <see cref="Close"/> method called, or not.
+        /// </summary>
         public bool IsClosed()
         {
-            return assemblyClosed;
+            return _assemblyClosed;
         }
 
-        /**
-         * Sets the learning mode.
-         * @param isLearn
-         */
-        public void SetLearn(bool isLearn)
+        /// <summary>
+        /// Sets the learning mode.
+        /// </summary>
+        /// <param name="learningMode"></param>
+        public void SetLearn(bool learningMode)
         {
-            this.isLearn = isLearn;
-            ILayer l = tail;
+            _isLearn = learningMode;
+            ILayer l = _tail;
             while (l != null)
             {
-                l.SetLearn(isLearn);
+                l.SetLearn(learningMode);
                 l = l.GetNext();
             }
         }
 
-        /**
-         * Returns the learning mode setting.
-         * @return
-         */
+        /// <summary>
+        /// Returns the learning mode setting.
+        /// </summary>
         public bool IsLearn()
         {
-            return isLearn;
+            return _isLearn;
         }
 
         /**
-         * Used to manually input data into a <see cref="Region"/>, the other way 
-         * being the call to {@link Region#start()} for a Region that contains
-         * a {@link Layer} which in turn contains a {@link Sensor} <em>-OR-</em>
-         * subscribing a receiving Region to this Region's output Observable.
+         
          * 
          * @param input One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)
          */
-        public void Compute<T>(T input)
+        /// <summary>
+        /// Used to manually input data into a <see cref="Region"/>, the other way 
+        /// being the call to <see cref="Start"/> for a Region that contains
+        /// a <see cref="ILayer"/> which in turn contains a <see cref="Sensor.ISensor"/> <em>-OR-</em>
+        /// subscribing a receiving Region to this Region's output Observable.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="inputToCompute">One of (int[], String[], <see cref="ManualInput"/>, or Map&lt;String, Object&gt;)</param>
+        public void Compute<T>(T inputToCompute)
         {
-            if (!assemblyClosed)
+            if (!_assemblyClosed)
             {
                 Close();
             }
-            this.input = input;
-            tail.Compute(input);
+            _input = inputToCompute;
+            _tail.Compute(inputToCompute);
         }
 
-        /**
-         * Returns the current input into the region. This value may change
-         * after every call to {@link Region#compute(Object)}.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the current input into the region. 
+        /// This value may change after every call to <see cref="Compute{T}"/>.
+        /// </summary>
+        /// <returns></returns>
         public object GetInput()
         {
-            return input;
+            return _input;
         }
 
-        /**
-         * Adds the specified {@link Layer} to this {@code Region}. 
-         * @param l
-         * @return
-         * @throws IllegalStateException if Region is already closed
-         * @throws IllegalArgumentException if a Layer with the same name already exists.
-         */
+        /// <summary>
+        /// Adds the specified <see cref="ILayer"/> to this <see cref="Region"/>. 
+        /// </summary>
+        /// <param name="l"></param>
+        /// <exception cref="RegionAlreadyClosedException">if Region is already closed</exception>
+        /// <exception cref="InvalidOperationException">if a Layer with the same name already exists.</exception>
         public Region Add(ILayer l)
         {
-            if (assemblyClosed)
+            if (_assemblyClosed)
             {
-                throw new InvalidOperationException("Cannot add Layers when Region has already been closed.");
+                throw new RegionAlreadyClosedException("Cannot add Layers when Region has already been closed.");
             }
 
-            if (sources == null)
+            if (_sources == null)
             {
-                sources = new HashSet<Layer<IInference>>();
-                sinks = new HashSet<Layer<IInference>>();
+                _sources = new HashSet<Layer<IInference>>();
+                _sinks = new HashSet<Layer<IInference>>();
             }
 
             // Set the sensor reference for global access.
-            if (l.HasSensor() && network != null)
+            if (l.HasSensor() && _parentNetwork != null)
             {
-                network.SetSensor(l.GetSensor());
-                network.SetEncoder(l.GetSensor().GetEncoder());
+                _parentNetwork.SetSensor(l.GetSensor());
+                _parentNetwork.SetEncoder(l.GetSensor().GetEncoder());
             }
 
-            string layerName = name + ":" + l.GetName();
-            if (layers.ContainsKey(layerName))
+            string layerName = _name + ":" + l.GetName();
+            if (_layers.ContainsKey(layerName))
             {
                 throw new InvalidOperationException("A Layer with the name: " + l.GetName() + " has already been added to this Region.");
             }
 
             l.SetName(layerName);
-            layers.Add(l.GetName(), (Layer<IInference>)l);
+            _layers.Add(l.GetName(), (Layer<IInference>)l);
             l.SetRegion(this);
-            l.SetNetwork(network);
+            l.SetNetwork(_parentNetwork);
 
             return this;
         }
 
-        /**
-         * Returns the String identifier for this {@code Region}
-         * @return
-         */
+        /// <summary>
+        /// Returns the String identifier for this <see cref="Region"/>
+        /// </summary>
         public string GetName()
         {
-            return name;
+            return _name;
         }
 
-        /**
-         * Returns an <see cref="IObservable{T}"/> which can be used to receive
-         * <see cref="IInference"/> emissions from this {@code Region}
-         * @return
-         */
+        /// <summary>
+        /// Returns an <see cref="IObservable{T}"/> which can be used to receive
+        /// <see cref="IInference"/> emissions from this <see cref="Region"/>
+        /// </summary>
         public IObservable<IInference> Observe()
         {
-            if (regionObservable == null && !assemblyClosed)
+            if (_regionObservable == null && !_assemblyClosed)
             {
                 Close();
             }
-            if (head.IsHalted() || regionObservable == null)
+            if (_head.IsHalted() || _regionObservable == null)
             {
-                regionObservable = head.Observe();
+                _regionObservable = _head.Observe();
             }
-            return regionObservable;
+            return _regionObservable;
         }
 
-        /**
-         * Calls {@link Layer#start()} on this Region's input {@link Layer} if 
-         * that layer contains a {@link Sensor}. If not, this method has no 
-         * effect.
-         * 
-         * @return flag indicating that thread was started
-         */
+        /// <summary>
+        /// Calls <see cref="ILayer.Start"/> on this Region's input <see cref="ILayer"/> if 
+        /// that layer contains a <see cref="Sensor.ISensor"/>. If not, this method has no 
+        /// effect.
+        /// </summary>
+        /// <returns>flag indicating that thread was started</returns>
         public bool Start()
         {
-            if (!assemblyClosed)
+            if (!_assemblyClosed)
             {
                 Close();
             }
 
-            if (tail.HasSensor())
+            if (_tail.HasSensor())
             {
-                LOGGER.Info("Starting Region [" + GetName() + "] input Layer thread.");
-                tail.Start();
+                Logger.Info("Starting Region [" + GetName() + "] input Layer thread.");
+                _tail.Start();
                 return true;
             }
             else
             {
-                LOGGER.Warn("Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
+                Logger.Warn("Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
             }
 
             return false;
         }
 
-        /**
-         * Calls {@link Layer#restart(boolean)} on this Region's input {@link Layer} if
-         * that layer contains a {@link Sensor}. If not, this method has no effect. If
-         * "startAtIndex" is true, the Network will start at the last saved index as 
-         * obtained from the serialized "recordNum" field; if false then the Network
-         * will restart from 0.
-         * 
-         * @param startAtIndex      flag indicating whether to start from the previous save
-         *                          point or not. If true, this region's Network will start
-         *                          at the previously stored index, if false then it will 
-         *                          start with a recordNum of zero.
-         * @return  flag indicating whether the call to restart had an effect or not.
-         */
+        /// <summary>
+        /// Calls <see cref="ILayer.Restart"/> on this Region's input <see cref="ILayer"/> if
+        /// that layer contains a <see cref="Sensor.ISensor"/>. If not, this method has no effect. If
+        /// "startAtIndex" is true, the Network will start at the last saved index as 
+        /// obtained from the serialized "recordNum" field; if false then the Network
+        /// will restart from 0.
+        /// </summary>
+        /// <param name="startAtIndex">
+        /// flag indicating whether to start from the previous save point or not. 
+        /// If true, this region's Network will start at the previously stored index, 
+        /// if false then it will start with a recordNum of zero.
+        /// </param>
+        /// <returns>flag indicating whether the call to restart had an effect or not.</returns>
         public bool Restart(bool startAtIndex)
         {
-            if (!assemblyClosed)
+            if (!_assemblyClosed)
             {
                 return Start();
             }
 
-            if (tail.HasSensor())
+            if (_tail.HasSensor())
             {
-                LOGGER.Info("Re-Starting Region [" + GetName() + "] input Layer thread.");
-                tail.Restart(startAtIndex);
+                Logger.Info("Re-Starting Region [" + GetName() + "] input Layer thread.");
+                _tail.Restart(startAtIndex);
                 return true;
             }
             else
             {
-                LOGGER.Warn("Re-Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
+                Logger.Warn("Re-Start called on Region [" + GetName() + "] with no effect due to no Sensor present.");
             }
 
             return false;
         }
 
-        /**
-         * Returns an {@link rx.Observable} operator that when subscribed to, invokes an operation
-         * that stores the state of this {@code Network} while keeping the Network up and running.
-         * The Network will be stored at the pre-configured location (in binary form only, not JSON).
-         * 
-         * @return  the {@link CheckPointOp} operator 
-         */
+        /// <summary>
+        /// Returns an Observable operator that when subscribed to, invokes an operation
+        /// that stores the state of this <see cref="Network"/> while keeping the Network up and running.
+        /// The Network will be stored at the pre-configured location (in binary form only, not JSON).
+        /// </summary>
+        /// <returns>the <see cref="ICheckPointOp{T}"/> operator </returns>
         internal ICheckPointOp<byte[]> GetCheckPointOperator()
         {
-            LOGGER.Debug("Region [" + GetName() + "] CheckPoint called at: " + (new DateTime()));
-            if (tail != null)
+            Logger.Debug("Region [" + GetName() + "] CheckPoint called at: " + (new DateTime()));
+            if (_tail != null)
             {
-                return tail.GetCheckPointOperator();
-
+                return _tail.GetCheckPointOperator();
             }
             Close();
-            return tail.GetCheckPointOperator();
+            if(_tail==null)throw new InvalidOperationException("Something went wrong with closing this region for the tail");
+            return _tail.GetCheckPointOperator();
         }
 
-        /**
-         * Stops each {@link Layer} contained within this {@code Region}
-         */
+        /// <summary>
+        /// Stops each <see cref="ILayer"/> contained within this <see cref="Region"/>
+        /// </summary>
         public void Halt()
         {
-            LOGGER.Debug("Stop called on Region [" + GetName() + "]");
-            if (tail != null)
+            Logger.Debug("Stop called on Region [" + GetName() + "]");
+            if (_tail != null)
             {
-                tail.Halt();
+                _tail.Halt();
             }
-            LOGGER.Debug("Region [" + GetName() + "] stopped.");
+            else
+            {
+                Close();
+                _tail?.Halt();
+            }
+            Logger.Debug("Region [" + GetName() + "] stopped.");
         }
 
-        /**
-         * Finds any {@link Layer} containing a {@link TemporalMemory} 
-         * and resets them.
-         */
+        /// <summary>
+        /// Returns a flag indicating whether this Region has a Layer whose Sensor thread is halted.
+        /// </summary>
+        /// <returns>true if so, false if not</returns>
+        public bool IsHalted()
+        {
+            if (_tail != null)
+            {
+                return _tail.IsHalted();
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Finds any <see cref="ILayer"/> containing a <see cref="Algorithms.TemporalMemory"/> and resets them.
+        /// </summary>
         public void Reset()
         {
-            foreach (var l in layers.Values)
+            foreach (var l in _layers.Values)
             {
                 if (l.HasTemporalMemory())
                 {
@@ -415,25 +450,21 @@ namespace HTM.Net.Network
             }
         }
 
-        /**
-         * Resets the recordNum in all {@link Layer}s.
-         */
+        /// <summary>
+        /// Resets the recordNum in all <see cref="ILayer"/>s.
+        /// </summary>
         public void ResetRecordNum()
         {
-            foreach (var l in layers.Values)
+            foreach (var l in _layers.Values)
             {
                 l.ResetRecordNum();
             }
         }
 
-        /**
-         * Connects the output of the specified {@code Region} to the 
-         * input of this Region
-         * 
-         * @param inputRegion   the Region who's emissions will be observed by 
-         *                      this Region.
-         * @return
-         */
+        /// <summary>
+        /// Connects the output of the specified <see cref="Region"/> to the input of this Region
+        /// </summary>
+        /// <param name="inputRegion">the Region who's emissions will be observed by this Region.</param>
         public Region Connect(Region inputRegion)
         {
             ManualInput localInf = new ManualInput();
@@ -442,101 +473,67 @@ namespace HTM.Net.Network
                 localInf.SetSdr(output.GetSdr()).SetRecordNum(output.GetRecordNum()).SetClassifierInput(output.GetClassifierInput()).SetLayerInput(output.GetSdr());
                 if (output.GetSdr().Length > 0)
                 {
-                    ((Layer<IInference>)tail).Compute(localInf);
+                    ((Layer<IInference>)_tail).Compute(localInf);
                 }
             }, Console.WriteLine, () =>
             {
-                tail.NotifyComplete();
+                ((Layer<IInference>)_tail).NotifyComplete();
             });
 
-            //inputRegion.Observe().Subscribe(new Observer<IInference>() {
-            //ManualInput localInf = new ManualInput();
-
-            //@Override public void onCompleted()
-            //{
-            //tail.notifyComplete();
-            //}
-            //@Override public void onError(Throwable e) { e.printStackTrace(); }
-            //@SuppressWarnings("unchecked")
-            //    @Override public void onNext(IInference i)
-            //{
-            //localInf.sdr(i.getSDR()).recordNum(i.getRecordNum()).classifierInput(i.getClassifierInput()).layerInput(i.getSDR());
-            //if (i.getSDR().length > 0)
-            //{
-            //    ((Layer<IInference>)tail).compute(localInf);
-            //}
-            //}
-            //});
             // Set the upstream region
-            this.upstreamRegion = inputRegion;
-            inputRegion.downstreamRegion = this;
+            _upstreamRegion = inputRegion;
+            inputRegion._downstreamRegion = this;
 
             return this;
         }
 
-        /**
-         * Returns this {@code Region}'s upstream region,
-         * if it exists.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns this <see cref="Region"/>'s upstream region, if it exists.
+        /// </summary>
         public Region GetUpstreamRegion()
         {
-            return upstreamRegion;
+            return _upstreamRegion;
         }
 
-        /**
-         * Returns the {@code Region} that receives this Region's
-         * output.
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the <see cref="Region"/> that receives this Region's output.
+        /// </summary>
         public Region GetDownstreamRegion()
         {
-            return downstreamRegion;
+            return _downstreamRegion;
         }
 
-        /**
-         * Returns the top-most (last in execution order from
-         * bottom to top) {@link Layer} in this {@code Region}
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the top-most (last in execution order from bottom to top) 
+        /// <see cref="ILayer"/> in this <see cref="Region"/>
+        /// </summary>
         public ILayer GetHead()
         {
-            return this.head;
+            return _head;
         }
 
-        /**
-         * Returns the bottom-most (first in execution order from
-         * bottom to top) {@link Layer} in this {@code Region}
-         * 
-         * @return
-         */
+        /// <summary>
+        /// Returns the bottom-most (first in execution order from bottom to top) <see cref="ILayer"/> in this <see cref="Region"/>
+        /// </summary>
         public ILayer GetTail()
         {
-            return this.tail;
+            return _tail;
         }
 
-        /**
-         * Connects two layers to each other in a unidirectional fashion 
-         * with "toLayerName" representing the receiver or "sink" and "fromLayerName"
-         * representing the sender or "source".
-         * 
-         * This method also forwards shared constructs up the connection chain
-         * such as any {@link Encoder} which may exist, and the <see cref="IInference"/> result
-         * container which is shared among layers.
-         * 
-         * @param toLayerName       the name of the sink layer
-         * @param fromLayerName     the name of the source layer
-         * @return
-         * @throws IllegalStateException if Region is already closed
-         */
+        /// <summary>
+        /// Connects two layers to each other in a unidirectional fashion 
+        /// with "toLayerName" representing the receiver or "sink" and "fromLayerName"
+        /// representing the sender or "source".
+        /// </summary>
+        /// <param name="toLayerName">the name of the sink layer</param>
+        /// <param name="fromLayerName">the name of the source layer</param>
+        /// <exception cref="RegionAlreadyClosedException">if Region is already closed</exception>
+        /// <exception cref="InvalidOperationException">layers not found</exception>
         public Region Connect(string toLayerName, string fromLayerName)
         {
-            if (assemblyClosed)
+            if (_assemblyClosed)
             {
-                throw new InvalidOperationException("Cannot connect Layers when Region has already been closed.");
+                throw new RegionAlreadyClosedException("Cannot connect Layers when Region has already been closed.");
             }
 
             Layer<IInference> @in = (Layer<IInference>)Lookup(toLayerName);
@@ -561,46 +558,44 @@ namespace HTM.Net.Network
             return this;
         }
 
-        /**
-         * Does a straight associative lookup by first creating a composite
-         * key containing this {@code Region}'s name concatenated with the specified
-         * {@link Layer}'s name, and returning the result.
-         * 
-         * @param layerName
-         * @return
-         */
+        /// <summary>
+        /// Does a straight associative lookup by first creating a composite
+        /// key containing this <see cref="Region"/>'s name concatenated with the specified
+        /// <see cref="ILayer"/>'s name, and returning the result.
+        /// </summary>
+        /// <param name="layerName">name of the layer</param>
         public ILayer Lookup(string layerName)
         {
             if (layerName.IndexOf(":", StringComparison.Ordinal) != -1)
             {
-                return layers[layerName];
+                return _layers[layerName];
             }
-            string key = name + ":" + layerName;
-            if (layers.ContainsKey(key))
+            string key = _name + ":" + layerName;
+            if (_layers.ContainsKey(key))
             {
-                return layers[key];
+                return _layers[key];
             }
             return null;
         }
 
-        /**
-         * Called by {@link #start()}, {@link #observe()} and {@link #connect(Region)}
-         * to finalize the internal chain of {@link Layer}s contained by this {@code Region}.
-         * This method assigns the head and tail Layers and composes the <see cref="IObservable{T}"/>
-         * which offers this Region's emissions to any upstream <see cref="Region"/>s.
-         */
+        /// <summary>
+        /// Called by <see cref="Start"/>, <see cref="Observe"/> and <see cref="Connect(HTM.Net.Network.Region)"/>
+        /// to finalize the internal chain of <see cref="ILayer"/>s contained by this <see cref="Region"/>.
+        /// This method assigns the head and tail Layers and composes the <see cref="IObservable{T}"/>
+        /// which offers this Region's emissions to any upstream <see cref="Region"/>s.
+        /// </summary>
         private void CompleteAssembly()
         {
-            if (!assemblyClosed)
+            if (!_assemblyClosed)
             {
-                if (layers.Count == 0) return;
+                if (_layers.Count == 0) return;
 
-                if (layers.Count == 1)
+                if (_layers.Count == 1)
                 {
-                    var enumerator = layers.Values.GetEnumerator();
+                    var enumerator = _layers.Values.GetEnumerator();
                     if (enumerator.MoveNext())
                     {
-                        head = tail = enumerator.Current;
+                        _head = _tail = enumerator.Current;
                     }
                     else
                     {
@@ -608,83 +603,96 @@ namespace HTM.Net.Network
                     }
                 }
 
-                if (tail == null)
+                if (_tail == null)
                 {
-                    HashSet<Layer<IInference>> temp = new HashSet<Layer<IInference>>(sources);
-                    temp.ExceptWith(sinks);
+                    HashSet<Layer<IInference>> temp = new HashSet<Layer<IInference>>(_sources);
+                    temp.ExceptWith(_sinks);
                     if (temp.Count != 1)
                     {
                         throw new InvalidOperationException("Detected misconfigured Region too many or too few sinks.");
                     }
                     var enumerator = temp.GetEnumerator();
                     enumerator.MoveNext();
-                    tail = enumerator.Current;
+                    _tail = enumerator.Current;
                 }
 
-                if (head == null)
+                if (_head == null)
                 {
-                    HashSet<Layer<IInference>> temp = new HashSet<Layer<IInference>>(sinks);
-                    temp.ExceptWith(sources);
+                    HashSet<Layer<IInference>> temp = new HashSet<Layer<IInference>>(_sinks);
+                    temp.ExceptWith(_sources);
                     if (temp.Count != 1)
                     {
                         throw new InvalidOperationException("Detected misconfigured Region too many or too few sources.");
                     }
                     var enumerator = temp.GetEnumerator();
                     enumerator.MoveNext();
-                    head = enumerator.Current;
+                    _head = enumerator.Current;
                 }
 
-                regionObservable = head.Observe();
+                if(_head == null) throw new InvalidOperationException("Something went wrong in closing the region, no head found.");
+                _regionObservable = _head.Observe();
 
-                assemblyClosed = true;
+                _assemblyClosed = true;
             }
         }
 
-        /**
-         * Called internally to "connect" two {@link Layer} <see cref="IObservable{T}"/>s
-         * taking care of other connection details such as passing the inference
-         * up the chain and any possible encoder.
-         * 
-         * @param in         the sink end of the connection between two layers
-         * @param out        the source end of the connection between two layers
-         * @throws IllegalStateException if Region is already closed
-         */
-        private void Connect<I, O>(I @in, O @out) // <I extends Layer<IInference>, O extends Layer<IInference>> 
-            where I : Layer<IInference>
-            where O : Layer<IInference>
+        /// <summary>
+        /// Called internally to configure the connection between two <see cref="ILayer"/> 
+        /// Observables taking care of other connection details such as passing
+        /// the inference up the chain and any possible encoder.
+        /// </summary>
+        /// <typeparam name="TIn"></typeparam>
+        /// <typeparam name="TOut"></typeparam>
+        /// <param name="in">the sink end of the connection between two layers</param>
+        /// <param name="out">the source end of the connection between two layers</param>
+        /// <exception cref="RegionAlreadyClosedException">if Region is already closed</exception>
+        private void ConfigureConnection<TIn, TOut>(TIn @in, TOut @out)
+            where TIn : Layer<IInference>
+            where TOut : Layer<IInference>
         {
-            if (assemblyClosed)
+            if (_assemblyClosed)
             {
-                throw new InvalidOperationException("Cannot add Layers when Region has already been closed.");
+                throw new RegionAlreadyClosedException("Cannot add Layers when Region has already been closed.");
             }
 
-            HashSet<Layer<IInference>> all = new HashSet<Layer<IInference>>(sources);
-            foreach (var sink in sinks)
-            {
-                all.Add(sink);
-            }
-            //all.addAll(sinks);
+            HashSet<ILayer> all = new HashSet<ILayer>(_sources);
+            all.UnionWith(_sinks);
             LayerMask inMask = @in.GetMask();
             LayerMask outMask = @out.GetMask();
             if (!all.Contains(@out))
             {
-                layersDistinct = (int)(flagAccumulator & outMask) < 1;
-                flagAccumulator |= outMask;
+                _layersDistinct = (int)(_flagAccumulator & outMask) < 1;
+                _flagAccumulator |= outMask;
             }
             if (!all.Contains(@in))
             {
-                layersDistinct = (int)(flagAccumulator & inMask) < 1;
-                flagAccumulator |= inMask;
+                _layersDistinct = (int)(_flagAccumulator & inMask) < 1;
+                _flagAccumulator |= inMask;
             }
 
-            sources.Add(@out);
-            sinks.Add(@in);
+            _sources.Add(@out);
+            _sinks.Add(@in);
+        }
 
+        /// <summary>
+        /// Called internally to "connect" two <see cref="ILayer"/> <see cref="IObservable{T}"/>s
+        /// taking care of other connection details such as passing the inference
+        /// up the chain and any possible encoder.
+        /// </summary>
+        /// <typeparam name="TIn"></typeparam>
+        /// <typeparam name="TOut"></typeparam>
+        /// <param name="in">the sink end of the connection between two layers</param>
+        /// <param name="out">the source end of the connection between two layers</param>
+        /// <exception cref="RegionAlreadyClosedException">if Region is already closed</exception>
+        private void Connect<TIn, TOut>(TIn @in, TOut @out) // <I extends Layer<IInference>, O extends Layer<IInference>> 
+            where TIn : Layer<IInference>
+            where TOut : Layer<IInference>
+        {
             ManualInput localInf = new ManualInput();
 
             @out.Subscribe(Observer.Create<IInference>(i =>
             {
-                if (layersDistinct)
+                if (_layersDistinct)
                 {
                     @in.Compute(i);
                 }
@@ -697,71 +705,16 @@ namespace HTM.Net.Network
             {
                 @in.NotifyComplete();
             }));
-
-            //    @out.subscribe(new Subscriber<IInference>() {
-            //        ManualInput localInf = new ManualInput();
-
-            //        @Override public void onCompleted() { in.notifyComplete(); }
-            //    @Override public void onError(Throwable e) { e.printStackTrace(); }
-            //    @Override public void onNext(IInference i)
-            //    {
-            //        if (layersDistinct)
-            //        {
-            //                in.compute(i);
-            //        }
-            //        else {
-            //            localInf.sdr(i.getSDR()).recordNum(i.getRecordNum()).layerInput(i.getSDR());
-            //                in.compute(localInf);
-            //        }
-            //    }
-            //});
-        }
-
-        /**
-         * Called internally to configure the connection between two {@link Layer} 
-         * {@link Observable}s taking care of other connection details such as passing
-         * the inference up the chain and any possible encoder.
-         * 
-         * @param in         the sink end of the connection between two layers
-         * @param out        the source end of the connection between two layers
-         * @throws IllegalStateException if Region is already closed
-         */
-        private void ConfigureConnection<I, O>(I @in, O @out)
-            where I : Layer<IInference>
-            where O : Layer<IInference>
-        {
-            if (assemblyClosed)
-            {
-                throw new InvalidOperationException("Cannot add Layers when Region has already been closed.");
-            }
-
-            HashSet<ILayer> all = new HashSet<ILayer>(sources);
-            all.UnionWith(sinks);
-            LayerMask inMask = @in.GetMask();
-            LayerMask outMask = @out.GetMask();
-            if (!all.Contains(@out))
-            {
-                layersDistinct = (int)(flagAccumulator & outMask) < 1;
-                flagAccumulator |= outMask;
-            }
-            if (!all.Contains(@in))
-            {
-                layersDistinct = (int)(flagAccumulator & inMask) < 1;
-                flagAccumulator |= inMask;
-            }
-
-            sources.Add(@out);
-            sinks.Add(@in);
         }
 
         public override int GetHashCode()
         {
             const int prime = 31;
             int result = 1;
-            result = prime * result + (assemblyClosed ? 1231 : 1237);
-            result = prime * result + (isLearn ? 1231 : 1237);
-            result = prime * result + ((layers == null) ? 0 : layers.Count);
-            result = prime * result + ((name == null) ? 0 : name.GetHashCode());
+            result = prime * result + (_assemblyClosed ? 1231 : 1237);
+            result = prime * result + (_isLearn ? 1231 : 1237);
+            result = prime * result + ((_layers == null) ? 0 : _layers.Count);
+            result = prime * result + ((_name == null) ? 0 : _name.GetHashCode());
             return result;
         }
 
@@ -774,23 +727,23 @@ namespace HTM.Net.Network
             if (GetType() != obj.GetType())
                 return false;
             Region other = (Region)obj;
-            if (assemblyClosed != other.assemblyClosed)
+            if (_assemblyClosed != other._assemblyClosed)
                 return false;
-            if (isLearn != other.isLearn)
+            if (_isLearn != other._isLearn)
                 return false;
-            if (layers == null)
+            if (_layers == null)
             {
-                if (other.layers != null)
+                if (other._layers != null)
                     return false;
             }
-            else if (!layers.Equals(other.layers))
+            else if (!_layers.Equals(other._layers))
                 return false;
-            if (name == null)
+            if (_name == null)
             {
-                if (other.name != null)
+                if (other._name != null)
                     return false;
             }
-            else if (!name.Equals(other.name))
+            else if (!_name.Equals(other._name))
                 return false;
             return true;
         }

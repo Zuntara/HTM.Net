@@ -433,7 +433,7 @@ namespace HTM.Net.Network.Sensor
             //return ((ILocalEnumerator)mainIterator).HasNext(); // TODO: check that this is correct!
             if (outputStream != null)
             {
-                return !((IStream<int[]>) outputStream).EndOfStream;
+                return ((IStream<int[]>) outputStream).EndOfStream;
             }
             return @delegate.EndOfStream();
         }

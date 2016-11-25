@@ -37,7 +37,7 @@ namespace HTM.Net.Tests.Network
             }
             catch (Exception e)
             {
-                Assert.IsTrue(e.GetType().IsAssignableFrom(typeof(InvalidOperationException)));
+                Assert.IsTrue(e.GetType().IsAssignableFrom(typeof(RegionAlreadyClosedException)));
                 Assert.AreEqual("Cannot add Layers when Region has already been closed.", e.Message);
             }
         }
@@ -51,7 +51,7 @@ namespace HTM.Net.Tests.Network
             try
             {
                 r1.Reset();
-                Assert.IsTrue(r1.Lookup("l1").HasTemporalMemory());
+                Assert.IsTrue(((Layer<IInference>)r1.Lookup("l1")).HasTemporalMemory());
             }
             catch (Exception e)
             {
@@ -63,7 +63,7 @@ namespace HTM.Net.Tests.Network
             try
             {
                 r1.Reset();
-                Assert.IsFalse(r1.Lookup("l1").HasTemporalMemory());
+                Assert.IsFalse(((Layer<IInference>)r1.Lookup("l1")).HasTemporalMemory());
             }
             catch (Exception e)
             {
@@ -88,10 +88,10 @@ namespace HTM.Net.Tests.Network
 
             r1.Compute(new int[] { 2, 3, 4 });
             r1.Compute(new int[] { 2, 3, 4 });
-            Assert.AreEqual(1, r1.Lookup("l1").GetRecordNum());
+            Assert.AreEqual(1, ((Layer<IInference>)r1.Lookup("l1")).GetRecordNum());
 
             r1.ResetRecordNum();
-            Assert.AreEqual(0, r1.Lookup("l1").GetRecordNum());
+            Assert.AreEqual(0, ((Layer<IInference>)r1.Lookup("l1")).GetRecordNum());
         }
 
         [TestMethod]
@@ -119,7 +119,7 @@ namespace HTM.Net.Tests.Network
             }
             catch (Exception e)
             {
-                Assert.IsTrue(e.GetType().IsAssignableFrom(typeof(InvalidOperationException)));
+                Assert.IsTrue(e.GetType().IsAssignableFrom(typeof(RegionAlreadyClosedException)));
                 Assert.AreEqual("Cannot add Layers when Region has already been closed.", e.Message);
             }
         }
@@ -425,11 +425,11 @@ namespace HTM.Net.Tests.Network
             Region r1 = n.Lookup("r1");
             Assert.IsFalse(n.IsLearn());
             ILayer layer = r1.GetTail();
-            Assert.IsFalse(layer.SetIsLearn());
+            Assert.IsFalse(layer.IsLearn());
             while (layer.GetNext() != null)
             {
                 layer = layer.GetNext();
-                Assert.IsFalse(layer.SetIsLearn());
+                Assert.IsFalse(layer.IsLearn());
             }
         }
 
@@ -475,7 +475,7 @@ namespace HTM.Net.Tests.Network
                 i =>
                 {
                     Console.WriteLine("onNext() called (4) -> " + Arrays.ToString(i.GetEncoding()));
-                    //Assert.IsTrue(Arrays.AreEqual(inputs[idx0++], i.GetEncoding()));
+                    Assert.IsTrue(Arrays.AreEqual(inputs[idx0++], i.GetEncoding()));
                 },
                 //error
                 e => { Console.WriteLine("error (4): " + e); },
@@ -498,7 +498,7 @@ namespace HTM.Net.Tests.Network
                 i =>
                 {
                     Console.WriteLine("onNext() called (2/3) -> " + Arrays.ToString(i.GetEncoding()));
-                    //Assert.IsTrue(Arrays.AreEqual(inputs[idx1++], i.GetEncoding()));
+                    Assert.IsTrue(Arrays.AreEqual(inputs[idx1++], i.GetEncoding()));
                 },
                 //error
                 e => { Console.WriteLine("error (2/3): " + e); },
@@ -520,7 +520,7 @@ namespace HTM.Net.Tests.Network
                 i =>
                 {
                     Console.WriteLine("onNext() called (out) -> " + Arrays.ToString(i.GetEncoding()));
-                    //Assert.IsTrue(Arrays.AreEqual(inputs[idx2++], i.GetEncoding()));
+                    Assert.IsTrue(Arrays.AreEqual(inputs[idx2++], i.GetEncoding()));
                 },
                 //error
                 e => { Console.WriteLine("error (out): " + e); },
@@ -583,14 +583,14 @@ namespace HTM.Net.Tests.Network
                 .Connect("2/3", "4"));
 
             Region r = n.Lookup("r1");
-            Assert.IsTrue(r.layersDistinct);
-            LayerMask flags = r.flagAccumulator;
+            Assert.IsTrue(r._layersDistinct);
+            LayerMask flags = r._flagAccumulator;
             flags ^= LayerMask.SpatialPooler;
             flags ^= LayerMask.TemporalMemory;
             flags ^= LayerMask.ClaClassifier;
             Assert.AreEqual(LayerMask.None, flags);
-            Assert.AreEqual(r.Lookup("2/3").GetMask(), (LayerMask.TemporalMemory | LayerMask.ClaClassifier));
-            Assert.AreEqual(r.Lookup("4").GetMask(), LayerMask.SpatialPooler);
+            Assert.AreEqual(((Layer<IInference>)r.Lookup("2/3")).GetMask(), (LayerMask.TemporalMemory | LayerMask.ClaClassifier));
+            Assert.AreEqual(((Layer<IInference>)r.Lookup("4")).GetMask(), LayerMask.SpatialPooler);
 
             // -- Test overlap detection
             n = Net.Network.Network.Create("test network", p)
@@ -606,9 +606,9 @@ namespace HTM.Net.Tests.Network
                 .Connect("2/3", "4"));
 
             r = n.Lookup("r1");
-            Assert.IsFalse(r.layersDistinct);
-            Assert.AreEqual(r.Lookup("2/3").GetMask(), (LayerMask.TemporalMemory | LayerMask.ClaClassifier));
-            Assert.AreEqual(r.Lookup("4").GetMask(), (LayerMask.SpatialPooler | LayerMask.TemporalMemory));
+            Assert.IsFalse(r._layersDistinct);
+            Assert.AreEqual(((Layer<IInference>)r.Lookup("2/3")).GetMask(), (LayerMask.TemporalMemory | LayerMask.ClaClassifier));
+            Assert.AreEqual(((Layer<IInference>)r.Lookup("4")).GetMask(), (LayerMask.SpatialPooler | LayerMask.TemporalMemory));
 
         }
     }

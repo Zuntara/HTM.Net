@@ -603,7 +603,7 @@ namespace HTM.Net.Research.Swarming
         public string fieldName { get; set; }
         public KWArgsModel kwArgs { get; set; }
 
-        public string encoderClass { get; set; }
+        public string encoderType { get; set; }
 
         public bool classifierOnly { get { return (bool)kwArgs.Get("classifierOnly", false); } set { kwArgs["classifierOnly"] = value; } }
         public object maxval { get { return kwArgs.Get("maxval", null); } set { kwArgs["maxval"] = value; } } // int or permuteint
@@ -627,7 +627,7 @@ namespace HTM.Net.Research.Swarming
                 name = fieldName;
             }
             this.name = name;
-            this.encoderClass = encoderClass;
+            this.encoderType = encoderClass;
 
             // Possible values in kwArgs include: w, n, minval, maxval, etc.
             this.kwArgs = kwArgs ?? new KWArgsModel();
@@ -645,7 +645,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             return string.Format("PermuteEncoder(fieldName={0}, encoderClass={1}, name={2}, {3})",
-                this.fieldName, this.encoderClass, this.name, suffix);
+                this.fieldName, this.encoderType, this.name, suffix);
         }
 
         #endregion
@@ -775,10 +775,10 @@ namespace HTM.Net.Research.Swarming
             //    DateEncoder.dayOfWeek
             //    DateEncoder.season
             // If one of these, we need to intelligently set the constructor args.
-            if (this.encoderClass.Contains("."))
+            if (this.encoderType.Contains("."))
             {
                 // (encoder['type'], argName) = this.encoderClass.Split('.');
-                string[] splitted = this.encoderClass.Split('.');
+                string[] splitted = this.encoderType.Split('.');
                 encoder["type"] = splitted[0];
                 string argName = splitted[1];
 
@@ -789,7 +789,7 @@ namespace HTM.Net.Research.Swarming
             }
             else
             {
-                encoder["type"] = this.encoderClass;
+                encoder["type"] = this.encoderType;
             }
 
             //var args = new KWArgsModel();

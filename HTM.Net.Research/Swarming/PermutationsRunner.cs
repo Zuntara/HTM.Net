@@ -1491,19 +1491,19 @@ namespace HTM.Net.Research.Swarming
 
                         if (key == "timeOfDay")
                         {
-                            enc.encoderClass = $"{encoderType}.timeOfDay";
+                            enc.encoderType = $"{encoderType}.timeOfDay";
                             enc.radius = new PermuteFloat(0.5, 12);
                             enc.w = ((Tuple)value).Get(0);
                         }
                         else if (key == "dayOfWeek")
                         {
-                            enc.encoderClass = $"{encoderType}.dayOfWeek";
+                            enc.encoderType = $"{encoderType}.dayOfWeek";
                             enc.radius = new PermuteFloat(1, 6);
                             enc.w = ((Tuple)value).Get(0);
                         }
                         else if (key == "weekend")
                         {
-                            enc.encoderClass = $"{encoderType}.weekend";
+                            enc.encoderType = $"{encoderType}.weekend";
                             enc.radius = new PermuteChoices(new double[] { 1 });
                             enc.w = ((Tuple)value).Get(0);
                         }
