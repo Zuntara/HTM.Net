@@ -8,6 +8,7 @@ using HTM.Net.Algorithms;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
+using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Tests.Examples.Sine;
@@ -192,8 +193,9 @@ namespace HTM.Net.Research.Tests.Regression
         [DeploymentItem("Resources\\swarming\\sine.csv")]
         public void RunSineInManualSetupToMatchPerformanceOneLayer()
         {
-            _predictions = new List<PredictionValue>();
-
+            var metric = MetricSpec.GetModule(new MetricSpec("rmse", InferenceElement.Prediction, "Sine",
+                new Map<string, object>()));
+            
             // Get config first
             var config = BenchMarkSine(__recordsToProcess);
             config.maxModels = 1;
@@ -204,26 +206,28 @@ namespace HTM.Net.Research.Tests.Regression
 
             Parameters p = description.GetParameters();
 
-            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
-            p.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.2);
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.5);
 
             Network.Network network = new Network.Network("SineNetwork", p)
                 .Add(Network.Network.CreateRegion("TopRegion")
                     .Add(Network.Network.CreateLayer("Layer 2/3", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier))
-                        .Add(Anomaly.Create(p))
                         .Add(new TemporalMemory())
                         .Add(new SpatialPooler())
                         .Add(Sensor<FileInfo>.Create(FileSensor.Create,
                             SensorParams.Create(SensorParams.Keys.Path, "", "sine.csv"))))
                 );
 
+            double? errorScore = null;
             network.Observe().Subscribe(
                 i =>
                 {
-                    RecordStep(i, "Sine");
-                    Console.Write(".");
+                    //RecordStep(i, "Sine");
+                    errorScore = metric.addInstance((double) ((NamedTuple) i.GetClassifierInput()["Sine"]).Get("inputValue"),
+                        (double)i.GetClassification("Sine").GetMostProbableValue(1));
+                    //Console.Write(".");
                 },
                 e =>
                 {
@@ -238,7 +242,7 @@ namespace HTM.Net.Research.Tests.Regression
 
             network.GetHead().GetHead().GetLayerThread().Wait(); // wait for it to finish
 
-            Console.WriteLine("Total accurancy: {0}", GetTotalAccurancy(1.0, false));
+            Console.WriteLine("Total accurancy: {0}", errorScore);
             Console.WriteLine("Total accurancy from last 30%: {0}", GetTotalAccurancy(0.3, true));
         }
 

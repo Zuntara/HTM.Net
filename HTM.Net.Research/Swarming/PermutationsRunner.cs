@@ -1920,6 +1920,16 @@ namespace HTM.Net.Research.Swarming
             }
             if (tpEnable)
             {
+                // NOTE: Temporary fix
+                if (tpParams.minThreshold is PermuteVariable)
+                {
+                    tpParams.minThreshold = (int)((PermuteVariable) tpParams.minThreshold).getPosition();
+                }
+                if (tpParams.activationThreshold is PermuteVariable)
+                {
+                    tpParams.activationThreshold = (int)((PermuteVariable)tpParams.activationThreshold).getPosition();
+                }
+
                 Parameters.ApplyParametersFromDescription(tpParams, p);
             }
             if (clEnable)

@@ -601,7 +601,7 @@ namespace HTM.Net.Research.Tests.Swarming
             ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
             var config = BenchMarkLinear(-1);
-            config.maxModels = 2;
+            config.maxModels = 1;
 
             // Convert config to parameters
             // set encoders in place
