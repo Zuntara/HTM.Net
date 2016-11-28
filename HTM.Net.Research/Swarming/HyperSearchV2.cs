@@ -152,8 +152,8 @@ namespace HTM.Net.Research.Swarming
             // Return which swarms to kill when we've reached maturity
             // If there is no change in the swarm's best for some time,
             // Mark it dead
-            var cumulativeBestScores = this.swarmBests[swarmId];
-            if (cumulativeBestScores[-1] == cumulativeBestScores[-this.MATURITY_WINDOW])
+            List<double> cumulativeBestScores = this.swarmBests[swarmId];
+            if (cumulativeBestScores.LastOrDefault() == cumulativeBestScores[cumulativeBestScores.Count - 1 - this.MATURITY_WINDOW])
             {
                 this._logger.Info(string.Format("Swarm {0} has matured (no change in {1} generations). Stopping...", swarmId, this.MATURITY_WINDOW));
                 terminatedSwarms.Add(swarmId);
@@ -198,7 +198,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             var bestScore = generationScores.Values.Min();
-            var tolerance = this.milestones.Single(v => v == generation);
+            var tolerance = this.milestones.ElementAt(generation);
 
             foreach (var swarmScores in generationScores)
             //for (swarm, score in generationScores.iteritems())
@@ -269,7 +269,7 @@ namespace HTM.Net.Research.Swarming
         private Dictionary<string, List<int>> _swarmNumParticlesPerGeneration;
         private HashSet<Tuple<string, int>> _modifiedSwarmGens;
         private HashSet<Tuple<string, int>> _maturedSwarmGens;
-        private Dictionary<string, Tuple<double?, Dictionary<string, int>>> _particleBest;
+        private Map<string, Tuple<double?, Map<string, int>>> _particleBest;
         private Dictionary<string, int> _particleLatestGenIdx;
         private Dictionary<string, List<int>> _swarmIdToIndexes;
         private Dictionary<string, int?> _paramsHashToIndexes;
@@ -336,7 +336,7 @@ namespace HTM.Net.Research.Swarming
             // generations) and the position it was at when it got that score. The keys
             // in this dict are the particleId, the values are (bestResult, position),
             // where position is a dict with varName:position items in it.
-            this._particleBest = new Dictionary<string, Tuple<double?, Dictionary<string, int>>>();
+            this._particleBest = new Map<string, Tuple<double?, Map<string, int>>>();
 
             // For each particle, we keep track of it's latest generation index.
             this._particleLatestGenIdx = new Dictionary<string, int>();
@@ -406,7 +406,8 @@ namespace HTM.Net.Research.Swarming
             // Get the canonicalized optimize metric results. For this metric, lower
             //  is always better
             double? errScore;
-            if (metricResult != null && matured /*&& completionReason in [ClientJobsDAO.CMPL_REASON_EOF,ClientJobsDAO.CMPL_REASON_STOPPED]*/)
+            if (metricResult != null && matured
+                && new[] { BaseClientJobDao.CMPL_REASON_EOF, BaseClientJobDao.CMPL_REASON_STOPPED }.Contains(completionReason))
             {
                 // Canonicalize the error score so that lower is better
                 if (this._hsObj._maximize)
@@ -435,7 +436,7 @@ namespace HTM.Net.Research.Swarming
             //  errScore to infinite and essentially make this model invisible to
             //  further queries
             bool hidden;
-            if (completed /*&& completionReason in [ClientJobsDAO.CMPL_REASON_ORPHAN]*/)
+            if (completed && completionReason == BaseClientJobDao.CMPL_REASON_ORPHAN)
             {
                 errScore = double.PositiveInfinity;
                 hidden = true;
@@ -557,11 +558,11 @@ namespace HTM.Net.Research.Swarming
             if (matured && !hidden)
             {
                 //(oldResult, pos) = this._particleBest.get(particleId, (numpy.inf, None));
-                Tuple<double?, Dictionary<string, int>> oldResultPos = this._particleBest[particleId];// TODO check!
+                Tuple<double?, Map<string, int>> oldResultPos = this._particleBest.Get(particleId, new Tuple<double?, Map<string, int>>(double.PositiveInfinity, null));// TODO check!
                 if (errScore < oldResultPos.Item1 /*oldResult*/)
                 {
-                    Dictionary<string, int> pos1 = Particle.getPositionFromState(modelParams.particleState);
-                    this._particleBest[particleId] = new Tuple<double?, Dictionary<string, int>>(errScore, pos1);
+                    Map<string, int> pos1 = Particle.getPositionFromState(modelParams.particleState);
+                    this._particleBest[particleId] = new Tuple<double?, Map<string, int>>(errScore, pos1);
                     // this._particleBest[particleId] = (errScore, pos1);
                 }
             }
@@ -1051,7 +1052,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="particleId">which particle</param>
         /// <returns>(bestResult, bestPosition)</returns>
-        public Tuple<double?, Dictionary<string, int>> getParticleBest(string particleId)
+        public Tuple<double?, Map<string, int>> getParticleBest(string particleId)
         {
             return this._particleBest.Get(particleId, null);
         }
@@ -1660,9 +1661,9 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="pState"></param>
         /// <returns>dict() of particle position, keys are the variable names, values are their positions</returns>
-        public static Dictionary<string, int> getPositionFromState(ParticleStateModel pState)
+        public static Map<string, int> getPositionFromState(ParticleStateModel pState)
         {
-            Dictionary<string, int> result = new Dictionary<string, int>();
+            Map<string, int> result = new Map<string, int>();
             foreach (var pair in pState.varStates)
             //for (varName, value) in pState["varStates"].iteritems()
             {
@@ -4353,15 +4354,12 @@ namespace HTM.Net.Research.Swarming
                     // the best model. Once the best model changes, the one that used to be
                     // best (and has  matured) will notice that and stop itself at that point.
                     string jobResultsStr = (string)this._cjDAO.jobGetFields(this._jobID, new[] { "results" })[0];
-                    Dictionary<string, object> jobResults;
+                    Map<string, object> jobResults;
                     ulong? bestModelId;
                     if (jobResultsStr != null)
                     {
-                        jobResults = (Dictionary<string, object>)JsonConvert.DeserializeObject(jobResultsStr, new JsonSerializerSettings
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        });
-                        bestModelId = (ulong?)jobResults.Get("bestModel", null);
+                        jobResults = Json.Deserialize<Map<string, object>>(jobResultsStr);
+                        bestModelId = TypeConverter.Convert<ulong?>(jobResults.Get("bestModel", null));
                     }
                     else
                     {
@@ -4905,7 +4903,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Update the fieldContributions field.
-            if (!pctFieldContributions.Equals((Map<string,Double>)jobResults.Get("fieldContributions")))
+            if (!pctFieldContributions.Equals((Map<string, Double>)jobResults.Get("fieldContributions")))
             {
                 jobResults["fieldContributions"] = pctFieldContributions;
                 jobResults["absoluteFieldContributions"] = absFieldContributions;

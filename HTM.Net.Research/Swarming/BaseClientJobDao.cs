@@ -294,7 +294,7 @@ namespace HTM.Net.Research.Swarming
             throw new NotImplementedException();
         }
 
-        public void jobSetFields(uint? jobID, Dictionary<string, object> fields, bool useConnectionID, bool ignoreUnchanged)
+        public virtual void jobSetFields(uint? jobID, Dictionary<string, object> fields, bool useConnectionID, bool ignoreUnchanged)
         {
             throw new NotImplementedException();
         }
@@ -844,6 +844,24 @@ namespace HTM.Net.Research.Swarming
                 }
             }
             
+        }
+
+        public override void jobSetFields(uint? jobID, Dictionary<string, object> fields, bool useConnectionID, bool ignoreUnchanged)
+        {
+            var job = Jobs.Single(m => m.jobID == jobID.Value);
+
+            foreach (var fieldPair in fields)
+            {
+                if (fieldPair.Key == "engStatus")
+                {
+                    job._eng_status = (string)fieldPair.Value;
+                }
+                
+                else
+                {
+                    throw new InvalidOperationException("Unknown field: " + fieldPair.Key);
+                }
+            }
         }
 
         public override NamedTuple jobInfo(uint? jobId)

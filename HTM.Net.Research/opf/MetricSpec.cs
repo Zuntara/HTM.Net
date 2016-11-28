@@ -178,7 +178,7 @@ namespace HTM.Net.Research.opf
         {
             // Init default member variables
             this.id = null;
-            this.verbosity = 0;
+            this.verbosity = 2;
             this.window = -1;
             this.history = null;
             this.accumulatedError = 0;

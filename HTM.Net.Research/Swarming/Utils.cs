@@ -101,12 +101,12 @@ namespace HTM.Net.Research.Swarming
                 // Override parameter values
                 if (@params?.modelParams?.clParams?.alpha != null)
                 {
-                    cloneDescr.modelConfig.modelParams.clParams.alpha = (double)@params.modelParams.clParams.alpha;
+                    cloneDescr.modelConfig.modelParams.clParams.alpha = TypeConverter.Convert<double>(@params.modelParams.clParams.alpha);
                 }
                 if (@params?.modelParams?.spParams?.synPermInactiveDec != null)
                 {
                     cloneDescr.modelConfig.modelParams.spParams.synPermInactiveDec =
-                        (double)@params.modelParams.spParams.synPermInactiveDec;
+                        TypeConverter.Convert<double>(@params.modelParams.spParams.synPermInactiveDec);
                 }
                 cloneDescr.modelConfig.modelParams.tpParams.activationThreshold =
                     TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold);

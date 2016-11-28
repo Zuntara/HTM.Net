@@ -670,7 +670,11 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         private void __createModelCheckpoint()
         {
-            _logger.Error("The model has not been saved yet in the OPF Model runner!");
+            if (_model == null || _modelCheckpointGUID == null) return;
+
+            _jobsDAO.modelSetFields(_modelID, new Map<string, object> { {"modelCheckpointId", _modelCheckpointGUID} }, ignoreUnchanged: true);
+
+            _logger.Error("The model has not been saved yet in the OPF Model runner! (partially implemented)");
             //throw new NotImplementedException();
         }
 

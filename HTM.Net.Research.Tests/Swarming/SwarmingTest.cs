@@ -601,23 +601,21 @@ namespace HTM.Net.Research.Tests.Swarming
             ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
             var config = BenchMarkLinear(-1);
-            config.maxModels = 2;
+            config.maxModels = 1;
 
             // Convert config to parameters
             // set encoders in place
             var description = new ExpGenerator(config).Generate();
 
+            //description.Item2.permutations.modelParams.clParams.alpha = 1;
+            //description.Item2.permutations.modelParams.tpParams.activationThreshold = 4;
+
             var expDir = new Tuple<BaseDescription, BasePermutations>(
                 description.Item1, description.Item2);
-            // Test it out
-            //if (env is None)
-            //{
-            //    env = dict();
-            //}
-            //env["NTA_TEST_numIterations"] = "99";
-            //env["NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow"] = "%d" % (g_repeatableSwarmMaturityWindow);
 
-            //(jobID, jobInfo, resultInfos, metricResults, minErrScore) 
+            
+
+            // Test it out
             var permutationResult = this.RunPermutations(expDirectory: expDir,
                                    hsImp: "v2",
                                    //loggingLevel = g_myEnv.options.logLevel,
