@@ -120,22 +120,62 @@ namespace HTM.Net.Encoders
         }
 
         public string name { get; set; }
+        /// <summary>
+        /// Name of the field being encoded
+        /// </summary>
         public string fieldName { get; set; }
+        /// <summary>
+        /// Primitive type of the field, used to auto-configure the type of encoder
+        /// </summary>
         public FieldMetaType? fieldType { get; set; }
+        /// <summary>
+        /// number of bits in the representation (must be &gt;= w)
+        /// </summary>
         public int? n { get; set; }
+        /// <summary>
+        /// The number of bits that are set to encode a single value - the "width" of the output signal
+        /// </summary>
         public int? w { get; set; }
+        /// <summary>
+        /// The minimum value of the input signal.
+        /// </summary>
         public double? minVal { get; set; }
+        /// <summary>
+        /// The maximum value of the input signal.
+        /// </summary>
         public double? maxVal { get; set; }
+        /// <summary>
+        /// inputs separated by more than, or equal to this distance will have non-overlapping representations
+        /// </summary>
         public double? radius { get; set; }
+        /// <summary>
+        /// inputs separated by more than, or equal to this distance will have different representations
+        /// </summary>
         public double? resolution { get; set; }
-        public double? numBuckets { get; set; }
-        public bool? forced { get; set; }
+        /// <summary>
+        /// If true, then the input value "wraps around" such that minval = maxval
+        /// For a periodic value, the input must be strictly less than maxval,
+        /// otherwise maxval is a true upper bound.
+        /// </summary>
         public bool? periodic { get; set; }
+        public double? numBuckets { get; set; }
+        /// <summary>
+        /// If true, skip some safety checks (for compatibility reasons), default false
+        /// Mostly having to do with being able to set the window size &lt; 21 
+        /// </summary>
+        public bool? forced { get; set; }
+        /// <summary>
+        /// if true, non-periodic inputs smaller than minval or greater
+        /// than maxval will be clipped to minval/maxval
+        /// </summary>
         public bool? clipInput { get; set; }
         public bool? runDelta { get; set; }
         public string space { get; set; }
         public IList categoryList { get; set; }
         public bool? classifierOnly { get; set; }
+        /// <summary>
+        /// Encoder name
+        /// </summary>
         public string encoderType { get; set; }
         public string type { get; set; }
 

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
@@ -183,7 +184,7 @@ namespace HTM.Net.Research.Tests.Regression
 
             network.Start();
 
-            network.GetHead().GetHead().GetLayerThread().Wait(); // wait for it to finish
+            network.GetHead().GetTail().GetLayerThread().Wait(); // wait for it to finish
 
             Console.WriteLine("Total accurancy: {0}", GetTotalAccurancy(1.0, false));
             Console.WriteLine("Total accurancy from last 30%: {0}", GetTotalAccurancy(0.3, true));
@@ -303,7 +304,7 @@ namespace HTM.Net.Research.Tests.Regression
             Console.WriteLine(p.ToString());
 
             Assert.IsNotNull(p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP), "No encoders found in parameter definition");
-            Map<string, Map<string, object>> encodings = (Map<string, Map<string, object>>)p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP);
+            EncoderSettingsList encodings = (EncoderSettingsList)p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP);
             Assert.AreEqual(3, encodings.Count, "Encoder count is incorrect");
 
         }

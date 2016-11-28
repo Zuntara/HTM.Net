@@ -276,28 +276,29 @@ namespace HTM.Net
             /// The maximum value of the input signal.
             /// </summary>
             public static readonly KEY MAX_VAL = new KEY("maxVal", typeof(double));
-            /**
-             * inputs separated by more than, or equal to this distance will have non-overlapping
-             * representations
-             */
+            /// <summary>
+            /// inputs separated by more than, or equal to this distance will have non-overlapping representations
+            /// </summary>
             public static readonly KEY RADIUS = new KEY("radius", typeof(double));
-            /** inputs separated by more than, or equal to this distance will have different representations */
+            /// <summary>
+            /// inputs separated by more than, or equal to this distance will have different representations
+            /// </summary>
             public static readonly KEY RESOLUTION = new KEY("resolution", typeof(double));
-            /**
-             * If true, then the input value "wraps around" such that minval = maxval
-             * For a periodic value, the input must be strictly less than maxval,
-             * otherwise maxval is a true upper bound.
-             */
+            /// <summary>
+            /// If true, then the input value "wraps around" such that minval = maxval
+            /// For a periodic value, the input must be strictly less than maxval,
+            /// otherwise maxval is a true upper bound.
+            /// </summary>
             public static readonly KEY PERIODIC = new KEY("periodic", typeof(bool));
-            /** 
-             * if true, non-periodic inputs smaller than minval or greater
-             * than maxval will be clipped to minval/maxval 
-             */
+            /// <summary>
+            /// if true, non-periodic inputs smaller than minval or greater
+            /// than maxval will be clipped to minval/maxval
+            /// </summary>
             public static readonly KEY CLIP_INPUT = new KEY("clipInput", typeof(bool));
-            /** 
-             * If true, skip some safety checks (for compatibility reasons), default false 
-             * Mostly having to do with being able to set the window size &lt; 21 
-             */
+            /// <summary>
+            /// If true, skip some safety checks (for compatibility reasons), default false
+            /// Mostly having to do with being able to set the window size &lt; 21 
+            /// </summary>
             public static readonly KEY FORCED = new KEY("forced", typeof(bool));
             /// <summary>
             /// Name of the field being encoded
@@ -311,7 +312,9 @@ namespace HTM.Net
             /// Encoder name
             /// </summary>
             public static readonly KEY ENCODER = new KEY("encoderType", typeof(string));
-            /** Designates holder for the Multi Encoding Map */
+            /// <summary>
+            /// Designates holder for the Multi Encoding Map
+            /// </summary>
             public static readonly KEY FIELD_ENCODING_MAP = new KEY("fieldEncodings", typeof(EncoderSettingsList));
             public static readonly KEY CATEGORY_LIST = new KEY("categoryList", typeof(IList));
 
