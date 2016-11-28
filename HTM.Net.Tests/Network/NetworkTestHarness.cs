@@ -1,13 +1,12 @@
-﻿using HTM.Net.Util;
+﻿using HTM.Net.Encoders;
+using HTM.Net.Util;
 
 namespace HTM.Net.Tests.Network
 {
     /**
- * Encapsulates Setup methods which are shared among various tests
- * in the {@link org.numenta.nupic.network} package.
- * 
- * @author cogmission
- */
+     * Encapsulates Setup methods which are shared among various tests
+     * in the {@link org.numenta.nupic.network} package.
+     */
     public class NetworkTestHarness
     {
         /**
@@ -31,40 +30,40 @@ namespace HTM.Net.Tests.Network
          * @param encoderType       the Camel case class name minus the .class suffix
          * @return
          */
-        public static Map<string, Map<string, object>> SetupMap(
-                Map<string, Map<string, object>> map,
+        public static EncoderSettingsList SetupMap(
+                EncoderSettingsList map,
                 int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-                bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+                bool? clip, bool? forced, string fieldName, FieldMetaType? fieldType, string encoderType)
         {
 
             if (map == null)
             {
-                map = new Map<string, Map<string, object>>();
+                map = new EncoderSettingsList();
             }
-            Map<string, object> inner;
+            EncoderSetting inner;
 
             if (!map.TryGetValue(fieldName, out inner))
             {
-                map.Add(fieldName, inner = new Map<string, object>());
+                map.Add(fieldName, inner = new EncoderSetting());
             }
 
-            inner.Add("n", n);
-            inner.Add("w", w);
-            inner.Add("minVal", min);
-            inner.Add("maxVal", max);
-            inner.Add("radius", radius);
-            inner.Add("resolution", resolution);
+            inner.n = n;
+            inner.w = w;
+            inner.minVal = min;
+            inner.maxVal = max;
+            inner.radius = radius;
+            inner.resolution = resolution;
 
-            if (periodic != null) inner.Add("periodic", periodic);
-            if (clip != null) inner.Add("clipInput", clip);
-            if (forced != null) inner.Add("forced", forced);
+            if (periodic != null) inner.periodic = periodic;
+            if (clip != null) inner.clipInput = clip;
+            if (forced != null) inner.forced = forced;
             if (fieldName != null)
             {
-                inner.Add("fieldName", fieldName);
-                inner.Add("name", fieldName);
+                inner.fieldName = fieldName;
+                inner.name = fieldName;
             }
-            if (fieldType != null) inner.Add("fieldType", fieldType);
-            if (encoderType != null) inner.Add("encoderType", encoderType);
+            if (fieldType != null) inner.fieldType = fieldType;
+            if (encoderType != null) inner.encoderType = encoderType;
 
             return map;
         }
@@ -73,24 +72,24 @@ namespace HTM.Net.Tests.Network
          * Returns the Hot Gym encoder Setup.
          * @return
          */
-        public static Map<string, Map<string, object>> GetHotGymFieldEncodingMap()
+        public static EncoderSettingsList GetHotGymFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                     null,
                     0, // n
                     0, // w
                     0, 0, 0, 0, null, null, null,
-                    "timestamp", "datetime", "DateEncoder");
+                    "timestamp", FieldMetaType.DateTime, "DateEncoder");
             fieldEncodings = SetupMap(
                     fieldEncodings,
                     25,
                     3,
                     0, 0, 0, 0.1, null, null, null,
-                    "consumption", "float", "RandomDistributedScalarEncoder");
+                    "consumption", FieldMetaType.Float, "RandomDistributedScalarEncoder");
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
+            fieldEncodings["timestamp"].dayOfWeek = new Tuple(1, 1.0); // Day of week
+            fieldEncodings["timestamp"].timeOfDay= new Tuple(5, 4.0); // Time of day
+            fieldEncodings["timestamp"].formatPattern = "MM/dd/YY HH:mm";
 
             return fieldEncodings;
         }
@@ -99,23 +98,23 @@ namespace HTM.Net.Tests.Network
          * Returns the Hot Gym encoder Setup.
          * @return
          */
-        public static Map<string, Map<string, object>> GetNetworkDemoFieldEncodingMap()
+        public static EncoderSettingsList GetNetworkDemoFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                     null,
                     0, // n
                     0, // w
                     0, 0, 0, 0, null, null, null,
-                    "timestamp", "datetime", "DateEncoder");
+                    "timestamp", FieldMetaType.DateTime, "DateEncoder");
             fieldEncodings = SetupMap(
                     fieldEncodings,
                     50,
                     21,
                     0, 100, 0, 0.1, null, true, null,
-                    "consumption", "float", "ScalarEncoder");
+                    "consumption", FieldMetaType.Float, "ScalarEncoder");
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(21, 9.5)); // Time of day
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
+            fieldEncodings["timestamp"].timeOfDay = new Tuple(21, 9.5); // Time of day
+            fieldEncodings["timestamp"].formatPattern = "MM/dd/YY HH:mm";
 
             return fieldEncodings;
         }
@@ -126,7 +125,7 @@ namespace HTM.Net.Tests.Network
          */
         public static Parameters GetNetworkDemoTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetNetworkDemoFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetNetworkDemoFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
@@ -158,7 +157,7 @@ namespace HTM.Net.Tests.Network
          */
         public static Parameters GetHotGymTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetHotGymFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetHotGymFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -170,14 +169,14 @@ namespace HTM.Net.Tests.Network
          * Parameters and meta information for the "dayOfWeek" encoder
          * @return
          */
-        public static Map<string, Map<string, object>> GetDayDemoFieldEncodingMap()
+        public static EncoderSettingsList GetDayDemoFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                     null,
                     8, // n
                     3, // w
                     0.0, 8.0, 0, 1, true, null, true,
-                    "dayOfWeek", "number", "ScalarEncoder");
+                    "dayOfWeek", FieldMetaType.Float, "ScalarEncoder");
             return fieldEncodings;
         }
 
@@ -187,7 +186,7 @@ namespace HTM.Net.Tests.Network
          */
         public static Parameters GetDayDemoTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetDayDemoFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetDayDemoFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -239,17 +238,17 @@ namespace HTM.Net.Tests.Network
          * Parameters and meta information for the "Geospatial Test" encoder
          * @return
          */
-        public static Map<string, Map<string, object>> GetGeospatialFieldEncodingMap()
+        public static EncoderSettingsList GetGeospatialFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(null, 0, 0, 0.0D, 0.0D, 0.0D, 0.0D, null, null, null, "timestamp", "datetime", "DateEncoder");
-            fieldEncodings = SetupMap(fieldEncodings, 50, 21, 0.0D, 100.0D, 0.0D, 0.1D, null, true, null, "consumption", "float", "ScalarEncoder");
-            fieldEncodings = SetupMap(fieldEncodings, 999, 25, 0.0D, 100.0D, 0.0D, 0.1D, null, true, null, "location", "geo", "GeospatialCoordinateEncoder");
+            EncoderSettingsList fieldEncodings = SetupMap(null, 0, 0, 0.0D, 0.0D, 0.0D, 0.0D, null, null, null, "timestamp", FieldMetaType.DateTime, "DateEncoder");
+            fieldEncodings = SetupMap(fieldEncodings, 50, 21, 0.0D, 100.0D, 0.0D, 0.1D, null, true, null, "consumption", FieldMetaType.Float, "ScalarEncoder");
+            fieldEncodings = SetupMap(fieldEncodings, 999, 25, 0.0D, 100.0D, 0.0D, 0.1D, null, true, null, "location", FieldMetaType.Geo, "GeospatialCoordinateEncoder");
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(new object[] { 21, 9.5d }));
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
+            fieldEncodings["timestamp"].timeOfDay = new Tuple(new object[] { 21, 9.5d }); // timeOfDay
+            fieldEncodings["timestamp"].formatPattern = "MM/dd/YY HH:mm"; // formatPattern
 
-            fieldEncodings["location"].Add("timestep", "60");
-            fieldEncodings["location"].Add("scale", "30");
+            fieldEncodings["location"].timestep = 60;
+            fieldEncodings["location"].scale = 30;
 
             return fieldEncodings;
         }
@@ -260,7 +259,7 @@ namespace HTM.Net.Tests.Network
          */
         public static Parameters GetGeospatialTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetGeospatialFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetGeospatialFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);

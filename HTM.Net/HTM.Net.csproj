@@ -103,6 +103,7 @@
     <Compile Include="Algorithms\BitHistory.cs" />
     <Compile Include="Algorithms\CLAClassifier.cs" />
     <Compile Include="Algorithms\Classification.cs" />
+    <Compile Include="Encoders\EncoderSettings.cs" />
     <Compile Include="Model\Connections.cs" />
     <Compile Include="Model\Persistable.cs" />
     <Compile Include="Monitor\MonitoredTemporalMemory.cs" />
@@ -136,7 +137,6 @@
     <Compile Include="Algorithms\Statistic.cs" />
     <Compile Include="Algorithms\TemporalMemory.cs" />
     <Compile Include="Model\ComputeCycle.cs" />
-    <Compile Include="Connections.cs" />
     <Compile Include="Encoders\CategoryEncoder.cs" />
     <Compile Include="Encoders\CoordinateEncoder.cs" />
     <Compile Include="Encoders\DateEncoder.cs" />

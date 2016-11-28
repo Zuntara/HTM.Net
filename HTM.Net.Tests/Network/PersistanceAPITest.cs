@@ -7,6 +7,7 @@ using System.Threading;
 using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
 using HTM.Net.Datagen;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -761,20 +762,20 @@ namespace HTM.Net.Tests.Network
             return p;
         }
 
-        private Map<String, Map<String, Object>> SetupMap(
-            Map<String, Map<String, Object>> map,
+        private EncoderSettingsList SetupMap(
+            EncoderSettingsList map,
             int n, int w, double min, double max, double radius, double resolution, bool? periodic,
             bool? clip, bool? forced, String fieldName, String fieldType, String encoderType)
         {
 
             if (map == null)
             {
-                map = new Map<String, Map<String, Object>>();
+                map = new EncoderSettingsList();
             }
-            Map<String, Object> inner = null;
+            EncoderSetting inner = null;
             if ((inner = map.Get(fieldName)) == null)
             {
-                map.Add(fieldName, inner = new Map<String, Object>());
+                map.Add(fieldName, inner = new EncoderSetting());
             }
 
             inner.Add("n", n);

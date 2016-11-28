@@ -446,7 +446,7 @@ namespace HTM.Net.Network
             {
                 if (Encoder.GetEncoders(Encoder) == null || Encoder.GetEncoders(Encoder).Count < 1)
                 {
-                    var fieldEncodingMap = Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) as Map<string, Map<string, object>>;
+                    var fieldEncodingMap = Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) as EncoderSettingsList;
                     if (fieldEncodingMap == null || fieldEncodingMap.Count < 1)
                     {
                         Logger.Error("No field encoding map found for specified MultiEncoder");

@@ -26,7 +26,7 @@ namespace HTM.Net.Encoders
          * @param encoder           the {@link MultiEncoder} to configure.
          * @param encoderSettings   the Map containing MultiEncoder settings.
          */
-        public static void Assemble(MultiEncoder encoder, Map<string, Map<string, object>> encoderSettings)
+        public static void Assemble(MultiEncoder encoder, EncoderSettingsList encoderSettings)
         {
             if (encoderSettings == null || !encoderSettings.Any())
             {
@@ -39,20 +39,20 @@ namespace HTM.Net.Encoders
 
             foreach (string field in sortedFields)
             {
-                Map<string, object> @params = encoderSettings[field];
+                EncoderSetting @params = encoderSettings[field];
                 if (@params == null) continue;
-                if (!@params.ContainsKey("fieldName") && !@params.ContainsKey("fieldname"))
+                if (!@params.HasFieldName())
                 {
                     throw new ArgumentException("Missing fieldname for encoder " + field);
                 }
-                string fieldName = (string)(@params.Get("fieldName") ?? @params.Get("fieldname"));
+                string fieldName = @params.fieldName;
 
-                if (!@params.ContainsKey("encoderType") && !@params.ContainsKey("type"))
+                if (!@params.HasEncoderType() && !@params.HasType())
                 {
                     throw new ArgumentException("Missing type for encoder " + field);
                 }
 
-                string encoderType = (string)(@params.Get("encoderType") ?? @params.Get("type"));
+                string encoderType = (string)(@params.encoderType ?? @params.type);
                 IBuilder builder = encoder.GetBuilder(encoderType);
 
                 if (encoderType.Equals("SDRCategoryEncoder"))
@@ -94,23 +94,23 @@ namespace HTM.Net.Encoders
         }
 
         private static void ConfigureCategoryBuilder(MultiEncoder multiEncoder,
-            Map<string, object> encoderSettings, IBuilder builder)
+            EncoderSetting encoderSettings, IBuilder builder)
         {
-            if (encoderSettings.ContainsKey("name"))
-                multiEncoder.SetValue(builder, "name", encoderSettings["name"]);
-            multiEncoder.SetValue(builder, "n", encoderSettings["n"]);
-            multiEncoder.SetValue(builder, "w", encoderSettings["w"]);
-            multiEncoder.SetValue(builder, "forced", encoderSettings.Get("forced", true));
-            multiEncoder.SetValue(builder, "categoryList", encoderSettings.Get("categoryList"));
+            if (encoderSettings.HasName())
+                multiEncoder.SetValue(builder, "name", encoderSettings.name);
+            multiEncoder.SetValue(builder, "n", encoderSettings.n.GetValueOrDefault());
+            multiEncoder.SetValue(builder, "w", encoderSettings.w.GetValueOrDefault());
+            multiEncoder.SetValue(builder, "forced", encoderSettings.forced.GetValueOrDefault(true));
+            multiEncoder.SetValue(builder, "categoryList", encoderSettings.categoryList);
         }
 
         /**
          * Do special configuration for DateEncoder
          * @param encoderSettings
          */
-        private static void ConfigureDateBuilder(MultiEncoder multiEncoder, string fieldName, Map<string, Map<string, object>> encoderSettings, DateEncoder.Builder b)
+        private static void ConfigureDateBuilder(MultiEncoder multiEncoder, string fieldName, EncoderSettingsList encoderSettings, DateEncoder.Builder b)
         {
-            Map<string, object> dateEncoderSettings = GetEncoderMap(fieldName, encoderSettings, "DateEncoder");
+            EncoderSetting dateEncoderSettings = GetEncoderMap(fieldName, encoderSettings, "DateEncoder");
             if (dateEncoderSettings == null)
             {
                 throw new InvalidOperationException("Input requires missing DateEncoder settings mapping.");
@@ -118,17 +118,15 @@ namespace HTM.Net.Encoders
 
             foreach (string key in dateEncoderSettings.Keys)
             {
-                if (!key.Equals("fieldname", StringComparison.InvariantCultureIgnoreCase) && !key.Equals("encoderType") && !key.Equals("type") &&
+                if (!key.Equals("fieldName") && !key.Equals("encoderType") && !key.Equals("type") &&
                     !key.Equals("fieldType") && !key.Equals("fieldEncodings"))
                 {
 
                     if (!key.Equals("season") && !key.Equals("dayOfWeek") &&
                         !key.Equals("weekend") && !key.Equals("holiday") &&
-                        !key.Equals("timeOfDay")
-                            && !key.Equals("customDays") &&
+                        !key.Equals("timeOfDay") && !key.Equals("customDays") &&
                         !key.Equals("formatPattern") && !key.Equals("dateFormatter"))
                     {
-
                         multiEncoder.SetValue(b, key, dateEncoderSettings[key]);
                     }
                     else
@@ -156,7 +154,7 @@ namespace HTM.Net.Encoders
          * @param m         the map containing the values
          * @param key       the key to be set.
          */
-        private static void SetDateFieldBits(DateEncoder.Builder b, Map<string, object> m, string key)
+        private static void SetDateFieldBits(DateEncoder.Builder b, EncoderSetting m, string key)
         {
             Tuple t = (Tuple)m[key];
             switch (key)
@@ -243,9 +241,9 @@ namespace HTM.Net.Encoders
          * @param encoderSettings
          * @param builder
          */
-        private static void ConfigureGeoBuilder(MultiEncoder multiEncoder, string fieldName, Map<string, Map<string, object>> encoderSettings, GeospatialCoordinateEncoder.Builder builder)
+        private static void ConfigureGeoBuilder(MultiEncoder multiEncoder, string fieldName, EncoderSettingsList encoderSettings, GeospatialCoordinateEncoder.Builder builder)
         {
-            Map<string, object> geoEncoderSettings = GetEncoderMap(fieldName, encoderSettings, "GeospatialCoordinateEncoder");
+            EncoderSetting geoEncoderSettings = GetEncoderMap(fieldName, encoderSettings, "GeospatialCoordinateEncoder");
             if (geoEncoderSettings == null)
             {
                 throw new InvalidOperationException("Input requires missing GeospatialCoordinateEncoder settings mapping.");
@@ -275,7 +273,7 @@ namespace HTM.Net.Encoders
          * @param m         the map containing the values
          * @param key       the key to be set.
          */
-        private static void SetGeoFieldBits(GeospatialCoordinateEncoder.Builder b, Dictionary<string, object> m, string key)
+        private static void SetGeoFieldBits(GeospatialCoordinateEncoder.Builder b, EncoderSetting m, string key)
         {
             object obj = m[key];
             if (obj is string)
@@ -316,36 +314,34 @@ namespace HTM.Net.Encoders
             }
         }
 
-        /**
-         * Extract the encoder settings out of the main map so that we can do
-         * special initialization on it
-         * @param encoderSettings
-         * @return the settings map
-         */
-        private static Map<string, object> GetEncoderMap(string fieldName, Map<string, Map<string, object>> encoderSettings, string encoderType)
+        /// <summary>
+        /// Extract the encoder settings out of the main map so that we can do special initialization on it
+        /// </summary>
+        /// <param name="fieldName"></param>
+        /// <param name="encoderSettings"></param>
+        /// <param name="encoderType"></param>
+        /// <returns>Extracted settings for encoder</returns>
+        private static EncoderSetting GetEncoderMap(string fieldName, EncoderSettingsList encoderSettings, string encoderType)
         {
             foreach (string key in encoderSettings.Keys.Where(k => k.Equals(fieldName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 string keyType = null;
-                if (encoderSettings[key].ContainsKey("encoderType"))
+                if (encoderSettings[key].HasEncoderType())
                 {
-                    if ((keyType = (string)encoderSettings[key]["encoderType"]) != null &&
-                        keyType.Equals(encoderType))
+                    if (encoderSettings[key].encoderType.Equals(encoderType))
                     {
                         // Remove the key from the specified map (extraction)
-                        return (Map<string, object>)encoderSettings[key];
+                        return encoderSettings[key];
                     }
                 }
-                if (encoderSettings[key].ContainsKey("type"))
+                if (encoderSettings[key].HasType())
                 {
-                    if ((keyType = (string)encoderSettings[key]["type"]) != null &&
-                        keyType.Equals(encoderType))
+                    if (encoderSettings[key].type.Equals(encoderType))
                     {
                         // Remove the key from the specified map (extraction)
-                        return (Map<string, object>)encoderSettings[key];
+                        return encoderSettings[key];
                     }
                 }
-
             }
             return null;
         }

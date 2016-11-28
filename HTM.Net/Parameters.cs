@@ -9,6 +9,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
@@ -311,7 +312,7 @@ namespace HTM.Net
             /// </summary>
             public static readonly KEY ENCODER = new KEY("encoderType", typeof(string));
             /** Designates holder for the Multi Encoding Map */
-            public static readonly KEY FIELD_ENCODING_MAP = new KEY("fieldEncodings", typeof(Map<string, Map<string, object>>));
+            public static readonly KEY FIELD_ENCODING_MAP = new KEY("fieldEncodings", typeof(EncoderSettingsList));
             public static readonly KEY CATEGORY_LIST = new KEY("categoryList", typeof(IList));
 
             /// <summary>

@@ -123,7 +123,7 @@ namespace HTM.Net.Encoders
          * 
          * @param fieldEncodings
          */
-        public void AddMultipleEncoders(Map<string, Map<string, object>> fieldEncodings)
+        public void AddMultipleEncoders(EncoderSettingsList fieldEncodings)
         {
             MultiEncoderAssembler.Assemble(this, fieldEncodings);
         }
