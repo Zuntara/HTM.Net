@@ -722,7 +722,14 @@ namespace HTM.Net.Research.Swarming
         /// <param name="modelId">The id of the model whose output cache is being deleted</param>
         private void __deleteOutputCache(ulong? modelId)
         {
-            _logger.Error("__deleteOutputCache not implemented");
+            if (modelId == _modelID /*&& _predictionLogger != null*/)
+            {
+                //_predictionLogger.Close();
+                __predictionCache = null;
+                // _predictionLogger = null;
+            }
+
+            _logger.Error("__deleteOutputCache not implemented fully");
             //throw new NotImplementedException();
         }
 

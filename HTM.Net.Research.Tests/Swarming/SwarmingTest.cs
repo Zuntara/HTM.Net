@@ -601,7 +601,7 @@ namespace HTM.Net.Research.Tests.Swarming
             ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
             var config = BenchMarkLinear(-1);
-            config.maxModels = 1;
+            config.swarmSize = SwarmDefinition.SwarmSize.Medium;
 
             // Convert config to parameters
             // set encoders in place
@@ -609,6 +609,8 @@ namespace HTM.Net.Research.Tests.Swarming
 
             //description.Item2.permutations.modelParams.clParams.alpha = 1;
             //description.Item2.permutations.modelParams.tpParams.activationThreshold = 4;
+            //description.Item2.permutations.modelParams.tpParams.minThreshold = 4;
+            //description.Item2.permutations.modelParams.tpParams.pamLength = 4;
 
             var expDir = new Tuple<BaseDescription, BasePermutations>(
                 description.Item1, description.Item2);

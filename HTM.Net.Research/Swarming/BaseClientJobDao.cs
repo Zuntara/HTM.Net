@@ -507,9 +507,9 @@ namespace HTM.Net.Research.Swarming
         /// <returns>list of result tuples. Each tuple contains: 
         ///  (modelID, results, status, updateCounter, numRecords, completionReason, completionMsg, engParamsHash)
         /// </returns>
-        public virtual List<ResultAndStatusModel> modelsGetResultAndStatus(List<ulong> modelIDs)
+        public virtual List<ResultAndStatusModel> modelsGetResultAndStatus(IEnumerable<ulong> modelIDs)
         {
-            Debug.Assert(modelIDs.Count >= 1, "modelIDs is empty");
+            Debug.Assert(modelIDs.Count() >= 1, "modelIDs is empty");
 
             //var rows = this._getMatchingRowsWithRetries(_models, { 'model_id' : modelIDs},
             //     [self._models.pubToDBNameDict[f] for f in self._models.getResultAndStatusNamedTuple._fields])
@@ -762,9 +762,9 @@ namespace HTM.Net.Research.Swarming
                 .Select(m => new Tuple<ulong, uint>(m.model_id, m.update_counter)).ToList();
         }
 
-        public override List<ResultAndStatusModel> modelsGetResultAndStatus(List<ulong> modelIDs)
+        public override List<ResultAndStatusModel> modelsGetResultAndStatus(IEnumerable<ulong> modelIDs)
         {
-            Debug.Assert(modelIDs.Count >= 1, "modelIDs is empty");
+            Debug.Assert(modelIDs.Count() >= 1, "modelIDs is empty");
 
             List<ResultAndStatusModel> rows = _getMatchingRowsWithRetries(Models, m => modelIDs.Contains(m.model_id),
                 m => new ResultAndStatusModel
@@ -784,7 +784,7 @@ namespace HTM.Net.Research.Swarming
             //     [self._models.pubToDBNameDict[f] for f in self._models.getResultAndStatusNamedTuple._fields])
 
             // NOTE: assertion will also fail when modelIDs contains duplicates
-            Debug.Assert(rows.Count == modelIDs.Count, "Didn't find modelIDs");
+            Debug.Assert(rows.Count == modelIDs.Count(), "Didn't find modelIDs");
             //Debug.Assert(rows.Count == modelIDs.Count, "Didn't find modelIDs", "Didn't find modelIDs: %r", 
             //    (set(modelIDs) - set(r[0] for r in rows)),)
 
@@ -856,7 +856,10 @@ namespace HTM.Net.Research.Swarming
                 {
                     job._eng_status = (string)fieldPair.Value;
                 }
-                
+                else if (fieldPair.Key == "workerCompletionMsg")
+                {
+                    job.worker_completion_msg = (string) fieldPair.Value;
+                }
                 else
                 {
                     throw new InvalidOperationException("Unknown field: " + fieldPair.Key);

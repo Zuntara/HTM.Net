@@ -1026,7 +1026,7 @@ namespace HTM.Net.Research.Swarming
 
             //numPsPerGen = numpy.array(numPsPerGen);
             //firstNonFull = numpy.where(numPsPerGen < minNumParticles)[0];
-            var firstNonFull = numPsPerGen.Where(x => x < minNumParticles).ToArray();
+            var firstNonFull = ArrayUtils.Where(numPsPerGen, x => x < minNumParticles).ToArray();
             if (firstNonFull.Length == 0)
             {
                 return numPsPerGen.Length;
@@ -2764,6 +2764,7 @@ namespace HTM.Net.Research.Swarming
                         //              for swarmId in activeSwarmIds];
                         var notFullSwarms = swarmSizes
                             .Where(swarm => swarm.Count < this._hsObj._minParticlesPerSwarm)
+                            .Select(s=>s.Count)
                             .ToList();
                         //  notFullSwarms = [len(swarm) for swarm in swarmSizes \
                         //       if len(swarm) < this._hsObj._minParticlesPerSwarm];
@@ -4498,44 +4499,43 @@ namespace HTM.Net.Research.Swarming
             var activeSwarms = this._hsState.getActiveSwarms();
             if (priorActiveSwarms != null && !activeSwarms.SequenceEqual(priorActiveSwarms))
             {
-                this.logger.Info(string.Format("Active swarms changed to {0} (from {1})", activeSwarms,
-                                                                  priorActiveSwarms));
+                this.logger.Info($"Active swarms changed to {Arrays.ToString(activeSwarms)} (from {Arrays.ToString(priorActiveSwarms)})");
             }
-            this.logger.Debug(string.Format("Active swarms: {0}", activeSwarms));
+            this.logger.Debug($"Active swarms: {Arrays.ToString(activeSwarms)}");
 
             // If too many model errors were detected, exit
             int totalCmpModels = this._resultsDB.getNumCompletedModels();
             if (totalCmpModels > 5)
             {
                 int numErrs = this._resultsDB.getNumErrModels();
-                //if ((double)numErrs / totalCmpModels > this._maxPctErrModels)
-                //{
-                //    // Get one of the errors
-                //    List<int> errModelIds = this._resultsDB.getErrModelIds();
-                //    var resInfo = this._cjDAO.modelsGetResultAndStatus(new[] { errModelIds[0] })[0];
-                //    string modelErrMsg = resInfo.completionMsg;
-                //    string cmpMsg = string.Format("{0}: Exiting due to receiving too many models failing" +
-                //                                  " from exceptions ({1} out of {2}). \nModel Exception: {3}",
-                //              ErrorCodes.tooManyModelErrs, numErrs, totalCmpModels, modelErrMsg);
-                //    this.logger.Error(cmpMsg);
+                if ((double)numErrs / totalCmpModels > this._maxPctErrModels)
+                {
+                    // Get one of the errors
+                    List<ulong> errModelIds = this._resultsDB.getErrModelIds();
+                    ResultAndStatusModel resInfo = this._cjDAO.modelsGetResultAndStatus(new[] { errModelIds[0] })[0];
+                    string modelErrMsg = resInfo.completionMsg;
+                    string cmpMsg = string.Format("{0}: Exiting due to receiving too many models failing" +
+                                                  " from exceptions ({1} out of {2}). \nModel Exception: {3}",
+                              "tooManyModelErrs", numErrs, totalCmpModels, modelErrMsg);
+                    this.logger.Error(cmpMsg);
 
-                //    // Cancel the entire job now, if it has not already been cancelled
-                //    var workerCmpReason = this._cjDAO.jobGetFields(this._jobID, new[] { "workerCompletionReason" })[0];
-                //    if (workerCmpReason == BaseClientJobDao.CMPL_REASON_SUCCESS.ToString())
-                //    {
-                //        this._cjDAO.jobSetFields(
-                //            this._jobID,
-                //            fields: new Dictionary<string, object>
-                //            {
-                //              {"cancel", true},
-                //              {"workerCompletionReason", BaseClientJobDao.CMPL_REASON_ERROR},
-                //              {"workerCompletionMsg", cmpMsg}
-                //            },
-                //            useConnectionID: false,
-                //            ignoreUnchanged: true);
-                //    }
-                //    return new CanidateParticleAndSwarm(true, null, null);
-                //}
+                    // Cancel the entire job now, if it has not already been cancelled
+                    var workerCmpReason = this._cjDAO.jobGetFields(this._jobID, new[] { "workerCompletionReason" })[0] as string;
+                    if (workerCmpReason == BaseClientJobDao.CMPL_REASON_SUCCESS)
+                    {
+                        this._cjDAO.jobSetFields(
+                            this._jobID,
+                            fields: new Dictionary<string, object>
+                            {
+                              {"cancel", true},
+                              {"workerCompletionReason", BaseClientJobDao.CMPL_REASON_ERROR},
+                              {"workerCompletionMsg", cmpMsg}
+                            },
+                            useConnectionID: false,
+                            ignoreUnchanged: true);
+                    }
+                    return new CanidateParticleAndSwarm(true, null, null);
+                }
             }
 
             // If HsState thinks the search is over, exit. It is seeing if the results

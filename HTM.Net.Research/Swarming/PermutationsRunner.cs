@@ -979,7 +979,7 @@ namespace HTM.Net.Research.Swarming
                 string predictedFieldName = predFieldTuple.Item1;
                 FieldMetaType? predictedFieldType = predFieldTuple.Item2;
                 bool isCategory = _isCategory(predictedFieldType);
-                string[] metricNames = isCategory ? new[] { "avg_err" } : new[] { "aae", "altMAPE" };
+                string[] metricNames = isCategory ? new[] { "avg_err" } : new[] { "aae", "altMAPE" }; // aae ipv rmse
                 string trivialErrorMetric = isCategory ? "avg_err" : "altMAPE";
                 string oneGramErrorMetric = isCategory ? "avg_err" : "altMAPE";
                 string movingAverageBaselineName = isCategory ? "moving_mode" : "moving_mean";
@@ -1414,6 +1414,7 @@ namespace HTM.Net.Research.Swarming
                 foreach (string origKey in encoderDict.Keys)
                 {
                     string key = origKey;
+                    object value = encoderDict[key];
                     if (key == "fieldname") key = "fieldName";
                     else if (key == "type") key = "encoderType";
                     if (key == "name") continue;
@@ -1425,7 +1426,7 @@ namespace HTM.Net.Research.Swarming
                     else
                     {
                         // Set other props on encoder
-                        enc[key] = encoderDict[key];
+                        enc[key] = value;
                         //typeof(PermuteEncoder).GetProperty(key).SetValue(enc, encoderDict[key]);
                     }
                 }

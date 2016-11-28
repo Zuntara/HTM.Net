@@ -48,6 +48,15 @@ namespace HTM.Net.Research.Swarming
                     variable name, the value is a dict of the variable's
                     position, velocity, bestPosition, bestResult, etc.
         */
+
+        #region Overrides of Object
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this, Formatting.Indented);
+        }
+
+        #endregion
     }
 
     //public class StructuredParams

@@ -337,9 +337,9 @@ namespace HTM.Net.Research.opf
             if (historyBuffer != null)
             {
                 historyBuffer.Append(error);
-                if (historyBuffer.Length > (int)this.spec.Params["window"])
+                if (historyBuffer.Length > TypeConverter.Convert<int>(this.spec.Params["window"]))
                 {
-                    accumulatedError -= (double)historyBuffer.TakeFirst();
+                    accumulatedError -= TypeConverter.Convert<double>(historyBuffer.TakeFirst());
                 }
             }
 
@@ -577,7 +577,7 @@ namespace HTM.Net.Research.opf
         public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
         {
             // If missing data
-            if(!groundTruth .HasValue)
+            if (!groundTruth.HasValue)
                 return aggregateError;
 
             var error = Math.Abs(groundTruth.Value - TypeConverter.Convert<double?>(prediction).GetValueOrDefault());
@@ -595,9 +595,9 @@ namespace HTM.Net.Research.opf
                 history.Append(new Tuple(groundTruth, error));
                 if (history.Length > TypeConverter.Convert<int>(spec.Params["window"]))
                 {
-                    Tuple tLeft = (Tuple) history.TakeFirst();
-                    _accumulatedGroundTruth -= (double?) tLeft.Item1;
-                    _accumulatedError -= (double) tLeft.Item2;
+                    Tuple tLeft = (Tuple)history.TakeFirst();
+                    _accumulatedGroundTruth -= (double?)tLeft.Item1;
+                    _accumulatedError -= (double)tLeft.Item2;
                 }
             }
             _accumulatedGroundTruth += Math.Abs(groundTruth.GetValueOrDefault());
@@ -606,7 +606,7 @@ namespace HTM.Net.Research.opf
             // Compute aggregate pct error
             if (_accumulatedGroundTruth > 0)
             {
-                aggregateError = 100.0*_accumulatedError/_accumulatedGroundTruth;
+                aggregateError = 100.0 * _accumulatedError / _accumulatedGroundTruth;
             }
             else
             {
