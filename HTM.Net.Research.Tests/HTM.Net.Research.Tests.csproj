@@ -103,6 +103,9 @@
     <Compile Include="Examples\HotGym\NetworkAPIDemo.cs" />
     <Compile Include="Examples\HotGym\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\HotGym\NetworkDemoHarness.cs" />
+    <Compile Include="Examples\Random\NetworkAPIDemo.cs" />
+    <Compile Include="Examples\Random\NetworkApiDemoTests.cs" />
+    <Compile Include="Examples\Random\NetworkDemoHarness.cs" />
     <Compile Include="Examples\Sine\NetworkAPIDemo.cs" />
     <Compile Include="Examples\Sine\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\Sine\NetworkDemoHarness.cs" />
@@ -169,6 +172,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Resources\foxeat.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\RandomData.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Resources\rec-center-15m.csv">

@@ -64,7 +64,7 @@ namespace HTM.Net.Research.Tests.Examples.SpatialPooler
 
             inputArray = new int[inputSize];
 
-            Random rand = new Random();
+            System.Random rand = new System.Random();
             for (int i = 0; i < inputSize; i++)
             {
                 // nextInt(2) returns 0 or 1

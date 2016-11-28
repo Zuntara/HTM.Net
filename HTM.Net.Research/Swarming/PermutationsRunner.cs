@@ -31,7 +31,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="permWorkDir">Optional location of working directory (defaults to current working directory).</param>
         /// <param name="verbosity">Optional (1,2,3) increasing verbosity of output.</param>
         /// <returns> Model parameters</returns>
-        public static uint RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options, string outDir = null, string outputLabel = "default",
+        public static uint /*ConfigModelDescription*/ RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options, string outDir = null, string outputLabel = "default",
             string permWorkDir = null, int verbosity = 1)
         {
             if (options == null) options = new Map<string, object>();
