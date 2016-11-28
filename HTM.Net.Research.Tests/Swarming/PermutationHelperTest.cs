@@ -72,6 +72,62 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.IsTrue(positions.Count <= visited);
         }
 
+        private void TestValidPositions<T>(int minValue, int maxValue, int? stepSize, int iterations = 100)
+           where T : PermuteVariable
+        {
+            var positions = new HashSet<double>();
+            double? cogRate = 2.0;
+            double? socRate = 2.0;
+            double? inertia = null;
+            double gBestPosition = maxValue;
+            double lBestPosition = minValue;
+            double? foundBestPosition = null;
+            double? foundBestResult = null;
+            var rng = new MersenneTwister(42);
+
+            //var var = varClass(min = minValue, max = maxValue, stepSize = stepSize,
+            //                   inertia = inertia, cogRate = cogRate, socRate = socRate);
+            var var = (T)Activator.CreateInstance(typeof(T), minValue, maxValue, stepSize, inertia, cogRate, socRate);
+            foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
+            {
+                var pos = var.getPosition();
+                if (this.verbosity >= 1)
+                {
+                    Console.WriteLine("pos: {0}", pos);
+                }
+                if (this.verbosity >= 2)
+                {
+                    Console.WriteLine(var);
+                }
+                positions.Add(pos.GetValueOrDefault());
+
+                // Set the result so that the local best is at lBestPosition.
+                double result = 1.0 - Math.Abs(pos.GetValueOrDefault() - lBestPosition);
+
+                if (foundBestResult == null || result > foundBestResult)
+                {
+                    foundBestResult = result;
+                    foundBestPosition = pos;
+                    var state = var.getState();
+                    state.bestPosition = foundBestPosition.GetValueOrDefault();
+                    state.bestResult = foundBestResult;
+                    var.setState(state);
+                }
+
+                var.newPosition(gBestPosition, rng);
+            }
+
+            //positions = sorted(positions);
+            //positions.Sort();
+            Console.WriteLine("Positions visited ({0}):", positions.Count);
+
+            // Validate positions.
+            Assert.IsTrue((positions.Max()) <= maxValue);
+            Assert.IsTrue((positions.Min()) >= minValue);
+            int visited = (int)(Math.Round((double)(maxValue - minValue) / stepSize.GetValueOrDefault()) + 1);
+            Assert.IsTrue(positions.Count <= visited);
+        }
+
         /// <summary>
         /// Test that we can converge on the right answer.
         /// </summary>
@@ -81,6 +137,53 @@ namespace HTM.Net.Research.Tests.Swarming
         /// <param name="targetValue"></param>
         /// <param name="iterations"></param>
         private void TestConvergence<T>(double minValue, double maxValue, double targetValue,
+                       int iterations = 100)
+            where T : PermuteVariable
+        {
+            double gBestPosition = targetValue;
+            double lBestPosition = targetValue;
+            double? foundBestPosition = null;
+            double? foundBestResult = null;
+            var rng = new MersenneTwister(42);
+
+            //var = varClass(min = minValue, max = maxValue);
+            var var = (T)Activator.CreateInstance(typeof(T), minValue, maxValue, null, null, null, null);
+            double pos = 0;
+            foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
+            {
+                pos = var.getPosition().GetValueOrDefault();
+                if (this.verbosity >= 1)
+                {
+                    Console.WriteLine("pos: {0}", pos);
+                }
+                if (this.verbosity >= 2)
+                {
+                    Console.WriteLine(var);
+                }
+
+                // Set the result so that the local best is at lBestPosition.
+                double result = 1.0 - Math.Abs(pos - lBestPosition);
+
+                if (foundBestResult == null || result > foundBestResult)
+                {
+                    foundBestResult = result;
+                    foundBestPosition = pos;
+                    var state = var.getState();
+                    state.bestPosition = foundBestPosition.GetValueOrDefault();
+                    state.bestResult = foundBestResult;
+                    var.setState(state);
+                }
+
+                var.newPosition(gBestPosition, rng);
+            }
+
+            // Test that we reached the target.
+
+            Console.WriteLine("Target: {0}, Converged on: {1}", targetValue, pos);
+            Assert.IsTrue(Math.Abs(pos - targetValue) < 0.001);
+        }
+
+        private void TestConvergence<T>(int minValue, int maxValue, int targetValue,
                        int iterations = 100)
             where T : PermuteVariable
         {
@@ -233,7 +336,7 @@ namespace HTM.Net.Research.Tests.Swarming
             verbosity = 2;
             // ------------------------------------------------------------------------
             // Test that step size is handled correctly for floats
-            this.TestValidPositions<PermuteInt>(minValue: 2, maxValue: 11, stepSize: 1);
+            this.TestValidPositions<PermuteInt>(minValue: 2, maxValue: 11, stepSize: 1, iterations: 100);
         }
 
         [TestMethod]

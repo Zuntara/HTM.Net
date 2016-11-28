@@ -95,7 +95,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         internal Network.Network CreateBasicNetworkSdr()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p = p.Union(NetworkDemoHarness.GetRandomDataFieldEncodingParams());
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(SDRClassifier));
 
             // This is how easy it is to create a full running Network!
@@ -121,7 +121,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         internal Network.Network CreateMultiLayerNetwork()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p = p.Union(NetworkDemoHarness.GetRandomDataFieldEncodingParams());
 
             return Network.Network.Create("Network API Demo", p)
                 .Add(Network.Network.CreateRegion("Region 1")
@@ -147,7 +147,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         internal Network.Network CreateMultiRegionNetwork()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p = p.Union(NetworkDemoHarness.GetRandomDataFieldEncodingParams());
 
             return Network.Network.Create("Network API Demo", p)
                 .Add(Network.Network.CreateRegion("Region 1")
@@ -231,7 +231,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 {
                     double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)infer.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
                     //double[] errors = ArrayUtils.Abs(ArrayUtils.Subtract(_predictedValues, actuals));
-                    int correctGuesses = actuals.Where(a => _predictedValues.Contains(a)).Count();
+                    int correctGuesses = GetGuessCount(actuals, _predictedValues);
                     StringBuilder sb = new StringBuilder()
                             .Append(infer.GetRecordNum()).Append(", ")
                             //.Append("classifier input=")
@@ -274,7 +274,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             {
                 double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)infer.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
                 double[] errors = ArrayUtils.Abs(ArrayUtils.Subtract(_predictedValues, actuals));
-                int correctGuesses = actuals.Where(a => _predictedValues.Contains(a)).Count();
+                int correctGuesses = GetGuessCount(actuals, _predictedValues);
 
                 PredictionValue value = new PredictionValue();
                 value.RecordNum = infer.GetRecordNum();
@@ -296,7 +296,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             _predictions = new List<PredictionValue>();
 
             _network.Start();
-            _network.GetHead().GetHead().GetLayerThread().Wait();
+            _network.GetTail().GetTail().GetLayerThread().Wait();
         }
 
         public int GetHighestCorrectGuesses(double rangePct, bool fromBehind)
@@ -338,6 +338,25 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public int[] GetGuesses()
         {
             return _predictions.Skip(1).Select(p => p.CorrectGuesses).ToArray();
+        }
+
+        public static int GetGuessCount(IEnumerable<double> actuals, IEnumerable<double> predicted)
+        {
+            int correct = 0;
+            Stack<double> predStack = new Stack<double>(predicted);
+            List<double> actList = new List<double>(actuals);
+            double predValue;
+            while (predStack.Count>0)
+            {
+                predValue = predStack.Pop();
+                if (actList.Contains(predValue))
+                {
+                    int index = actList.IndexOf(predValue);
+                    actList.RemoveAt(index);
+                    correct++;
+                }
+            }
+            return correct;
         }
 
         //public double GetTotalAccurancy(double rangePct, bool fromBehind)
