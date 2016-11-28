@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reactive;
 using System.Threading;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -166,7 +167,7 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = GetParameters();
 
-            Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
+            EncoderSettingsList settings = NetworkTestHarness.SetupMap(
                             null, // map
                             20,    // n
                             0,    // w
@@ -178,7 +179,7 @@ namespace HTM.Net.Tests.Network
                             null,                 // clip
                             true,         // forced
                             "dayOfWeek",          // fieldName
-                            "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
+                            FieldMetaType.DenseArray,               // fieldType (dense array as opposed to sparse array or "sarr")
                             "SDRPassThroughEncoder"); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);

@@ -55,18 +55,18 @@ namespace HTM.Net.Encoders
                 string encoderType = (string)(@params.encoderType ?? @params.type);
                 IBuilder builder = encoder.GetBuilder(encoderType);
 
-                if (encoderType.Equals("SDRCategoryEncoder"))
+                if (encoderType.EqualsIgnoreCase("SDRCategoryEncoder"))
                 {
                     // Add mappings for category list
                     ConfigureCategoryBuilder(encoder, @params, builder);
                 }
-                else if (encoderType.Equals("DateEncoder"))
+                else if (encoderType.EqualsIgnoreCase("DateEncoder"))
                 {
                     // Extract date specific mappings out of the map so that we can
                     // pre-configure the DateEncoder with its needed directives.
                     ConfigureDateBuilder(encoder, field, encoderSettings, (DateEncoder.Builder)builder);
                 }
-                else if (encoderType.Equals("GeospatialCoordinateEncoder"))
+                else if (encoderType.EqualsIgnoreCase("GeospatialCoordinateEncoder"))
                 {
                     // Extract Geo specific mappings out of the map so that we can
                     // pre-configure the GeospatialCoordinateEncoder with its needed directives.
@@ -76,12 +76,12 @@ namespace HTM.Net.Encoders
                 {
                     foreach (string param in @params.Keys)
                     {
-                        if (param.Equals("kwArgs")) // for permutation file in swarming
+                        if (param.EqualsIgnoreCase("kwArgs")) // for permutation file in swarming
                         {
                             continue;   // ignore , already added
                         }
-                        if (!param.Equals("fieldName") && !param.Equals("encoderType") && !param.Equals("type") &&
-                            !param.Equals("fieldType") && !param.Equals("fieldEncodings"))
+                        if (!param.EqualsIgnoreCase("fieldName") && !param.EqualsIgnoreCase("encoderType") && !param.EqualsIgnoreCase("type") &&
+                            !param.EqualsIgnoreCase("fieldType") && !param.EqualsIgnoreCase("fieldEncodings"))
                         {
                             encoder.SetValue(builder, param, @params[param]);
                         }
@@ -118,24 +118,24 @@ namespace HTM.Net.Encoders
 
             foreach (string key in dateEncoderSettings.Keys)
             {
-                if (!key.Equals("fieldName") && !key.Equals("encoderType") && !key.Equals("type") &&
-                    !key.Equals("fieldType") && !key.Equals("fieldEncodings"))
+                if (!key.EqualsIgnoreCase("fieldName") && !key.EqualsIgnoreCase("encoderType") && !key.EqualsIgnoreCase("type") &&
+                    !key.EqualsIgnoreCase("fieldType") && !key.EqualsIgnoreCase("fieldEncodings"))
                 {
 
-                    if (!key.Equals("season") && !key.Equals("dayOfWeek") &&
-                        !key.Equals("weekend") && !key.Equals("holiday") &&
-                        !key.Equals("timeOfDay") && !key.Equals("customDays") &&
-                        !key.Equals("formatPattern") && !key.Equals("dateFormatter"))
+                    if (!key.EqualsIgnoreCase("season") && !key.EqualsIgnoreCase("dayOfWeek") &&
+                        !key.EqualsIgnoreCase("weekend") && !key.EqualsIgnoreCase("holiday") &&
+                        !key.EqualsIgnoreCase("timeOfDay") && !key.EqualsIgnoreCase("customDays") &&
+                        !key.EqualsIgnoreCase("formatPattern") && !key.EqualsIgnoreCase("dateFormatter"))
                     {
                         multiEncoder.SetValue(b, key, dateEncoderSettings[key]);
                     }
                     else
                     {
-                        if (key.Equals("formatPattern"))
+                        if (key.EqualsIgnoreCase("formatPattern"))
                         {
                             b.FormatPattern((string)dateEncoderSettings[key]);
                         }
-                        else if (key.Equals("dateFormatter"))
+                        else if (key.EqualsIgnoreCase("dateFormatter"))
                         {
                             b.Formatter((DateTimeFormatInfo)dateEncoderSettings[key]);
                         }
@@ -172,6 +172,7 @@ namespace HTM.Net.Encoders
                         break;
                     }
                 case "dayOfWeek":
+                case "dayofweek":
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1)) > 0.0))
                         {
@@ -208,6 +209,7 @@ namespace HTM.Net.Encoders
                         break;
                     }
                 case "timeOfDay":
+                case "timeofday":
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
                         {
@@ -220,6 +222,7 @@ namespace HTM.Net.Encoders
                         break;
                     }
                 case "customDays":
+                case "customdays":
                     {
                         if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
                         {
@@ -251,11 +254,11 @@ namespace HTM.Net.Encoders
 
             foreach (string key in geoEncoderSettings.Keys)
             {
-                if (!key.Equals("fieldName") && !key.Equals("encoderType") &&
-                        !key.Equals("fieldType") && !key.Equals("fieldEncodings"))
+                if (!key.EqualsIgnoreCase("fieldName") && !key.EqualsIgnoreCase("encoderType") &&
+                        !key.EqualsIgnoreCase("fieldType") && !key.EqualsIgnoreCase("fieldEncodings"))
                 {
 
-                    if (!key.Equals("scale") && !key.Equals("timestep"))
+                    if (!key.EqualsIgnoreCase("scale") && !key.EqualsIgnoreCase("timestep"))
                     {
                         multiEncoder.SetValue(builder, key, geoEncoderSettings[key]);
                     }
@@ -328,7 +331,7 @@ namespace HTM.Net.Encoders
                 string keyType = null;
                 if (encoderSettings[key].HasEncoderType())
                 {
-                    if (encoderSettings[key].encoderType.Equals(encoderType))
+                    if (encoderSettings[key].encoderType.EqualsIgnoreCase(encoderType))
                     {
                         // Remove the key from the specified map (extraction)
                         return encoderSettings[key];
@@ -336,7 +339,7 @@ namespace HTM.Net.Encoders
                 }
                 if (encoderSettings[key].HasType())
                 {
-                    if (encoderSettings[key].type.Equals(encoderType))
+                    if (encoderSettings[key].type.EqualsIgnoreCase(encoderType))
                     {
                         // Remove the key from the specified map (extraction)
                         return encoderSettings[key];

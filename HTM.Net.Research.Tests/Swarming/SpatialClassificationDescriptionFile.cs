@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
-using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -42,12 +42,12 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 predictAheadTime = null,
 
-                inputRecordSchema = new []
+                inputRecordSchema = new[]
                 {
-                    new FieldMetaInfo("address", FieldMetaType.String, SensorFlags.Blank), 
-                    new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank), 
-                    new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp), 
-                    new FieldMetaInfo("consumption", FieldMetaType.Float, SensorFlags.Blank), 
+                    new FieldMetaInfo("address", FieldMetaType.String, SensorFlags.Blank),
+                    new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank),
+                    new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp),
+                    new FieldMetaInfo("consumption", FieldMetaType.Float, SensorFlags.Blank),
                 },
 
                 // Model parameter dictionary.
@@ -70,61 +70,61 @@ namespace HTM.Net.Research.Tests.Swarming
                         //     ],
                         //
                         // (value generated from DS_ENCODER_SCHEMA)
-                        encoders = new Map<string, Map<string, object>>
+                        encoders = new EncoderSettingsList
                         {
                             {
-                                "address", new Map<string, object>
+                                "address", new EncoderSetting
                                 {
-                                    {"fieldname", "address"},
-                                    {"n", 300},
-                                    {"name", "address"},
-                                    {"type", "SDRCategoryEncoder"},
-                                    {"w", 21},
-                                    {"categoryList", new List<string>() }
+                                    fieldName= "address",
+                                    n= 300,
+                                    name= "address",
+                                    type= "SDRCategoryEncoder",
+                                    w= 21,
+                                    categoryList= new List<string>()
                                 }
                             },
                             {
-                                "_classifierInput", new Map<string, object>
+                                "_classifierInput", new EncoderSetting
                                 {
-                                    {"name", "_classifierInput"},
-                                    {"fieldname", "consumption"},
-                                    {"classifierOnly", true},
-                                    {"clipInput", true},
-                                    {"maxval", 200},
-                                    {"minval", 0},
-                                    {"n", 1500},
-                                    {"type", "ScalarEncoder"},
-                                    {"w", 21},
+                                    name= "_classifierInput",
+                                    fieldName= "consumption",
+                                    classifierOnly= true,
+                                    clipInput= true,
+                                    maxVal= 200,
+                                    minVal= 0,
+                                    n= 1500,
+                                    type= "ScalarEncoder",
+                                    w= 21,
                                     //{"categoryList", new List<string>() }
                                 }
                             },
                             {
-                                "gym", new Map<string, object>
+                                "gym", new EncoderSetting
                                 {
-                                    {"fieldname", "gym"},
-                                    {"n", 300},
-                                    {"name", "gym"},
-                                    {"type", "SDRCategoryEncoder"},
-                                    {"w", 21},
-                                    {"categoryList", new List<string>() }
+                                    fieldName= "gym",
+                                    n= 300,
+                                    name= "gym",
+                                    type= "SDRCategoryEncoder",
+                                    w= 21,
+                                    categoryList= new List<string>()
                                 }
                             },
                             {
-                                "timestamp_dayOfWeek", new Map<string, object>
+                                "timestamp_dayOfWeek", new EncoderSetting
                                 {
-                                    {"dayOfWeek", new Tuple(7, 3)},
-                                    {"fieldname", "timestamp"},
-                                    {"name", "timestamp_dayOfWeek"},
-                                    {"type", "DateEncoder"}
+                                    dayOfWeek= new Tuple(7, 3),
+                                    fieldName= "timestamp",
+                                    name= "timestamp_dayOfWeek",
+                                    type= "DateEncoder"
                                 }
                             },
                             {
-                                "timestamp_timeOfDay", new Map<string, object>
+                                "timestamp_timeOfDay", new EncoderSetting
                                 {
-                                    {"fieldname", "timestamp"},
-                                    {"name", "timestamp_timeOfDay"},
-                                    {"timeOfDay", new Tuple(7, 8)},
-                                    {"type", "DateEncoder"}
+                                    fieldName= "timestamp",
+                                    name= "timestamp_timeOfDay",
+                                    timeOfDay= new Tuple(7, 8),
+                                    type= "DateEncoder"
                                 }
                             }
                         },
@@ -332,7 +332,7 @@ namespace HTM.Net.Research.Tests.Swarming
             {
                 int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
                 Debug.Assert(predictionSteps >= 1);
-                config.modelParams.clParams.steps = new[] {predictionSteps};
+                config.modelParams.clParams.steps = new[] { predictionSteps };
             }
 
             // Adjust config by applying ValueGetterBase-derived
@@ -383,9 +383,9 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 inferenceArgs = new InferenceArgsDescription
                 {
-                     inputPredictedField = InputPredictedField.Auto,
-                     predictedField = "consumption",
-                     predictionSteps = new[] {0}
+                    inputPredictedField = InputPredictedField.Auto,
+                    predictedField = "consumption",
+                    predictionSteps = new[] { 0 }
                 },
 
                 // Logged Metrics: A sequence of regular expressions that specify which of

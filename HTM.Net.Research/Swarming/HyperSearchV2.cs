@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using HTM.Net.Encoders;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
@@ -3758,10 +3759,7 @@ namespace HTM.Net.Research.Swarming
             //Dictionary<string, object> vars = new Dictionary<string, object>();
 
             //permFile = execfile(filename, globals(), vars);
-            IPermutionFilter permFile = (IPermutionFilter)JsonConvert.DeserializeObject(permFileJson, typeof(BasePermutations), new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
+            IPermutionFilter permFile = Json.Deserialize<BasePermutations>(permFileJson);
 
             // Read in misc info.
             this._reportKeys = permFile.report; // vars.Get("report", []);
@@ -3899,11 +3897,11 @@ namespace HTM.Net.Research.Swarming
             {
                 // If it does not have a separate encoder for the predicted field that
                 //  goes to the classifier, it is a legacy multi-step network
-                Map<string, object> classifierOnlyEncoder = null;
+                EncoderSetting classifierOnlyEncoder = null;
 
                 foreach (var encoder in modelDescription.modelParams.sensorParams.encoders.Values)
                 {
-                    if ((bool)encoder.Get("classifierOnly", false) && (string)encoder["fieldName"] == permFile.predictedField)
+                    if ((bool)encoder.classifierOnly.GetValueOrDefault() && encoder.fieldName == permFile.predictedField)
                     {
                         classifierOnlyEncoder = encoder;
                         break;

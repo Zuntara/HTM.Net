@@ -5,11 +5,10 @@ using System.Linq;
 using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
-using HTM.Net.Research.Swarming.Descriptions;
-using HTM.Net.Research.Tests.Swarming;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Tuple = HTM.Net.Util.Tuple;
@@ -253,31 +252,31 @@ namespace HTM.Net.Research.Tests.Opf
                         inferenceType = InferenceType.TemporalAnomaly,
                         sensorParams = new SensorParamsDescription
                         {
-                            encoders = new Map<string, Map<string, object>>
+                            encoders = new EncoderSettingsList()
                             {
                                 {
                                     "c0_dayOfWeek", null
                                 },
                                 {
-                                    "c0_timeOfDay", new Map<string, object>
+                                    "c0_timeOfDay", new EncoderSetting
                                     {
-                                        {"fieldname", "c0"},
-                                        {"name", "c0"},
-                                        {"timeOfDay", new Tuple(21, 9.49122334747737)},
-                                        {"type", "DateEncoder"}
+                                        fieldName= "c0",
+                                        name= "c0",
+                                        timeOfDay= new Tuple(21, 9.49122334747737),
+                                        type= "DateEncoder"
                                     }
                                 },
                                 {
                                     "c0_weekend", null
                                 },
                                 {
-                                    "c1", new Map<string, object>
+                                    "c1", new EncoderSetting
                                     {
-                                        {"fieldname", "c1"},
-                                        {"name", "c1"},
-                                        {"resolution", 0.8771929824561403},
-                                        //{"seed",  42},
-                                        {"type", "RandomDistributedScalarEncoder"}
+                                        fieldName= "c1",
+                                        name= "c1",
+                                        resolution= 0.8771929824561403,
+                                        // seed=  42,
+                                        type= "RandomDistributedScalarEncoder"
                                     }
                                 },
                             },

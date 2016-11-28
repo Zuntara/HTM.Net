@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
@@ -159,16 +160,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         private static void FixupRandomEncoderParams(BestSingleMetricAnomalyParamsDescription paramSet, double? minVal, double? maxVal,
             double? minResolution)
         {
-            Map<string, Map<string, object>> encodersDict = paramSet.modelConfig.modelParams.sensorParams.encoders;
+            EncoderSettingsList encodersDict = paramSet.modelConfig.modelParams.sensorParams.encoders;
             foreach (var encoder in encodersDict.Values)
             {
                 if (encoder != null)
                 {
                     if ((string)encoder["type"] == "RandomDistributedScalarEncoder")
                     {
-                        var resolution = Math.Max(minResolution.Value,
-                            (maxVal.Value - minVal.Value) / (double)encoder["numBuckets"]);
-                        encoder.Remove("numBuckets");
+                        var resolution = Math.Max(minResolution.Value, (maxVal.Value - minVal.Value) / encoder.numBuckets.GetValueOrDefault());
+                        encoder.numBuckets = null;
                         encodersDict["c1"]["resolution"] = resolution;
                     }
                 }

@@ -163,7 +163,7 @@ namespace HTM.Net.Tests
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ArgumentException), e.GetType());
-                Assert.AreEqual("Can not set Parameters Property 'synPermActiveInc' because of type mismatch. The required type is class System.Double", e.Message);
+                Assert.AreEqual("Can not set Parameters Property 'synPermActiveInc' because of type mismatch. The required type is class System.Double and the given class is Boolean", e.Message);
             }
 
             // Positive test

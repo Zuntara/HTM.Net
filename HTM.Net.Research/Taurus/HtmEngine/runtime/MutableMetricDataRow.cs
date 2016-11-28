@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
@@ -286,15 +287,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                         //     ],
                         //
                         // (value generated from DS_ENCODER_SCHEMA)
-                        encoders = new Map<string, Map<string, object>>
+                        encoders = new EncoderSettingsList
                                 {
                                     {
-                                        "c0_timeOfDay", new Map<string, object>
+                                        "c0_timeOfDay", new EncoderSetting
                                         {
-                                            {"dayOfWeek", new Tuple(21, 9.49)},
-                                            {"fieldname", "c0"},
-                                            {"name", "c0"},
-                                            {"type", "DateEncoder"}
+                                            dayOfWeek= new Tuple(21, 9.49),
+                                            fieldName= "c0",
+                                            name= "c0",
+                                            type= "DateEncoder"
                                         }
                                     },
                                     {
@@ -304,12 +305,12 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                                         "c0_weekend", null
                                     },
                                     {
-                                        "c1", new Map<string, object>
+                                        "c1", new EncoderSetting
                                         {
-                                            {"fieldname", "c1"},
-                                            {"name", "c1"},
-                                            {"type", "RandomDistributedScalarEncoder"},
-                                            {"numBuckets", 130.0 }
+                                            fieldName= "c1",
+                                            name= "c1",
+                                            type= "RandomDistributedScalarEncoder",
+                                            numBuckets= 130.0
                                         }
                                     }
                                 },
@@ -575,7 +576,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 MinResolution = MinResolution,
                 ModelConfig = ModelConfig,
                 InferenceArgs = InferenceArgs.Clone(),
-                InputSchema = (FieldMetaInfo[]) InputSchema.Clone()
+                InputSchema = (FieldMetaInfo[])InputSchema.Clone()
             };
         }
     }
@@ -747,7 +748,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 _model.enableLearning();
                 _model.enableInference(modelParams.InferenceArgs);
             }
-            
+
             // Construct the object for converting a flat input row into a format
             // that is consumable by an OPF model
             if (modelDefinition == null)
@@ -756,7 +757,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             }
 
             var inputSchema = modelDefinition.inputRecordSchema;
-            
+
             FieldMetaInfo[] inputFieldsMeta = inputSchema;
             _inputRowEncoder = new InputRowEncoder(inputFieldsMeta);
 
@@ -856,7 +857,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             _fields = fields;
             _aggregationPeriod = aggregationPeriod;
             _sequenceId = -1;
-            _fieldNames = fields.Select(m=>m.name).ToList();
+            _fieldNames = fields.Select(m => m.name).ToList();
 
             _timestampFieldIndex = GetFieldIndexBySpecial(fields, SensorFlags.Timestamp);
         }

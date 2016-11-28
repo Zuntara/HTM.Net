@@ -122,9 +122,9 @@ namespace HTM.Net.Network.Sensor
         {
             encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("MultiEncoder").Build();
 
-            Map<string, Map<string, object>> encoderSettings;
+            EncoderSettingsList encoderSettings;
             if (localParameters != null &&
-                (encoderSettings = (Map<string, Map<string, object>>)localParameters.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null &&
+                (encoderSettings = (EncoderSettingsList)localParameters.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null &&
                     encoderSettings.Any())
             {
                 InitEncoders(encoderSettings);
@@ -690,8 +690,8 @@ namespace HTM.Net.Network.Sensor
         {
             localParameters = p;
 
-            Map<string, Map<string, object>> encoderSettings;
-            if ((encoderSettings = (Map<string, Map<string, object>>)p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null &&
+            EncoderSettingsList encoderSettings;
+            if ((encoderSettings = (EncoderSettingsList)p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null &&
                 !encoder.GetEncoders().Any() &&
                     indexToEncoderMap == null)
             {
@@ -724,7 +724,7 @@ namespace HTM.Net.Network.Sensor
          * Called internally to initialize this sensor's encoders
          * @param encoderSettings
          */
-        private void InitEncoders(Map<string, Map<string, object>> encoderSettings)
+        private void InitEncoders(EncoderSettingsList encoderSettings)
         {
             if (encoder is MultiEncoder)
             {

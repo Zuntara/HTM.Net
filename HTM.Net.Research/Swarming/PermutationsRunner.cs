@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
@@ -641,7 +642,7 @@ namespace HTM.Net.Research.Swarming
             var includedFields = Options.includedFields;
 
             var encoderTuple = _generateEncoderStringsV2(includedFields, Options);
-            var encoderSpecs = encoderTuple.Item1;
+            EncoderSettingsList encoderSpecs = encoderTuple.Item1;
             var permEncoderChoices = encoderTuple.Item2;
 
             // Generate the string containing the sensor auto-reset dict.
@@ -1195,11 +1196,11 @@ namespace HTM.Net.Research.Swarming
         }
 
 
-        private Tuple<Map<string, Map<string, object>>, Map<string, object>> _generateEncoderStringsV2(
+        private Tuple<EncoderSettingsList, Map<string, object>> _generateEncoderStringsV2(
             List<SwarmDefinition.SwarmDefIncludedField> includedFields, SwarmDefinition options)
         {
             int width = 21;
-            List<Map<string, object>> encoderDictList = new List<Map<string, object>>();
+            List<EncoderSetting> encoderDictList = new List<EncoderSetting>();
 
             string classifierOnlyField = null;
 
@@ -1221,7 +1222,7 @@ namespace HTM.Net.Research.Swarming
             // constructor arguments
             foreach (var fieldInfo in includedFields)
             {
-                var encoderDict = new Map<string, object>();
+                var encoderDict = new EncoderSetting();
                 string fieldName = fieldInfo.fieldName;
                 FieldMetaType? fieldType = fieldInfo.fieldType;
 
@@ -1234,56 +1235,56 @@ namespace HTM.Net.Research.Swarming
                     bool runDelta = fieldInfo.runDelta.GetValueOrDefault();
                     if (runDelta || !string.IsNullOrWhiteSpace(fieldInfo.space))
                     {
-                        encoderDict = new Map<string, object>
+                        encoderDict = new EncoderSetting
                         {
-                            {"type", "ScalarSpaceEncoder"},
-                            {"name", fieldName},
-                            {"fieldName", fieldName},
-                            {"n", 100},
-                            {"w", width},
-                            {"clipInput", true},
+                            type = "ScalarSpaceEncoder",
+                            name = fieldName,
+                            fieldName = fieldName,
+                            n = 100,
+                            w = width,
+                            clipInput = true,
                         };
                         if (runDelta)
                         {
-                            encoderDict["runDelta"] = true;
+                            encoderDict.runDelta = true;
                         }
                     }
                     else
                     {
-                        encoderDict = new Map<string, object>
+                        encoderDict = new EncoderSetting
                         {
-                            {"type", "AdaptiveScalarEncoder"},
-                            {"name", fieldName},
-                            {"fieldName", fieldName},
-                            {"n", 100},
-                            {"w", width},
-                            {"clipInput", true},
+                            type = "AdaptiveScalarEncoder",
+                            name = fieldName,
+                            fieldName = fieldName,
+                            n = 100,
+                            w = width,
+                            clipInput = true,
                         };
                     }
 
                     if (fieldInfo.minValue.HasValue)
                     {
-                        encoderDict["minval"] = fieldInfo.minValue.Value;
+                        encoderDict.minVal = fieldInfo.minValue.Value;
                     }
                     if (fieldInfo.maxValue.HasValue)
                     {
-                        encoderDict["maxval"] = fieldInfo.maxValue.Value;
+                        encoderDict.maxVal = fieldInfo.maxValue.Value;
                     }
                     // If both min and max were specified, use a non-adaptive encoder
                     if (fieldInfo.minValue.HasValue && fieldInfo.maxValue.HasValue
-                        && (string)encoderDict["type"] == "AdaptiveScalarEncoder")
+                        && encoderDict.type == "AdaptiveScalarEncoder")
                     {
-                        encoderDict["type"] = "ScalarEncoder";
+                        encoderDict.type = "ScalarEncoder";
                     }
                     // Defaults may have been over-ridden by specifying an encoder type
                     if (!string.IsNullOrWhiteSpace(fieldInfo.encoderType))
                     {
-                        encoderDict["type"] = fieldInfo.encoderType;
+                        encoderDict.type = fieldInfo.encoderType;
                     }
 
                     if (!string.IsNullOrWhiteSpace(fieldInfo.space))
                     {
-                        encoderDict["space"] = fieldInfo.space;
+                        encoderDict.space = fieldInfo.space;
                     }
                     encoderDictList.Add(encoderDict);
                 }
@@ -1291,17 +1292,17 @@ namespace HTM.Net.Research.Swarming
                 // String?
                 else if (fieldType == FieldMetaType.String)
                 {
-                    encoderDict = new Map<string, object>
+                    encoderDict = new EncoderSetting
                     {
-                        {"type", "SDRCategoryEncoder"},
-                        {"name", fieldName},
-                        {"fieldName", fieldName},
-                        {"n", 100 + width},
-                        {"w", width}
+                        type = "SDRCategoryEncoder",
+                        name = fieldName,
+                        fieldName = fieldName,
+                        n = 100 + width,
+                        w = width
                     };
                     if (!string.IsNullOrWhiteSpace(fieldInfo.encoderType))
                     {
-                        encoderDict["type"] = fieldInfo.encoderType;
+                        encoderDict.type = fieldInfo.encoderType;
                     }
                     encoderDictList.Add(encoderDict);
                 }
@@ -1310,44 +1311,44 @@ namespace HTM.Net.Research.Swarming
                 else if (fieldType == FieldMetaType.DateTime)
                 {
                     // First, the time of day representation
-                    encoderDict = new Map<string, object>
+                    encoderDict = new EncoderSetting
                     {
-                        {"type", "DateEncoder"},
-                        {"name", $"{fieldName}_timeOfDay"},
-                        {"fieldName", fieldName},
-                        {"timeOfDay", new Tuple(width, 1)}
+                        type = "DateEncoder",
+                        name = $"{fieldName}_timeOfDay",
+                        fieldName = fieldName,
+                        timeOfDay = new Tuple(width, 1)
                     };
                     if (!string.IsNullOrWhiteSpace(fieldInfo.encoderType))
                     {
-                        encoderDict["type"] = fieldInfo.encoderType;
+                        encoderDict.type = fieldInfo.encoderType;
                     }
                     encoderDictList.Add(encoderDict);
 
                     // Now, the day of week representation
-                    encoderDict = new Map<string, object>
+                    encoderDict = new EncoderSetting
                     {
-                        {"type", "DateEncoder"},
-                        {"name", $"{fieldName}_dayOfWeek"},
-                        {"fieldName", fieldName},
-                        {"dayOfWeek", new Tuple(width, 1)}
+                        type = "DateEncoder",
+                        name = $"{fieldName}_dayOfWeek",
+                        fieldName = fieldName,
+                        dayOfWeek = new Tuple(width, 1)
                     };
                     if (!string.IsNullOrWhiteSpace(fieldInfo.encoderType))
                     {
-                        encoderDict["type"] = fieldInfo.encoderType;
+                        encoderDict.type = fieldInfo.encoderType;
                     }
                     encoderDictList.Add(encoderDict);
 
                     // Now, the weekend representation
-                    encoderDict = new Map<string, object>
+                    encoderDict = new EncoderSetting
                     {
-                        {"type", "DateEncoder"},
-                        {"name", $"{fieldName}_weekend"},
-                        {"fieldName", fieldName},
-                        {"dayOfWeek", new Tuple(width)}
+                        type = "DateEncoder",
+                        name = $"{fieldName}_weekend",
+                        fieldName = fieldName,
+                        dayOfWeek = new Tuple(width)
                     };
                     if (!string.IsNullOrWhiteSpace(fieldInfo.encoderType))
                     {
-                        encoderDict["type"] = fieldInfo.encoderType;
+                        encoderDict.type = fieldInfo.encoderType;
                     }
                     encoderDictList.Add(encoderDict);
                 }
@@ -1361,9 +1362,9 @@ namespace HTM.Net.Research.Swarming
                 // to the classifier only
                 if (fieldName == classifierOnlyField)
                 {
-                    var clEncoderDict = new Map<string, object>(encoderDict);
-                    clEncoderDict["classifierOnly"] = true;
-                    clEncoderDict["name"] = "_classifierInput";
+                    var clEncoderDict = encoderDict.Clone();
+                    clEncoderDict.classifierOnly = true;
+                    clEncoderDict.name = "_classifierInput";
                     encoderDictList.Add(clEncoderDict);
 
                     // If the predicted field needs to be excluded, take it out of the encoder lists
@@ -1385,10 +1386,10 @@ namespace HTM.Net.Research.Swarming
             // encoderDictsList and constructorStringList
 
             Map<string, object> permEncodersList = new Map<string, object>();
-            Map<string, Map<string, object>> encoders = new Map<string, Map<string, object>>();
-            foreach (var encoderDict in encoderDictList)
+            EncoderSettingsList encoders = new EncoderSettingsList();
+            foreach (EncoderSetting encoderDict in encoderDictList)
             {
-                if (((string)encoderDict["name"]).Contains("\\"))
+                if (encoderDict.name.Contains("\\"))
                 {
                     throw new InvalidOperationException("Illegal character in field: '\\'");
                 }
@@ -1396,35 +1397,36 @@ namespace HTM.Net.Research.Swarming
                 // Check for bad characters (?)
 
                 object encoderPerms = _generatePermEncoderStr(options, encoderDict);
-                string encoderKey = encoderDict["name"] as string;
+                string encoderKey = encoderDict.name;
                 //encoderSpecsList.Add($"{encoderKey}: {encoderDict}");
                 encoders.Add(encoderKey, encoderDict);
                 permEncodersList.Add(encoderKey, encoderPerms);
             }
 
-            return new Tuple<Map<string, Map<string, object>>, Map<string, object>>(encoders, permEncodersList);
+            return new Tuple<EncoderSettingsList, Map<string, object>>(encoders, permEncodersList);
         }
 
-        private PermuteEncoder _generatePermEncoderStr(SwarmDefinition options, Map<string, object> encoderDict)
+        private PermuteEncoder _generatePermEncoderStr(SwarmDefinition options, EncoderSetting encoderDict)
         {
-            PermuteEncoder enc = new PermuteEncoder();
-            if ((bool)encoderDict.Get("classifierOnly", false))
+            PermuteEncoder enc = new PermuteEncoder(encoderDict.fieldName, encoderDict.type, encoderDict.name);
+            if (encoderDict.classifierOnly.GetValueOrDefault(false))
             {
-                foreach (var pair in encoderDict)
+                foreach (string origKey in encoderDict.Keys)
                 {
-                    string key = pair.Key;
+                    string key = origKey;
                     if (key == "fieldname") key = "fieldName";
                     else if (key == "type") key = "encoderType";
                     if (key == "name") continue;
 
-                    if (key == "n" && (string)encoderDict["type"] != "SDRCategoryEncoder")
+                    if (key == "n" && encoderDict.type != "SDRCategoryEncoder")
                     {
-                        enc.n = new PermuteInt((int)encoderDict["w"] + 1, (int)encoderDict["w"] + 500);
+                        enc.n = new PermuteInt(encoderDict.w.Value + 1, (int)encoderDict.w.Value + 500);
                     }
                     else
                     {
                         // Set other props on encoder
-                        typeof(PermuteEncoder).GetProperty(key).SetValue(enc, pair.Value);
+                        enc[key] = encoderDict[key];
+                        //typeof(PermuteEncoder).GetProperty(key).SetValue(enc, encoderDict[key]);
                     }
                 }
             }
@@ -1432,60 +1434,62 @@ namespace HTM.Net.Research.Swarming
             {
                 // Scalar encoders
                 if (new[] { "ScalarSpaceEncoder", "AdaptiveScalarEncoder",
-                            "ScalarEncoder", "LogEncoder"}.Contains((string)encoderDict["type"]))
+                            "ScalarEncoder", "LogEncoder"}.Contains(encoderDict.type))
                 {
-                    foreach (var pair in encoderDict)
+                    foreach (string origKey in encoderDict.Keys)
                     {
-                        string key = pair.Key;
-                        object value = pair.Value;
+                        string key = origKey;
+                        object value = encoderDict[key];
                         if (key == "fieldname") key = "fieldName";
                         else if (key == "type") key = "encoderType";
                         else if (key == "name") continue;
 
                         if (key == "n")
                         {
-                            enc.n = new PermuteInt((int)encoderDict["w"] + 1, (int)encoderDict["w"] + 500);
+                            enc.n = new PermuteInt(encoderDict.w.Value + 1, (int)encoderDict.w.Value + 500);
                         }
                         else if (key == "runDelta")
                         {
-                            if (value != null && !encoderDict.ContainsKey("space"))
+                            if (value != null && !encoderDict.HasSpace())
                             {
-                                //enc.space = new PermuteChoices("delta", "absolute");
+                                // enc.space = new PermuteChoices("delta", "absolute");
                             }
-                            encoderDict.Remove("runDelta");
+                            encoderDict.runDelta = null;
                         }
                         else
                         {
+                            enc[key] = value;
                             // Set other props on encoder
-                            var prop = typeof(PermuteEncoder).GetProperty(key);
-                            prop.SetValue(enc, value);
+                            //var prop = typeof(PermuteEncoder).GetProperty(key);
+                            //prop.SetValue(enc, value);
                         }
                     }
                 }
                 // Category encoder    
-                else if (new[] { "SDRCategoryEncoder" }.Contains((string)encoderDict["type"]))
+                else if (new[] { "SDRCategoryEncoder" }.Contains(encoderDict.type))
                 {
-                    foreach (var pair in encoderDict)
+                    foreach (string origKey in encoderDict.Keys)
                     {
-                        string key = pair.Key;
-                        object value = pair.Value;
+                        string key = origKey;
+                        object value = encoderDict[key];
                         if (key == "fieldname") key = "fieldName";
                         else if (key == "type") key = "encoderType";
                         else if (key == "name") continue;
 
                         // Set other props on encoder
-                        var prop = typeof(PermuteEncoder).GetProperty(key);
-                        prop.SetValue(enc, value);
+                        enc[key] = value;
+                        //var prop = typeof(PermuteEncoder).GetProperty(key);
+                        //prop.SetValue(enc, value);
                     }
                 }
                 // DateTime encoder    
-                else if (new[] { "DateEncoder" }.Contains((string)encoderDict["type"]))
+                else if (new[] { "DateEncoder" }.Contains(encoderDict.type))
                 {
                     string encoderType = (string)encoderDict["type"];
-                    foreach (var pair in encoderDict)
+                    foreach (string origKey in encoderDict.Keys)
                     {
-                        string key = pair.Key;
-                        object value = pair.Value;
+                        string key = origKey;
+                        object value = encoderDict[key];
                         if (key == "fieldname") key = "fieldName";
                         else if (key == "name") continue;
 
@@ -1510,14 +1514,15 @@ namespace HTM.Net.Research.Swarming
                         else
                         {
                             // Set other props on encoder
-                            var prop = typeof(PermuteEncoder).GetProperty(key);
-                            prop.SetValue(enc, value);
+                            enc[key] = value;
+                            //var prop = typeof(PermuteEncoder).GetProperty(key);
+                            //prop.SetValue(enc, value);
                         }
                     }
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Unsupported encoder type '{(string)encoderDict["type"]}'");
+                    throw new InvalidOperationException($"Unsupported encoder type '{encoderDict.type}'");
                 }
             }
             return enc;
@@ -1608,6 +1613,7 @@ namespace HTM.Net.Research.Swarming
             if (prop.PropertyType.Namespace?.StartsWith("HTM.") == true)
             {
                 if (prop.PropertyType.Name.Equals("Map`2")) return false;
+                if (prop.Name.Equals("Item")) return false;
                 return true;
             }
             return false;
@@ -1760,7 +1766,7 @@ namespace HTM.Net.Research.Swarming
 
         }
 
-        
+
 
         public void updateConfigFromSubConfig(ConfigModelDescription config)
         {
@@ -1876,7 +1882,7 @@ namespace HTM.Net.Research.Swarming
     {
         [TokenReplace("$ENCODER_SPECS")]
         [ParameterMapping("fieldEncodings")]
-        public Map<string, Map<string, object>> encoders { get; set; }
+        public EncoderSettingsList encoders { get; set; }
         public int verbosity { get; set; }
         [TokenReplace("$SENSOR_AUTO_RESET")]
         public IDictionary<string, object> sensorAutoReset { get; set; }
@@ -1923,7 +1929,7 @@ namespace HTM.Net.Research.Swarming
                 // NOTE: Temporary fix
                 if (tpParams.minThreshold is PermuteVariable)
                 {
-                    tpParams.minThreshold = (int)((PermuteVariable) tpParams.minThreshold).getPosition();
+                    tpParams.minThreshold = (int)((PermuteVariable)tpParams.minThreshold).getPosition();
                 }
                 if (tpParams.activationThreshold is PermuteVariable)
                 {

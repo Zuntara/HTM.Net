@@ -1514,7 +1514,7 @@ namespace HTM.Net.Algorithms
             if (distanceNorm == 0.0)
             {
                 //L0Dist(x, y);
-
+                throw new NotImplementedException(distanceNorm.ToString());
             }
             else if (distanceNorm == 1.0)
             {

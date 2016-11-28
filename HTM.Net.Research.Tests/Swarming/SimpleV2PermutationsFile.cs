@@ -19,11 +19,11 @@ namespace HTM.Net.Research.Tests.Swarming
                     {
                         encoders = new Map<string, object>
                         {
-                            {"gym",new PermuteEncoder(fieldName: "gym", encoderClass: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
-                            {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderClass: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
-                            {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderClass: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})},
-                            {"consumption",new PermuteEncoder(fieldName: "consumption", encoderClass: "ScalarEncoder",kwArgs:new KWArgsModel{{"maxval", new PermuteInt(100, 300, 25)},{"n", new PermuteInt(13, 500, 20)},{"w", 7},{"minval", 0}})},
-                            {"address",new PermuteEncoder(fieldName: "address", encoderClass: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
+                            {"gym",new PermuteEncoder(fieldName: "gym", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
+                            {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
+                            {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})},
+                            {"consumption",new PermuteEncoder(fieldName: "consumption", encoderType: "ScalarEncoder",kwArgs:new KWArgsModel{{"maxval", new PermuteInt(100, 300, 25)},{"n", new PermuteInt(13, 500, 20)},{"w", 7},{"minval", 0}})},
+                            {"address",new PermuteEncoder(fieldName: "address", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
                         }
                     },
                     tpParams = new PermutationTemporalPoolerParams

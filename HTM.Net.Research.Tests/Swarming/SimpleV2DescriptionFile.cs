@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
@@ -30,12 +31,12 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     days = 0,
                     fields = new Map<string, object>
-                        {
-                            {"timestamp", "first"},
-                            {"gym", "first"},
-                            {"consumption", "mean"},
-                            {"address", "first"}
-                        },
+                    {
+                        {"timestamp", "first"},
+                        {"gym", "first"},
+                        {"consumption", "mean"},
+                        {"address", "first"}
+                    },
                     hours = 0,
                     microseconds = 0,
                     milliseconds = 0,
@@ -68,59 +69,59 @@ namespace HTM.Net.Research.Tests.Swarming
                         //     ],
                         //
                         // (value generated from DS_ENCODER_SCHEMA)
-                        encoders = new Map<string, Map<string, object>>
+                        encoders = new EncoderSettingsList
                         {
                             {
-                                "address", new Map<string, object>
+                                "address", new EncoderSetting
                                 {
-                                    {"fieldname", "address"},
-                                    {"n", 300},
-                                    {"name", "address"},
-                                    {"type", "SDRCategoryEncoder"},
-                                    {"w", 21},
-                                    {"categoryList", new List<string>() }
+                                    fieldName = "address",
+                                    n = 300,
+                                    name = "address",
+                                    type = "SDRCategoryEncoder",
+                                    w = 21,
+                                    categoryList = new List<string>()
                                 }
                             },
                             {
-                                "consumption", new Map<string, object>
+                                "consumption", new EncoderSetting
                                 {
-                                    {"clipInput", true},
-                                    {"fieldname", "consumption"},
-                                    {"maxval", 200},
-                                    {"minval", 0},
-                                    {"n", 1500},
-                                    {"name", "consumption"},
-                                    {"type", "ScalarEncoder"},
-                                    {"w", 21}
+                                    clipInput = true,
+                                    fieldName = "consumption",
+                                    maxVal = 200,
+                                    minVal = 0,
+                                    n = 1500,
+                                    name = "consumption",
+                                    type = "ScalarEncoder",
+                                    w = 21
                                 }
                             },
                             {
-                                "gym", new Map<string, object>
+                                "gym", new EncoderSetting
                                 {
-                                    {"fieldname", "gym"},
-                                    {"n", 300},
-                                    {"name", "gym"},
-                                    {"type", "SDRCategoryEncoder"},
-                                    {"w", 21},
-                                    {"categoryList", new List<string>() }
+                                    fieldName = "gym",
+                                    n = 300,
+                                    name = "gym",
+                                    type = "SDRCategoryEncoder",
+                                    w = 21,
+                                    categoryList = new List<string>()
                                 }
                             },
                             {
-                                "timestamp_dayOfWeek", new Map<string, object>
+                                "timestamp_dayOfWeek", new EncoderSetting
                                 {
-                                    {"dayOfWeek", new Tuple(7, 3)},
-                                    {"fieldname", "timestamp"},
-                                    {"name", "timestamp_dayOfWeek"},
-                                    {"type", "DateEncoder"}
+                                    dayOfWeek = new Tuple(7, 3),
+                                    fieldName = "timestamp",
+                                    name = "timestamp_dayOfWeek",
+                                    type = "DateEncoder"
                                 }
                             },
                             {
-                                "timestamp_timeOfDay", new Map<string, object>
+                                "timestamp_timeOfDay", new EncoderSetting
                                 {
-                                    {"fieldname", "timestamp"},
-                                    {"name", "timestamp_timeOfDay"},
-                                    {"timeOfDay", new Tuple(7, 8)},
-                                    {"type", "DateEncoder"}
+                                    fieldName = "timestamp",
+                                    name = "timestamp_timeOfDay",
+                                    timeOfDay = new Tuple(7, 8),
+                                    type = "DateEncoder"
                                 }
                             }
                         },
@@ -152,9 +153,9 @@ namespace HTM.Net.Research.Tests.Swarming
                         // Number of cell columns in the cortical region (same number for
                         // SP and TP)
                         // (see also tpNCellsPerCol)
-                        columnCount = new int[] { 2048 },
+                        columnCount = new int[] {2048},
 
-                        inputWidth = new int[] { 0 },
+                        inputWidth = new int[] {0},
 
                         // SP inhibition control (absolute value);
                         // Maximum number of active columns in the SP region"s output (when
@@ -201,12 +202,12 @@ namespace HTM.Net.Research.Tests.Swarming
                         // Number of cell columns in the cortical region (same number for
                         // SP and TP)
                         // (see also tpNCellsPerCol)
-                        columnCount = new[] { 2048 },
+                        columnCount = new[] {2048},
 
                         // The number of cells (i.e., states), allocated per column.
                         cellsPerColumn = 32,
 
-                        inputWidth = new[] { 2048 },
+                        inputWidth = new[] {2048},
 
                         seed = 1960,
 
@@ -280,7 +281,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                     clParams = new ClassifierParamsDescription
                     {
-                        regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
+                        regionName = typeof (CLAClassifier).AssemblyQualifiedName, // "CLAClassifierRegion",
 
                         // Classifier diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
@@ -292,7 +293,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
                         // This is set after the call to updateConfigFromSubConfig and is
                         // computed from the aggregationInfo and predictAheadTime.
-                        steps = new[] { 1 },
+                        steps = new[] {1},
                     },
 
                     trainSPNetOnlyIfRequested = false,
@@ -300,14 +301,14 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 inputRecordSchema = new[]
                 {
-                    new FieldMetaInfo( "address", FieldMetaType.String, SensorFlags.Blank) ,
-                    new FieldMetaInfo( "consumption", FieldMetaType.Float, SensorFlags.Blank),
-                    new FieldMetaInfo( "gym", FieldMetaType.String, SensorFlags.Blank),
-                    new FieldMetaInfo( "timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp)
+                    new FieldMetaInfo("address", FieldMetaType.String, SensorFlags.Blank),
+                    new FieldMetaInfo("consumption", FieldMetaType.Float, SensorFlags.Blank),
+                    new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank),
+                    new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp)
                 }
             };
             // end of config dictionary
-            
+
 
             // Adjust base config dictionary for any modifications if imported from a
             // sub-experiment

@@ -19,9 +19,9 @@ namespace HTM.Net.Research.Tests.Swarming
                     {
                         encoders = new Map<string, object>
                         {
-                            {"gym",new PermuteEncoder(fieldName: "gym", encoderClass: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
-                            {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderClass: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
-                            {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderClass: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})},
+                            {"gym",new PermuteEncoder(fieldName: "gym", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
+                            {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
+                            {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})},
                             {"_classifierInput", new Map<string,object>
                                 {
                                     { "fieldName", "consumption"},
@@ -36,7 +36,7 @@ namespace HTM.Net.Research.Tests.Swarming
                                         }
                                     }
                                 }},
-                            {"address",new PermuteEncoder(fieldName: "address", encoderClass: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
+                            {"address",new PermuteEncoder(fieldName: "address", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
                         }
                     },
                     tpParams = new PermutationTemporalPoolerParams

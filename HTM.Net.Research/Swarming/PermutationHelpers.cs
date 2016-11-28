@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
+using HTM.Net.Encoders;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -340,7 +341,7 @@ namespace HTM.Net.Research.Swarming
 
         }
 
-        public PermuteInt(double min, double max, double? stepSize = 1, double? inertia = null, double? cogRate = null,
+        public PermuteInt(int min, int max, int? stepSize = 1, double? inertia = null, double? cogRate = null,
                double? socRate = null)
             : base(min, max, stepSize, inertia, cogRate, socRate)
         {
@@ -599,19 +600,19 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public class PermuteEncoder : PermuteVariable
     {
-        public string name;
-        public string fieldName { get; set; }
+        public string name { get { return this["name"] as string; } set { this["name"] = value; } }
+        public string fieldName { get { return this["fieldName"] as string; } set { this["fieldName"] = value; } }
+        public string encoderType { get { return this["encoderType"] as string; } set { this["encoderType"] = value; } }
+        public bool classifierOnly { get { return (bool)(this["classifierOnly"] ?? false); } set { this["classifierOnly"] = value; } }
+        public object maxval { get { return this["maxval"]; } set { this["maxval"] = value; } } // int or permuteint
+        public object radius { get { return this["radius"]; } set { this["radius"] = value; } } // float or permutefloat
+        public object n { get { return this["n"]; } set { this["n"] = value; } } // int or permuteint
+        public object w { get { return this["w"]; } set { this["w"] = value; } } // int or permuteint
+        public object minval { get { return this["minval"]; } set { this["minval"] = value; } } // int or permuteint
+        public bool clipInput { get { return (bool)(this["clipInput"] ?? false); } set { this["clipInput"] = value; } }
+
         public KWArgsModel kwArgs { get; set; }
 
-        public string encoderType { get; set; }
-
-        public bool classifierOnly { get { return (bool)kwArgs.Get("classifierOnly", false); } set { kwArgs["classifierOnly"] = value; } }
-        public object maxval { get { return kwArgs.Get("maxval", null); } set { kwArgs["maxval"] = value; } } // int or permuteint
-        public object radius { get { return kwArgs.Get("radius", null); } set { kwArgs["radius"] = value; } } // float or permutefloat
-        public object n { get { return kwArgs.Get("n", null); } set { kwArgs["n"] = value; } } // int or permuteint
-        public object w { get { return kwArgs.Get("w", null); } set { kwArgs["w"] = value; } } // int or permuteint
-        public object minval { get { return kwArgs.Get("minxval", null); } set { kwArgs["minval"] = value; } } // int or permuteint
-        public bool clipInput { get { return (bool)kwArgs.Get("clipInput", false); } set { kwArgs["clipInput"] = value; } }
 
         [Obsolete("Don' use")]
         public PermuteEncoder()
@@ -619,18 +620,18 @@ namespace HTM.Net.Research.Swarming
             kwArgs = new KWArgsModel();
         }
 
-        public PermuteEncoder(string fieldName, string encoderClass, string name = null, KWArgsModel kwArgs = null)
+        public PermuteEncoder(string fieldName, string encoderType, string name = null, KWArgsModel kwArgs = null)
         {
+            // Possible values in kwArgs include: w, n, minval, maxval, etc.
+            this.kwArgs = kwArgs ?? new KWArgsModel();
+
             this.fieldName = fieldName;
             if (name == null)
             {
                 name = fieldName;
             }
             this.name = name;
-            this.encoderType = encoderClass;
-
-            // Possible values in kwArgs include: w, n, minval, maxval, etc.
-            this.kwArgs = kwArgs ?? new KWArgsModel();
+            this.encoderType = encoderType;
         }
 
         #region Overrides of Object
@@ -652,8 +653,17 @@ namespace HTM.Net.Research.Swarming
 
         public object this[string key]
         {
-            get { return kwArgs[key]; }
-            set { kwArgs[key] = value; }
+            get
+            {
+                if(kwArgs.ContainsKey(key)) return kwArgs[key];
+                if (kwArgs.ContainsKey(key.ToLower())) return kwArgs[key.ToLower()];
+                return null;
+            }
+            set
+            {
+                if(kwArgs.ContainsKey(key)) kwArgs[key] = value;
+                else kwArgs[key.ToLower()] = value;
+            }
         }
 
         ///// <summary>
@@ -748,11 +758,11 @@ namespace HTM.Net.Research.Swarming
         /// permuted over.
         /// </param>
         /// <returns></returns>
-        public Map<string, object> getDict(string encoderName, Map<string, object> flattenedChosenValues)
+        public EncoderSetting getDict(string encoderName, Map<string, object> flattenedChosenValues)
         {
-            Map<string, object> encoder = new Map<string, object>();
-            encoder.Add("fieldname", this.fieldName);
-            encoder.Add("name", this.name);
+            EncoderSetting encoder = new EncoderSetting();
+            encoder.fieldName = this.fieldName;
+            encoder.name= this.name;
 
             // Get the position of each encoder argument
             //for (encoderArg, value in this.kwArgs.iteritems())
@@ -779,17 +789,17 @@ namespace HTM.Net.Research.Swarming
             {
                 // (encoder['type'], argName) = this.encoderClass.Split('.');
                 string[] splitted = this.encoderType.Split('.');
-                encoder["type"] = splitted[0];
+                encoder.type = splitted[0];
                 string argName = splitted[1];
 
-                Tuple argValue = new Tuple(encoder.Get("w", this.w), encoder.Get("radius", this.radius));
+                Tuple argValue = new Tuple(encoder.w.GetValueOrDefault((int) this.w), encoder.radius.GetValueOrDefault((double) this.radius));
                 encoder[argName] = argValue;
-                encoder.Remove("w");
-                encoder.Remove("radius");
+                encoder.w = null;
+                encoder.radius = null;
             }
             else
             {
-                encoder["type"] = this.encoderType;
+                encoder.type = this.encoderType;
             }
 
             //var args = new KWArgsModel();
@@ -815,8 +825,8 @@ namespace HTM.Net.Research.Swarming
     }
 
     [Serializable]
-    [JsonConverter(typeof(KwArgsJsonConverter))]
-    public class KWArgsModel : Dictionary<string, object>
+    //[JsonConverter(typeof(KwArgsJsonConverter))]
+    public class KWArgsModel : Map<string, object>
     {
         public KWArgsModel()
         {

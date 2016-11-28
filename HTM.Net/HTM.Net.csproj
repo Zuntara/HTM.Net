@@ -157,6 +157,7 @@
     <Compile Include="Encoders\SDRPassThroughEncoder.cs" />
     <Compile Include="Encoders\SparsePassThroughEncoder.cs" />
     <Compile Include="Util\SparseByteArray.cs" />
+    <Compile Include="Util\StringExtentions.cs" />
     <Compile Include="Util\Topology.cs" />
     <Compile Include="Util\TypeConverter.cs" />
     <Compile Include="Monitor\ComputeDecorator.cs" />

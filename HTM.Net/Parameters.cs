@@ -101,7 +101,7 @@ namespace HTM.Net
             defaultEncoderParams.Add(KEY.FIELD_NAME, "UNSET");
             defaultEncoderParams.Add(KEY.FIELD_TYPE, "int");
             defaultEncoderParams.Add(KEY.ENCODER, "ScalarEncoder");
-            defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
+            defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new EncoderSettingsList());
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
 

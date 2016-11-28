@@ -532,7 +532,7 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
-            Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
+            EncoderSettingsList settings = NetworkTestHarness.SetupMap(
                 null, // map
                 8,    // n
                 0,    // w
@@ -544,7 +544,7 @@ namespace HTM.Net.Tests.Network
                 null,                 // clip
                 true,         // forced
                 "dayOfWeek",          // fieldName
-                "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
+                FieldMetaType.DenseArray,               // fieldType (dense array as opposed to sparse array or "sarr")
                 "SDRPassThroughEncoder"); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
@@ -738,23 +738,23 @@ namespace HTM.Net.Tests.Network
 
         private Parameters GetTestEncoderParams()
         {
-            Map<String, Map<String, Object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                 null,
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", FieldMetaType.DateTime, "DateEncoder");
 
             fieldEncodings = SetupMap(
                 fieldEncodings,
                 25,
                 3,
                 0, 0, 0, 0.1, null, null, null,
-                "consumption", "float", "RandomDistributedScalarEncoder");
+                "consumption", FieldMetaType.Float, "RandomDistributedScalarEncoder");
 
-            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
-            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
-            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
+            fieldEncodings.Get("timestamp").dayOfWeek= new Tuple(1, 1.0); // Day of week
+            fieldEncodings.Get("timestamp").timeOfDay = new Tuple(5, 4.0); // Time of day
+            fieldEncodings.Get("timestamp").formatPattern = "MM/dd/YY HH:mm";
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -765,7 +765,7 @@ namespace HTM.Net.Tests.Network
         private EncoderSettingsList SetupMap(
             EncoderSettingsList map,
             int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-            bool? clip, bool? forced, String fieldName, String fieldType, String encoderType)
+            bool? clip, bool? forced, String fieldName, FieldMetaType? fieldType, String encoderType)
         {
 
             if (map == null)
@@ -778,19 +778,19 @@ namespace HTM.Net.Tests.Network
                 map.Add(fieldName, inner = new EncoderSetting());
             }
 
-            inner.Add("n", n);
-            inner.Add("w", w);
-            inner.Add("minVal", min);
-            inner.Add("maxVal", max);
-            inner.Add("radius", radius);
-            inner.Add("resolution", resolution);
+            inner.n = n;
+            inner.w = w;
+            inner.minVal = min;
+            inner.maxVal = max;
+            inner.radius = radius;
+            inner.resolution = resolution;
 
-            if (periodic != null) inner.Add("periodic", periodic);
-            if (clip != null) inner.Add("clip", clip);
-            if (forced != null) inner.Add("forced", forced);
-            if (fieldName != null) inner.Add("fieldName", fieldName);
-            if (fieldType != null) inner.Add("fieldType", fieldType);
-            if (encoderType != null) inner.Add("encoderType", encoderType);
+            if (periodic != null) inner.periodic = periodic;
+            if (clip != null) inner.clipInput = clip;
+            if (forced != null) inner.forced = forced;
+            if (fieldName != null) inner.fieldName = fieldName;
+            if (fieldType != null) inner.fieldType = fieldType;
+            if (encoderType != null) inner.encoderType = encoderType;
 
             return map;
         }
@@ -809,7 +809,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
 
-            Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
+            EncoderSettingsList settings = NetworkTestHarness.SetupMap(
                 null, // map
                 8,   // n
                 0,    // w
@@ -821,7 +821,7 @@ namespace HTM.Net.Tests.Network
                 null,                 // clip
                 true,         // forced
                 "dayOfWeek",          // fieldName
-                "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
+                FieldMetaType.DenseArray,               // fieldType (dense array as opposed to sparse array or "sarr")
                 "SDRPassThroughEncoder"); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
@@ -904,7 +904,7 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = GetParameters();
 
-            Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
+            EncoderSettingsList settings = NetworkTestHarness.SetupMap(
                 null, // map
                 20,   // n
                 0,    // w
@@ -916,7 +916,7 @@ namespace HTM.Net.Tests.Network
                 null,                 // clip
                 true,         // forced
                 "dayOfWeek",          // fieldName
-                "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
+                FieldMetaType.DenseArray,               // fieldType (dense array as opposed to sparse array or "sarr")
                 "SDRPassThroughEncoder"); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);

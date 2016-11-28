@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
+using HTM.Net.Encoders;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
@@ -122,17 +123,17 @@ namespace HTM.Net.Research.Swarming
                 foreach (var encoderDict in cloneDescr.modelConfig.modelParams.sensorParams.encoders)
                 {
                     string encoderName = encoderDict.Key;
-                    Map<string, object> encoderValues = encoderDict.Value;
+                    EncoderSetting encoderValues = encoderDict.Value;
 
-                    var permutedEncoder = (Map<string, object>)@params.modelParams.sensorParams.encoders[encoderName];
+                    var permutedEncoder = (EncoderSetting)@params.modelParams.sensorParams.encoders[encoderName];
                     if (permutedEncoder == null) continue;
-                    foreach (var pair in permutedEncoder)
+                    foreach (var key in permutedEncoder.Keys)
                     {
                         // overload permuted encoder values when they are there
-                        if (pair.Value != null)
+                        if (permutedEncoder[key] != null)
                         {
-                            Debug.WriteLine($">> sensorParams.{pair.Key} = {pair.Value}");
-                            encoderValues[pair.Key] = pair.Value;
+                            Debug.WriteLine($">> sensorParams.{key} = {permutedEncoder[key]}");
+                            encoderValues[key] = permutedEncoder[key];
                         }
                     }
                 }
@@ -426,13 +427,15 @@ namespace HTM.Net.Research.Swarming
             {
                 if (property.Name == "Item" && property.GetGetMethod().GetParameters().Any())
                     continue;
+                if (property.Name == "Keys" || property.Name == "AllKeys")
+                    continue;
                 List<string> keys = new List<string>(currentKeys);
                 keys.Add(property.Name);
                 var value = property.GetValue(d);
                 var converted = f(value, keys.ToArray());
-                property.SetValue(d, converted);
+                property.SetValue(d, TypeConverter.Convert(converted, property.PropertyType));
                 var rcObj = rCopy(converted, f, discardNoneKeys, deepCopy, keys.ToArray());
-                property.SetValue(d, rcObj);
+                property.SetValue(d, TypeConverter.Convert(rcObj, property.PropertyType));
             }
 
             //newDict = { };
@@ -673,7 +676,7 @@ namespace HTM.Net.Research.Swarming
                             {
                                 "", new PermuteEncoder(
                                     fieldName: "consumption",
-                                    encoderClass: "ScalarEncoder",
+                                    encoderType: "ScalarEncoder",
                                     kwArgs: new KWArgsModel
                                     {
                                         {"maxval", new PermuteInt(100, 300, 1)},

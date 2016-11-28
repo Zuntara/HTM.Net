@@ -1157,7 +1157,7 @@ namespace HTM.Net.Research.opf
             //sensorLayer.Add(sensor);
 
             //enabledEncoders = copy.deepcopy(sensorParams['encoders']);
-            Map<string, Map<string, object>> enabledEncoders = new Map<string, Map<string, object>>(_modelConfig.modelParams.sensorParams.encoders);
+            EncoderSettingsList enabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
             List<string> enabledEncodersToRemove = new List<string>();
 
             foreach (var pair in enabledEncoders)
@@ -1167,8 +1167,8 @@ namespace HTM.Net.Research.opf
 
                 if (@params != null)
                 {
-                    bool classifierOnly = (bool)@params.Get("classifierOnly", false);
-                    @params.Remove("classifierOnly");
+                    bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
+                    @params.classifierOnly = null;
                     if (classifierOnly)
                     {
                         enabledEncodersToRemove.Add(name);
@@ -1176,12 +1176,12 @@ namespace HTM.Net.Research.opf
                     }
                 }
             }
-            enabledEncoders = new Map<string, Map<string, object>>(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+            enabledEncoders = new EncoderSettingsList(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
             // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
             // SP or TP Regions. This is to handle the case where the predicted field
             // is not fed through the SP/TP. We typically just have one of these now.
-            Map<string, Map<string, object>> disabledEncoders = new Map<string, Map<string, object>>(_modelConfig.modelParams.sensorParams.encoders);
+            EncoderSettingsList disabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
             //disabledEncoders = copy.deepcopy(sensorParams['encoders']);
             List<string> disabledEncodersToRemove = new List<string>();
             foreach (var pair in disabledEncoders)
@@ -1195,15 +1195,15 @@ namespace HTM.Net.Research.opf
                 }
                 else
                 {
-                    bool classifierOnly = (bool)@params.Get("classifierOnly", false);
-                    @params.Remove("classifierOnly");
+                    bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
+                    @params.classifierOnly = null;
                     if (!classifierOnly)
                     {
                         disabledEncodersToRemove.Add(name);
                     }
                 }
             }
-            disabledEncoders = new Map<string, Map<string, object>>(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+            disabledEncoders = new EncoderSettingsList(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
             MultiEncoder encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // enabledEncoders
             MultiEncoderAssembler.Assemble(encoder, enabledEncoders);
@@ -1377,7 +1377,7 @@ namespace HTM.Net.Research.opf
 
             // --------------------------------------------------
             // Define encoders for sensor
-            Map<string, Map<string, object>> enabledEncoders = new Map<string, Map<string, object>>(_modelConfig.modelParams.sensorParams.encoders);
+            EncoderSettingsList enabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
             List<string> enabledEncodersToRemove = new List<string>();
 
             foreach (var pair in enabledEncoders)
@@ -1387,8 +1387,8 @@ namespace HTM.Net.Research.opf
 
                 if (@params != null)
                 {
-                    bool classifierOnly = (bool)@params.Get("classifierOnly", false);
-                    @params.Remove("classifierOnly");
+                    bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
+                    @params.classifierOnly = null;
                     if (classifierOnly)
                     {
                         enabledEncodersToRemove.Add(name);
@@ -1396,12 +1396,12 @@ namespace HTM.Net.Research.opf
                     }
                 }
             }
-            enabledEncoders = new Map<string, Map<string, object>>(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+            enabledEncoders = new EncoderSettingsList(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
             // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
             // SP or TP Regions. This is to handle the case where the predicted field
             // is not fed through the SP/TP. We typically just have one of these now.
-            Map<string, Map<string, object>> disabledEncoders = new Map<string, Map<string, object>>(_modelConfig.modelParams.sensorParams.encoders);
+            EncoderSettingsList disabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
             //disabledEncoders = copy.deepcopy(sensorParams['encoders']);
             List<string> disabledEncodersToRemove = new List<string>();
             foreach (var pair in disabledEncoders)
@@ -1415,15 +1415,15 @@ namespace HTM.Net.Research.opf
                 }
                 else
                 {
-                    bool classifierOnly = (bool)@params.Get("classifierOnly", false);
-                    @params.Remove("classifierOnly");
+                    bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
+                    @params.classifierOnly = null;
                     if (!classifierOnly)
                     {
                         disabledEncodersToRemove.Add(name);
                     }
                 }
             }
-            disabledEncoders = new Map<string, Map<string, object>>(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+            disabledEncoders = new EncoderSettingsList(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
             MultiEncoder encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // enabledEncoders
             MultiEncoderAssembler.Assemble(encoder, enabledEncoders);
