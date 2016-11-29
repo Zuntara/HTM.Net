@@ -37,7 +37,7 @@ namespace HTM.Net.Research.Swarming
         private ulong? _modelID;
         private uint? _jobID;
         private string _predictedField;
-        private IDescription _experimentDir;
+        private ClaExperimentParameters _experimentDir;
         private string[] _reportKeyPatterns;
         private string _optimizeKeyPattern;
         private BaseClientJobDao _jobsDAO;
@@ -46,7 +46,7 @@ namespace HTM.Net.Research.Swarming
         private bool _isMaturityEnabled;
         private string _optimizedMetricLabel;
         private string _cmpReason;
-        private ControlModelDescription _modelControl;
+        private ClaExperimentParameters _modelControl; // ControlModelDescription
         private opf.Model _model;
         private MetricsManager __metricMgr;
         private BatchedCsvStream<string[]> _inputSource;
@@ -76,7 +76,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="modelCheckpointGUID">A persistent, globally-unique identifier for constructing the model checkpoint key. If None, then don't bother creating a model checkpoint.</param>
         /// <param name="predictionCacheMaxRecords">Maximum number of records for the prediction output cache.
         /// Pass None for default value.</param>
-        public OpfModelRunner(ulong? modelID, uint? jobID, string predictedField, IDescription experimentDir,
+        public OpfModelRunner(ulong? modelID, uint? jobID, string predictedField, ClaExperimentParameters experimentDir,
                string[] reportKeyPatterns, string optimizeKeyPattern, BaseClientJobDao jobsDAO,
                string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
         {
@@ -188,12 +188,12 @@ namespace HTM.Net.Research.Swarming
         public ModelCompletionStatus run()
         {
             // Load experiments description module
-            var modelDescription = _experimentDir.modelConfig;
-            this._modelControl = _experimentDir.control;
+            var modelDescription = _experimentDir;
+            this._modelControl = _experimentDir;
 
             // -----------------------------------------------------------------------
             // Create the input data stream for this task
-            var streamDef = this._modelControl.dataset;
+            var streamDef = this._modelControl.Control.DatasetSpec;
 
             string fileName = streamDef.streams[0].source;
 
@@ -208,15 +208,15 @@ namespace HTM.Net.Research.Swarming
             this._model = ModelFactory.Create(modelDescription);
             this._model.setFieldStatistics(fieldStats);
             this._model.enableLearning();
-            this._model.enableInference(this._modelControl.inferenceArgs);
+            this._model.enableInference(this._modelControl.Control.InferenceArgs);
 
             // -----------------------------------------------------------------------
             // Instantiate the metrics
-            this.__metricMgr = new MetricsManager(this._modelControl.metrics,
+            this.__metricMgr = new MetricsManager(this._modelControl.Control.Metrics,
                                               this._model.getFieldInfo(),
                                               this._model.getInferenceType());
 
-            this.__loggedMetricPatterns = this._modelControl.loggedMetrics ?? new string[0];
+            this.__loggedMetricPatterns = this._modelControl.Control.LoggedMetrics ?? new string[0];
 
             this._optimizedMetricLabel = this.__getOptimizedMetricLabel();
             this._reportMetricLabels = ArrayUtils.MatchPatterns(this._reportKeyPatterns, this._getMetricLabels());
@@ -228,12 +228,12 @@ namespace HTM.Net.Research.Swarming
 
             // -----------------------------------------------------------------------
             // Create our top-level loop-control iterator
-            int numIters = this._modelControl.iterationCount.GetValueOrDefault(-1);
+            int numIters = this._modelControl.Control.IterationCount.GetValueOrDefault(-1);
 
             // Are we asked to turn off learning for a certain // of iterations near the
             //  end?
             int? learningOffAt = null;
-            int iterationCountInferOnly = this._modelControl.iterationCountInferOnly.GetValueOrDefault();
+            int iterationCountInferOnly = this._modelControl.Control.IterationCountInferOnly.GetValueOrDefault();
             if (iterationCountInferOnly == -1)
             {
                 this._model.disableLearning();

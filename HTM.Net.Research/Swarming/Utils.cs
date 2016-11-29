@@ -86,7 +86,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="predictionCacheMaxRecords"></param>
         /// <returns>completion reason and msg</returns>
         public static ModelCompletionStatus runModelGivenBaseAndParams(ulong? modelID, uint? jobID,
-            IDescription baseDescription, PermutationModelParameters @params,
+            ClaExperimentParameters baseDescription, PermutationModelParameters @params,
             string predictedField, string[] reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
             string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
         {
@@ -106,31 +106,32 @@ namespace HTM.Net.Research.Swarming
 
                 string expDescription = Json.Serialize(@params);
 
-                var cloneDescr = baseDescription.Clone();
+                var cloneDescr = baseDescription.Copy();
 
                 // Override parameter values
                 if (@params?.modelParams?.clParams?.alpha != null)
                 {
-                    cloneDescr.modelConfig.modelParams.clParams.alpha = TypeConverter.Convert<double>(@params.modelParams.clParams.alpha);
+                    cloneDescr.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 
+                        TypeConverter.Convert<double>(@params.modelParams.clParams.alpha));
                 }
                 if (@params?.modelParams?.spParams?.synPermInactiveDec != null)
                 {
-                    cloneDescr.modelConfig.modelParams.spParams.synPermInactiveDec =
-                        TypeConverter.Convert<double>(@params.modelParams.spParams.synPermInactiveDec);
+                    cloneDescr.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC,
+                        TypeConverter.Convert<double>(@params.modelParams.spParams.synPermInactiveDec));
                 }
-                cloneDescr.modelConfig.modelParams.tpParams.activationThreshold =
-                    TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold);
-                cloneDescr.modelConfig.modelParams.tpParams.minThreshold =
-                    TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold);
-                cloneDescr.modelConfig.modelParams.tpParams.pamLength =
-                    TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
+                cloneDescr.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD,
+                        TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold));
+                cloneDescr.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD,
+                        TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold));
+                //cloneDescr.SetParameterByKey(Parameters.KEY.PAM_LENGTH,
+                //        TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
 
                 Debug.WriteLine($">> clParams.alpha = {@params?.modelParams?.clParams?.alpha}");
                 Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.tpParams.activationThreshold}");
                 Debug.WriteLine($">> tpParams.minThreshold = {@params.modelParams.tpParams.minThreshold}");
                 Debug.WriteLine($">> tpParams.pamLength = {@params.modelParams.tpParams.pamLength}");
 
-                foreach (var encoderDict in cloneDescr.modelConfig.modelParams.sensorParams.encoders)
+                foreach (var encoderDict in cloneDescr.GetEncoderSettings())
                 {
                     string encoderName = encoderDict.Key;
                     EncoderSetting encoderValues = encoderDict.Value;

@@ -744,7 +744,8 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
                 // fieldStats come from, anyway?
 
                 //ModelParams modelParams = modelDefinition.modelParams;
-                _model = ModelFactory.Create(modelConfig: modelParams.ModelConfig);
+                //_model = ModelFactory.Create(modelConfig: modelParams.ModelConfig);
+                _model = null;// let it crash, look at line above, description mechanism has been changed
                 _model.enableLearning();
                 _model.enableInference(modelParams.InferenceArgs);
             }

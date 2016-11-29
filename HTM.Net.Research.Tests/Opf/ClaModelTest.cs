@@ -165,7 +165,7 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestTemporalAnomalyModelFactory()
         {
-            IDescription exp = new TemporalAnomalyModelDescription();
+            ClaExperimentParameters exp = new TemporalAnomalyModelDescriptionParams();
 
             var data = new List<Tuple<Map<string, object>, string[]>>
             {
@@ -201,9 +201,9 @@ namespace HTM.Net.Research.Tests.Opf
                 }, new[] {"2", "05/12/2013", "7.0"}),
             };
 
-            var model = ModelFactory.Create(exp.modelConfig);
+            var model = ModelFactory.Create(exp);
             model.enableLearning();
-            model.enableInference(exp.control.inferenceArgs);
+            model.enableInference(exp.Control.InferenceArgs);
 
             foreach (var row in data)
             {
@@ -358,6 +358,121 @@ namespace HTM.Net.Research.Tests.Opf
             }
 
             #endregion
+        }
+
+        class TemporalAnomalyModelDescriptionParams : ClaExperimentParameters
+        {
+            public TemporalAnomalyModelDescriptionParams()
+            {
+                InitializeParameters();
+            }
+
+            private void InitializeParameters()
+            {
+                // Properties
+                SetProperties();
+
+                // Spatial defaults
+                SetParameterByKey(KEY.SP_VERBOSITY, 0);
+                SetParameterByKey(KEY.GLOBAL_INHIBITION, true);
+                SetParameterByKey(KEY.POTENTIAL_PCT, 0.8);
+                SetParameterByKey(KEY.COLUMN_DIMENSIONS, new[] { 2048 });
+                SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 40.0);
+                SetParameterByKey(KEY.SEED_SP, 1956);
+                SetParameterByKey(KEY.RANDOM_SP, new XorshiftRandom((int)paramMap[KEY.SEED_SP]));
+                SetParameterByKey(KEY.SYN_PERM_ACTIVE_INC, 0.0015);
+                SetParameterByKey(KEY.SYN_PERM_CONNECTED, 0.1);
+                SetParameterByKey(KEY.SYN_PERM_INACTIVE_DEC, 0.0005);
+                SetParameterByKey(KEY.MAX_BOOST, 1.0);
+                // Temporal defaults
+                SetParameterByKey(KEY.TM_VERBOSITY, 0);
+                SetParameterByKey(KEY.CELLS_PER_COLUMN, 32);
+                SetParameterByKey(KEY.INPUT_DIMENSIONS, new[] { 2048 });
+                SetParameterByKey(KEY.SEED_TM, 1960);
+                SetParameterByKey(KEY.RANDOM_TM, new XorshiftRandom((int)paramMap[KEY.SEED_TM]));
+                SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
+                SetParameterByKey(KEY.MAX_SYNAPSES_PER_SEGMENT, 32);
+                SetParameterByKey(KEY.MAX_SEGMENTS_PER_CELL, 128);
+                SetParameterByKey(KEY.INITIAL_PERMANENCE, 0.21);
+                SetParameterByKey(KEY.PERMANENCE_INCREMENT, 0.1);
+                SetParameterByKey(KEY.PERMANENCE_DECREMENT, 0.1);
+                //SetParameterByKey(KEY.GLOBAL_DECAY, 0);
+                //SetParameterByKey(KEY.MAX_AGE, 0);
+                SetParameterByKey(KEY.MIN_THRESHOLD, 10);
+                SetParameterByKey(KEY.ACTIVATION_THRESHOLD, 13);
+                //SetParameterByKey(KEY.PAM_LENGTH, 1);
+
+                // Classifier params
+                SetParameterByKey(KEY.CLASSIFIER_ALPHA, 0.035828933612158);
+                SetParameterByKey(KEY.AUTO_CLASSIFY, false);
+                SetParameterByKey(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
+                SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 1 });
+
+                SetParameterByKey(KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
+            }
+
+            private void SetProperties()
+            {
+                AggregationInfo = new AggregationSettings
+                {
+                    days = 0,
+                    fields = new Map<string, object>(),
+                    hours = 0,
+                    microseconds = 0,
+                    milliseconds = 0,
+                    minutes = 0,
+                    months = 0,
+                    seconds = 0,
+                    weeks = 0,
+                    years = 0
+                };
+
+                EnableClassification = false;
+                EnableSpatialPooler = true;
+                EnableTemporalMemory = true;
+
+                InferenceType = InferenceType.TemporalAnomaly;
+                Control.InputRecordSchema = new[]
+                {
+                    new FieldMetaInfo("c0", FieldMetaType.DateTime, SensorFlags.Timestamp),
+                    new FieldMetaInfo("c1", FieldMetaType.Float, SensorFlags.Blank)
+                };
+                Control.InferenceArgs = new InferenceArgsDescription
+                {
+                    inputPredictedField = InputPredictedField.Auto,
+                    predictedField = "c1",
+                    predictionSteps = new[] {1},
+                };
+
+                SetParameterByKey(KEY.FIELD_ENCODING_MAP, new EncoderSettingsList
+                {
+                    {
+                        "c0_dayOfWeek", null
+                    },
+                    {
+                        "c0_timeOfDay", new EncoderSetting
+                        {
+                            fieldName = "c0",
+                            name = "c0",
+                            timeOfDay = new Tuple(21, 9.49122334747737),
+                            type = "DateEncoder"
+                        }
+                    },
+                    {
+                        "c0_weekend", null
+                    },
+                    {
+                        "c1", new EncoderSetting
+                        {
+                            fieldName = "c1",
+                            name = "c1",
+                            resolution = 0.8771929824561403,
+                            // seed=  42,
+                            type = "RandomDistributedScalarEncoder"
+                        }
+                    },
+                });
+            }
         }
 
         [TestMethod]

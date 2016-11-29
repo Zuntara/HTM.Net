@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -13,6 +14,8 @@ using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net
@@ -39,7 +42,7 @@ namespace HTM.Net
 
             /////////// Universal Parameters ///////////
 
-            
+
             /////////// Temporal Memory Parameters ///////////
             ParametersMap defaultTemporalParams = new ParametersMap();
             defaultTemporalParams.Add(KEY.COLUMN_DIMENSIONS, new int[] { 2048 });
@@ -174,7 +177,7 @@ namespace HTM.Net
             /// Seed for random number generator
             /// </summary>
             public static readonly KEY SEED_TM = new KEY("seedTM", typeof(int));
-            public static readonly KEY SEED_SP= new KEY("seedSP", typeof(int));
+            public static readonly KEY SEED_SP = new KEY("seedSP", typeof(int));
 
             /////////// Temporal Memory Parameters ///////////
             /**
@@ -610,7 +613,8 @@ namespace HTM.Net
         /// Save guard decorator around params map
         /// </summary>
         [Serializable]
-        public class ParametersMap : Dictionary<KEY, object>
+        [JsonConverter(typeof(ParametersMapJsonConverter))]
+        public class ParametersMap : Map<KEY, object>
         {
             /**
              * Default serialvers
@@ -628,7 +632,7 @@ namespace HTM.Net
 
             }
 
-            public new void Add(KEY key, object value)
+            public override void Add(KEY key, object value)
             {
                 if (value != null && !(value is PermuteVariable))
                 {
@@ -664,7 +668,8 @@ namespace HTM.Net
         /// <summary>
         /// Map of parameters to their values
         /// </summary>
-        protected readonly ParametersMap paramMap = new ParametersMap();
+        [JsonProperty]
+        protected ParametersMap paramMap = new ParametersMap();
 
         //TODO apply from container to parameters
 
@@ -1506,6 +1511,80 @@ namespace HTM.Net
             }
             return false;
         }
+    }
+
+    public class ParametersMapJsonConverter : JsonConverter
+    {
+
+        public override bool CanWrite { get { return false; } }
+
+        #region Overrides of JsonConverter
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            Debug.WriteLine("Writing json");
+            serializer.Serialize(writer, value);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            Debug.WriteLine("Reading json (ParametersMap)");
+
+            var jObj = JObject.Load(reader);
+
+            Parameters.ParametersMap map = new Parameters.ParametersMap();
+
+            foreach (KeyValuePair<string, JToken> pair in jObj)
+            {
+                var key = Parameters.KEY.GetKeyByFieldName(pair.Key);
+                if (key != null)
+                {
+                    if (!pair.Value.HasValues)
+                    {
+                        if (pair.Value.Type == JTokenType.String && key.GetFieldType() != typeof (string))
+                        {
+                            // type def?
+                            string type = pair.Value.Value<string>();
+                            Type retVal = Type.GetType(type);
+                            map.Add(key, retVal);
+                        }
+                        else if(pair.Value.Type != JTokenType.Null)
+                        {
+                            // primitive
+                            map.Add(key, pair.Value.ToObject(key.GetFieldType()));
+                        }
+                    }
+                    else
+                    {
+                        // Sub-type
+                        //string stype = pair.Value.First.First.Value<string>();
+                        //object retVal = Activator.CreateInstance(Type.GetType(stype));
+
+                        JsonReader reader3 = new JTokenReader(pair.Value);
+                        var o = serializer.Deserialize(reader3);
+
+                        map.Add(key, o);
+                    }
+                }
+            }
+
+            //object retVal = null;
+            //string type = jObj.Value<string>("Type");
+            //retVal = Activator.CreateInstance(Type.GetType(type));
+
+            //JsonReader reader2 = new JTokenReader(jObj);
+            //serializer.Populate(reader2, retVal);
+
+            return map;
+        }
+
+        public override bool CanConvert(Type objectType)
+        {
+            Debug.WriteLine("CanConvert json");
+            return typeof(Parameters.ParametersMap).IsAssignableFrom(objectType);
+        }
+
+        #endregion
     }
 
     public class ParameterMapping : Attribute

@@ -13,6 +13,11 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
+    public class SimpleV2DescriptionParameters : ClaExperimentParameters
+    {
+        
+    }
+
     public class SimpleV2DescriptionFile : BaseDescription
     {
         public SimpleV2DescriptionFile()

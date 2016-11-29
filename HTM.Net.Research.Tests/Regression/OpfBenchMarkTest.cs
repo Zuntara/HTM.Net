@@ -147,9 +147,9 @@ namespace HTM.Net.Research.Tests.Regression
 
             // Convert config to parameters
             // set encoders in place
-            var description = new ExpGenerator(config).Generate().Item1;
+            var description = new ExpGenerator(config).GenerateParams().Item1;
 
-            Parameters p = description.GetParameters();
+            Parameters p = description;
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -203,9 +203,9 @@ namespace HTM.Net.Research.Tests.Regression
 
             // Convert config to parameters
             // set encoders in place
-            var description = new ExpGenerator(config).Generate().Item1;
+            var description = new ExpGenerator(config).GenerateParams().Item1;
 
-            Parameters p = description.GetParameters();
+            Parameters p = description;
 
             p.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
             p.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.5);
@@ -295,9 +295,9 @@ namespace HTM.Net.Research.Tests.Regression
             };
             def.inferenceArgs.predictedField = "Sine";
 
-            var description = new ExpGenerator(def).Generate().Item1;
+            var description = new ExpGenerator(def).GenerateParams().Item1;
 
-            Parameters p = description.GetParameters();
+            Parameters p = description;
 
             Assert.IsNotNull(p);
 

@@ -149,7 +149,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// </param>
         /// <param name="maxRecords"></param>
         /// <returns></returns>
-        protected Map<string, object> _generateHSJobParams(Tuple<BaseDescription, BasePermutations> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
+        protected Map<string, object> _generateHSJobParams(Tuple<ClaExperimentParameters, BasePermutations> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
                            int? predictionCacheMaxRecords = null, string dataPath = null, int? maxRecords = 10)
         {
             Map<string, object> jobParams = null;
@@ -405,7 +405,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// the prediction cache.</param>
         /// <param name="kwargs"></param>
         /// <returns>(jobID, jobInfo, resultsInfoForAllModels, metricResults, minErrScore)</returns>
-        public PermutationsLocalResult RunPermutations(Tuple<BaseDescription, BasePermutations> expDirectory, string hsImp = "v2", int? maxModels = 2,
+        public PermutationsLocalResult RunPermutations(Tuple<ClaExperimentParameters, BasePermutations> expDirectory, string hsImp = "v2", int? maxModels = 2,
                       int maxNumWorkers = 4, bool onCluster = false, bool waitForCompletion = true,
                       int? continueJobId = null, string dataPath = null, int? maxRecords = null,
                       int? timeoutSec = null, bool ignoreErrModels = false,
@@ -561,8 +561,8 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestSimpleV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
         {
             //this._printTestHeader();
-            var expDir = new Tuple<BaseDescription, BasePermutations>(
-                new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
+            var expDir = new Tuple<ClaExperimentParameters, BasePermutations>(
+                new SimpleV2DescriptionParameters(), new SimpleV2PermutationsFile());
             // Test it out
             //if (env is None)
             //{
@@ -606,14 +606,14 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // Convert config to parameters
             // set encoders in place
-            var description = new ExpGenerator(config).Generate();
+            var description = new ExpGenerator(config).GenerateParams();
 
             //description.Item2.permutations.modelParams.clParams.alpha = 1;
             //description.Item2.permutations.modelParams.tpParams.activationThreshold = 4;
             //description.Item2.permutations.modelParams.tpParams.minThreshold = 4;
             //description.Item2.permutations.modelParams.tpParams.pamLength = 4;
 
-            var expDir = new Tuple<BaseDescription, BasePermutations>(
+            var expDir = new Tuple<ClaExperimentParameters, BasePermutations>(
                 description.Item1, description.Item2);
 
             
@@ -693,8 +693,8 @@ namespace HTM.Net.Research.Tests.Swarming
         //[DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSpatialClassification()
         {
-            var expDir = new Tuple<BaseDescription, BasePermutations>(
-                new SpatialClassificationDescriptionFile(), new SpatialClassificationPermutationsFile());
+            var expDir = new Tuple<ClaExperimentParameters, BasePermutations>(
+                new SpatialClassificationDescriptionParameters(), new SpatialClassificationPermutationsFile());
             // spatial_classification
             var permutationResult = this.RunPermutations(expDirectory: expDir,
                                    hsImp: "v2",
@@ -792,8 +792,8 @@ namespace HTM.Net.Research.Tests.Swarming
         [TestMethod]
         public void TestParamsDeserialisation()
         {
-            var expDir = new Tuple<BaseDescription, BasePermutations>(
-                new SimpleV2DescriptionFile(), new SimpleV2PermutationsFile());
+            var expDir = new Tuple<ClaExperimentParameters, BasePermutations>(
+                new SimpleV2DescriptionParameters(), new SimpleV2PermutationsFile());
 
             var jobParamsDict = this._generateHSJobParams(expDirectory: expDir, hsImp: "v2");
             jobParamsDict.Update(null);

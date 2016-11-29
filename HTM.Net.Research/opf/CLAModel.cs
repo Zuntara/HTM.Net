@@ -24,7 +24,7 @@ namespace HTM.Net.Research.opf
 
         #region Fields
 
-        private ConfigModelDescription _modelConfig;
+        private ClaExperimentParameters _modelConfig;
 
         private IInference _currentInferenceOutput;
         private Publisher _inputProvider;
@@ -83,14 +83,14 @@ namespace HTM.Net.Research.opf
 
         #endregion
 
-        public CLAModel(ConfigModelDescription modelConfig)
-            : base(modelConfig.modelParams.inferenceType)
+        public CLAModel(ClaExperimentParameters modelConfig)
+            : base(modelConfig.InferenceType)
         {
             _modelConfig = modelConfig;
 
-            Parameters parameters = modelConfig.GetParameters();
+            Parameters parameters = modelConfig;
 
-            InferenceType inferenceType = modelConfig.modelParams.inferenceType;
+            InferenceType inferenceType = modelConfig.InferenceType;
 
             if (!__supportedInferenceKindSet.Contains(inferenceType))
             {
@@ -117,11 +117,11 @@ namespace HTM.Net.Research.opf
 
             // set up learning parameters (note: these may be replaced via
             // enable/disable//SP/TP//Learning methods)
-            this.__spLearningEnabled = modelConfig.modelParams.spEnable;
-            this.__tpLearningEnabled = modelConfig.modelParams.tpEnable;
+            this.__spLearningEnabled = modelConfig.EnableSpatialPooler;
+            this.__tpLearningEnabled = modelConfig.EnableTemporalMemory;
             var spEnable = __spLearningEnabled;
             var tpEnable = __tpLearningEnabled;
-            var clEnable = modelConfig.modelParams.clEnable;
+            var clEnable = modelConfig.EnableClassification;
 
             // Explicitly exclude the TP if this type of inference doesn't require it
             if (!__temporalInferenceKindSet.Contains(inferenceType)
@@ -135,19 +135,19 @@ namespace HTM.Net.Research.opf
             this._hasTP = tpEnable;
             this._hasCL = clEnable;
 
-            var anomalyParams = modelConfig.modelParams.anomalyParams;
+            //var anomalyParams = modelConfig.modelParams.anomalyParams;
 
             //this._classifierInputEncoder = null;
             this._predictedFieldIdx = null;
             this._predictedFieldName = null;
             this._numFields = null;
             // init anomaly
-            int? windowSize = anomalyParams?.slidingWindowSize;// anomalyParams.get("slidingWindowSize", null);
-            Anomaly.Mode mode = anomalyParams?.mode ?? Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
-            double? anomalyThreshold = anomalyParams?.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
+            //int? windowSize = anomalyParams?.slidingWindowSize;// anomalyParams.get("slidingWindowSize", null);
+            //Anomaly.Mode mode = anomalyParams?.mode ?? Anomaly.Mode.PURE; // anomalyParams.get("mode", "pure");
+            //double? anomalyThreshold = anomalyParams?.autoDetectThreshold;// anomalyParams.get("autoDetectThreshold", null);
 
-            parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, windowSize);
-            parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, mode);
+            //parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, windowSize);
+            //parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, mode);
             //parameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_autoDetectThreshold, anomalyThreshold);
 
             this._anomalyInst = Anomaly.Create(parameters);
@@ -183,7 +183,7 @@ namespace HTM.Net.Research.opf
             // -----------------------------------------------------------------------
             // This flag, if present tells us not to train the SP network unless
             //  the user specifically asks for the SP inference metric
-            this.__trainSPNetOnlyIfRequested = modelConfig.modelParams.trainSPNetOnlyIfRequested;
+            this.__trainSPNetOnlyIfRequested = modelConfig.TrainSPNetOnlyIfRequested;
 
             this.__numRunCalls = 0;
 
@@ -1111,232 +1111,233 @@ namespace HTM.Net.Research.opf
                                    bucketIndex: bucketIdx);
         }
 
-        /// <summary>
-        /// Create a CLA network and return it. (using CLA Model description dictionary)
-        /// </summary>
-        /// <param name="sensorParams"></param>
-        /// <param name="spEnable"></param>
-        /// <param name="spParams"></param>
-        /// <param name="tpEnable"></param>
-        /// <param name="tpParams"></param>
-        /// <param name="clEnable"></param>
-        /// <param name="clParams"></param>
-        /// <param name="anomalyParams"></param>
-        /// <returns>NetworkInfo instance</returns>
-        internal NetworkInfo CreateClaNetwork(Parameters parameters)
-        {
-            //Parameters p = _modelConfig.GetParameters();
-            // --------------------------------------------------
-            // Create the network
-            var n = new Network.Network("CLANetwork", parameters);
+        ///// <summary>
+        ///// Create a CLA network and return it. (using CLA Model description dictionary)
+        ///// </summary>
+        ///// <param name="sensorParams"></param>
+        ///// <param name="spEnable"></param>
+        ///// <param name="spParams"></param>
+        ///// <param name="tpEnable"></param>
+        ///// <param name="tpParams"></param>
+        ///// <param name="clEnable"></param>
+        ///// <param name="clParams"></param>
+        ///// <param name="anomalyParams"></param>
+        ///// <returns>NetworkInfo instance</returns>
+        //internal NetworkInfo CreateClaNetwork(Parameters parameters)
+        //{
+        //    //Parameters p = _modelConfig.GetParameters();
+        //    // --------------------------------------------------
+        //    // Create the network
+        //    var n = new Network.Network("CLANetwork", parameters);
 
-            // --------------------------------------------------
-            // Add the Sensor
-            var topRegion = new Region("Top", n);
-            n.Add(topRegion);
-            //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
-            //sensor = n.regions['sensor'].getSelf();
+        //    // --------------------------------------------------
+        //    // Add the Sensor
+        //    var topRegion = new Region("Top", n);
+        //    n.Add(topRegion);
+        //    //n.addRegion("sensor", "py.RecordSensor", json.dumps(dict(verbosity = sensorParams['verbosity'])));
+        //    //sensor = n.regions['sensor'].getSelf();
 
-            var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();
-            var dataTypes = _modelConfig.inputRecordSchema.Select(v => v.type).ToList();
-            var sensorFlags = _modelConfig.inputRecordSchema.Select(v => v.special).ToList();
-            var pubBuilder = Publisher.GetBuilder()
-                .AddHeader(string.Join(", ", fieldNames))
-                //.AddHeader("address, consumption, gym, timestamp")
-                //.AddHeader("string, float, string, datetime")
-                .AddHeader(string.Join(", ", dataTypes))
-                .AddHeader(string.Join(", ", sensorFlags))
-                .Build();
-            _inputProvider = pubBuilder;
+        //    var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();
+        //    var dataTypes = _modelConfig.inputRecordSchema.Select(v => v.type).ToList();
+        //    var sensorFlags = _modelConfig.inputRecordSchema.Select(v => v.special).ToList();
+        //    var pubBuilder = Publisher.GetBuilder()
+        //        .AddHeader(string.Join(", ", fieldNames))
+        //        //.AddHeader("address, consumption, gym, timestamp")
+        //        //.AddHeader("string, float, string, datetime")
+        //        .AddHeader(string.Join(", ", dataTypes))
+        //        .AddHeader(string.Join(", ", sensorFlags))
+        //        .Build();
+        //    _inputProvider = pubBuilder;
 
-            //string dataFilePath = (string)((Map<string, object>)_description.control.dataset["streams"])["source"];
-            SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, "name", pubBuilder);
-            IHTMSensor sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(ObservableSensor<string[]>.Create, parms);
+        //    //string dataFilePath = (string)((Map<string, object>)_description.control.dataset["streams"])["source"];
+        //    SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, "name", pubBuilder);
+        //    IHTMSensor sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(ObservableSensor<string[]>.Create, parms);
 
-            ILayer sensorLayer = Network.Network.CreateLayer("sensor", parameters);
-            //sensorLayer.Add(sensor);
+        //    ILayer sensorLayer = Network.Network.CreateLayer("sensor", parameters);
+        //    //sensorLayer.Add(sensor);
 
-            //enabledEncoders = copy.deepcopy(sensorParams['encoders']);
-            EncoderSettingsList enabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
-            List<string> enabledEncodersToRemove = new List<string>();
+        //    //enabledEncoders = copy.deepcopy(sensorParams['encoders']);
+        //    EncoderSettingsList enabledEncoders = new EncoderSettingsList(_modelConfig.GetEncoderSettings());
+        //    List<string> enabledEncodersToRemove = new List<string>();
 
-            foreach (var pair in enabledEncoders)
-            {
-                string name = pair.Key;
-                var @params = pair.Value;
+        //    foreach (var pair in enabledEncoders)
+        //    {
+        //        string name = pair.Key;
+        //        var @params = pair.Value;
 
-                if (@params != null)
-                {
-                    bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
-                    @params.classifierOnly = null;
-                    if (classifierOnly)
-                    {
-                        enabledEncodersToRemove.Add(name);
-                        //enabledEncoders.Remove(name);
-                    }
-                }
-            }
-            enabledEncoders = new EncoderSettingsList(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+        //        if (@params != null)
+        //        {
+        //            bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
+        //            @params.classifierOnly = null;
+        //            if (classifierOnly)
+        //            {
+        //                enabledEncodersToRemove.Add(name);
+        //                //enabledEncoders.Remove(name);
+        //            }
+        //        }
+        //    }
+        //    enabledEncoders = new EncoderSettingsList(enabledEncoders.Where(pr => !enabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
-            // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
-            // SP or TP Regions. This is to handle the case where the predicted field
-            // is not fed through the SP/TP. We typically just have one of these now.
-            EncoderSettingsList disabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
-            //disabledEncoders = copy.deepcopy(sensorParams['encoders']);
-            List<string> disabledEncodersToRemove = new List<string>();
-            foreach (var pair in disabledEncoders)
-            {
-                string name = pair.Key;
-                var @params = pair.Value;
+        //    // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
+        //    // SP or TP Regions. This is to handle the case where the predicted field
+        //    // is not fed through the SP/TP. We typically just have one of these now.
+        //    EncoderSettingsList disabledEncoders = new EncoderSettingsList(_modelConfig.GetEncoderSettings());
+        //    //disabledEncoders = copy.deepcopy(sensorParams['encoders']);
+        //    List<string> disabledEncodersToRemove = new List<string>();
+        //    foreach (var pair in disabledEncoders)
+        //    {
+        //        string name = pair.Key;
+        //        var @params = pair.Value;
 
-                if (@params == null)
-                {
-                    disabledEncodersToRemove.Add(name);
-                }
-                else
-                {
-                    bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
-                    @params.classifierOnly = null;
-                    if (!classifierOnly)
-                    {
-                        disabledEncodersToRemove.Add(name);
-                    }
-                }
-            }
-            disabledEncoders = new EncoderSettingsList(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
+        //        if (@params == null)
+        //        {
+        //            disabledEncodersToRemove.Add(name);
+        //        }
+        //        else
+        //        {
+        //            bool classifierOnly = @params.classifierOnly.GetValueOrDefault(false);
+        //            @params.classifierOnly = null;
+        //            if (!classifierOnly)
+        //            {
+        //                disabledEncodersToRemove.Add(name);
+        //            }
+        //        }
+        //    }
+        //    disabledEncoders = new EncoderSettingsList(disabledEncoders.Where(pr => !disabledEncodersToRemove.Contains(pr.Key)).ToDictionary(k => k.Key, v => v.Value));
 
-            MultiEncoder encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // enabledEncoders
-            MultiEncoderAssembler.Assemble(encoder, enabledEncoders);
-            sensorLayer.Add(encoder);
-            encoder.SetScalarNames(fieldNames);
+        //    MultiEncoder encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // enabledEncoders
+        //    MultiEncoderAssembler.Assemble(encoder, enabledEncoders);
+        //    sensorLayer.Add(encoder);
+        //    encoder.SetScalarNames(fieldNames);
 
-            //sensor.SetEncoder(encoder);
-            //sensor.InitEncoder(parameters);
-            topRegion.Add(sensorLayer);
-            //sensor.encoder = encoder;
-            //MultiEncoder disabledEncoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // disabledEncoders
-            //sensor.disabledEncoder = MultiEncoder(disabledEncoders);
+        //    //sensor.SetEncoder(encoder);
+        //    //sensor.InitEncoder(parameters);
+        //    topRegion.Add(sensorLayer);
+        //    //sensor.encoder = encoder;
+        //    //MultiEncoder disabledEncoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // disabledEncoders
+        //    //sensor.disabledEncoder = MultiEncoder(disabledEncoders);
 
-            //sensor.dataSource = DataBuffer();
+        //    //sensor.dataSource = DataBuffer();
 
-            string prevRegion = "sensor";
-            int prevRegionWidth = encoder.GetWidth();
+        //    string prevRegion = "sensor";
+        //    int prevRegionWidth = encoder.GetWidth();
 
-            bool spEnable = _modelConfig.modelParams.spEnable;
-            bool tpEnable = _modelConfig.modelParams.tpEnable;
-            bool clEnable = _modelConfig.modelParams.clEnable;
-            var spParams = _modelConfig.modelParams.spParams;
-            var tpParams = _modelConfig.modelParams.tpParams;
+        //    bool spEnable = _modelConfig.EnableSpatialPooler;
+        //    bool tpEnable = _modelConfig.EnableTemporalMemory;
+        //    bool clEnable = _modelConfig.EnableClassification;
 
-            // SP is not enabled for spatial classification network
-            if (spEnable)
-            {
-                //spParams = spParams.copy();
-                spParams.inputWidth = new[] { prevRegionWidth };
-                this.__logger.Debug("Adding SPRegion; spParams: " + spParams);
-                SpatialPooler spatialPooler = new SpatialPooler();
+        //    //var spParams = _modelConfig.modelParams.spParams;
+        //    //var tpParams = _modelConfig.modelParams.tpParams;
 
-                ILayer spLayer = Network.Network.CreateLayer("SP", parameters);
-                topRegion.Add(spLayer.Add(spatialPooler));
+        //    // SP is not enabled for spatial classification network
+        //    if (spEnable)
+        //    {
+        //        //spParams = spParams.copy();
+        //        spParams.inputWidth = new[] { prevRegionWidth };
+        //        this.__logger.Debug("Adding SPRegion; spParams: " + spParams);
+        //        SpatialPooler spatialPooler = new SpatialPooler();
 
-                //n.addRegion("SP", "py.SPRegion", json.dumps(spParams));
+        //        ILayer spLayer = Network.Network.CreateLayer("SP", parameters);
+        //        topRegion.Add(spLayer.Add(spatialPooler));
 
-                // Link SP region
-                topRegion.Connect("SP", "sensor");
-                //n.link("sensor", "SP", "UniformLink", "");
-                //n.link("sensor", "SP", "UniformLink", "", srcOutput = "resetOut", destInput = "resetIn");
+        //        //n.addRegion("SP", "py.SPRegion", json.dumps(spParams));
 
-                //n.link("SP", "sensor", "UniformLink", "", srcOutput = "spatialTopDownOut", destInput = "spatialTopDownIn");
-                //n.link("SP", "sensor", "UniformLink", "", srcOutput = "temporalTopDownOut", destInput = "temporalTopDownIn");
+        //        // Link SP region
+        //        topRegion.Connect("SP", "sensor");
+        //        //n.link("sensor", "SP", "UniformLink", "");
+        //        //n.link("sensor", "SP", "UniformLink", "", srcOutput = "resetOut", destInput = "resetIn");
 
-                prevRegion = "SP";
-                prevRegionWidth = spParams.columnCount[0];
-            }
+        //        //n.link("SP", "sensor", "UniformLink", "", srcOutput = "spatialTopDownOut", destInput = "spatialTopDownIn");
+        //        //n.link("SP", "sensor", "UniformLink", "", srcOutput = "temporalTopDownOut", destInput = "temporalTopDownIn");
 
-            if (tpEnable)
-            {
-                //tpParams = tpParams.copy();
-                if (prevRegion == "sensor")
-                {
-                    tpParams.inputWidth[0] = tpParams.columnCount[0] = prevRegionWidth;
-                }
-                else
-                {
-                    Debug.Assert(tpParams.columnCount[0] == prevRegionWidth);
-                    tpParams.inputWidth = tpParams.columnCount;
-                }
+        //        prevRegion = "SP";
+        //        prevRegionWidth = spParams.columnCount[0];
+        //    }
 
-                this.__logger.Debug("Adding TPRegion; tpParams: " + tpParams);
-                TemporalMemory tpMemory = new TemporalMemory();
+        //    if (tpEnable)
+        //    {
+        //        //tpParams = tpParams.copy();
+        //        if (prevRegion == "sensor")
+        //        {
+        //            tpParams.inputWidth[0] = tpParams.columnCount[0] = prevRegionWidth;
+        //        }
+        //        else
+        //        {
+        //            Debug.Assert(tpParams.columnCount[0] == prevRegionWidth);
+        //            tpParams.inputWidth = tpParams.columnCount;
+        //        }
 
-                ILayer tpLayer = Network.Network.CreateLayer("TP", parameters);
-                topRegion.Add(tpLayer.Add(tpMemory));
+        //        this.__logger.Debug("Adding TPRegion; tpParams: " + tpParams);
+        //        TemporalMemory tpMemory = new TemporalMemory();
 
-                //n.addRegion("TP", "py.TPRegion", json.dumps(tpParams));
+        //        ILayer tpLayer = Network.Network.CreateLayer("TP", parameters);
+        //        topRegion.Add(tpLayer.Add(tpMemory));
 
-                // Link TP region
-                topRegion.Connect("TP", prevRegion);
-                //n.link(prevRegion, "TP", "UniformLink", "");
-                if (prevRegion != "sensor")
-                {
-                    //n.Connect(prevRegion, "TP");
-                    //n.link("TP", prevRegion, "UniformLink", "", srcOutput = "topDownOut",destInput = "topDownIn");
-                }
-                else
-                {
-                    //n.Connect(prevRegion, "TP");
-                    // n.link("TP", prevRegion, "UniformLink", "", srcOutput = "topDownOut",destInput = "temporalTopDownIn");
-                }
-                //n.link("sensor", "TP", "UniformLink", "", srcOutput = "resetOut",destInput = "resetIn");
+        //        //n.addRegion("TP", "py.TPRegion", json.dumps(tpParams));
 
-                prevRegion = "TP";
-                prevRegionWidth = tpParams.inputWidth[0];
-            }
+        //        // Link TP region
+        //        topRegion.Connect("TP", prevRegion);
+        //        //n.link(prevRegion, "TP", "UniformLink", "");
+        //        if (prevRegion != "sensor")
+        //        {
+        //            //n.Connect(prevRegion, "TP");
+        //            //n.link("TP", prevRegion, "UniformLink", "", srcOutput = "topDownOut",destInput = "topDownIn");
+        //        }
+        //        else
+        //        {
+        //            //n.Connect(prevRegion, "TP");
+        //            // n.link("TP", prevRegion, "UniformLink", "", srcOutput = "topDownOut",destInput = "temporalTopDownIn");
+        //        }
+        //        //n.link("sensor", "TP", "UniformLink", "", srcOutput = "resetOut",destInput = "resetIn");
 
-            var clParams = _modelConfig.modelParams.clParams;
-            if (clEnable && clParams != null)
-            {
-                //clParams = clParams.copy();
-                string clRegionName = clParams.regionName;
-                this.__logger.Debug(string.Format("Adding {0}; clParams: {1}", clRegionName, clParams));
+        //        prevRegion = "TP";
+        //        prevRegionWidth = tpParams.inputWidth[0];
+        //    }
 
-                //CLAClassifier claClassifier = new CLAClassifier();
+        //    var clParams = _modelConfig.modelParams.clParams;
+        //    if (clEnable && clParams != null)
+        //    {
+        //        //clParams = clParams.copy();
+        //        string clRegionName = clParams.regionName;
+        //        this.__logger.Debug(string.Format("Adding {0}; clParams: {1}", clRegionName, clParams));
 
-                ILayer classifierLayer = Network.Network.CreateLayer("Classifier", parameters);
+        //        //CLAClassifier claClassifier = new CLAClassifier();
 
-                topRegion.Add(classifierLayer.AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true));
+        //        ILayer classifierLayer = Network.Network.CreateLayer("Classifier", parameters);
 
-                //n.addRegion("Classifier", "py.%s" + str(clRegionName), json.dumps(clParams));
+        //        topRegion.Add(classifierLayer.AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true));
 
-                //n.link("sensor", "Classifier", "UniformLink", "", srcOutput = "categoryOut", destInput = "categoryIn");
+        //        //n.addRegion("Classifier", "py.%s" + str(clRegionName), json.dumps(clParams));
 
-                //n.link(prevRegion, "Classifier", "UniformLink", "");
-            }
+        //        //n.link("sensor", "Classifier", "UniformLink", "", srcOutput = "categoryOut", destInput = "categoryIn");
 
-            if (this.getInferenceType() == InferenceType.TemporalAnomaly)
-            {
-                //topLayer.Add(Anomaly.Create(parameters));
-                topRegion.Lookup("TP").Add(Anomaly.Create(parameters));
-                //anomalyClParams = dict(
-                //    trainRecords = anomalyParams.get('autoDetectWaitRecords', None),
-                //    cacheSize = anomalyParams.get('anomalyCacheRecords', None)
-                //);
-                //this._addAnomalyClassifierRegion(n, anomalyClParams, spEnable, tpEnable);
-            }
+        //        //n.link(prevRegion, "Classifier", "UniformLink", "");
+        //    }
 
-            // --------------------------------------------------
-            // NuPIC doesn't initialize the network until you try to run it
-            // but users may want to access components in a setup callback
-            //n.initialize();
-            n.GetHead().Close();
+        //    if (this.getInferenceType() == InferenceType.TemporalAnomaly)
+        //    {
+        //        //topLayer.Add(Anomaly.Create(parameters));
+        //        topRegion.Lookup("TP").Add(Anomaly.Create(parameters));
+        //        //anomalyClParams = dict(
+        //        //    trainRecords = anomalyParams.get('autoDetectWaitRecords', None),
+        //        //    cacheSize = anomalyParams.get('anomalyCacheRecords', None)
+        //        //);
+        //        //this._addAnomalyClassifierRegion(n, anomalyClParams, spEnable, tpEnable);
+        //    }
 
-            //n.GetHead().GetTail().Observe().Subscribe(output =>
-            //{
-            //    _currentInferenceOutput = output;
-            //});
+        //    // --------------------------------------------------
+        //    // NuPIC doesn't initialize the network until you try to run it
+        //    // but users may want to access components in a setup callback
+        //    //n.initialize();
+        //    n.GetHead().Close();
 
-            return new NetworkInfo(n, null);
-        }
+        //    //n.GetHead().GetTail().Observe().Subscribe(output =>
+        //    //{
+        //    //    _currentInferenceOutput = output;
+        //    //});
+
+        //    return new NetworkInfo(n, null);
+        //}
 
         /// <summary>
         /// Create a CLA network and return it. (using CLA Model description dictionary)
@@ -1360,9 +1361,9 @@ namespace HTM.Net.Research.opf
 
             // --------------------------------------------------
             // Build sensor
-            var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();
-            var dataTypes = _modelConfig.inputRecordSchema.Select(v => v.type).ToList();
-            var sensorFlags = _modelConfig.inputRecordSchema.Select(v => v.special).ToList();
+            var fieldNames = _modelConfig.Control.InputRecordSchema.Select(v => v.name).ToList();
+            var dataTypes = _modelConfig.Control.InputRecordSchema.Select(v => v.type).ToList();
+            var sensorFlags = _modelConfig.Control.InputRecordSchema.Select(v => v.special).ToList();
             var pubBuilder = Publisher.GetBuilder()
                 .AddHeader(string.Join(", ", fieldNames))
                 //.AddHeader("address, consumption, gym, timestamp")
@@ -1377,7 +1378,7 @@ namespace HTM.Net.Research.opf
 
             // --------------------------------------------------
             // Define encoders for sensor
-            EncoderSettingsList enabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
+            EncoderSettingsList enabledEncoders = new EncoderSettingsList(_modelConfig.GetEncoderSettings());
             List<string> enabledEncodersToRemove = new List<string>();
 
             foreach (var pair in enabledEncoders)
@@ -1401,7 +1402,7 @@ namespace HTM.Net.Research.opf
             // Disabled encoders are encoders that are fed to CLAClassifierRegion but not
             // SP or TP Regions. This is to handle the case where the predicted field
             // is not fed through the SP/TP. We typically just have one of these now.
-            EncoderSettingsList disabledEncoders = new EncoderSettingsList(_modelConfig.modelParams.sensorParams.encoders);
+            EncoderSettingsList disabledEncoders = new EncoderSettingsList(_modelConfig.GetEncoderSettings());
             //disabledEncoders = copy.deepcopy(sensorParams['encoders']);
             List<string> disabledEncodersToRemove = new List<string>();
             foreach (var pair in disabledEncoders)
@@ -1437,26 +1438,25 @@ namespace HTM.Net.Research.opf
 
             int prevRegionWidth = encoder.GetWidth();
 
-            bool spEnable = _modelConfig.modelParams.spEnable;
-            bool tpEnable = _modelConfig.modelParams.tpEnable;
-            bool clEnable = _modelConfig.modelParams.clEnable;
-            var spParams = _modelConfig.modelParams.spParams;
-            var tpParams = _modelConfig.modelParams.tpParams;
+            bool spEnable = _modelConfig.EnableSpatialPooler;
+            bool tpEnable = _modelConfig.EnableTemporalMemory;
+            bool clEnable = _modelConfig.EnableClassification;
+            //var spParams = _modelConfig.modelParams.spParams;
+            //var tpParams = _modelConfig.modelParams.tpParams;
 
             // SP is not enabled for spatial classification network
             if (spEnable)
             {
-                //spParams = spParams.copy();
-                spParams.inputWidth = new[] { prevRegionWidth };
-                parameters.SetInputDimensions(spParams.inputWidth);
+                //spParams.inputWidth = new[] { prevRegionWidth };
+                parameters.SetInputDimensions(new[] { prevRegionWidth });
 
-                this.__logger.Debug("Adding SPRegion; spParams: " + spParams);
+                this.__logger.Debug("Adding SPRegion");
                 SpatialPooler spatialPooler = new SpatialPooler();
 
                 // spParams get applies when the network closes because they are present in the parameters instance.
                 layer.Add(spatialPooler);
 
-                prevRegionWidth = spParams.columnCount[0];
+                prevRegionWidth = ((int[])parameters.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS))[0];
             }
 
             if (tpEnable)
@@ -1464,33 +1464,36 @@ namespace HTM.Net.Research.opf
                 //tpParams = tpParams.copy();
                 if (!spEnable)
                 {
-                    tpParams.inputWidth[0] = tpParams.columnCount[0] = prevRegionWidth;
-                    parameters.SetInputDimensions(tpParams.inputWidth);
+                    //tpParams.inputWidth[0] = tpParams.columnCount[0] = prevRegionWidth;
+                    parameters.SetInputDimensions(new [] {prevRegionWidth});
+                    parameters.SetColumnDimensions(new [] {prevRegionWidth});
                 }
                 else
                 {
-                    Debug.Assert(tpParams.columnCount[0] == prevRegionWidth);
-                    tpParams.inputWidth = tpParams.columnCount;
-                    parameters.SetInputDimensions(tpParams.inputWidth);
+                    Debug.Assert(((int[])parameters.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS))[0] == prevRegionWidth);
+                    //tpParams.inputWidth = tpParams.columnCount;
+                    parameters.SetInputDimensions((int[])parameters.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS));
+                    
+                    //parameters.SetInputDimensions(tpParams.inputWidth);
                 }
 
-                __logger.Debug("Adding TPRegion; tpParams: " + tpParams);
+                __logger.Debug("Adding TPRegion;");
                 TemporalMemory tpMemory = new TemporalMemory();
 
                 layer.Add(tpMemory);
 
-                prevRegionWidth = tpParams.inputWidth[0];
+                prevRegionWidth = ((int[])parameters.GetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS))[0];
             }
 
-            var clParams = _modelConfig.modelParams.clParams;
-            if (clEnable && clParams != null)
+            //var clParams = _modelConfig.modelParams.clParams;
+            if (clEnable && (bool)parameters.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false))
             {
                 //clParams = clParams.copy();
-                string clRegionName = clParams.regionName;
-                this.__logger.Debug(string.Format("Adding {0}; clParams: {1}", clRegionName, clParams));
+                //string clRegionName = clParams.regionName;
+                this.__logger.Debug(string.Format("Adding Classifier '{0}'", parameters.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE)));
 
-                layer.AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true);
-                layer.AlterParameter(Parameters.KEY.AUTO_CLASSIFY_TYPE, Type.GetType(clRegionName, true));
+                //layer.AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true);
+                //layer.AlterParameter(Parameters.KEY.AUTO_CLASSIFY_TYPE, Type.GetType(clRegionName, true));
             }
 
             if (this.getInferenceType() == InferenceType.TemporalAnomaly)
@@ -1579,13 +1582,13 @@ namespace HTM.Net.Research.opf
         public override List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false)
         {
             //var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();// _modelConfig.inputRecordSchema.Select(m=>m.name).ToList();
-            var sensorFlags = _modelConfig.inputRecordSchema.OrderBy(v => v.name).Select(v => v.special).ToList();
+            var sensorFlags = _modelConfig.Control.InputRecordSchema.OrderBy(v => v.name).Select(v => v.special).ToList();
 
             MultiEncoder encoder = _getEncoder();
 
             var fieldNames = encoder.GetScalarNames();
             //var fieldTypes = encoder.GetDecoderOutputFieldTypes();
-            var fieldTypes = _modelConfig.inputRecordSchema.OrderBy(v => v.name).Select(v => v.type).ToList();
+            var fieldTypes = _modelConfig.Control.InputRecordSchema.OrderBy(v => v.name).Select(v => v.type).ToList();
             Debug.Assert(fieldNames.Count == fieldTypes.Count);
 
             // Also include the classifierOnly field?

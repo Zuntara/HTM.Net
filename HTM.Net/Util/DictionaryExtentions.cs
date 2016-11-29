@@ -288,7 +288,7 @@ namespace HTM.Net.Util
         {
         }
 
-        public new void Add(TKey key, TValue value)
+        public new virtual void Add(TKey key, TValue value)
         {
             lock (_syncRoot)
             {

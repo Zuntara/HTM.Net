@@ -32,7 +32,8 @@ namespace HTM.Net.Research.Swarming
         /// <param name="permWorkDir">Optional location of working directory (defaults to current working directory).</param>
         /// <param name="verbosity">Optional (1,2,3) increasing verbosity of output.</param>
         /// <returns> Model parameters</returns>
-        public static uint /*ConfigModelDescription*/ RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options, string outDir = null, string outputLabel = "default",
+        public static uint /*ConfigModelDescription*/ RunWithConfig(SwarmDefinition swarmConfig, Map<string, object> options,
+            string outDir = null, string outputLabel = "default",
             string permWorkDir = null, int verbosity = 1)
         {
             if (options == null) options = new Map<string, object>();
@@ -43,13 +44,13 @@ namespace HTM.Net.Research.Swarming
             return _runAction(options, exp);
         }
 
-        private static uint _runAction(Map<string, object> options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private static uint _runAction(Map<string, object> options, Tuple<ClaExperimentParameters, ClaPermutations> exp)
         {
             var returnValue = _runHyperSearch(options, exp);
             return returnValue;
         }
 
-        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ClaExperimentParameters, ClaPermutations> exp)
         {
             var search = new HyperSearchRunner(runOptions);
             // Save in global for the signal handler.
@@ -67,9 +68,9 @@ namespace HTM.Net.Research.Swarming
             return search.peekSearchJob().getJobId().GetValueOrDefault();
         }
 
-        private static Tuple<ClaExperimentDescription, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
+        private static Tuple<ClaExperimentParameters, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
         {
-            return new ExpGenerator(swarmConfig).Generate();
+            return new ExpGenerator(swarmConfig).GenerateParams();
         }
     }
 
@@ -100,7 +101,7 @@ namespace HTM.Net.Research.Swarming
         /// Start a new hypersearch job and monitor it to completion
         /// </summary>
         /// <param name="exp"></param>
-        public void runNewSearch(Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        public void runNewSearch(Tuple<ClaExperimentParameters, ClaPermutations> exp)
         {
             __searchJob = this.__startSearch(exp);
             monitorSearchJob();
@@ -110,7 +111,7 @@ namespace HTM.Net.Research.Swarming
         /// Starts HyperSearch as a worker or runs it inline for the "dryRun" action
         /// </summary>
         /// <returns></returns>
-        private HyperSearchJob __startSearch(Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        private HyperSearchJob __startSearch(Tuple<ClaExperimentParameters, ClaPermutations> exp)
         {
             // TODO: only dryrun supported, maybe support the queing for workers also
             var @params = ClientJobUtils.MakeSearchJobParamsDict(_options, exp);
@@ -290,7 +291,7 @@ namespace HTM.Net.Research.Swarming
 
     internal class ClientJobUtils
     {
-        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ClaExperimentDescription, ClaPermutations> exp)
+        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ClaExperimentParameters, ClaPermutations> exp)
         {
             string hsVersion = "v2";
             //int maxModels = 1;
@@ -683,10 +684,12 @@ namespace HTM.Net.Research.Swarming
         public string Type { get; set; }
     }
 
+    [Serializable]
     public class ClaExperimentParameters : Parameters
     {
         protected ClaExperimentParameters()
         {
+            Control = new ExperimentControl();
             InitializeParameters();
         }
 
@@ -735,14 +738,73 @@ namespace HTM.Net.Research.Swarming
             return new ClaExperimentParameters();
         }
 
+        public ExperimentControl Control { get; set; }
+
+        public string Model { get; set; } = "CLA";
         public InferenceType InferenceType { get; set; }
         public bool EnableSpatialPooler { get; set; }
         public bool EnableTemporalMemory { get; set; }
         public bool EnableClassification { get; set; }
         public AggregationSettings SensorAutoReset { get; set; }
         public AggregationSettings AggregationInfo { get; set; }
+
+        public bool TrainSPNetOnlyIfRequested { get; set; }
+
+
+
+        public EncoderSettingsList GetEncoderSettings()
+        {
+            return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+        }
+
+        public ClaExperimentParameters Union(ClaExperimentParameters p)
+        {
+            foreach (KEY k in p.paramMap.Keys)
+            {
+                SetParameterByKey(k, p.GetParameterByKey(k));
+            }
+            return this;
+        }
+
+        public new ClaExperimentParameters Copy()
+        {
+            var p = new ClaExperimentParameters().Union(this);
+            p.InferenceType = InferenceType;
+            p.EnableSpatialPooler = EnableSpatialPooler;
+            p.EnableTemporalMemory = EnableTemporalMemory;
+            p.EnableClassification = EnableClassification;
+            p.SensorAutoReset = SensorAutoReset?.Clone();
+            p.AggregationInfo = AggregationInfo?.Clone();
+            p.TrainSPNetOnlyIfRequested = TrainSPNetOnlyIfRequested;
+            p.Control = Control.Clone();
+
+            return p;
+        }
+    }
+
+    [Serializable]
+    public class ExperimentControl
+    {
         public StreamDef DatasetSpec { get; set; }
+        public FieldMetaInfo[] InputRecordSchema { get; set; }
+        public InferenceArgsDescription InferenceArgs { get; set; }
+        public string[] LoggedMetrics { get; set; }
+        public MetricSpec[] Metrics { get; set; }
         public int? IterationCount { get; set; }
+        public int? IterationCountInferOnly { get; set; }
+
+        public ExperimentControl Clone()
+        {
+            ExperimentControl c = new ExperimentControl();
+            c.InputRecordSchema = (FieldMetaInfo[])InputRecordSchema.Clone();
+            c.InferenceArgs = InferenceArgs.Clone();
+            c.LoggedMetrics = (string[])LoggedMetrics.Clone();
+            c.Metrics = (MetricSpec[])Metrics.Clone();
+            c.DatasetSpec = DatasetSpec;
+            c.IterationCount = IterationCount;
+            c.IterationCountInferOnly = IterationCountInferOnly;
+            return c;
+        }
     }
 
     /// <summary>

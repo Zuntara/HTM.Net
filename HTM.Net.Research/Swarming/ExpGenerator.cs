@@ -21,366 +21,366 @@ namespace HTM.Net.Research.Swarming
             Options = definition;
         }
 
-        public Tuple<ClaExperimentDescription, ClaPermutations> Generate()
-        {
-            if (Options.streamDef == null) throw new InvalidOperationException("define 'streamDef' for datasource");
-            // If the user specified nonTemporalClassification, make sure prediction steps is 0
-            int[] predictionSteps = Options.inferenceArgs.predictionSteps;
-            if (Options.inferenceType == InferenceType.NontemporalClassification)
-            {
-                if (predictionSteps != null && predictionSteps[0] != 0)
-                {
-                    throw new InvalidOperationException(
-                        "When NontemporalClassification is used, prediction steps must be [0]");
-                }
-            }
-            // If the user asked for 0 steps of prediction, then make this a spatial classification experiment
-            if (predictionSteps != null && predictionSteps[0] == 0
-                &&
-                new List<InferenceType>
-                {
-                    InferenceType.NontemporalMultiStep,
-                    InferenceType.TemporalMultiStep,
-                    InferenceType.MultiStep
-                }.Contains(Options.inferenceType))
-            {
-                Options.inferenceType = InferenceType.NontemporalClassification;
-            }
-            // If NontemporalClassification was chosen as the inferenceType, then the
-            // predicted field can NOT be used as an input
-            if (Options.inferenceType == InferenceType.NontemporalClassification)
-            {
-                if (Options.inferenceArgs.inputPredictedField.HasValue &&
-                    (Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.Yes ||
-                     Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.Auto))
-                {
-                    throw new InvalidOperationException(
-                        "When the inference type is NontemporalClassification  inputPredictedField must be set to 'no'");
-                }
-                Options.inferenceArgs.inputPredictedField = InputPredictedField.No;
-            }
+        //public Tuple<ClaExperimentDescription, ClaPermutations> Generate()
+        //{
+        //    if (Options.streamDef == null) throw new InvalidOperationException("define 'streamDef' for datasource");
+        //    // If the user specified nonTemporalClassification, make sure prediction steps is 0
+        //    int[] predictionSteps = Options.inferenceArgs.predictionSteps;
+        //    if (Options.inferenceType == InferenceType.NontemporalClassification)
+        //    {
+        //        if (predictionSteps != null && predictionSteps[0] != 0)
+        //        {
+        //            throw new InvalidOperationException(
+        //                "When NontemporalClassification is used, prediction steps must be [0]");
+        //        }
+        //    }
+        //    // If the user asked for 0 steps of prediction, then make this a spatial classification experiment
+        //    if (predictionSteps != null && predictionSteps[0] == 0
+        //        &&
+        //        new List<InferenceType>
+        //        {
+        //            InferenceType.NontemporalMultiStep,
+        //            InferenceType.TemporalMultiStep,
+        //            InferenceType.MultiStep
+        //        }.Contains(Options.inferenceType))
+        //    {
+        //        Options.inferenceType = InferenceType.NontemporalClassification;
+        //    }
+        //    // If NontemporalClassification was chosen as the inferenceType, then the
+        //    // predicted field can NOT be used as an input
+        //    if (Options.inferenceType == InferenceType.NontemporalClassification)
+        //    {
+        //        if (Options.inferenceArgs.inputPredictedField.HasValue &&
+        //            (Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.Yes ||
+        //             Options.inferenceArgs.inputPredictedField.Value == InputPredictedField.Auto))
+        //        {
+        //            throw new InvalidOperationException(
+        //                "When the inference type is NontemporalClassification  inputPredictedField must be set to 'no'");
+        //        }
+        //        Options.inferenceArgs.inputPredictedField = InputPredictedField.No;
+        //    }
 
-            // Process the swarmSize setting, if provided
-            var swarmSize = Options.swarmSize;
+        //    // Process the swarmSize setting, if provided
+        //    var swarmSize = Options.swarmSize;
 
-            if (swarmSize == null)
-            {
-                if (Options.inferenceArgs.inputPredictedField == null)
-                {
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
-                }
-            }
-            else if (swarmSize.Value == SwarmDefinition.SwarmSize.Small)
-            {
-                if (Options.minParticlesPerSwarm == null)
-                    Options.minParticlesPerSwarm = 3;
-                if (Options.iterationCount == null)
-                    Options.iterationCount = 100;
-                if (Options.maxModels == null)
-                    Options.maxModels = 1;
-                if (Options.inferenceArgs.inputPredictedField == null)
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Yes;
-            }
-            else if (swarmSize.Value == SwarmDefinition.SwarmSize.Medium)
-            {
-                if (Options.minParticlesPerSwarm == null)
-                    Options.minParticlesPerSwarm = 5;
-                if (Options.iterationCount == null)
-                    Options.iterationCount = 4000;
-                if (Options.maxModels == null)
-                    Options.maxModels = 200;
-                if (Options.inferenceArgs.inputPredictedField == null)
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
-            }
-            else if (swarmSize.Value == SwarmDefinition.SwarmSize.Large)
-            {
-                if (Options.minParticlesPerSwarm == null)
-                    Options.minParticlesPerSwarm = 15;
-                Options.tryAll3FieldCombinationsWTimestamps = true;
-                if (Options.inferenceArgs.inputPredictedField == null)
-                    Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
-            }
+        //    if (swarmSize == null)
+        //    {
+        //        if (Options.inferenceArgs.inputPredictedField == null)
+        //        {
+        //            Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
+        //        }
+        //    }
+        //    else if (swarmSize.Value == SwarmDefinition.SwarmSize.Small)
+        //    {
+        //        if (Options.minParticlesPerSwarm == null)
+        //            Options.minParticlesPerSwarm = 3;
+        //        if (Options.iterationCount == null)
+        //            Options.iterationCount = 100;
+        //        if (Options.maxModels == null)
+        //            Options.maxModels = 1;
+        //        if (Options.inferenceArgs.inputPredictedField == null)
+        //            Options.inferenceArgs.inputPredictedField = InputPredictedField.Yes;
+        //    }
+        //    else if (swarmSize.Value == SwarmDefinition.SwarmSize.Medium)
+        //    {
+        //        if (Options.minParticlesPerSwarm == null)
+        //            Options.minParticlesPerSwarm = 5;
+        //        if (Options.iterationCount == null)
+        //            Options.iterationCount = 4000;
+        //        if (Options.maxModels == null)
+        //            Options.maxModels = 200;
+        //        if (Options.inferenceArgs.inputPredictedField == null)
+        //            Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
+        //    }
+        //    else if (swarmSize.Value == SwarmDefinition.SwarmSize.Large)
+        //    {
+        //        if (Options.minParticlesPerSwarm == null)
+        //            Options.minParticlesPerSwarm = 15;
+        //        Options.tryAll3FieldCombinationsWTimestamps = true;
+        //        if (Options.inferenceArgs.inputPredictedField == null)
+        //            Options.inferenceArgs.inputPredictedField = InputPredictedField.Auto;
+        //    }
 
-            // Get token replacements
-            Map<string, object> tokenReplacements = new Map<string, object>();
+        //    // Get token replacements
+        //    Map<string, object> tokenReplacements = new Map<string, object>();
 
-            // Generate the encoder related substitution strings
+        //    // Generate the encoder related substitution strings
 
-            var includedFields = Options.includedFields;
+        //    var includedFields = Options.includedFields;
 
-            var encoderTuple = _generateEncoderStringsV2(includedFields, Options);
-            EncoderSettingsList encoderSpecs = encoderTuple.Item1;
-            var permEncoderChoices = encoderTuple.Item2;
+        //    var encoderTuple = _generateEncoderStringsV2(includedFields, Options);
+        //    EncoderSettingsList encoderSpecs = encoderTuple.Item1;
+        //    var permEncoderChoices = encoderTuple.Item2;
 
-            // Generate the string containing the sensor auto-reset dict.
-            /*
-              if options['resetPeriod'] is not None:
-                sensorAutoResetStr = pprint.pformat(options['resetPeriod'],
-                                                     indent=2*_INDENT_STEP)
-              else:
-                sensorAutoResetStr = 'None'
-            */
-            var sensorAutoReset = Options.resetPeriod;
+        //    // Generate the string containing the sensor auto-reset dict.
+        //    /*
+        //      if options['resetPeriod'] is not None:
+        //        sensorAutoResetStr = pprint.pformat(options['resetPeriod'],
+        //                                             indent=2*_INDENT_STEP)
+        //      else:
+        //        sensorAutoResetStr = 'None'
+        //    */
+        //    var sensorAutoReset = Options.resetPeriod;
 
-            // Generate the string containing the aggregation settings.
+        //    // Generate the string containing the aggregation settings.
 
-            var aggregationPeriod = new AggregationSettings();
+        //    var aggregationPeriod = new AggregationSettings();
 
-            // Honor any overrides provided in the stream definition
-            if (Options.streamDef.aggregation != null)
-            {
-                aggregationPeriod = Options.streamDef.aggregation;
-            }
-            // Do we have any aggregation at all?
-            bool hasAggregation = aggregationPeriod.AboveZero();
+        //    // Honor any overrides provided in the stream definition
+        //    if (Options.streamDef.aggregation != null)
+        //    {
+        //        aggregationPeriod = Options.streamDef.aggregation;
+        //    }
+        //    // Do we have any aggregation at all?
+        //    bool hasAggregation = aggregationPeriod.AboveZero();
 
-            AggregationSettings aggregationInfo = aggregationPeriod.Clone();
-            aggregationInfo.fields = aggregationPeriod.fields;
+        //    AggregationSettings aggregationInfo = aggregationPeriod.Clone();
+        //    aggregationInfo.fields = aggregationPeriod.fields;
 
-            // -----------------------------------------------------------------------
-            // Generate the string defining the dataset. This is basically the
-            // streamDef, but referencing the aggregation we already pulled out into the
-            // config dict (which enables permuting over it)
-            var datasetSpec = Options.streamDef;
-            if (datasetSpec.aggregation != null)
-            {
-                datasetSpec.aggregation = null;
-            }
-            if (hasAggregation)
-            {
-                datasetSpec.aggregation = aggregationPeriod;
-            }
+        //    // -----------------------------------------------------------------------
+        //    // Generate the string defining the dataset. This is basically the
+        //    // streamDef, but referencing the aggregation we already pulled out into the
+        //    // config dict (which enables permuting over it)
+        //    var datasetSpec = Options.streamDef;
+        //    if (datasetSpec.aggregation != null)
+        //    {
+        //        datasetSpec.aggregation = null;
+        //    }
+        //    if (hasAggregation)
+        //    {
+        //        datasetSpec.aggregation = aggregationPeriod;
+        //    }
 
-            // -----------------------------------------------------------------------
-            // Was computeInterval specified with Multistep prediction? If so, this swarm
-            // should permute over different aggregations
-            var computeInterval = Options.computeInterval;
-            AggregationSettings predictAheadTime;
-            if (computeInterval != null
-                &&
-                new List<InferenceType>
-                {
-                    InferenceType.NontemporalMultiStep,
-                    InferenceType.TemporalMultiStep,
-                    InferenceType.MultiStep
-                }.Contains(Options.inferenceType))
-            {
-                // Compute the predictAheadTime based on the minAggregation (specified in
-                // the stream definition) and the number of prediction steps
-                predictionSteps = Options.inferenceArgs.predictionSteps ?? new[] { 1 };
-                if (predictionSteps.Length > 1)
-                {
-                    throw new InvalidOperationException($"Invalid predictionSteps: {predictionSteps}. " +
-                                                        "When computeInterval is specified, there can only be one stepSize in predictionSteps.");
-                }
-                if (!aggregationInfo.AboveZero())
-                {
-                    throw new InvalidOperationException(
-                        $"Missing or nil stream aggregation: When computeInterval is specified, then the stream aggregation interval must be non-zero.");
-                }
+        //    // -----------------------------------------------------------------------
+        //    // Was computeInterval specified with Multistep prediction? If so, this swarm
+        //    // should permute over different aggregations
+        //    var computeInterval = Options.computeInterval;
+        //    AggregationSettings predictAheadTime;
+        //    if (computeInterval != null
+        //        &&
+        //        new List<InferenceType>
+        //        {
+        //            InferenceType.NontemporalMultiStep,
+        //            InferenceType.TemporalMultiStep,
+        //            InferenceType.MultiStep
+        //        }.Contains(Options.inferenceType))
+        //    {
+        //        // Compute the predictAheadTime based on the minAggregation (specified in
+        //        // the stream definition) and the number of prediction steps
+        //        predictionSteps = Options.inferenceArgs.predictionSteps ?? new[] { 1 };
+        //        if (predictionSteps.Length > 1)
+        //        {
+        //            throw new InvalidOperationException($"Invalid predictionSteps: {predictionSteps}. " +
+        //                                                "When computeInterval is specified, there can only be one stepSize in predictionSteps.");
+        //        }
+        //        if (!aggregationInfo.AboveZero())
+        //        {
+        //            throw new InvalidOperationException(
+        //                $"Missing or nil stream aggregation: When computeInterval is specified, then the stream aggregation interval must be non-zero.");
+        //        }
 
-                // Compute the predictAheadTime
-                int numSteps = predictionSteps[0];
-                predictAheadTime = aggregationPeriod.Clone();
-                predictAheadTime.MultiplyAllFieldsWith(numSteps);
+        //        // Compute the predictAheadTime
+        //        int numSteps = predictionSteps[0];
+        //        predictAheadTime = aggregationPeriod.Clone();
+        //        predictAheadTime.MultiplyAllFieldsWith(numSteps);
 
-                // This tells us to plug in a wildcard string for the prediction steps that
-                // we use in other parts of the description file (metrics, inferenceArgs,
-                // etc.)
-                Options.dynamicPredictionSteps = true;
-            }
-            else
-            {
-                Options.dynamicPredictionSteps = false;
-                predictAheadTime = null;
-            }
+        //        // This tells us to plug in a wildcard string for the prediction steps that
+        //        // we use in other parts of the description file (metrics, inferenceArgs,
+        //        // etc.)
+        //        Options.dynamicPredictionSteps = true;
+        //    }
+        //    else
+        //    {
+        //        Options.dynamicPredictionSteps = false;
+        //        predictAheadTime = null;
+        //    }
 
-            // -----------------------------------------------------------------------
-            // Save environment-common token substitutions
+        //    // -----------------------------------------------------------------------
+        //    // Save environment-common token substitutions
 
-            // We will run over the description template with reflection to assign the values to the correct fields,
-            // the replacements will be marked in an attribute above the properties.
+        //    // We will run over the description template with reflection to assign the values to the correct fields,
+        //    // the replacements will be marked in an attribute above the properties.
 
-            // If the "uber" metric 'MultiStep' was specified, then plug in TemporalMultiStep
-            // by default
-            InferenceType inferenceType = Options.inferenceType;
-            if (inferenceType == InferenceType.MultiStep)
-            {
-                inferenceType = InferenceType.TemporalMultiStep;
-            }
-            tokenReplacements["$INFERENCE_TYPE"] = inferenceType;
+        //    // If the "uber" metric 'MultiStep' was specified, then plug in TemporalMultiStep
+        //    // by default
+        //    InferenceType inferenceType = Options.inferenceType;
+        //    if (inferenceType == InferenceType.MultiStep)
+        //    {
+        //        inferenceType = InferenceType.TemporalMultiStep;
+        //    }
+        //    tokenReplacements["$INFERENCE_TYPE"] = inferenceType;
 
-            // Nontemporal classification uses only encoder and classifier
-            if (inferenceType == InferenceType.NontemporalClassification)
-            {
-                tokenReplacements["$SP_ENABLE"] = false;
-                tokenReplacements["$TP_ENABLE"] = false;
-            }
-            else
-            {
-                tokenReplacements["$SP_ENABLE"] = true;
-                tokenReplacements["$TP_ENABLE"] = true;
-                tokenReplacements["$CLA_CLASSIFIER_IMPL"] = "";
-            }
+        //    // Nontemporal classification uses only encoder and classifier
+        //    if (inferenceType == InferenceType.NontemporalClassification)
+        //    {
+        //        tokenReplacements["$SP_ENABLE"] = false;
+        //        tokenReplacements["$TP_ENABLE"] = false;
+        //    }
+        //    else
+        //    {
+        //        tokenReplacements["$SP_ENABLE"] = true;
+        //        tokenReplacements["$TP_ENABLE"] = true;
+        //        tokenReplacements["$CLA_CLASSIFIER_IMPL"] = "";
+        //    }
 
-            tokenReplacements["$ANOMALY_PARAMS"] = Options.anomalyParams;
+        //    tokenReplacements["$ANOMALY_PARAMS"] = Options.anomalyParams;
 
-            tokenReplacements["$ENCODER_SPECS"] = encoderSpecs;
-            tokenReplacements["$SENSOR_AUTO_RESET"] = sensorAutoReset;
+        //    tokenReplacements["$ENCODER_SPECS"] = encoderSpecs;
+        //    tokenReplacements["$SENSOR_AUTO_RESET"] = sensorAutoReset;
 
-            tokenReplacements["$AGGREGATION_INFO"] = aggregationInfo;
+        //    tokenReplacements["$AGGREGATION_INFO"] = aggregationInfo;
 
-            tokenReplacements["$DATASET_SPEC"] = datasetSpec;
+        //    tokenReplacements["$DATASET_SPEC"] = datasetSpec;
 
-            if (!Options.iterationCount.HasValue)
-            {
-                Options.iterationCount = -1;
-            }
-            tokenReplacements["$ITERATION_COUNT"] = Options.iterationCount;
+        //    if (!Options.iterationCount.HasValue)
+        //    {
+        //        Options.iterationCount = -1;
+        //    }
+        //    tokenReplacements["$ITERATION_COUNT"] = Options.iterationCount;
 
-            tokenReplacements["$SP_POOL_PCT"] = Options.spCoincInputPoolPct;
-            tokenReplacements["$HS_MIN_PARTICLES"] = Options.minParticlesPerSwarm;
+        //    tokenReplacements["$SP_POOL_PCT"] = Options.spCoincInputPoolPct;
+        //    tokenReplacements["$HS_MIN_PARTICLES"] = Options.minParticlesPerSwarm;
 
-            tokenReplacements["$SP_PERM_CONNECTED"] = Options.spSynPermConnected;
-            tokenReplacements["$FIELD_PERMUTATION_LIMIT"] = Options.fieldPermutationLimit;
+        //    tokenReplacements["$SP_PERM_CONNECTED"] = Options.spSynPermConnected;
+        //    tokenReplacements["$FIELD_PERMUTATION_LIMIT"] = Options.fieldPermutationLimit;
 
-            tokenReplacements["$PERM_ENCODER_CHOICES"] = permEncoderChoices;
+        //    tokenReplacements["$PERM_ENCODER_CHOICES"] = permEncoderChoices;
 
-            predictionSteps = Options.inferenceArgs.predictionSteps ?? new[] { 1 };
-            tokenReplacements["$PREDICTION_STEPS"] = predictionSteps;
+        //    predictionSteps = Options.inferenceArgs.predictionSteps ?? new[] { 1 };
+        //    tokenReplacements["$PREDICTION_STEPS"] = predictionSteps;
 
-            tokenReplacements["$PREDICT_AHEAD_TIME"] = predictAheadTime;
+        //    tokenReplacements["$PREDICT_AHEAD_TIME"] = predictAheadTime;
 
-            // Option permuting over SP synapse decrement value
-            //tokenReplacements["$PERM_SP_CHOICES"] = "";
-            if (Options.spPermuteDecrement && Options.inferenceType != InferenceType.NontemporalClassification)
-            {
-                tokenReplacements["$PERM_SP_CHOICES_synPermInactiveDec"] = new PermuteFloat(0.0003, 0.1);
-            }
+        //    // Option permuting over SP synapse decrement value
+        //    //tokenReplacements["$PERM_SP_CHOICES"] = "";
+        //    if (Options.spPermuteDecrement && Options.inferenceType != InferenceType.NontemporalClassification)
+        //    {
+        //        tokenReplacements["$PERM_SP_CHOICES_synPermInactiveDec"] = new PermuteFloat(0.0003, 0.1);
+        //    }
 
-            // The TP permutation parameters are not required for non-temporal networks
-            if (Options.inferenceType == InferenceType.NontemporalMultiStep ||
-                Options.inferenceType == InferenceType.NontemporalClassification)
-            {
-                //tokenReplacements["$PERM_TP_CHOICES"] = "";
-            }
-            else
-            {
-                tokenReplacements["$PERM_TP_CHOICES_activationThreshold"] = new PermuteInt(12, 16);
-                tokenReplacements["$PERM_TP_CHOICES_minThreshold"] = new PermuteInt(9, 12);
-                tokenReplacements["$PERM_TP_CHOICES_pamLength"] = new PermuteInt(1, 5);
-            }
+        //    // The TP permutation parameters are not required for non-temporal networks
+        //    if (Options.inferenceType == InferenceType.NontemporalMultiStep ||
+        //        Options.inferenceType == InferenceType.NontemporalClassification)
+        //    {
+        //        //tokenReplacements["$PERM_TP_CHOICES"] = "";
+        //    }
+        //    else
+        //    {
+        //        tokenReplacements["$PERM_TP_CHOICES_activationThreshold"] = new PermuteInt(12, 16);
+        //        tokenReplacements["$PERM_TP_CHOICES_minThreshold"] = new PermuteInt(9, 12);
+        //        tokenReplacements["$PERM_TP_CHOICES_pamLength"] = new PermuteInt(1, 5);
+        //    }
 
-            // If the inference type is just the generic 'MultiStep', then permute over
-            // temporal/nonTemporal multistep
-            if (Options.inferenceType == InferenceType.MultiStep)
-            {
-                tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES_inferenceType"] = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
-            }
-            else
-            {
-                //tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES"] = "";
-            }
+        //    // If the inference type is just the generic 'MultiStep', then permute over
+        //    // temporal/nonTemporal multistep
+        //    if (Options.inferenceType == InferenceType.MultiStep)
+        //    {
+        //        tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES_inferenceType"] = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
+        //    }
+        //    else
+        //    {
+        //        //tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES"] = "";
+        //    }
 
-            // The Classifier permutation parameters are only required for
-            // Multi-step inference types
-            if (new[] { InferenceType.NontemporalMultiStep, InferenceType.TemporalMultiStep, InferenceType.MultiStep,
-                InferenceType.TemporalAnomaly, InferenceType.NontemporalClassification }.Contains(Options.inferenceType))
-            {
-                tokenReplacements["$PERM_CL_CHOICES_alpha"] = new PermuteFloat(0.0001, 0.1);
-            }
+        //    // The Classifier permutation parameters are only required for
+        //    // Multi-step inference types
+        //    if (new[] { InferenceType.NontemporalMultiStep, InferenceType.TemporalMultiStep, InferenceType.MultiStep,
+        //        InferenceType.TemporalAnomaly, InferenceType.NontemporalClassification }.Contains(Options.inferenceType))
+        //    {
+        //        tokenReplacements["$PERM_CL_CHOICES_alpha"] = new PermuteFloat(0.0001, 0.1);
+        //    }
 
-            // The Permutations alwaysIncludePredictedField setting. 
-            // * When the experiment description has 'inputPredictedField' set to 'no', we 
-            // simply do not put in an encoder for the predicted field. 
-            // * When 'inputPredictedField' is set to 'auto', we include an encoder for the 
-            // predicted field and swarming tries it out just like all the other fields.
-            // * When 'inputPredictedField' is set to 'yes', we include this setting in
-            // the permutations file which informs swarming to always use the
-            // predicted field (the first swarm will be the predicted field only) 
-            tokenReplacements["$PERM_ALWAYS_INCLUDE_PREDICTED_FIELD"] = Options.inferenceArgs.inputPredictedField;
+        //    // The Permutations alwaysIncludePredictedField setting. 
+        //    // * When the experiment description has 'inputPredictedField' set to 'no', we 
+        //    // simply do not put in an encoder for the predicted field. 
+        //    // * When 'inputPredictedField' is set to 'auto', we include an encoder for the 
+        //    // predicted field and swarming tries it out just like all the other fields.
+        //    // * When 'inputPredictedField' is set to 'yes', we include this setting in
+        //    // the permutations file which informs swarming to always use the
+        //    // predicted field (the first swarm will be the predicted field only) 
+        //    tokenReplacements["$PERM_ALWAYS_INCLUDE_PREDICTED_FIELD"] = Options.inferenceArgs.inputPredictedField;
 
-            // The Permutations minFieldContribution setting
-            if (Options.minFieldContribution.HasValue) tokenReplacements["$PERM_MIN_FIELD_CONTRIBUTION"] = Options.minFieldContribution;
-            // The Permutations killUselessSwarms setting
-            if (Options.killUselessSwarms.HasValue) tokenReplacements["$PERM_KILL_USELESS_SWARMS"] = Options.killUselessSwarms;
-            // The Permutations maxFieldBranching setting
-            if (Options.maxFieldBranching.HasValue) tokenReplacements["$PERM_MAX_FIELD_BRANCHING"] = Options.maxFieldBranching;
-            // The Permutations tryAll3FieldCombinations setting
-            if (Options.tryAll3FieldCombinations.HasValue) tokenReplacements["$PERM_TRY_ALL_3_FIELD_COMBINATIONS"] = Options.tryAll3FieldCombinations;
-            //The Permutations tryAll3FieldCombinationsWTimestamps setting
-            if (Options.tryAll3FieldCombinationsWTimestamps.HasValue) tokenReplacements["$PERM_TRY_ALL_3_FIELD_COMBINATIONS_W_TIMESTAMPS"] = Options.tryAll3FieldCombinationsWTimestamps;
+        //    // The Permutations minFieldContribution setting
+        //    if (Options.minFieldContribution.HasValue) tokenReplacements["$PERM_MIN_FIELD_CONTRIBUTION"] = Options.minFieldContribution;
+        //    // The Permutations killUselessSwarms setting
+        //    if (Options.killUselessSwarms.HasValue) tokenReplacements["$PERM_KILL_USELESS_SWARMS"] = Options.killUselessSwarms;
+        //    // The Permutations maxFieldBranching setting
+        //    if (Options.maxFieldBranching.HasValue) tokenReplacements["$PERM_MAX_FIELD_BRANCHING"] = Options.maxFieldBranching;
+        //    // The Permutations tryAll3FieldCombinations setting
+        //    if (Options.tryAll3FieldCombinations.HasValue) tokenReplacements["$PERM_TRY_ALL_3_FIELD_COMBINATIONS"] = Options.tryAll3FieldCombinations;
+        //    //The Permutations tryAll3FieldCombinationsWTimestamps setting
+        //    if (Options.tryAll3FieldCombinationsWTimestamps.HasValue) tokenReplacements["$PERM_TRY_ALL_3_FIELD_COMBINATIONS_W_TIMESTAMPS"] = Options.tryAll3FieldCombinationsWTimestamps;
 
-            // The Permutations fieldFields setting
-            if (Options.fixedFields != null)
-            {
-                tokenReplacements["$PERM_FIXED_FIELDS"] = Options.fixedFields;
-            }
-            else
-            {
-                tokenReplacements["$PERM_FIXED_FIELDS"] = null;
-            }
+        //    // The Permutations fieldFields setting
+        //    if (Options.fixedFields != null)
+        //    {
+        //        tokenReplacements["$PERM_FIXED_FIELDS"] = Options.fixedFields;
+        //    }
+        //    else
+        //    {
+        //        tokenReplacements["$PERM_FIXED_FIELDS"] = null;
+        //    }
 
-            // The Permutations fastSwarmModelParams setting
-            if (Options.fastSwarmModelParams != null)
-            {
-                tokenReplacements["$PERM_FAST_SWARM_MODEL_PARAMS"] = Options.fastSwarmModelParams;
-            }
-            else
-            {
-                tokenReplacements["$PERM_FAST_SWARM_MODEL_PARAMS"] = null;
-            }
+        //    // The Permutations fastSwarmModelParams setting
+        //    if (Options.fastSwarmModelParams != null)
+        //    {
+        //        tokenReplacements["$PERM_FAST_SWARM_MODEL_PARAMS"] = Options.fastSwarmModelParams;
+        //    }
+        //    else
+        //    {
+        //        tokenReplacements["$PERM_FAST_SWARM_MODEL_PARAMS"] = null;
+        //    }
 
-            // The Permutations maxModels setting
-            if (Options.maxModels.HasValue)
-            {
-                tokenReplacements["$PERM_MAX_MODELS"] = Options.maxModels;
-            }
-            else
-            {
-                tokenReplacements["$PERM_MAX_MODELS"] = null;
-            }
+        //    // The Permutations maxModels setting
+        //    if (Options.maxModels.HasValue)
+        //    {
+        //        tokenReplacements["$PERM_MAX_MODELS"] = Options.maxModels;
+        //    }
+        //    else
+        //    {
+        //        tokenReplacements["$PERM_MAX_MODELS"] = null;
+        //    }
 
-            // --------------------------------------------------------------------------
-            // The Aggregation choices have to be determined when we are permuting over
-            // aggregations.
-            if (Options.dynamicPredictionSteps)
-            {
-                throw new NotImplementedException("not yet implemented!");
-            }
-            else
-            {
-                tokenReplacements["$PERM_AGGREGATION_CHOICES"] = aggregationInfo;
-            }
+        //    // --------------------------------------------------------------------------
+        //    // The Aggregation choices have to be determined when we are permuting over
+        //    // aggregations.
+        //    if (Options.dynamicPredictionSteps)
+        //    {
+        //        throw new NotImplementedException("not yet implemented!");
+        //    }
+        //    else
+        //    {
+        //        tokenReplacements["$PERM_AGGREGATION_CHOICES"] = aggregationInfo;
+        //    }
 
-            // Generate the inferenceArgs replacement tokens
-            _generateInferenceArgs(Options, tokenReplacements);
+        //    // Generate the inferenceArgs replacement tokens
+        //    _generateInferenceArgs(Options,cl, tokenReplacements);
 
-            // Generate the metric replacement tokens
-            _generateMetricsSubstitutions(Options, tokenReplacements);
+        //    // Generate the metric replacement tokens
+        //    _generateMetricsSubstitutions(Options, tokenReplacements);
 
-            // Generate input record schema
-            _generateInputRecordSchema(Options, tokenReplacements);
+        //    // Generate input record schema
+        //    _generateInputRecordSchema(Options, tokenReplacements);
 
-            // -----------------------------------------------------------------------
-            // Generate Control dictionary
+        //    // -----------------------------------------------------------------------
+        //    // Generate Control dictionary
 
-            tokenReplacements["$ENVIRONMENT"] = "Nupic";
+        //    tokenReplacements["$ENVIRONMENT"] = "Nupic";
 
-            // Generate 'files' / descriptions etc from the token replacements
-            ClaExperimentDescription descr = new ClaExperimentDescription();
-            TokenReplacer.ReplaceIn(descr, tokenReplacements);
+        //    // Generate 'files' / descriptions etc from the token replacements
+        //    ClaExperimentDescription descr = new ClaExperimentDescription();
+        //    TokenReplacer.ReplaceIn(descr, tokenReplacements);
 
-            ClaPermutations perms = new ClaPermutations();
-            TokenReplacer.ReplaceIn(perms, tokenReplacements);
+        //    ClaPermutations perms = new ClaPermutations();
+        //    TokenReplacer.ReplaceIn(perms, tokenReplacements);
 
-            //Debug.WriteLine("");
-            //Debug.WriteLine(JsonConvert.SerializeObject(descr, Formatting.Indented));
-            //Debug.WriteLine("");
-            //Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
+        //    //Debug.WriteLine("");
+        //    //Debug.WriteLine(JsonConvert.SerializeObject(descr, Formatting.Indented));
+        //    //Debug.WriteLine("");
+        //    //Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
 
-            return new Tuple<ClaExperimentDescription, ClaPermutations>(descr, perms);
-        }
+        //    return new Tuple<ClaExperimentDescription, ClaPermutations>(descr, perms);
+        //}
 
         public Tuple<ClaExperimentParameters, ClaPermutations> GenerateParams()
         {
@@ -574,7 +574,7 @@ namespace HTM.Net.Research.Swarming
             {
                 claParameters.EnableSpatialPooler = true;
                 claParameters.EnableTemporalMemory = true;
-               // tokenReplacements["$CLA_CLASSIFIER_IMPL"] = "";
+                // tokenReplacements["$CLA_CLASSIFIER_IMPL"] = "";
             }
 
             //tokenReplacements["$ANOMALY_PARAMS"] = Options.anomalyParams;
@@ -590,14 +590,14 @@ namespace HTM.Net.Research.Swarming
             claParameters.AggregationInfo = aggregationInfo;
 
             //tokenReplacements["$DATASET_SPEC"] = datasetSpec;
-            claParameters.DatasetSpec = datasetSpec;
+            claParameters.Control.DatasetSpec = datasetSpec;
 
             if (!Options.iterationCount.HasValue)
             {
                 Options.iterationCount = -1;
             }
             //tokenReplacements["$ITERATION_COUNT"] = Options.iterationCount;
-            claParameters.IterationCount = Options.iterationCount;
+            claParameters.Control.IterationCount = Options.iterationCount;
 
             tokenReplacements["$SP_POOL_PCT"] = Options.spCoincInputPoolPct;
             tokenReplacements["$HS_MIN_PARTICLES"] = Options.minParticlesPerSwarm;
@@ -716,13 +716,13 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Generate the inferenceArgs replacement tokens
-            _generateInferenceArgs(Options, tokenReplacements);
+            _generateInferenceArgs(Options, claParameters, tokenReplacements);
 
             // Generate the metric replacement tokens
-            _generateMetricsSubstitutions(Options, tokenReplacements);
+            _generateMetricsSubstitutions(Options, claParameters, tokenReplacements);
 
             // Generate input record schema
-            _generateInputRecordSchema(Options, tokenReplacements);
+            _generateInputRecordSchema(Options, claParameters);
 
             // -----------------------------------------------------------------------
             // Generate Control dictionary
@@ -730,7 +730,7 @@ namespace HTM.Net.Research.Swarming
             tokenReplacements["$ENVIRONMENT"] = "Nupic";
 
             // Generate 'files' / descriptions etc from the token replacements
-           
+
             ClaPermutations perms = new ClaPermutations();
             TokenReplacer.ReplaceIn(perms, tokenReplacements);
 
@@ -747,7 +747,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="options"></param>
         /// <param name="tokenReplacements"></param>
-        private void _generateMetricsSubstitutions(SwarmDefinition options, Map<string, object> tokenReplacements)
+        private void _generateMetricsSubstitutions(SwarmDefinition options, ClaExperimentParameters claExperimentParameters, Map<string, object> tokenReplacements)
         {
             // -----------------------------------------------------------------------
             //
@@ -759,8 +759,8 @@ namespace HTM.Net.Research.Swarming
             var optimizeMetricLabel = mSpecs.Item2;
 
             tokenReplacements["$PERM_OPTIMIZE_SETTING"] = optimizeMetricLabel;
-            tokenReplacements["$LOGGED_METRICS"] = options.loggedMetrics;
-            tokenReplacements["$METRICS"] = metricList;
+            claExperimentParameters.Control.LoggedMetrics = options.loggedMetrics;
+            claExperimentParameters.Control.Metrics = metricList;
         }
 
         /// <summary>
@@ -965,7 +965,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="options"></param>
         /// <param name="tokenReplacements"></param>
-        private void _generateInferenceArgs(SwarmDefinition options, Map<string, object> tokenReplacements)
+        private void _generateInferenceArgs(SwarmDefinition options, ClaExperimentParameters claExperimentParameters, Map<string, object> tokenReplacements)
         {
             var inferenceType = options.inferenceType;
             var optionInferenceArgs = options.inferenceArgs;
@@ -997,6 +997,7 @@ namespace HTM.Net.Research.Swarming
             tokenReplacements["$PREDICTED_FIELD"] = predictedField;
             tokenReplacements["$PREDICTED_FIELD_report"] = new[] { ".*" + predictedField + ".*" };
             tokenReplacements["$INFERENCE_ARGS"] = resultInferenceArgs;
+            claExperimentParameters.Control.InferenceArgs = resultInferenceArgs;
         }
 
         /// <summary>
@@ -1356,7 +1357,7 @@ namespace HTM.Net.Research.Swarming
             return enc;
         }
 
-        private void _generateInputRecordSchema(SwarmDefinition options, Map<string, object> tokenReplacements)
+        private void _generateInputRecordSchema(SwarmDefinition options, ClaExperimentParameters claExperimentParameters)
         {
             if (options.includedFields == null)
             {
@@ -1372,7 +1373,8 @@ namespace HTM.Net.Research.Swarming
                 infos[i] = fmi;
             }
 
-            tokenReplacements["$INPUT_RECORD_SCHEMA"] = infos;
+            //tokenReplacements["$INPUT_RECORD_SCHEMA"] = infos;
+            claExperimentParameters.Control.InputRecordSchema = infos;
         }
     }
 }

@@ -3081,12 +3081,12 @@ namespace HTM.Net.Research.Swarming
         // Added myself, is the description holder (file)
         public string baseDescriptionFileName;
         public string hsVersion = "v2";
-        public BaseDescription descriptionPyContents;
+        public ClaExperimentParameters descriptionPyContents;
 
         public void Populate(Map<string, object> jobParamsMap)
         {
             this.persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
-            this.descriptionPyContents = (BaseDescription)jobParamsMap["descriptionPyContents"];
+            this.descriptionPyContents = (ClaExperimentParameters)jobParamsMap["descriptionPyContents"];
             this.permutationsPyContents = (BasePermutations)jobParamsMap["permutationsPyContents"];
             this.maxModels = TypeConverter.Convert<int?>(jobParamsMap.Get("maxModels"));
             this.hsVersion = (string)jobParamsMap["hsVersion"];
@@ -3204,7 +3204,7 @@ namespace HTM.Net.Research.Swarming
         private HsState _hsState;
         private SwarmTerminator _swarmTerminator;
         //private string _basePath;
-        private BaseDescription _baseDescription;
+        private ClaExperimentParameters _baseDescription;
         private int _baseDescriptionHash;
         private int _maxUniqueModelAttempts;
         private double _modelOrphanIntervalSecs;
@@ -3488,7 +3488,7 @@ namespace HTM.Net.Research.Swarming
                 //modelDescription, _ = opfhelpers.loadExperiment(this._basePath);
                 //Tuple<ModelDescription, object> modelDescrPair = new Tuple<ModelDescription, object>(null, null);// opfhelpers.loadExperiment(this._basePath);
                 //throw new NotImplementedException("Check line above");
-                ConfigModelDescription modelDescription = _baseDescription.modelConfig;
+                //ConfigModelDescription modelDescription = _baseDescription.modelConfig;
 
                 // Read info from permutations file. This sets up the following member
                 // variables:
@@ -3501,7 +3501,7 @@ namespace HTM.Net.Research.Swarming
                 //   _optimizeKey
                 //   _maximize
                 //   _dummyModelParamsFunc
-                this._readPermutationsFile(permutationsScript, modelDescription);
+                this._readPermutationsFile(permutationsScript, _baseDescription);
 
                 // Fill in and save the base description and permutations file contents
                 //  if they haven't already been filled in by another worker
@@ -3713,7 +3713,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="filename">Name of permutations file</param>
         /// <param name="modelDescription"></param>
         /// <returns>None</returns>
-        private void _readPermutationsFile(string permFileJson, ConfigModelDescription modelDescription)
+        private void _readPermutationsFile(string permFileJson, ClaExperimentParameters modelDescription)
         {
             // Open and execute the permutations file
             //Dictionary<string, object> vars = new Dictionary<string, object>();
@@ -3846,7 +3846,7 @@ namespace HTM.Net.Research.Swarming
             //    other field.
             //  elif it's a classification search:
             //    the first sprint has N swarms, each with 1 field
-            string sIinferenceType = modelDescription.modelParams.inferenceType.ToString();
+            string sIinferenceType = modelDescription.InferenceType.ToString();
             InferenceType inferenceType;
             if (!Enum.TryParse(sIinferenceType, true, out inferenceType))
             {
@@ -3859,7 +3859,7 @@ namespace HTM.Net.Research.Swarming
                 //  goes to the classifier, it is a legacy multi-step network
                 EncoderSetting classifierOnlyEncoder = null;
 
-                foreach (var encoder in modelDescription.modelParams.sensorParams.encoders.Values)
+                foreach (var encoder in modelDescription.GetEncoderSettings().Values)
                 {
                     if ((bool)encoder.classifierOnly.GetValueOrDefault() && encoder.fieldName == permFile.predictedField)
                     {

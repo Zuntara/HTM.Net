@@ -12,6 +12,11 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
+    public class SpatialClassificationDescriptionParameters : ClaExperimentParameters
+    {
+        
+    }
+
     public class SpatialClassificationDescriptionFile : BaseDescription
     {
         public SpatialClassificationDescriptionFile()
