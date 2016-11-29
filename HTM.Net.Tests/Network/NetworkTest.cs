@@ -198,7 +198,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -268,7 +270,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -537,7 +541,9 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -617,7 +623,9 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p.SetPotentialRadius(16);
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            var rnd = new XorshiftRandom(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -700,7 +708,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.LIKELIHOOD);
 
@@ -766,7 +776,9 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.4);
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -841,7 +853,9 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.4);
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -893,7 +907,9 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.4);
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -984,7 +1000,9 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetGeospatialTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             HTMSensor<ObservableSensor<string[]>> htmSensor = (HTMSensor<ObservableSensor<string[]>>)sensor;
 
@@ -1051,7 +1069,9 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetGeospatialTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             HTMSensor<ObservableSensor<string[]>> htmSensor = (HTMSensor<ObservableSensor<string[]>>)sensor;
 
@@ -1115,7 +1135,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1144,7 +1166,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1173,7 +1197,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1195,7 +1221,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                     .Add(Net.Network.Network.CreateRegion("r1")
@@ -1217,7 +1245,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1238,7 +1268,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1262,7 +1294,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1285,7 +1319,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Region region1 = Net.Network.Network.CreateRegion("region1");
             ILayer layer1 = Net.Network.Network.CreateLayer("layer1", p);
@@ -1326,7 +1362,9 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            var rnd = new XorshiftRandom(42);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
 
             Sensor<ObservableSensor<String[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
                 ObservableSensor<string[]>.Create, 

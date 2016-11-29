@@ -139,7 +139,7 @@ namespace HTM.Net.Algorithms
                     else
                     {
                         Tuple cellsXwinnerCell = BurstColumn(conn, columnData.Column(), columnData.MatchingSegments(),
-                            prevActiveCells, prevWinnerCells, permanenceIncrement, permanenceDecrement, conn.GetRandom(),
+                            prevActiveCells, prevWinnerCells, permanenceIncrement, permanenceDecrement, conn.GetRandomForTemporalMemory(),
                                learn);
 
                         cycle.ActiveCells().UnionWith((IEnumerable<Cell>)cellsXwinnerCell.Get(0));
@@ -275,7 +275,7 @@ namespace HTM.Net.Algorithms
                     if (nGrowDesired > 0)
                     {
                         GrowSynapses(conn, prevWinnerCells, segment, conn.GetInitialPermanence(),
-                            nGrowDesired, conn.GetRandom());
+                            nGrowDesired, conn.GetRandomForTemporalMemory());
                     }
                 }
             }

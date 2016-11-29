@@ -31,8 +31,10 @@ namespace HTM.Net.Tests
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
             Assert.AreEqual(@params.GetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN), 32);
-            Assert.AreEqual(@params.GetParameterByKey(Parameters.KEY.SEED), 42);
-            Assert.AreEqual(true, ((Random)@params.GetParameterByKey(Parameters.KEY.RANDOM)).GetType().Equals(typeof(MersenneTwister)));
+            Assert.AreEqual(@params.GetParameterByKey(Parameters.KEY.SEED_SP), 42);
+            Assert.AreEqual(@params.GetParameterByKey(Parameters.KEY.SEED_TM), 42);
+            Assert.AreEqual(true, ((IRandom)@params.GetParameterByKey(Parameters.KEY.RANDOM_SP)).GetType().Equals(typeof(MersenneTwister)));
+            Assert.AreEqual(true, ((IRandom)@params.GetParameterByKey(Parameters.KEY.RANDOM_TM)).GetType().Equals(typeof(MersenneTwister)));
             Console.WriteLine("All Defaults:\n" + Parameters.GetAllDefaultParameters());
             Console.WriteLine("Spatial Defaults:\n" + Parameters.GetSpatialDefaultParameters());
             Console.WriteLine("Temporal Defaults:\n" + Parameters.GetTemporalDefaultParameters());
@@ -243,8 +245,11 @@ namespace HTM.Net.Tests
             @params.SetMaxNewSynapseCount(42);
             Assert.AreEqual(42, @params.GetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT));
 
-            @params.SetSeed(42);
-            Assert.AreEqual(42, @params.GetParameterByKey(Parameters.KEY.SEED));
+            @params.SetSeedForSpatialPooler(42);
+            Assert.AreEqual(42, @params.GetParameterByKey(Parameters.KEY.SEED_SP));
+
+            @params.SetSeedForTemporalMemory(42);
+            Assert.AreEqual(42, @params.GetParameterByKey(Parameters.KEY.SEED_TM));
 
             @params.SetInitialPermanence(0.82);
             Assert.AreEqual(0.82, @params.GetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE));

@@ -203,12 +203,12 @@ namespace HTM.Net.Model
         /** Stores each cycle's most recent activity */
         public Activity lastActivity;
         /** The default random number seed */
-        protected int seed = 42;
-        /** The random number generator */
-        //[NonSerialized]
-        public IRandom random = new MersenneTwister(42);
-
-        //private Type randomGeneratorType;
+        protected int seedSpatial = 42;
+        protected int seedTemporal = 42;
+        /** The random number generator for spatial pooler */
+        public IRandom randomSpatial = new MersenneTwister(42);
+        /** The random number generator for temporal memory */
+        public IRandom randomTemporal = new MersenneTwister(42);
 
         /** Sorting Lambda used for sorting active and matching segments */
         public Comparison<DistalDendrite> segmentPositionSortKey;
@@ -219,12 +219,12 @@ namespace HTM.Net.Model
         ////////////////////////////////////////
         //       Connections Constructor      //
         ////////////////////////////////////////
+
         /**
          * Constructs a new {@code OldConnections} object. This object
          * is usually configured via the {@link Parameters#apply(Object)}
          * method.
          */
-
         public Connections()
         {
             segmentPositionSortKey = (s1, s2) =>
@@ -251,20 +251,6 @@ namespace HTM.Net.Model
             };
         }
 
-        //public override Connections PreSerialize()
-        //{
-        //    // Take some values from the random generator
-        //    randomGeneratorType = random.GetType();
-        //    return this;
-        //}
-
-        //public override Connections PostDeSerialize()
-        //{
-        //    // Put random generator in again
-        //    random = (IRandom)Activator.CreateInstance(randomGeneratorType, seed);
-        //    return this;
-        //}
-
         /**
          * Returns a deep copy of this {@code Connections} object.
          * @return a deep copy of this {@code Connections}
@@ -276,9 +262,9 @@ namespace HTM.Net.Model
             return api.Serializer().Deserialize<Connections>(myBytes);
         }
 
-        /**
-         * Sets the derived values of the {@link SpatialPooler}'s initialization.
-         */
+        /// <summary>
+        /// Sets the derived values of the <see cref="SpatialPooler"/>'s initialization.
+        /// </summary>
         public void DoSpatialPoolerPostInit()
         {
             synPermBelowStimulusInc = synPermConnected / 10.0;
@@ -292,44 +278,58 @@ namespace HTM.Net.Model
         /////////////////////////////////////////
         //         General Methods             //
         /////////////////////////////////////////
+        ///**
+        // * Sets the seed used for the internal random number generator.
+        // * If the generator has been instantiated, this method will initialize
+        // * a new random generator with the specified seed.
+        // *
+        // * @param seed
+        // */
+        //public void SetSeed(int seed)
+        //{
+        //    this.seed = seed;
+        //}
+
         /**
-         * Sets the seed used for the internal random number generator.
-         * If the generator has been instantiated, this method will initialize
-         * a new random generator with the specified seed.
-         *
-         * @param seed
+         * Returns the configured random number seed
+         * @return
          */
-        public void SetSeed(int seed)
+        public int GetSeedForSpatialPooler()
         {
-            this.seed = seed;
+            return seedSpatial;
         }
 
         /**
          * Returns the configured random number seed
          * @return
          */
-        public int GetSeed()
+        public int GetSeedForTemporalMemory()
         {
-            return seed;
+            return seedTemporal;
         }
 
         /**
          * Returns the thread specific {@link Random} number generator.
          * @return
          */
-        public IRandom GetRandom()
+        public IRandom GetRandomForSpatialPooler()
         {
-            return random;
+            return randomSpatial;
         }
 
-        /**
-         * Sets the random number generator.
-         * @param random
-         */
-        public void SetRandom(IRandom random)
+        public IRandom GetRandomForTemporalMemory()
         {
-            this.random = random;
+            return randomTemporal;
         }
+
+        ///**
+        // * Sets the random number generator.
+        // * @param random
+        // */
+        //public void SetRandom(IRandom random)
+        //{
+        //    this.random = random;
+        //}
 
         /**
          * Returns the {@link Cell} specified by the index passed in.
@@ -2388,8 +2388,10 @@ namespace HTM.Net.Model
             pw.WriteLine("inputDimensions            = " + Arrays.ToString(GetInputDimensions()));
             pw.WriteLine("cellsPerColumn             = " + GetCellsPerColumn());
 
-            pw.WriteLine("random                     = " + GetRandom());
-            pw.WriteLine("seed                       = " + GetSeed());
+            pw.WriteLine("random SP                  = " + GetRandomForSpatialPooler());
+            pw.WriteLine("seed SP                    = " + GetSeedForSpatialPooler());
+            pw.WriteLine("random TM                  = " + GetRandomForTemporalMemory());
+            pw.WriteLine("seed TM                    = " + GetSeedForTemporalMemory());
 
             pw.WriteLine("\n------------ SpatialPooler Parameters ------------------");
             pw.WriteLine("numInputs                  = " + GetNumInputs());
@@ -2547,9 +2549,11 @@ namespace HTM.Net.Model
             temp = BitConverter.DoubleToInt64Bits(predictedSegmentDecrement);
             result = prime * result + (int)(temp ^ (temp >> 32));
             result = prime * result + ((predictiveCells == null) ? 0 : predictiveCells.GetHashCode());
-            result = prime * result + ((random == null) ? 0 : random.GetHashCode());
+            result = prime * result + ((randomSpatial == null) ? 0 : randomSpatial.GetHashCode());
+            result = prime * result + ((randomTemporal == null) ? 0 : randomTemporal.GetHashCode());
             result = prime * result + ((receptorSynapses == null) ? 0 : receptorSynapses.GetHashCode());
-            result = prime * result + seed;
+            result = prime * result + seedSpatial;
+            result = prime * result + seedTemporal;
             result = prime * result + ((segments == null) ? 0 : segments.GetHashCode());
             temp = BitConverter.DoubleToInt64Bits(stimulusThreshold);
             result = prime * result + (int)(temp ^ (temp >> 32));
@@ -2709,7 +2713,9 @@ namespace HTM.Net.Model
             }
             else if (!receptorSynapses.Equals(other.receptorSynapses))
                 return false;
-            if (seed != other.seed)
+            if (seedSpatial != other.seedSpatial)
+                return false;
+            if (seedTemporal != other.seedTemporal)
                 return false;
             if (segments == null)
             {

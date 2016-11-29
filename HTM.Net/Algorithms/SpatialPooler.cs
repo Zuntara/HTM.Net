@@ -5,7 +5,6 @@ using HTM.Net.Model;
 using HTM.Net.Util;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace HTM.Net.Algorithms
 {
@@ -702,7 +701,7 @@ namespace HTM.Net.Algorithms
          */
         public static double InitPermConnected(Connections c)
         {
-            double p = c.GetSynPermConnected() + (c.GetSynPermMax() - c.GetSynPermConnected()) * c.random.NextDouble();
+            double p = c.GetSynPermConnected() + (c.GetSynPermMax() - c.GetSynPermConnected()) * c.randomSpatial.NextDouble();
 
             // Note from Python implementation on conditioning below:
             // Ensure we don't have too much unnecessary precision. A full 64 bits of
@@ -720,7 +719,7 @@ namespace HTM.Net.Algorithms
         /// <returns>a randomly generated permanence value</returns>
         public static double InitPermNonConnected(Connections c)
         {
-            double p = c.GetSynPermConnected() * c.GetRandom().NextDouble();
+            double p = c.GetSynPermConnected() * c.GetRandomForSpatialPooler().NextDouble();
 
             // Note from Python implementation on conditioning below:
             // Ensure we don't have too much unnecessary precision. A full 64 bits of
@@ -751,7 +750,7 @@ namespace HTM.Net.Algorithms
             double[] perm = new double[c.GetNumInputs()];
             foreach (int idx in potentialPool)
             {
-                if (c.random.NextDouble() <= connectedPct)
+                if (c.randomSpatial.NextDouble() <= connectedPct)
                 {
                     perm[idx] = InitPermConnected(c);
                 }
@@ -840,7 +839,7 @@ namespace HTM.Net.Algorithms
             // the potential pool
             int numPotential = (int)(columnInputs.Length * c.GetPotentialPct() + 0.5);
             int[] retVal = new int[numPotential];
-            return ArrayUtils.Sample(columnInputs, ref retVal, c.GetRandom());
+            return ArrayUtils.Sample(columnInputs, ref retVal, c.GetRandomForSpatialPooler());
         }
 
         /**

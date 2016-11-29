@@ -120,6 +120,7 @@
     <Compile Include="opf\ModelFactory.cs" />
     <Compile Include="opf\ModelResult.cs" />
     <Compile Include="opf\NetworkInfo.cs" />
+    <Compile Include="Swarming\ExpGenerator.cs" />
     <Compile Include="Swarming\OpfModelRunner.cs" />
     <Compile Include="opf\PredictionMetricsManager.cs" />
     <Compile Include="opf\SensorInput.cs" />
@@ -134,7 +135,6 @@
     <Compile Include="Swarming\HyperSearchV2.cs" />
     <Compile Include="Swarming\HyperSearchWorker.cs" />
     <Compile Include="Swarming\ModelChooser.cs" />
-    <Compile Include="Swarming\PermutationHelpers.cs" />
     <Compile Include="Swarming\PermutationsRunner.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />

@@ -29,8 +29,8 @@ namespace HTM.Net.Tests.Algorithms
             retVal.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.10);
             retVal.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.10);
             retVal.SetParameterByKey(Parameters.KEY.PREDICTED_SEGMENT_DECREMENT, 0.0);
-            retVal.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            retVal.SetParameterByKey(Parameters.KEY.SEED, 42);
+            retVal.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(42));
+            retVal.SetParameterByKey(Parameters.KEY.SEED_TM, 42);
 
             return retVal;
         }
@@ -722,8 +722,8 @@ namespace HTM.Net.Tests.Algorithms
                 Connections cn = new Connections();
                 Parameters p = GetDefaultParameters(null, Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 4);
                 p = GetDefaultParameters(p, Parameters.KEY.PREDICTED_SEGMENT_DECREMENT, 0.02);
-                p = GetDefaultParameters(p, Parameters.KEY.SEED, seed);
-                p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(seed));
+                p = GetDefaultParameters(p, Parameters.KEY.SEED_TM, seed);
+                p.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(seed));
                 p.Apply(cn);
                 TemporalMemory.Init(cn);
 
@@ -838,7 +838,7 @@ namespace HTM.Net.Tests.Algorithms
 
             for (int i = 0; i < 100; i++)
             {
-                Assert.AreEqual(1, tm.LeastUsedCell(cn, cn.GetColumn(0).GetCells(), cn.GetRandom()).GetIndex());
+                Assert.AreEqual(1, tm.LeastUsedCell(cn, cn.GetColumn(0).GetCells(), cn.GetRandomForTemporalMemory()).GetIndex());
             }
         }
 

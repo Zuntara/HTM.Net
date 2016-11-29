@@ -168,7 +168,8 @@ namespace HTM.Net.Tests
             parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.SEED_TM, 42);
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
             parameters.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
 
             //Temporal Memory specific
@@ -179,7 +180,9 @@ namespace HTM.Net.Tests
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 4);
-            parameters.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            var rnd = new MersenneTwister(42);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_TM, rnd);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_SP, rnd);
 
             return parameters;
         }

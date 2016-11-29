@@ -176,34 +176,6 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return p;
         }
 
-        /**
-         * Parameters and meta information for the "dayOfWeek" encoder
-         * @return
-         */
-        public static EncoderSettingsList GetDayDemoFieldEncodingMap()
-        {
-            EncoderSettingsList fieldEncodings = SetupMap(
-                    null,
-                    8, // n
-                    3, // w
-                    0.0, 8.0, 0, 1, true, null, true,
-                    "dayOfWeek", FieldMetaType.Integer, "ScalarEncoder");
-            return fieldEncodings;
-        }
-
-        /**
-         * Returns Encoder parameters for the "dayOfWeek" test encoder.
-         * @return
-         */
-        public static Parameters GetDayDemoTestEncoderParams()
-        {
-            EncoderSettingsList fieldEncodings = GetDayDemoFieldEncodingMap();
-
-            Parameters p = Parameters.GetEncoderDefaultParameters();
-            p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
-
-            return p;
-        }
 
         /**
          * Returns the default parameters used for the "dayOfWeek" encoder and algorithms.
@@ -212,11 +184,14 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public static Parameters GetParameters()
         {
             Parameters parameters = Parameters.GetAllDefaultParameters();
-            parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 20 });
-            parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 20 });
-            parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 6);
+            parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 40 });
+            parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 40 });
+            parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 8);
 
-            //SpatialPooler specific
+            // Classifier Specific
+            //parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.1);
+
+            // SpatialPooler specific
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 12);//3
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.5);//0.5
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, false);
@@ -231,7 +206,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 1956);
+            parameters.SetParameterByKey(Parameters.KEY.SEED_TM, 1960);
             parameters.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
 
             //Temporal Memory specific
@@ -241,7 +217,10 @@ namespace HTM.Net.Research.Tests.Examples.Random
             parameters.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 6);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.05);
-            parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 4);
+            parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 16);
+            
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(1960));
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(1956));
 
             return parameters;
         }

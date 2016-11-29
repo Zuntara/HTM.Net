@@ -11,6 +11,7 @@ using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Model;
+using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -38,9 +39,7 @@ namespace HTM.Net
 
             /////////// Universal Parameters ///////////
 
-            defaultParams.Add(KEY.SEED, 42);
-            defaultParams.Add(KEY.RANDOM, new MersenneTwister((int)defaultParams[KEY.SEED]));
-
+            
             /////////// Temporal Memory Parameters ///////////
             ParametersMap defaultTemporalParams = new ParametersMap();
             defaultTemporalParams.Add(KEY.COLUMN_DIMENSIONS, new int[] { 2048 });
@@ -58,6 +57,8 @@ namespace HTM.Net
             defaultTemporalParams.Add(KEY.PREDICTED_SEGMENT_DECREMENT, 0.0);
             defaultTemporalParams.Add(KEY.TM_VERBOSITY, 0);
             defaultTemporalParams.Add(KEY.LEARN, true);
+            defaultTemporalParams.Add(KEY.SEED_TM, 42);
+            defaultTemporalParams.Add(KEY.RANDOM_TM, new MersenneTwister((int)defaultTemporalParams[KEY.SEED_TM]));
             DEFAULTS_TEMPORAL = defaultTemporalParams;
             defaultParams.AddAll(DEFAULTS_TEMPORAL);
 
@@ -84,6 +85,8 @@ namespace HTM.Net
             defaultSpatialParams.Add(KEY.SP_VERBOSITY, 0);
             defaultSpatialParams.Add(KEY.LEARN, true);
             defaultSpatialParams.Add(KEY.SP_PARALLELMODE, false);   // default off
+            defaultSpatialParams.Add(KEY.SEED_SP, 42);
+            defaultSpatialParams.Add(KEY.RANDOM_SP, new MersenneTwister((int)defaultSpatialParams[KEY.SEED_SP]));
             DEFAULTS_SPATIAL = defaultSpatialParams;
             defaultParams.AddAll(DEFAULTS_SPATIAL);
 
@@ -160,13 +163,18 @@ namespace HTM.Net
             /// </summary>
             public static readonly KEY LEARN = new KEY("learn", typeof(bool));
             /// <summary>
-            /// Random Number Generator
+            /// Random Number Generator for Temporal Memory
             /// </summary>
-            public static readonly KEY RANDOM = new KEY("random", typeof(IRandom));
+            public static readonly KEY RANDOM_TM = new KEY("randomTemporal", typeof(IRandom));
+            /// <summary>
+            /// Random Number Generator for Spatial Pooler
+            /// </summary>
+            public static readonly KEY RANDOM_SP = new KEY("randomSpatial", typeof(IRandom));
             /// <summary>
             /// Seed for random number generator
             /// </summary>
-            public static readonly KEY SEED = new KEY("seed", typeof(int));
+            public static readonly KEY SEED_TM = new KEY("seedTM", typeof(int));
+            public static readonly KEY SEED_SP= new KEY("seedSP", typeof(int));
 
             /////////// Temporal Memory Parameters ///////////
             /**
@@ -622,7 +630,7 @@ namespace HTM.Net
 
             public new void Add(KEY key, object value)
             {
-                if (value != null)
+                if (value != null && !(value is PermuteVariable))
                 {
                     if (!(value is Type) && !key.GetFieldType().IsInstanceOfType(value))
                     {
@@ -642,7 +650,7 @@ namespace HTM.Net
                             , key.GetFieldName(), value, key.GetMin(), key.GetMax()));
                     }
                 }
-                if (base.ContainsKey(key))
+                if (ContainsKey(key))
                 {
                     base[key] = value;
                 }
@@ -650,15 +658,13 @@ namespace HTM.Net
                 {
                     base.Add(key, value);
                 }
-
-                //return value;
             }
         }
 
         /// <summary>
         /// Map of parameters to their values
         /// </summary>
-        private ParametersMap paramMap = new ParametersMap();
+        protected readonly ParametersMap paramMap = new ParametersMap();
 
         //TODO apply from container to parameters
 
@@ -767,7 +773,7 @@ namespace HTM.Net
          * It is private. Only allow instantiation with Factory methods.
          * This way we will never have erroneous Parameters with missing attributes
          */
-        private Parameters()
+        protected Parameters()
         {
         }
 
@@ -806,11 +812,9 @@ namespace HTM.Net
             return this;
         }
 
-        /**
-         * Returns a Set view of the keys in this {@code Parameter}s 
-         * object
-         * @return
-         */
+        /// <summary>
+        /// Returns a Set view of the keys in this <see cref="Parameters"/>s 
+        /// </summary>
         public List<KEY> Keys()
         {
             List<KEY> retVal = paramMap.Keys.ToList();
@@ -869,6 +873,16 @@ namespace HTM.Net
             paramMap.Remove(key);
         }
 
+        /// <summary>
+        /// Returns all the variables that are to be permuted.
+        /// </summary>
+        public List<Tuple<KEY, PermuteVariable>> GetPermutationVars()
+        {
+            return paramMap.Where(pair => pair.Value != null && pair.Value is PermuteVariable)
+                .Select(p => new Tuple<KEY, PermuteVariable>(p.Key, p.Value as PermuteVariable))
+                .ToList();
+        }
+
         /**
          * Convenience method to log difference this {@code Parameters} and specified
          * {@link Connections} object.
@@ -917,9 +931,39 @@ namespace HTM.Net
          *
          * @param r the generator to use.
          */
-        public void SetRandom(IRandom r)
+        public void SetRandomForSpatialPooler(IRandom r)
         {
-            paramMap.Add(KEY.RANDOM, r);
+            paramMap.Add(KEY.RANDOM_SP, r);
+        }
+
+        /**
+         * Returns the seeded random number generator.
+         *
+         * @param r the generator to use.
+         */
+        public void SetRandomForTemporalMemory(IRandom r)
+        {
+            paramMap.Add(KEY.RANDOM_TM, r);
+        }
+
+        /**
+         * Seed for random number generator
+         *
+         * @param seed
+         */
+        public void SetSeedForSpatialPooler(int seed)
+        {
+            paramMap.Add(KEY.SEED_SP, seed);
+        }
+
+        /**
+         * Seed for random number generator
+         *
+         * @param seed
+         */
+        public void SetSeedForTemporalMemory(int seed)
+        {
+            paramMap.Add(KEY.SEED_TM, seed);
         }
 
         /**
@@ -1007,16 +1051,6 @@ namespace HTM.Net
         public void SetMaxNewSynapseCount(int maxNewSynapseCount)
         {
             paramMap.Add(KEY.MAX_NEW_SYNAPSE_COUNT, maxNewSynapseCount);
-        }
-
-        /**
-         * Seed for random number generator
-         *
-         * @param seed
-         */
-        public void SetSeed(int seed)
-        {
-            paramMap.Add(KEY.SEED, seed);
         }
 
         /**
@@ -1389,10 +1423,13 @@ namespace HTM.Net
 
         public override int GetHashCode()
         {
-            IRandom rnd = (IRandom)paramMap.Get(KEY.RANDOM);
-            paramMap.Remove(KEY.RANDOM);
+            IRandom rndSp = (IRandom)paramMap.Get(KEY.RANDOM_SP);
+            IRandom rndTm = (IRandom)paramMap.Get(KEY.RANDOM_TM);
+            paramMap.Remove(KEY.RANDOM_SP);
+            paramMap.Remove(KEY.RANDOM_TM);
             int hc = paramMap.GetArrayHashCode();
-            paramMap.Add(KEY.RANDOM, rnd);
+            paramMap.Add(KEY.RANDOM_SP, rndSp);
+            paramMap.Add(KEY.RANDOM_TM, rndTm);
 
             return hc;
         }

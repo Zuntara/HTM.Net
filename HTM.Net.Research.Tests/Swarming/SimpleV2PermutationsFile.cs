@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Swarming

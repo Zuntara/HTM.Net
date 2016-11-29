@@ -37,7 +37,7 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
-            parameters.SetRandom(new XorshiftRandom(42));
+            parameters.SetRandomForSpatialPooler(new XorshiftRandom(42));
         }
 
         public void SetupDefaultParameters()
@@ -58,8 +58,8 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.001);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 1000);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
-            parameters.SetRandom(new XorshiftRandom(42));
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
+            parameters.SetRandomForSpatialPooler(new XorshiftRandom(42));
         }
 
         private void InitSp()
@@ -92,7 +92,7 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(0.1, mem.GetMinPctActiveDutyCycles(), 0);
             Assert.AreEqual(10, mem.GetDutyCyclePeriod(), 0);
             Assert.AreEqual(10.0, mem.GetMaxBoost(), 0);
-            Assert.AreEqual(42, mem.GetSeed());
+            Assert.AreEqual(42, mem.GetSeedForSpatialPooler());
 
             Assert.AreEqual(5, mem.GetNumInputs());
             Assert.AreEqual(5, mem.GetNumColumns());
@@ -215,8 +215,8 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
             parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 3.0);
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 0.0);
-            parameters.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
 
             SpatialPooler sp = new SpatialPooler();
             Connections cn = new Connections();
@@ -245,8 +245,8 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
             parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 3.0);
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 1.0);
-            parameters.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
 
             SpatialPooler sp = new SpatialPooler();
             Connections cn = new Connections();
@@ -271,8 +271,8 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, false);
             parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 1.0);
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 0.0);
-            parameters.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
 
             SpatialPooler sp = new SpatialPooler();
             Connections cn = new Connections();
@@ -306,8 +306,8 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, false);
             parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 3.0);
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 1.0);
-            parameters.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
 
             SpatialPooler sp = new SpatialPooler();
             Connections cn = new Connections();
@@ -331,8 +331,8 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetGlobalInhibition(true);
             parameters.SetSynPermActiveInc(0.1);
             parameters.SetSynPermInactiveDec(0.1);
-            parameters.SetSeed(42);
-            parameters.SetRandom(new XorshiftRandom(42));
+            parameters.SetSeedForSpatialPooler(42);
+            parameters.SetRandomForSpatialPooler(new XorshiftRandom(42));
 
             SpatialPooler sp = new SpatialPooler();
             Connections cn = new Connections();
@@ -655,7 +655,7 @@ namespace HTM.Net.Tests.Algorithms
                     return new[] { 2 };
                 }).Verifiable();
 
-            double[] overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandom());
+            double[] overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandomForSpatialPooler());
             mem.SetNumActiveColumnsPerInhArea(5);
             mem.SetLocalAreaDensity(0.1);
             mem.SetGlobalInhibition(true);
@@ -678,7 +678,7 @@ namespace HTM.Net.Tests.Algorithms
             double[] tieBreaker = new double[500];
             Arrays.Fill(tieBreaker, 0);
             mem.SetTieBreaker(tieBreaker);
-            overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandom());
+            overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandomForSpatialPooler());
             spMock.Object.InhibitColumns(mem, overlaps);
             trueDensity = mem.GetLocalAreaDensity();
             spMock.Verify(p => p.InhibitColumnsGlobal(It.IsAny<Connections>(), It.IsAny<double[]>(), It.IsAny<double>()), Times.Never);
@@ -700,7 +700,7 @@ namespace HTM.Net.Tests.Algorithms
             tieBreaker = new double[1000];
             Arrays.Fill(tieBreaker, 0);
             mem.SetTieBreaker(tieBreaker);
-            overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandom());
+            overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandomForSpatialPooler());
             spMock.Object.InhibitColumns(mem, overlaps);
             trueDensity = 3.0 / 81.0;
             spMock.Verify(p => p.InhibitColumnsGlobal(It.IsAny<Connections>(), It.IsAny<double[]>(), It.IsAny<double>()), Times.Never);
@@ -716,7 +716,7 @@ namespace HTM.Net.Tests.Algorithms
             tieBreaker = new double[1000];
             Arrays.Fill(tieBreaker, 0);
             mem.SetTieBreaker(tieBreaker);
-            overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandom());
+            overlaps = ArrayUtils.Sample(mem.GetNumColumns(), mem.GetRandomForSpatialPooler());
             spMock.Object.InhibitColumns(mem, overlaps);
             trueDensity = 0.5;
             spMock.Verify(p => p.InhibitColumnsGlobal(It.IsAny<Connections>(), It.IsAny<double[]>(), It.IsAny<double>()), Times.Never);
@@ -732,7 +732,7 @@ namespace HTM.Net.Tests.Algorithms
             parameters.SetInputDimensions(new int[] { 5/*Don't care*/ });
             parameters.SetColumnDimensions(new int[] { 5 });
             parameters.SetMaxBoost(10.0);
-            parameters.SetRandom(new XorshiftRandom(42));
+            parameters.SetRandomForSpatialPooler(new XorshiftRandom(42));
             InitSp();
 
             mem.SetNumColumns(6);

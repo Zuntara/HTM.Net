@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

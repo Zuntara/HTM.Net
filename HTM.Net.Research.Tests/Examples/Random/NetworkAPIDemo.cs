@@ -42,6 +42,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
         private readonly FileInfo _outputFile;
         private readonly StreamWriter _pw;
+        private readonly IRandom _random = new XorshiftRandom(42);
 
         private double[] _predictedValues = null;
         private List<PredictionValue> _predictions;
@@ -190,7 +191,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return Observer.Create<IInference>(output =>
             {
                 //Debug.WriteLine("Writing to file");
-                WriteToFile(output, new[] {"Number 1", "Number 2" , "Number 3" , "Number 4" , "Number 5" , "Number 6" , "Bonus" });
+                WriteToFile(output, new[] { "Number 1", "Number 2", "Number 3", "Number 4", "Number 5", "Number 6", "Bonus" });
                 RecordStep(output, new[] { "Number 1", "Number 2", "Number 3", "Number 4", "Number 5", "Number 6", "Bonus" });
             }, Console.WriteLine, () =>
             {
@@ -223,7 +224,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 {
                     newPredictions = classifierFields.Select(cf => ((double?)infer.GetClassification(cf).GetMostProbableValue(1)).GetValueOrDefault(-1)).ToArray();
                 }
-                else {
+                else
+                {
                     newPredictions = _predictedValues;
                 }
                 // Start logging from item 1
@@ -274,13 +276,16 @@ namespace HTM.Net.Research.Tests.Examples.Random
             {
                 double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)infer.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
                 double[] errors = ArrayUtils.Abs(ArrayUtils.Subtract(_predictedValues, actuals));
+                double[] randomSequence = GetRandomGuesses();
                 int correctGuesses = GetGuessCount(actuals, _predictedValues);
+                int correctRandomGuesses = GetGuessCount(actuals, randomSequence);
 
                 PredictionValue value = new PredictionValue();
                 value.RecordNum = infer.GetRecordNum();
                 value.ActualValues = actuals;
                 value.PredictionErrors = errors;
                 value.CorrectGuesses = correctGuesses;
+                value.CorrectRandomGuesses = correctRandomGuesses;
                 value.PredictedValues = newPredictions;
                 value.AnomalyFactor = infer.GetAnomalyScore();
                 _predictions.Add(value);
@@ -301,25 +306,25 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
         public int GetHighestCorrectGuesses(double rangePct, bool fromBehind)
         {
-            int totalLength = _predictions.Count-1;
+            int totalLength = _predictions.Count - 1;
             int takeRange = (int)(totalLength * rangePct);
             if (fromBehind)
             {
                 int offset = totalLength - takeRange;
                 int totalActual = _predictions.Skip(1).Skip(offset).Max(p => p.CorrectGuesses);
 
-                return  totalActual;
+                return totalActual;
             }
             else
             {
                 int totalActual = _predictions.Skip(1).Take(takeRange).Max(p => p.CorrectGuesses);
-                return  totalActual;
+                return totalActual;
             }
         }
 
         public double GetAverageCorrectGuesses(double rangePct, bool fromBehind)
         {
-            int totalLength = _predictions.Count-1;
+            int totalLength = _predictions.Count - 1;
             int takeRange = (int)(totalLength * rangePct);
             if (fromBehind)
             {
@@ -340,13 +345,23 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return _predictions.Skip(1).Select(p => p.CorrectGuesses).ToArray();
         }
 
+        public int[] GetRandomGuessesCounts()
+        {
+            return _predictions.Skip(1).Select(p => p.CorrectRandomGuesses).ToArray();
+        }
+
+        public double[] GetRandomGuesses()
+        {
+            return ArrayUtils.Range(0, 7).Select(i => (double)_random.NextInt(45) + 1).ToArray();
+        }
+
         public static int GetGuessCount(IEnumerable<double> actuals, IEnumerable<double> predicted)
         {
             int correct = 0;
             Stack<double> predStack = new Stack<double>(predicted);
             List<double> actList = new List<double>(actuals);
             double predValue;
-            while (predStack.Count>0)
+            while (predStack.Count > 0)
             {
                 predValue = predStack.Pop();
                 if (actList.Contains(predValue))
@@ -387,6 +402,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             public double[] PredictedValues { get; set; }
             public double[] PredictionErrors { get; set; }
             public int CorrectGuesses { get; set; }
+            public int CorrectRandomGuesses { get; set; }
             public double AnomalyFactor { get; set; }
         }
 

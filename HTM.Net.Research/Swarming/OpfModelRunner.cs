@@ -8,6 +8,7 @@ using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;

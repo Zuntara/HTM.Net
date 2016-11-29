@@ -207,7 +207,7 @@ namespace HTM.Net.Research.Tests.Regression
 
             Parameters p = description.GetParameters();
 
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
             p.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.5);
 
             Network.Network network = new Network.Network("SineNetwork", p)

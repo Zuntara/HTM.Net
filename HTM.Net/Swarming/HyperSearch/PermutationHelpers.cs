@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Tuple = HTM.Net.Util.Tuple;
 
-namespace HTM.Net.Research.Swarming
+namespace HTM.Net.Swarming.HyperSearch
 {
     // TODO:  PermutationTemporalPoolerParams  >  let float, double, int be assignable to a permute-variable, lock the variable to the type then.
     // now we have to put object on the props instead of a type.

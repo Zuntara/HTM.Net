@@ -8,6 +8,7 @@ using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Tests.Regression;
+using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using log4net;
 using log4net.Config;

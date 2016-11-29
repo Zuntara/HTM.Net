@@ -77,8 +77,8 @@ namespace HTM.Net.Research.Vision
                 p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, synPermConnected);
                 p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 1000);
                 p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
-                p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses
-                p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(1956)); // The seed that Grok uses
+                p.SetParameterByKey(Parameters.KEY.SEED_SP, 1956); // The seed that Grok uses
+                p.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(1956)); // The seed that Grok uses
                 p.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 1);
                 //p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
 
@@ -157,8 +157,8 @@ namespace HTM.Net.Research.Vision
                 p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, synPermConnected);
                 p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 1000);
                 p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
-                p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses
-                p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(1956)); // The seed that Grok uses
+                p.SetParameterByKey(Parameters.KEY.SEED_SP, 1956); // The seed that Grok uses
+                p.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(1956)); // The seed that Grok uses
                 p.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 1);
 
                 Connections cn = new Connections();

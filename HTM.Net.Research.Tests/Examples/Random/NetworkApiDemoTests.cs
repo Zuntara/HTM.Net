@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using HTM.Net.Encoders;
+using HTM.Net.Research.Swarming;
+using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -19,13 +21,6 @@ namespace HTM.Net.Research.Tests.Examples.Random
         }
 
         [TestMethod]
-        public void TestGetDayDemoTestEncoderParams()
-        {
-            Parameters p = NetworkDemoHarness.GetDayDemoTestEncoderParams();
-            Assert.AreEqual(13, p.Size());
-        }
-
-        [TestMethod]
         public void TestGetRandomDataFieldEncodingMap()
         {
             EncoderSettingsList fieldEncodings = NetworkDemoHarness.GetRandomDataFieldEncodingMap();
@@ -37,6 +32,29 @@ namespace HTM.Net.Research.Tests.Examples.Random
         {
             Parameters p = NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
             Assert.AreEqual(28, p.Size());
+        }
+
+        [TestMethod]
+        public void TestSettingPermutableVariables()
+        {
+            Parameters p = Parameters.Empty();
+            p.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, new PermuteFloat(0.001, 0.1));
+
+            var pVars = p.GetPermutationVars();
+            Assert.IsNotNull(pVars);
+            Assert.AreEqual(1, pVars.Count);
+            var alphaVar = pVars.Single();
+            Assert.AreEqual(Parameters.KEY.CLASSIFIER_ALPHA, alphaVar.Item1);
+            Assert.IsInstanceOfType(alphaVar.Item2, typeof(PermuteFloat));
+        }
+
+        [TestMethod]
+        public void TestClaExperimentParameters()
+        {
+            // Should return a filled parameter list with default values
+            var pars = ClaExperimentParameters.Default();
+            Assert.IsNotNull(pars);
+            Assert.AreEqual(26, pars.Size());
         }
 
         #endregion
@@ -114,6 +132,11 @@ namespace HTM.Net.Research.Tests.Examples.Random
             for (int i = 0; i < 8; i++)
             {
                 Console.WriteLine($"Correct: {i} = {allGuesses.Count(g => g == i)}");
+            }
+            allGuesses = demo.GetRandomGuessesCounts();
+            for (int i = 0; i < 8; i++)
+            {
+                Console.WriteLine($"Random correct: {i} = {allGuesses.Count(g => g == i)}");
             }
         }
 

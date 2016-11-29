@@ -46,8 +46,10 @@ namespace HTM.Net.Research.Tests.Vision
             p.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.001);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 1000);
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
-            p.SetParameterByKey(Parameters.KEY.SEED, 1956); // The seed that Grok uses
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(1956)); // The seed that Grok uses
+            p.SetParameterByKey(Parameters.KEY.SEED_SP, 1956); // The seed that Grok uses
+            p.SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(1956)); // The seed that Grok uses
+            p.SetParameterByKey(Parameters.KEY.SEED_TM, 1960); // The seed that Grok uses
+            p.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(1960)); // The seed that Grok uses
             p.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 1);
             p.SetParameterByKey(Parameters.KEY.SP_PARALLELMODE, true);
 

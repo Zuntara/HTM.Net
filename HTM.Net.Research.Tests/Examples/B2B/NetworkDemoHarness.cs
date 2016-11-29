@@ -224,7 +224,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
             parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 10);
             parameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
-            parameters.SetParameterByKey(Parameters.KEY.SEED, 42);
+            parameters.SetParameterByKey(Parameters.KEY.SEED_SP, 42);
             parameters.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
 
             //Temporal Memory specific

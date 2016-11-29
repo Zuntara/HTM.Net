@@ -122,6 +122,9 @@
     <Compile Include="Network\Layer.cs" />
     <Compile Include="Serialize\SerialConfig.cs" />
     <Compile Include="Serialize\SerializerCore.cs" />
+    <Compile Include="Swarming\HyperSearch\PermutationHelpers.cs" />
+    <Compile Include="Swarming\HyperSearch\SwarmConfiguration.cs" />
+    <Compile Include="Swarming\HyperSearch\VarState.cs" />
     <Compile Include="Util\ArrayExtentions.cs" />
     <Compile Include="Util\GroupBy.cs" />
     <Compile Include="Util\GroupBy2.cs" />
