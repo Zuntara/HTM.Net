@@ -1930,11 +1930,11 @@ namespace HTM.Net.Research.Swarming
                 // NOTE: Temporary fix
                 if (tpParams.minThreshold is PermuteVariable)
                 {
-                    tpParams.minThreshold = (int)((PermuteVariable)tpParams.minThreshold).getPosition();
+                    tpParams.minThreshold = (int)((PermuteVariable)tpParams.minThreshold).GetPosition();
                 }
                 if (tpParams.activationThreshold is PermuteVariable)
                 {
-                    tpParams.activationThreshold = (int)((PermuteVariable)tpParams.activationThreshold).getPosition();
+                    tpParams.activationThreshold = (int)((PermuteVariable)tpParams.activationThreshold).GetPosition();
                 }
 
                 Parameters.ApplyParametersFromDescription(tpParams, p);

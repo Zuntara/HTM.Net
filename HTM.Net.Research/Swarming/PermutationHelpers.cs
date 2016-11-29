@@ -20,18 +20,13 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public abstract class PermuteVariable
     {
-        protected PermuteVariable()
-        {
-            Type = GetType().AssemblyQualifiedName;
-        }
-
         /// <summary>
         /// Choose a new position that is as far away as possible from all
         /// 'otherVars', where 'otherVars' is a list of PermuteVariable instances.
         /// </summary>
         /// <param name="otherVars">list of other PermuteVariables to push away from</param>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual void pushAwayFrom(List<double> otherVars, MersenneTwister rng)
+        public virtual void PushAwayFrom(List<double> otherVars, IRandom rng)
         {
             throw new System.NotImplementedException();
         }
@@ -41,7 +36,7 @@ namespace HTM.Net.Research.Swarming
         /// instantiated on another worker.
         /// </summary>
         /// <returns></returns>
-        public virtual VarState getState()
+        public virtual VarState GetState()
         {
             throw new System.NotImplementedException();
         }
@@ -49,7 +44,7 @@ namespace HTM.Net.Research.Swarming
         /// Set the current state of this particle. This is counterpart to getState.
         /// </summary>
         /// <param name="varState"></param>
-        public virtual void setState(VarState varState)
+        public virtual void SetState(VarState varState)
         {
             throw new System.NotImplementedException();
         }
@@ -61,7 +56,7 @@ namespace HTM.Net.Research.Swarming
         /// and max.
         /// </summary>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual void resetVelocity(MersenneTwister rng)
+        public virtual void ResetVelocity(IRandom rng)
         {
             throw new System.NotImplementedException();
         }
@@ -69,7 +64,7 @@ namespace HTM.Net.Research.Swarming
         /// for int vars, returns position to nearest int
         /// </summary>
         /// <returns>current position</returns>
-        public virtual double? getPosition()
+        public virtual double GetPosition()
         {
             throw new System.NotImplementedException();
         }
@@ -80,7 +75,7 @@ namespace HTM.Net.Research.Swarming
         /// you can call agitate over and over again until the variable reaches a
         /// new position.
         /// </summary>
-        public virtual void agitate()
+        public virtual void Agitate()
         {
             throw new System.NotImplementedException();
         }
@@ -90,12 +85,10 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="globalBestPosition">global best position for this colony</param>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual double? newPosition(double? globalBestPosition, MersenneTwister rng)
+        public virtual double? NewPosition(double? globalBestPosition, IRandom rng)
         {
             throw new System.NotImplementedException();
         }
-
-        public string Type { get; set; }
     }
 
     /// <summary>
@@ -107,7 +100,7 @@ namespace HTM.Net.Research.Swarming
         public double min;
         public double max;
         public double? stepSize;
-        public double? _position;
+        public double _position;
         public double? _velocity;
         public double _inertia;
         public double _cogRate;
@@ -120,6 +113,7 @@ namespace HTM.Net.Research.Swarming
         {
             // For deserialization
         }
+
         /// <summary>
         /// Construct a variable that permutes over floating point values using
         /// the Particle Swarm Optimization(PSO) algorithm.See descriptions of
@@ -146,32 +140,29 @@ namespace HTM.Net.Research.Swarming
 
             // The inertia, cognitive, and social components of the particle
             this._inertia = inertia ?? SwarmConfiguration.inertia;
-            this._cogRate = inertia ?? SwarmConfiguration.cogRate;
-            this._socRate = inertia ?? SwarmConfiguration.socRate;
-            //this._inertia = (float(Configuration.get("nupic.hypersearch.inertia")) if inertia is None else inertia);
-            //this._cogRate = (float(Configuration.get("nupic.hypersearch.cogRate")) if cogRate is None else cogRate);
-            //this._socRate = (float(Configuration.get("nupic.hypersearch.socRate")) if socRate is None else socRate);
-
+            this._cogRate = cogRate ?? SwarmConfiguration.cogRate;
+            this._socRate = socRate ?? SwarmConfiguration.socRate;
+            
             // The particle's local best position and the best global position.
-            this._bestPosition = this.getPosition();
+            this._bestPosition = this.GetPosition();
             this._bestResult = null;
         }
 
         #region Overrides of PermuteVariable
 
-        public override VarState getState()
+        public override VarState GetState()
         {
             return new VarState
             {
                 _position = this._position,
-                position = (int)this.getPosition(),
+                position = this.GetPosition(),
                 velocity = this._velocity,
                 bestPosition = this._bestPosition,
                 bestResult = this._bestResult
             };
         }
 
-        public override void setState(VarState varState)
+        public override void SetState(VarState varState)
         {
             this._position = varState._position;
             this._velocity = varState.velocity;
@@ -179,7 +170,7 @@ namespace HTM.Net.Research.Swarming
             this._bestResult = varState.bestResult;
         }
 
-        public override double? getPosition()
+        public override double GetPosition()
         {
             if (!this.stepSize.HasValue)
             {
@@ -187,23 +178,23 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Find nearest step
-            double numSteps = (this._position.GetValueOrDefault() - this.min) / this.stepSize.Value;
-            numSteps = Math.Round(numSteps);
+            double numSteps = (this._position - this.min) / this.stepSize.Value;
+            numSteps = (int)Math.Round(numSteps);
             double position = this.min + (numSteps * this.stepSize.Value);
             position = Math.Max(this.min, position);
             position = Math.Min(this.max, position);
             return position;
         }
 
-        public override void agitate()
+        public override void Agitate()
         {
             // Increase velocity enough that it will be higher the next time
-            // newPosition() is called. We know that newPosition multiplies by inertia,
+            // NewPosition() is called. We know that newPosition multiplies by inertia,
             // so take that into account.
             this._velocity *= 1.5 / this._inertia;
 
             // Clip velocity
-            double maxV = (this.max - this.min) / 2;
+            double maxV = (this.max - this.min) / 2.0;
             if (this._velocity > maxV)
             {
                 this._velocity = maxV;
@@ -214,51 +205,49 @@ namespace HTM.Net.Research.Swarming
             }
 
             // if we at the max or min, reverse direction
-            if (this._position == this.max && this._velocity > 0)
+            if (Math.Abs(this._position - this.max) < double.Epsilon && this._velocity > 0)
             {
                 this._velocity *= -1;
             }
-            if (this._position == this.min && this._velocity < 0)
+            if (Math.Abs(this._position - this.min) < double.Epsilon && this._velocity < 0)
             {
                 this._velocity *= -1;
             }
         }
 
-        public override double? newPosition(double? globalBestPosition, MersenneTwister rng)
+        public override double? NewPosition(double? globalBestPosition, IRandom rng)
         {
             // First, update the velocity. The new velocity is given as:
             // v = (inertia * v)  + (cogRate * r1 * (localBest-pos))
             //                    + (socRate * r2 * (globalBest-pos))
             //
             // where r1 and r2 are random numbers between 0 and 1.0
-            //lb = float(Configuration.get("nupic.hypersearch.randomLowerBound"));
-            //ub = float(Configuration.get("nupic.hypersearch.randomUpperBound"));
             double lb = SwarmConfiguration.randomLowerBound;
             double ub = SwarmConfiguration.randomUpperBound;
 
             this._velocity = (this._velocity * this._inertia + rng.NextDouble(lb, ub) *
-                              this._cogRate * (this._bestPosition - this.getPosition()));
+                              this._cogRate * (this._bestPosition - this.GetPosition()));
             if (globalBestPosition.HasValue)
             {
                 this._velocity += rng.NextDouble(lb, ub) * this._socRate * (
-                    globalBestPosition.Value - this.getPosition());
+                    globalBestPosition.Value - this.GetPosition());
             }
 
             // update position based on velocity
             this._position += this._velocity.GetValueOrDefault();
 
             // Clip it
-            this._position = Math.Max(this.min, this._position.GetValueOrDefault());
-            this._position = Math.Min(this.max, this._position.GetValueOrDefault());
+            this._position = Math.Max(this.min, this._position);
+            this._position = Math.Min(this.max, this._position);
 
             // Return it
-            return this.getPosition();
+            return this.GetPosition();
         }
 
-        public override void pushAwayFrom(List<double> otherPositions, MersenneTwister rng)
+        public override void PushAwayFrom(List<double> otherPositions, IRandom rng)
         {
             // If min and max are the same, nothing to do
-            if (this.max == this.min)
+            if (Math.Abs(this.max - this.min) < double.Epsilon)
             {
                 return;
             }
@@ -272,7 +261,7 @@ namespace HTM.Net.Research.Swarming
 
             // Assign a weight to each potential position based on how close it is
             // to other particles.
-            stepSize = (double)(this.max - this.min) / numPositions;
+            stepSize = (this.max - this.min) / numPositions;
             double[] positions = ArrayUtils.Arrange(this.min, this.max + stepSize.Value, stepSize.Value);
 
             // Get rid of duplicates.
@@ -284,13 +273,13 @@ namespace HTM.Net.Research.Swarming
             // position is given as:
             //    e ^ -(dist^2/stepSize^2)
             double maxDistanceSq = -1 * Math.Pow(stepSize.Value, 2);
-            foreach (var pos in otherPositions)
+            foreach (double pos in otherPositions)
             {
-                var distances = ArrayUtils.Sub(positions, pos);// pos - positions;
+                var distances = ArrayUtils.Sub(pos, positions);// pos - positions;
 
-                var varWeights = distances.Select(d => Math.Exp(Math.Pow(d, 2) / maxDistanceSq)).ToArray();
+                var varWeights = ArrayUtils.Exp(ArrayUtils.Divide(ArrayUtils.Power(distances,2),maxDistanceSq)).ToArray(); 
+                // varWeights = numpy.exp(numpy.power(distances, 2) / maxDistanceSq)
 
-                //var varWeights = Math.Exp(Math.Pow(distances, 2) / maxDistanceSq);
                 weights = ArrayUtils.Add(weights, varWeights);
             }
 
@@ -300,16 +289,16 @@ namespace HTM.Net.Research.Swarming
             this._position = positions[positionIdx];
 
             // Set its best position to this.
-            this._bestPosition = this.getPosition();
+            this._bestPosition = this.GetPosition();
 
             // Give it a random direction.
             this._velocity *= rng.Choice(new[] { 1, -1 });
         }
 
-        public override void resetVelocity(MersenneTwister rng)
+        public override void ResetVelocity(IRandom rng)
         {
             double maxVelocity = (this.max - this.min) / 5.0;
-            this._velocity = maxVelocity; //min(abs(this._velocity), maxVelocity)
+            this._velocity = maxVelocity; //#min(abs(this._velocity), maxVelocity)
             this._velocity *= rng.Choice(new[] { 1, -1 });
         }
 
@@ -319,11 +308,8 @@ namespace HTM.Net.Research.Swarming
 
         public override string ToString()
         {
-            return string.Format("PermuteFloat(min={0}, max={1}, stepSize={2}) [position={3}({4}), " +
-                                 "velocity={5}, _bestPosition={6}, _bestResult={7}]",
-                this.min, this.max, this.stepSize, this.getPosition(),
-                this._position, this._velocity, this._bestPosition,
-                this._bestResult);
+            return $"PermuteFloat(min={this.min}, max={this.max}, stepSize={this.stepSize}) [position={this.GetPosition()}({this._position}), " +
+                $"velocity={this._velocity}, _bestPosition={this._bestPosition}, _bestResult={this._bestResult}]";
         }
 
         #endregion
@@ -350,10 +336,10 @@ namespace HTM.Net.Research.Swarming
 
         #region Overrides of PermuteFloat
 
-        public override double? getPosition()
+        public override double GetPosition()
         {
-            double? position = base.getPosition();
-            position = Math.Round(position.GetValueOrDefault());
+            double position = base.GetPosition();
+            position = (int)Math.Round(position);
             return position;
         }
 
@@ -363,11 +349,9 @@ namespace HTM.Net.Research.Swarming
 
         public override string ToString()
         {
-            return string.Format("PermuteInt(min={0}, max={1}, stepSize={2}) [position={3}({4}), " +
-                                 "velocity={5}, _bestPosition={6}, _bestResult={7}]",
-                this.min, this.max, this.stepSize, this.getPosition(),
-                this._position, this._velocity, this._bestPosition,
-                this._bestResult);
+            return
+                $"PermuteInt(min={this.min}, max={this.max}, stepSize={this.stepSize}) [position={this.GetPosition()}({this._position}), " +
+                $"velocity={this._velocity}, _bestPosition={this._bestPosition}, _bestResult={this._bestResult}]";
         }
 
         #endregion
@@ -419,43 +403,43 @@ namespace HTM.Net.Research.Swarming
 
         #region Overrides of PermuteVariable
 
-        public override VarState getState()
+        public override VarState GetState()
         {
             return new VarState
             {
-                _position = this.getPosition(),
-                position = (int)this.getPosition(),
+                _position = this.GetPosition(),
+                position = (int)this.GetPosition(),
                 velocity = null,
                 bestPosition = (double)this.choices[this._bestPositionIdx],
                 bestResult = this._bestResult
             };
         }
 
-        public override void setState(VarState varState)
+        public override void SetState(VarState varState)
         {
-            this._positionIdx = this.choices.ToList().IndexOf(varState._position.GetValueOrDefault());
-            this._bestPositionIdx = this.choices.ToList().IndexOf(varState.bestPosition.GetValueOrDefault());
+            this._positionIdx = Array.IndexOf(choices, varState._position);
+            this._bestPositionIdx = Array.IndexOf(choices, varState.bestPosition);
             this._bestResult = varState.bestResult;
         }
 
-        public override double? getPosition()
+        public override double GetPosition()
         {
-            return (double)this.choices[this._positionIdx];
+            return this.choices[this._positionIdx];
         }
 
-        public override void agitate()
+        public override void Agitate()
         {
             // Not sure what to do for choice variables....
             // TODO: figure this out
         }
 
-        public override double? newPosition(double? globalBestPosition, MersenneTwister rng)
+        public override double? NewPosition(double? globalBestPosition, IRandom rng)
         {
             // Compute the mean score per choice.
             int numChoices = this.choices.Length;
             List<double?> meanScorePerChoice = new List<double?>();
             double overallSum = 0;
-            double numResults = 0;
+            int numResults = 0;
 
             foreach (var i in ArrayUtils.Range(0, numChoices))
             {
@@ -472,7 +456,7 @@ namespace HTM.Net.Research.Swarming
                 }
             }
 
-            if (numResults == 0)
+            if (Math.Abs(numResults) < double.Epsilon)
             {
                 overallSum = 1.0;
                 numResults = 1;
@@ -527,15 +511,15 @@ namespace HTM.Net.Research.Swarming
             // int choiceIdx = numpy.where(r <= distribution)[0][0];
 
             this._positionIdx = choiceIdx;
-            return this.getPosition();
+            return this.GetPosition();
         }
 
 
-        public override void pushAwayFrom(List<double> otherPositions, MersenneTwister rng)
+        public override void PushAwayFrom(List<double> otherPositions, IRandom rng)
         {
             // Get the count of how many in each position
             //positions = [this.choices.index(x) for x in otherPositions];
-            var positions = otherPositions.Select(x => this.choices.ToList().IndexOf(x)).ToList();
+            var positions = otherPositions.Select(x => Array.IndexOf(this.choices,x)).ToList();
             var positionCounts = new int[this.choices.Length];  // [0] * this.choices.Length;
             foreach (var pos in positions)
             {
@@ -546,7 +530,7 @@ namespace HTM.Net.Research.Swarming
             this._bestPositionIdx = this._positionIdx;
         }
 
-        public override void resetVelocity(MersenneTwister rng)
+        public override void ResetVelocity(IRandom rng)
         {
 
         }
@@ -576,12 +560,16 @@ namespace HTM.Net.Research.Swarming
         /// retval:
         /// [('a', [0.1, 0.2, 0.3]), ('b', [0.5, 0.1, 0.6]), ('c', [0.2])]
         /// </summary>
-        /// <param name="values"></param>
-        public void setResultsPerChoice(IList<Tuple<int, List<double>>> resultsPerChoice)
+        /// <param name="resultsPerChoice"></param>
+        public void SetResultsPerChoice(IList<Tuple<int, List<double>>> resultsPerChoice)
         {
             // Keep track of the results obtained for each choice.
 
             //this._resultsPerChoice = [[]] *len(this.choices);
+            this._resultsPerChoice = new Dictionary<int, List<double>>();
+            for (int i = 0; i < choices.Length; i++)
+                _resultsPerChoice.Add(i, new List<double>());
+
             //for (choiceValue, values) in resultsPerChoice
             foreach (var pair in resultsPerChoice)
             {

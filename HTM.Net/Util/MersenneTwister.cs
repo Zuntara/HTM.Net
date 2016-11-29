@@ -9,9 +9,11 @@ namespace HTM.Net.Util
     public interface IRandom
     {
         double NextDouble();
+        double NextDouble(double min, double max);
         int NextInt(int maxValue);
         double NextGaussian();
         double[][] GetMatrix(int rows, int cols, double? threshold = null);
+        T Choice<T>(T[] array);
     }
 
     // https://github.com/numenta/htm.java/blob/master/src/main/java/org/numenta/nupic/util/MersenneTwister.java
@@ -817,6 +819,11 @@ namespace HTM.Net.Util
             return Next(maxValue);
         }
 
+        public double NextDouble(double min, double max)
+        {
+            return min + (base.NextDouble() * (max - min));
+        }
+
         private bool __haveNextNextGaussian;
         private double __nextNextGaussian;
 
@@ -842,6 +849,11 @@ namespace HTM.Net.Util
                 __haveNextNextGaussian = true;
                 return v1 * multiplier;
             }
+        }
+
+        public T Choice<T>(T[] array)
+        {
+            return array[Next(0, array.Length)];
         }
 
         #region Implementation of ISerializable

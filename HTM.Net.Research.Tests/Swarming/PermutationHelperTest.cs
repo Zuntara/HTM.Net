@@ -34,7 +34,7 @@ namespace HTM.Net.Research.Tests.Swarming
             var var = (T)Activator.CreateInstance(typeof(T), minValue, maxValue, stepSize, inertia, cogRate, socRate);
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                var pos = var.getPosition();
+                var pos = var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -43,22 +43,22 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     Console.WriteLine(var);
                 }
-                positions.Add(pos.GetValueOrDefault());
+                positions.Add(pos);
 
                 // Set the result so that the local best is at lBestPosition.
-                double result = 1.0 - Math.Abs(pos.GetValueOrDefault() - lBestPosition);
+                double result = 1.0 - Math.Abs(pos - lBestPosition);
 
                 if (foundBestResult == null || result > foundBestResult)
                 {
                     foundBestResult = result;
                     foundBestPosition = pos;
-                    var state = var.getState();
+                    var state = var.GetState();
                     state.bestPosition = foundBestPosition.GetValueOrDefault();
                     state.bestResult = foundBestResult;
-                    var.setState(state);
+                    var.SetState(state);
                 }
 
-                var.newPosition(gBestPosition, rng);
+                var.NewPosition(gBestPosition, rng);
             }
 
             //positions = sorted(positions);
@@ -90,7 +90,7 @@ namespace HTM.Net.Research.Tests.Swarming
             var var = (T)Activator.CreateInstance(typeof(T), minValue, maxValue, stepSize, inertia, cogRate, socRate);
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                var pos = var.getPosition();
+                var pos = var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -99,22 +99,22 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     Console.WriteLine(var);
                 }
-                positions.Add(pos.GetValueOrDefault());
+                positions.Add(pos);
 
                 // Set the result so that the local best is at lBestPosition.
-                double result = 1.0 - Math.Abs(pos.GetValueOrDefault() - lBestPosition);
+                double result = 1.0 - Math.Abs(pos - lBestPosition);
 
                 if (foundBestResult == null || result > foundBestResult)
                 {
                     foundBestResult = result;
                     foundBestPosition = pos;
-                    var state = var.getState();
+                    var state = var.GetState();
                     state.bestPosition = foundBestPosition.GetValueOrDefault();
                     state.bestResult = foundBestResult;
-                    var.setState(state);
+                    var.SetState(state);
                 }
 
-                var.newPosition(gBestPosition, rng);
+                var.NewPosition(gBestPosition, rng);
             }
 
             //positions = sorted(positions);
@@ -151,7 +151,7 @@ namespace HTM.Net.Research.Tests.Swarming
             double pos = 0;
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                pos = var.getPosition().GetValueOrDefault();
+                pos = var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -168,13 +168,13 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     foundBestResult = result;
                     foundBestPosition = pos;
-                    var state = var.getState();
+                    var state = var.GetState();
                     state.bestPosition = foundBestPosition.GetValueOrDefault();
                     state.bestResult = foundBestResult;
-                    var.setState(state);
+                    var.SetState(state);
                 }
 
-                var.newPosition(gBestPosition, rng);
+                var.NewPosition(gBestPosition, rng);
             }
 
             // Test that we reached the target.
@@ -198,7 +198,7 @@ namespace HTM.Net.Research.Tests.Swarming
             double pos = 0;
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                pos = var.getPosition().GetValueOrDefault();
+                pos = var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -215,13 +215,13 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     foundBestResult = result;
                     foundBestPosition = pos;
-                    var state = var.getState();
+                    var state = var.GetState();
                     state.bestPosition = foundBestPosition.GetValueOrDefault();
                     state.bestResult = foundBestResult;
-                    var.setState(state);
+                    var.SetState(state);
                 }
 
-                var.newPosition(gBestPosition, rng);
+                var.NewPosition(gBestPosition, rng);
             }
 
             // Test that we reached the target.
@@ -240,7 +240,7 @@ namespace HTM.Net.Research.Tests.Swarming
             int pos = -1;
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
-                pos = (int)(pc.newPosition(null, rng));
+                pos = (int)(pc.NewPosition(null, rng));
                 counts[pos] += 1;
             }
             foreach (int count in counts)
@@ -260,13 +260,13 @@ namespace HTM.Net.Research.Tests.Swarming
                 resultsPerChoice.Add(new Tuple<int, List<double>>((int)choice, new List<double> { (double)choice }));
                 counts2[(int)choice] = 0;
             }
-            pc.setResultsPerChoice(resultsPerChoice);
+            pc.SetResultsPerChoice(resultsPerChoice);
 
 
             // Check the without results the choices are chosen uniformly.
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
-                double choice = pc.newPosition(null, rng).GetValueOrDefault();
+                double choice = pc.NewPosition(null, rng).GetValueOrDefault();
                 counts2[(int)choice] += 1;
             }
             // Make sure that as the error goes up, the number of times the choice is
@@ -305,12 +305,12 @@ namespace HTM.Net.Research.Tests.Swarming
                     resultsPerChoiceDict[(int)choice].Item2.Add((double)choice);
                     counts2[(int)choice] = 0;
                 }
-                pc.setResultsPerChoice(resultsPerChoiceDict.Values.ToList());
+                pc.SetResultsPerChoice(resultsPerChoiceDict.Values.ToList());
 
                 // Check the without results the choices are chosen uniformly.
                 foreach (var nothing2 in ArrayUtils.Range(0, 1000))
                 {
-                    double choice = pc.newPosition(null, rng).GetValueOrDefault();
+                    double choice = pc.NewPosition(null, rng).GetValueOrDefault();
                     counts2[(int)choice] += 1;
                 }
                 // Make sure that as the error goes up, the number of times the choice is

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -32,14 +33,42 @@ namespace HTM.Net.Research.Swarming
         public static double minFieldContribution = 0.2;
         public static bool enableModelTermination;
         public static bool enableModelMaturity = false;
+        /// <summary>
+        /// The max # of attempts we will make to create a unique model before
+        /// giving up and assuming all the possible positions in a swarm have been
+        /// evaluated.
+        /// </summary>
         public static int maxUniqueModelAttempts = 10;
+        /// <summary>
+        /// The max amount of time (in seconds) allowed before a model is
+        /// considered orphaned.At this point, it is available for being taken over
+        /// by another worker.
+        /// </summary>
         public static int modelOrphanIntervalSecs = 180;
+        /// <summary>
+        /// If this percent of the models in a hyperseach completed with an error, abort the search.
+        /// </summary>
         public static double maxPctErrModels = 0.20;
         public static int minParticlesPerSwarm = 5;
+        /// <summary>
+        /// Weight given to the previous velocity of a particle in PSO.
+        /// </summary>
         public static double inertia = 0.25;
+        /// <summary>
+        /// This parameter controls how much the particle is affected by its distance from it's local best position.
+        /// </summary>
         public static double cogRate = 0.25;
+        /// <summary>
+        /// This parameter controls how much the particle is affected by its distance from the global best position.
+        /// </summary>
         public static double socRate = 1.0;
+        /// <summary>
+        /// Lower bound for sampling a random number in the PSO.
+        /// </summary>
         public static double randomLowerBound = 0.8;
+        /// <summary>
+        /// Upper bound for sampling a random number in the PSO.
+        /// </summary>
         public static double randomUpperBound = 1.2;
         public static int? bestModelMinRecords = 1000;
         public static double? maturityPctChange = 0.005;
@@ -237,8 +266,8 @@ namespace HTM.Net.Research.Swarming
 
     public class VarState
     {
-        public int? position;
-        public double? _position;
+        public double? position;
+        public double _position;
         public double? velocity;
         public double? bestPosition;
         public double? bestResult;
@@ -269,7 +298,7 @@ namespace HTM.Net.Research.Swarming
         private Dictionary<string, List<int>> _swarmNumParticlesPerGeneration;
         private HashSet<Tuple<string, int>> _modifiedSwarmGens;
         private HashSet<Tuple<string, int>> _maturedSwarmGens;
-        private Map<string, Tuple<double?, Map<string, int>>> _particleBest;
+        private Map<string, Tuple<double?, Map<string, double>>> _particleBest;
         private Dictionary<string, int> _particleLatestGenIdx;
         private Dictionary<string, List<int>> _swarmIdToIndexes;
         private Dictionary<string, int?> _paramsHashToIndexes;
@@ -336,7 +365,7 @@ namespace HTM.Net.Research.Swarming
             // generations) and the position it was at when it got that score. The keys
             // in this dict are the particleId, the values are (bestResult, position),
             // where position is a dict with varName:position items in it.
-            this._particleBest = new Map<string, Tuple<double?, Map<string, int>>>();
+            this._particleBest = new Map<string, Tuple<double?, Map<string, double>>>();
 
             // For each particle, we keep track of it's latest generation index.
             this._particleLatestGenIdx = new Dictionary<string, int>();
@@ -558,11 +587,11 @@ namespace HTM.Net.Research.Swarming
             if (matured && !hidden)
             {
                 //(oldResult, pos) = this._particleBest.get(particleId, (numpy.inf, None));
-                Tuple<double?, Map<string, int>> oldResultPos = this._particleBest.Get(particleId, new Tuple<double?, Map<string, int>>(double.PositiveInfinity, null));// TODO check!
+                Tuple<double?, Map<string, double>> oldResultPos = this._particleBest.Get(particleId, new Tuple<double?, Map<string, double>>(double.PositiveInfinity, null));// TODO check!
                 if (errScore < oldResultPos.Item1 /*oldResult*/)
                 {
-                    Map<string, int> pos1 = Particle.getPositionFromState(modelParams.particleState);
-                    this._particleBest[particleId] = new Tuple<double?, Map<string, int>>(errScore, pos1);
+                    Map<string, double> pos1 = Particle.getPositionFromState(modelParams.particleState);
+                    this._particleBest[particleId] = new Tuple<double?, Map<string, double>>(errScore, pos1);
                     // this._particleBest[particleId] = (errScore, pos1);
                 }
             }
@@ -1052,7 +1081,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="particleId">which particle</param>
         /// <returns>(bestResult, bestPosition)</returns>
-        public Tuple<double?, Map<string, int>> getParticleBest(string particleId)
+        public Tuple<double?, Map<string, double>> getParticleBest(string particleId)
         {
             return this._particleBest.Get(particleId, null);
         }
@@ -1102,19 +1131,19 @@ namespace HTM.Net.Research.Swarming
                 }
 
                 var position = Particle.getPositionFromState(particleState);
-                int varPosition = position[varName];
+                double varPosition = position[varName];
                 //var varPositionStr = varPosition.ToString();
                 //if (results.ContainsKey(varPositionStr))
-                if (results.Any(r => r.Item1 == varPosition))
+                if (results.Any(r => r.Item1 == (int)varPosition))
                 {
-                    results[varPosition].Item2.Add(resultErr);
+                    results[(int)varPosition].Item2.Add(resultErr);
                     //results[varPositionStr][1].Add(resultErr);
                 }
                 else
                 {
                     //results[varPositionStr] = (varPosition, [resultErr]);
                     //results[varPositionStr] = new Dictionary<int, List<double>> { { varPosition, new List<double> { resultErr } } };
-                    results[varPosition] = new Tuple<int, List<double>>(varPosition, new List<double> { resultErr });
+                    results[(int)varPosition] = new Tuple<int, List<double>>((int)varPosition, new List<double> { resultErr });
                 }
             }
 
@@ -1264,7 +1293,7 @@ namespace HTM.Net.Research.Swarming
 
                         var resultsPerChoice = this._resultsDB.getResultsPerChoice(
                             swarmId: swarmId, maxGenIdx: maxGenIdx, varName: varName);
-                        ((PermuteChoices)this.permuteVars[varName]).setResultsPerChoice(resultsPerChoice);
+                        ((PermuteChoices)this.permuteVars[varName]).SetResultsPerChoice(resultsPerChoice);
                     }
                 }
             };
@@ -1300,7 +1329,7 @@ namespace HTM.Net.Research.Swarming
                         {
                             otherPositions.Add(particleState.varStates[varName].position.GetValueOrDefault());
                         }
-                        this.permuteVars[varName].pushAwayFrom(otherPositions, this._rng);
+                        this.permuteVars[varName].PushAwayFrom(otherPositions, this._rng);
 
                         // Give this particle a unique seed.
                         this._rng = new MersenneTwister(otherPositions.GetHashCode());
@@ -1389,7 +1418,7 @@ namespace HTM.Net.Research.Swarming
             Dictionary<string, VarState> varStates = new Dictionary<string, VarState>();
             foreach (KeyValuePair<string, PermuteVariable> permuteVar in this.permuteVars)
             {
-                varStates[permuteVar.Key] = permuteVar.Value.getState();
+                varStates[permuteVar.Key] = permuteVar.Value.GetState();
             }
             //for (varName, var in this.permuteVars.iteritems())
             //{
@@ -1421,7 +1450,7 @@ namespace HTM.Net.Research.Swarming
         {
             // Get the update best position and result?
             double? bestResult;
-            Dictionary<string, int> bestPosition;
+            Dictionary<string, double> bestPosition;
             if (newBest)
             {
                 var tuplePositions = this._resultsDB.getParticleBest(particleId);
@@ -1449,7 +1478,7 @@ namespace HTM.Net.Research.Swarming
                 {
                     varState.bestPosition = bestPosition[varName];
                 }
-                this.permuteVars[varName].setState(varState);
+                this.permuteVars[varName].SetState(varState);
             }
         }
         /// <summary>
@@ -1475,7 +1504,7 @@ namespace HTM.Net.Research.Swarming
 
                     // Set the best position to the copied position
                     VarState state = particleState.varStates[varName].Clone();
-                    state._position = state.position;
+                    state._position = state.position.GetValueOrDefault();
                     state.bestPosition = state.position;
 
                     if (!allowedToMove)
@@ -1484,14 +1513,14 @@ namespace HTM.Net.Research.Swarming
                     }
 
                     // Set the state now
-                    this.permuteVars[varName].setState(state);
+                    this.permuteVars[varName].SetState(state);
 
                     if (allowedToMove)
                     {
                         // Let the particle move in both directions from the best position
                         //  it found previously and set it's initial velocity to a known
                         //  fraction of the total distance.
-                        this.permuteVars[varName].resetVelocity(this._rng);
+                        this.permuteVars[varName].ResetVelocity(this._rng);
                     }
                 }
             }
@@ -1520,7 +1549,7 @@ namespace HTM.Net.Research.Swarming
 
                     // Set the best position to the copied position
                     var state = particleState.varStates[varName].Clone();
-                    state._position = state.position;
+                    state._position = state.position.GetValueOrDefault();
                     state.bestPosition = state.position;
 
                     if (!allowedToMove)
@@ -1529,14 +1558,14 @@ namespace HTM.Net.Research.Swarming
                     }
 
                     // Set the state now
-                    this.permuteVars[varName].setState(state);
+                    this.permuteVars[varName].SetState(state);
 
                     if (allowedToMove)
                     {
                         // Let the particle move in both directions from the best position
                         //  it found previously and set it's initial velocity to a known
                         //  fraction of the total distance.
-                        this.permuteVars[varName].resetVelocity(this._rng);
+                        this.permuteVars[varName].ResetVelocity(this._rng);
                     }
                 }
             }
@@ -1553,7 +1582,7 @@ namespace HTM.Net.Research.Swarming
             foreach (var pair in this.permuteVars)
             //for (varName, value) in this.permuteVars.iteritems()
             {
-                result[pair.Key] = pair.Value.getPosition();
+                result[pair.Key] = pair.Value.GetPosition();
             }
 
             return result;
@@ -1568,7 +1597,7 @@ namespace HTM.Net.Research.Swarming
             foreach (var pair in this.permuteVars)
             //for (varName, var) in this.permuteVars.iteritems()
             {
-                pair.Value.agitate();
+                pair.Value.Agitate();
             }
 
             this.newPosition();
@@ -1584,7 +1613,7 @@ namespace HTM.Net.Research.Swarming
             // TODO: make sure we're calling this when appropriate.
 
             // Get the global best position for this swarm generation
-            Dictionary<string, int> globalBestPosition = null;
+            Dictionary<string, double> globalBestPosition = null;
             // If speculative particles are enabled, use the global best considering
             //  even particles in the current generation. This gives better results
             //  but does not provide repeatable results because it depends on
@@ -1621,11 +1650,11 @@ namespace HTM.Net.Research.Swarming
                 }
                 if (globalBestPosition == null)
                 {
-                    var.newPosition(null, this._rng);
+                    var.NewPosition(null, this._rng);
                 }
                 else
                 {
-                    var.newPosition(globalBestPosition[varName], this._rng);
+                    var.NewPosition(globalBestPosition[varName], this._rng);
                 }
             }
 
@@ -1661,9 +1690,9 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="pState"></param>
         /// <returns>dict() of particle position, keys are the variable names, values are their positions</returns>
-        public static Map<string, int> getPositionFromState(ParticleStateModel pState)
+        public static Map<string, double> getPositionFromState(ParticleStateModel pState)
         {
-            Map<string, int> result = new Map<string, int>();
+            Map<string, double> result = new Map<string, double>();
             foreach (var pair in pState.varStates)
             //for (varName, value) in pState["varStates"].iteritems()
             {
