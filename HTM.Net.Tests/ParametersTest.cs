@@ -185,7 +185,7 @@ namespace HTM.Net.Tests
         public void TestSize()
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
-            Assert.AreEqual(71, @params.Size());
+            Assert.AreEqual(73, @params.Size());
         }
 
         [TestMethod]
@@ -193,7 +193,7 @@ namespace HTM.Net.Tests
         {
             Parameters @params = Parameters.GetAllDefaultParameters();
             Assert.IsNotNull(@params.Keys());
-            Assert.AreEqual(71, @params.Keys().Count);
+            Assert.AreEqual(73, @params.Keys().Count);
         }
 
         [TestMethod]

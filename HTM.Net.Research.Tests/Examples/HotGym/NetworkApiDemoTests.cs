@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using HTM.Net.Encoders;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -27,14 +28,14 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         [TestMethod]
         public void TestGetDayDemoFieldEncodingMap()
         {
-            Map<String, Map<string, object>> fieldEncodings = NetworkDemoHarness.GetDayDemoFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = NetworkDemoHarness.GetDayDemoFieldEncodingMap();
             Assert.AreEqual(1, fieldEncodings.Count);
         }
 
         [TestMethod]
         public void TestGetHotGymTestEncoderParams()
         {
-            Map<String, Map<String, Object>> fieldEncodings = NetworkDemoHarness.GetHotGymFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = NetworkDemoHarness.GetHotGymFieldEncodingMap();
             Assert.AreEqual(2, fieldEncodings.Count);
         }
 
@@ -48,20 +49,20 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         [TestMethod]
         public void TestSetupMap()
         {
-            Map<String, Map<String, Object>> m = NetworkDemoHarness.SetupMap(null, 23, 2, 0.0, 0.9, 22.0, 3.0, false, false, null, "cogmission", "ai", "works");
+            EncoderSettingsList m = NetworkDemoHarness.SetupMap(null, 23, 2, 0.0, 0.9, 22.0, 3.0, false, false, null, "cogmission", FieldMetaType.SparseArray, "works");
             Assert.IsNotNull(m);
 
             // Make sure omission of key doesn't insert null or a default value
             Assert.IsTrue(!m.ContainsKey("forced"));
 
             Assert.AreEqual(1, m.Count);
-            Assert.AreEqual(12, m.Get("cogmission").Count);
+            Assert.AreEqual(12, m.Get("cogmission").Keys.Count);
         }
 
         #endregion
 
-        //[TestMethod]
-        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void TestCreateBasicNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_CLA);
@@ -81,8 +82,8 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         //    Assert.IsNotNull(s);
         //}
 
-        [TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         //[DeploymentItem("Resources\\rec-center-15m.Csv")]
         public void RunBasicNetwork()
         {

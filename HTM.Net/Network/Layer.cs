@@ -1750,6 +1750,7 @@ namespace HTM.Net.Network
             foreach (EncoderTuple t in _encoderTuples)
             {
                 string name = t.GetName();
+                string fieldName = t.GetFieldName();
                 IEncoder e = t.GetEncoder();
 
                 int bucketIdx;
@@ -1758,11 +1759,11 @@ namespace HTM.Net.Network
                 {
                     var getMethod = encoderInputMap.GetType().GetMethod("Get");
                     getMethod = getMethod.MakeGenericMethod(e.GetEncoderType());
-                    o = getMethod.Invoke(encoderInputMap, new object[] { name }); // encoderInputMap[name]
+                    o = getMethod.Invoke(encoderInputMap, new object[] { fieldName }); // encoderInputMap[name]
                 }
                 else
                 {
-                    o = encoderInputMap[name];
+                    o = encoderInputMap[fieldName];
                 }
 
                 if (o is DateTime)
@@ -2031,7 +2032,7 @@ namespace HTM.Net.Network
             int i = 0;
             foreach (EncoderTuple et in encoder.GetEncoders(encoder))
             {
-                names[i] = et.GetFieldName();
+                names[i] = et.GetName();
                 ca[i] = (IClassifier)Activator.CreateInstance(classificationType); //new CLAClassifier();
                 ca[i].ApplyParameters(this.Params);
                 i++;

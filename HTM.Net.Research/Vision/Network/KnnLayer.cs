@@ -119,7 +119,7 @@ namespace HTM.Net.Research.Vision.Network
                 {
                     if (et.GetEncoder() is SDRPassThroughEncoder)
                     {
-                        namesList.Add(et.GetFieldName());
+                        namesList.Add(et.GetName());
                         classifiers.Add(KNNClassifier.GetBuilder().Apply(base.GetParameters()));
                     }
                     i++;

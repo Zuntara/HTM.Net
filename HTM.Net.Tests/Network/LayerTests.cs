@@ -2245,46 +2245,46 @@ namespace HTM.Net.Tests.Network
 
         private Parameters GetArrayTestParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                 null,
                 884, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "sdr_in", "darr", "SDRPassThroughEncoder");
+                "sdr_in", FieldMetaType.DenseArray, "SDRPassThroughEncoder");
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             return p;
         }
 
-        private Map<string, Map<string, object>> SetupMap(
-            Map<string, Map<string, object>> map,
+        private EncoderSettingsList SetupMap(
+            EncoderSettingsList map,
             int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-            bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+            bool? clip, bool? forced, string fieldName, FieldMetaType? fieldType, string encoderType)
         {
 
             if (map == null)
             {
-                map = new Map<string, Map<string, object>>();
+                map = new EncoderSettingsList();
             }
-            Map<string, object> inner;
+            EncoderSetting inner;
             if (!map.TryGetValue(fieldName, out inner))
             {
-                map.Add(fieldName, inner = new Map<string, object>());
+                map.Add(fieldName, inner = new EncoderSetting());
             }
 
-            inner.Add("n", n);
-            inner.Add("w", w);
-            inner.Add("minVal", min);
-            inner.Add("maxVal", max);
-            inner.Add("radius", radius);
-            inner.Add("resolution", resolution);
+            inner.n= n;
+            inner.w= w;
+            inner.minVal= min;
+            inner.maxVal= max;
+            inner.radius= radius;
+            inner.resolution= resolution;
 
-            if (periodic != null) inner.Add("periodic", periodic);
-            if (clip != null) inner.Add("clip", clip);
-            if (forced != null) inner.Add("forced", forced);
-            if (fieldName != null) inner.Add("fieldName", fieldName);
-            if (fieldType != null) inner.Add("fieldType", fieldType);
-            if (encoderType != null) inner.Add("encoderType", encoderType);
+            if (periodic != null) inner.periodic= periodic;
+            if (clip != null) inner.clipInput= clip;
+            if (forced != null) inner.forced= forced;
+            if (fieldName != null) inner.fieldName= fieldName;
+            if (fieldType != null) inner.fieldType= fieldType;
+            if (encoderType != null) inner.encoderType= encoderType;
 
             return map;
         }

@@ -1,4 +1,5 @@
-﻿using HTM.Net.Util;
+﻿using HTM.Net.Encoders;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.HotGym
 {
@@ -10,60 +11,59 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
  */
     public class NetworkDemoHarness
     {
-        /**
-         * Sets up an Encoder Mapping of configurable values.
-         *  
-         * @param map               if called more than once to set up encoders for more
-         *                          than one field, this should be the map itself returned
-         *                          from the first call to {@code #setupMap(Map, int, int, double, 
-         *                          double, double, double, Boolean, Boolean, Boolean, String, String, String)}
-         * @param n                 the total number of bits in the output encoding
-         * @param w                 the number of bits to use in the representation
-         * @param min               the minimum value (if known i.e. for the ScalarEncoder)
-         * @param max               the maximum value (if known i.e. for the ScalarEncoder)
-         * @param radius            see {@link Encoder}
-         * @param resolution        see {@link Encoder}
-         * @param periodic          such as hours of the day or days of the week, which repeat in cycles
-         * @param clip              whether the outliers should be clipped to the min and max values
-         * @param forced            use the implied or explicitly stated ratio of w to n bits rather than the "suggested" number
-         * @param fieldName         the name of the encoded field
-         * @param fieldType         the data type of the field
-         * @param encoderType       the Camel case class name minus the .class suffix
-         * @return
-         */
-        public static Map<string, Map<string, object>> SetupMap(
-                Map<string, Map<string, object>> map,
-                int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-                bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+        /// <summary>
+        /// Sets up an Encoder Mapping of configurable values.
+        /// </summary>
+        /// <param name="map">if called more than once to set up encoders for more
+        /// than one field, this should be the map itself returned
+        /// from the first call to {@code #setupMap(Map, int, int, double, double, double, double, Boolean, Boolean, Boolean, String, String, String)}</param>
+        /// <param name="n">the total number of bits in the output encoding</param>
+        /// <param name="w">the number of bits to use in the representation</param>
+        /// <param name="min">the minimum value (if known i.e. for the ScalarEncoder)</param>
+        /// <param name="max">the maximum value (if known i.e. for the ScalarEncoder)</param>
+        /// <param name="radius">see {@link Encoder}</param>
+        /// <param name="resolution">see {@link Encoder}</param>
+        /// <param name="periodic">such as hours of the day or days of the week, which repeat in cycles</param>
+        /// <param name="clip">whether the outliers should be clipped to the min and max values</param>
+        /// <param name="forced">use the implied or explicitly stated ratio of w to n bits rather than the "suggested" number</param>
+        /// <param name="fieldName">the name of the encoded field</param>
+        /// <param name="fieldType">the data type of the field</param>
+        /// <param name="encoderType">the Camel case class name minus the .class suffix</param>
+        /// <returns></returns>
+        public static EncoderSettingsList SetupMap(
+                        EncoderSettingsList map,
+                        int n, int w, double min, double max, double radius, double resolution, bool? periodic,
+                        bool? clip, bool? forced, string fieldName, FieldMetaType? fieldType, string encoderType)
         {
 
             if (map == null)
             {
-                map = new Map<string, Map<string, object>>();
+                map = new EncoderSettingsList();
             }
-            Map<string, object> inner = null;
+            EncoderSetting inner;
+
             if (!map.TryGetValue(fieldName, out inner))
             {
-                map.Add(fieldName, inner = new Map<string, object>());
+                map.Add(fieldName, inner = new EncoderSetting());
             }
 
-            inner.Add("n", n);
-            inner.Add("w", w);
-            inner.Add("minVal", min);
-            inner.Add("maxVal", max);
-            inner.Add("radius", radius);
-            inner.Add("resolution", resolution);
+            inner.n = n;
+            inner.w = w;
+            inner.minVal = min;
+            inner.maxVal = max;
+            inner.radius = radius;
+            inner.resolution = resolution;
 
-            if (periodic != null) inner.Add("periodic", periodic);
-            if (clip != null) inner.Add("clipInput", clip);
-            if (forced != null) inner.Add("forced", forced);
+            if (periodic != null) inner.periodic = periodic;
+            if (clip != null) inner.clipInput = clip;
+            if (forced != null) inner.forced = forced;
             if (fieldName != null)
             {
-                inner.Add("fieldName", fieldName);
-                inner.Add("name", fieldName);
+                inner.fieldName = fieldName;
+                inner.name = fieldName;
             }
-            if (fieldType != null) inner.Add("fieldType", fieldType);
-            if (encoderType != null) inner.Add("encoderType", encoderType);
+            if (fieldType != null) inner.fieldType = fieldType;
+            if (encoderType != null) inner.encoderType = encoderType;
 
             return map;
         }
@@ -72,24 +72,24 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
          * Returns the Hot Gym encoder setup.
          * @return
          */
-        public static Map<string, Map<string, object>> GetHotGymFieldEncodingMap()
+        public static EncoderSettingsList GetHotGymFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                     null,
                     0, // n
                     0, // w
                     0, 0, 0, 0, null, null, null,
-                    "timestamp", "datetime", "DateEncoder");
+                    "timestamp", FieldMetaType.DateTime, "DateEncoder");
             fieldEncodings = SetupMap(
                     fieldEncodings,
                     25,
                     3,
                     0, 0, 0, 0.1, null, null, null,
-                    "consumption", "float", "RandomDistributedScalarEncoder");
+                    "consumption", FieldMetaType.Float, "RandomDistributedScalarEncoder");
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_HOW.GetFieldName(), new BitsTuple(1, 1.0)); // Day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(5, 4.0)); // Time of day
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
+            fieldEncodings["timestamp"].dayOfWeek = new BitsTuple(1, 1.0); // Hours of week
+            fieldEncodings["timestamp"].timeOfDay = new BitsTuple(5, 4.0); // Time of day
+            fieldEncodings["timestamp"].formatPattern = "MM/dd/YY HH:mm";
 
             return fieldEncodings;
         }
@@ -98,23 +98,23 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
          * Returns the Hot Gym encoder setup.
          * @return
          */
-        public static Map<string, Map<string, object>> GetNetworkDemoFieldEncodingMap()
+        public static EncoderSettingsList GetNetworkDemoFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                     null,
                     0, // n
                     0, // w
                     0, 0, 0, 0, null, null, null,
-                    "timestamp", "datetime", "DateEncoder");
+                    "timestamp", FieldMetaType.DateTime, "DateEncoder");
             fieldEncodings = SetupMap(
                     fieldEncodings,
                     50,
                     21,
                     0, 100.0, 0, 0.1, null, true, null,
-                    "consumption", "float", "ScalarEncoder");
+                    "consumption", FieldMetaType.Float, "ScalarEncoder");
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(21, 9.5)); // Time of day
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
+            fieldEncodings["timestamp"].timeOfDay = new BitsTuple(21, 9.5); // Time of day
+            fieldEncodings["timestamp"].formatPattern = "MM/dd/YY HH:mm";
 
             return fieldEncodings;
         }
@@ -125,7 +125,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
          */
         public static Parameters GetNetworkDemoTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetNetworkDemoFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetHotGymFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
@@ -143,8 +143,8 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.21);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.1);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.1);
-            p.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 9); 
-            p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 12); 
+            p.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 9);
+            p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 12);
 
             p.SetParameterByKey(Parameters.KEY.CLIP_INPUT, true);
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -158,7 +158,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
          */
         public static Parameters GetHotGymTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetHotGymFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetHotGymFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -170,14 +170,14 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
          * Parameters and meta information for the "dayOfWeek" encoder
          * @return
          */
-        public static Map<string, Map<string, object>> GetDayDemoFieldEncodingMap()
+        public static EncoderSettingsList GetDayDemoFieldEncodingMap()
         {
-            Map<string, Map<string, object>> fieldEncodings = SetupMap(
+            EncoderSettingsList fieldEncodings = SetupMap(
                     null,
                     8, // n
                     3, // w
                     0.0, 8.0, 0, 1, true, null, true,
-                    "dayOfWeek", "number", "ScalarEncoder");
+                    "dayOfWeek",  FieldMetaType.Float, "ScalarEncoder");
             return fieldEncodings;
         }
 
@@ -187,7 +187,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
          */
         public static Parameters GetDayDemoTestEncoderParams()
         {
-            Map<string, Map<string, object>> fieldEncodings = GetDayDemoFieldEncodingMap();
+            EncoderSettingsList fieldEncodings = GetDayDemoFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);

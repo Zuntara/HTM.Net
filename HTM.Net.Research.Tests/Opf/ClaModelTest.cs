@@ -213,152 +213,152 @@ namespace HTM.Net.Research.Tests.Opf
             }
         }
 
-        class TemporalAnomalyModelDescription : BaseDescription
-        {
-            public TemporalAnomalyModelDescription()
-            {
-                var config = new ConfigModelDescription
-                {
-                    model = "CLA",
-                    aggregationInfo = new AggregationSettings
-                    {
-                        days = 0,
-                        fields = new Map<string, object>(),
-                        hours = 0,
-                        microseconds = 0,
-                        milliseconds = 0,
-                        minutes = 0,
-                        months = 0,
-                        seconds = 0,
-                        weeks = 0,
-                        years = 0
-                    },
-                    modelParams = new ModelParamsDescription
-                    {
-                        anomalyParams = new AnomalyParamsDescription
-                        {
-                            anomalyCacheRecords = null,
-                            autoDetectThreshold = null,
-                            autoDetectWaitRecords = 5030
-                        },
-                        clEnable = false,
-                        clParams = new ClassifierParamsDescription
-                        {
-                            alpha = 0.035828933612158,
-                            verbosity = 0,
-                            regionName = typeof(CLAClassifier).AssemblyQualifiedName,
-                            steps = new[] {1}
-                        },
-                        inferenceType = InferenceType.TemporalAnomaly,
-                        sensorParams = new SensorParamsDescription
-                        {
-                            encoders = new EncoderSettingsList()
-                            {
-                                {
-                                    "c0_dayOfWeek", null
-                                },
-                                {
-                                    "c0_timeOfDay", new EncoderSetting
-                                    {
-                                        fieldName= "c0",
-                                        name= "c0",
-                                        timeOfDay= new Tuple(21, 9.49122334747737),
-                                        type= "DateEncoder"
-                                    }
-                                },
-                                {
-                                    "c0_weekend", null
-                                },
-                                {
-                                    "c1", new EncoderSetting
-                                    {
-                                        fieldName= "c1",
-                                        name= "c1",
-                                        resolution= 0.8771929824561403,
-                                        // seed=  42,
-                                        type= "RandomDistributedScalarEncoder"
-                                    }
-                                },
-                            },
-                            sensorAutoReset = null,
-                            verbosity = 0
-                        },
-                        spEnable = true,
-                        spParams = new SpatialParamsDescription
-                        {
-                            potentialPct = 0.8,
-                            columnCount = new[] {2048},
-                            globalInhibition = true,
-                            inputWidth = new[] {0},
-                            maxBoost = 1.0,
-                            numActiveColumnsPerInhArea = 40,
-                            seed = 1956,
-                            spVerbosity = 0,
-                            synPermActiveInc = 0.0015,
-                            synPermConnected = 0.1,
-                            synPermInactiveDec = 0.0005,
-                        },
-                        tpEnable = true,
-                        tpParams = new TemporalParamsDescription
-                        {
-                            activationThreshold = 13,
-                            cellsPerColumn = 32,
-                            columnCount = new[] {2048},
-                            globalDecay = 0.0,
-                            initialPerm = 0.21,
-                            inputWidth = new[] {2048},
-                            maxAge = 0,
-                            maxSegmentsPerCell = 128,
-                            maxSynapsesPerSegment = 32,
-                            minThreshold = 10,
-                            newSynapseCount = 20,
-                            outputType = "normal",
-                            pamLength = 3,
-                            permanenceDec = 0.1,
-                            permanenceInc = 0.1,
-                            seed = 1960,
-                            verbosity = 0
-                        },
-                        trainSPNetOnlyIfRequested = false
-                    },
-                    predictAheadTime = null,
-                    version = 1,
-                    inputRecordSchema = new[]
-                    {
-                        new FieldMetaInfo("c0", FieldMetaType.DateTime, SensorFlags.Timestamp),
-                        new FieldMetaInfo("c1", FieldMetaType.Float, SensorFlags.Blank)
-                    }
-                };
+        //class TemporalAnomalyModelDescription : BaseDescription
+        //{
+        //    public TemporalAnomalyModelDescription()
+        //    {
+        //        var config = new ConfigModelDescription
+        //        {
+        //            model = "CLA",
+        //            aggregationInfo = new AggregationSettings
+        //            {
+        //                days = 0,
+        //                fields = new Map<string, object>(),
+        //                hours = 0,
+        //                microseconds = 0,
+        //                milliseconds = 0,
+        //                minutes = 0,
+        //                months = 0,
+        //                seconds = 0,
+        //                weeks = 0,
+        //                years = 0
+        //            },
+        //            modelParams = new ModelParamsDescription
+        //            {
+        //                anomalyParams = new AnomalyParamsDescription
+        //                {
+        //                    anomalyCacheRecords = null,
+        //                    autoDetectThreshold = null,
+        //                    autoDetectWaitRecords = 5030
+        //                },
+        //                clEnable = false,
+        //                clParams = new ClassifierParamsDescription
+        //                {
+        //                    alpha = 0.035828933612158,
+        //                    verbosity = 0,
+        //                    regionName = typeof(CLAClassifier).AssemblyQualifiedName,
+        //                    steps = new[] {1}
+        //                },
+        //                inferenceType = InferenceType.TemporalAnomaly,
+        //                sensorParams = new SensorParamsDescription
+        //                {
+        //                    encoders = new EncoderSettingsList()
+        //                    {
+        //                        {
+        //                            "c0_dayOfWeek", null
+        //                        },
+        //                        {
+        //                            "c0_timeOfDay", new EncoderSetting
+        //                            {
+        //                                fieldName= "c0",
+        //                                name= "c0",
+        //                                timeOfDay= new Tuple(21, 9.49122334747737),
+        //                                type= "DateEncoder"
+        //                            }
+        //                        },
+        //                        {
+        //                            "c0_weekend", null
+        //                        },
+        //                        {
+        //                            "c1", new EncoderSetting
+        //                            {
+        //                                fieldName= "c1",
+        //                                name= "c1",
+        //                                resolution= 0.8771929824561403,
+        //                                // seed=  42,
+        //                                type= "RandomDistributedScalarEncoder"
+        //                            }
+        //                        },
+        //                    },
+        //                    sensorAutoReset = null,
+        //                    verbosity = 0
+        //                },
+        //                spEnable = true,
+        //                spParams = new SpatialParamsDescription
+        //                {
+        //                    potentialPct = 0.8,
+        //                    columnCount = new[] {2048},
+        //                    globalInhibition = true,
+        //                    inputWidth = new[] {0},
+        //                    maxBoost = 1.0,
+        //                    numActiveColumnsPerInhArea = 40,
+        //                    seed = 1956,
+        //                    spVerbosity = 0,
+        //                    synPermActiveInc = 0.0015,
+        //                    synPermConnected = 0.1,
+        //                    synPermInactiveDec = 0.0005,
+        //                },
+        //                tpEnable = true,
+        //                tpParams = new TemporalParamsDescription
+        //                {
+        //                    activationThreshold = 13,
+        //                    cellsPerColumn = 32,
+        //                    columnCount = new[] {2048},
+        //                    globalDecay = 0.0,
+        //                    initialPerm = 0.21,
+        //                    inputWidth = new[] {2048},
+        //                    maxAge = 0,
+        //                    maxSegmentsPerCell = 128,
+        //                    maxSynapsesPerSegment = 32,
+        //                    minThreshold = 10,
+        //                    newSynapseCount = 20,
+        //                    outputType = "normal",
+        //                    pamLength = 3,
+        //                    permanenceDec = 0.1,
+        //                    permanenceInc = 0.1,
+        //                    seed = 1960,
+        //                    verbosity = 0
+        //                },
+        //                trainSPNetOnlyIfRequested = false
+        //            },
+        //            predictAheadTime = null,
+        //            version = 1,
+        //            inputRecordSchema = new[]
+        //            {
+        //                new FieldMetaInfo("c0", FieldMetaType.DateTime, SensorFlags.Timestamp),
+        //                new FieldMetaInfo("c1", FieldMetaType.Float, SensorFlags.Blank)
+        //            }
+        //        };
 
-                modelConfig = config;
+        //        modelConfig = config;
 
-                control = new ControlModelDescription
-                {
-                    inferenceArgs = new InferenceArgsDescription
-                    {
-                        inputPredictedField = InputPredictedField.Auto,
-                        predictedField = "c1",
-                        predictionSteps = new[] {1},
-                    }
-                };
-            }
+        //        control = new ControlModelDescription
+        //        {
+        //            inferenceArgs = new InferenceArgsDescription
+        //            {
+        //                inputPredictedField = InputPredictedField.Auto,
+        //                predictedField = "c1",
+        //                predictionSteps = new[] {1},
+        //            }
+        //        };
+        //    }
 
-            #region Overrides of DescriptionBase
+        //    #region Overrides of DescriptionBase
 
-            public override Network.Network BuildNetwork()
-            {
-                throw new System.NotImplementedException();
-            }
+        //    public override Network.Network BuildNetwork()
+        //    {
+        //        throw new System.NotImplementedException();
+        //    }
 
-            public override Parameters GetParameters()
-            {
-                Parameters p = Parameters.Empty();
-                p.Union(modelConfig.GetParameters());
-                return p;
-            }
+        //    public override Parameters GetParameters()
+        //    {
+        //        Parameters p = Parameters.Empty();
+        //        p.Union(modelConfig.GetParameters());
+        //        return p;
+        //    }
 
-            #endregion
-        }
+        //    #endregion
+        //}
 
         class TemporalAnomalyModelDescriptionParams : ClaExperimentParameters
         {

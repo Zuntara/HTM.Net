@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Util;
+using Newtonsoft.Json;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
@@ -45,6 +46,7 @@ namespace HTM.Net.Encoders
         /// <summary>
         /// Returns all keys
         /// </summary>
+        [JsonIgnore]
         public List<string> AllKeys
         {
             get { return _allKeyProps.Keys.ToList(); }
@@ -53,6 +55,7 @@ namespace HTM.Net.Encoders
         /// <summary>
         /// Returns all non empty keys
         /// </summary>
+        [JsonIgnore]
         public List<string> Keys
         {
             get { return _allKeyProps.Where(p => p.Value.GetValue(this) != null).Select(p => p.Key).ToList(); }
@@ -181,6 +184,9 @@ namespace HTM.Net.Encoders
 
         public Tuple dayOfWeek { get; set; }
         public Tuple timeOfDay { get; set; }
+        public Tuple weekend { get; set; }
+        public Tuple season { get; set; }
+        public Tuple holiday { get; set; }
         public string formatPattern { get; set; }
 
         public int? timestep { get; set; }
@@ -194,6 +200,11 @@ namespace HTM.Net.Encoders
             ms.Position = 0;
             EncoderSetting obj = (EncoderSetting)formatter.Deserialize(ms);
             return obj;
+        }
+
+        public string GetEncoderType()
+        {
+            return encoderType ?? type;
         }
     }
 }

@@ -102,7 +102,14 @@ namespace HTM.Net
                         return ChangeType<T>(new Tuple(double.Parse(parts[0], NumberFormatInfo.InvariantInfo), double.Parse(parts[1], NumberFormatInfo.InvariantInfo), double.Parse(parts[2], NumberFormatInfo.InvariantInfo)));
                     }
                 case FieldMetaType.Integer:
-                case FieldMetaType.Float: return ChangeType<T>(double.Parse(input, NumberFormatInfo.InvariantInfo)); //return ChangeType<T>(input);
+                case FieldMetaType.Float:
+                    {
+                        if (input.Contains("."))
+                        {
+                            return ChangeType<T>(double.Parse(input, CultureInfo.InvariantCulture));
+                        }
+                        return ChangeType<T>(double.Parse(input, CultureInfo.GetCultureInfo("nl-BE").NumberFormat));
+                    }
                 case FieldMetaType.SparseArray:
                 case FieldMetaType.DenseArray:
                     {

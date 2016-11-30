@@ -21,10 +21,10 @@ namespace HTM.Net.Encoders
          * 					encoder encodes/decodes. (see  {@link ScalarEncoder#getFirstOnBit(
          * 						org.numenta.nupic.research.Connections, double)})
          */
-        public EncoderTuple(string fieldName, string encoderName, IEncoder e, int offset)
-            : base(fieldName, encoderName, e, offset)
+        public EncoderTuple(string fieldName, string name, IEncoder e, int offset)
+            : base(fieldName, name, e, offset)
         {
-            if (encoderName == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
+            if (name == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
                  " with a null encoderName");
             if (fieldName == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
                  " with a null fieldName");
@@ -34,7 +34,7 @@ namespace HTM.Net.Encoders
 
         public string GetFieldName()
         {
-            return (string) Get(0);
+            return (string) Get(1);
         }
 
         /**
@@ -43,7 +43,7 @@ namespace HTM.Net.Encoders
          */
         public string GetName()
         {
-            return (string)Get(1);
+            return (string)Get(0);
         }
 
         /**

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
@@ -111,11 +112,11 @@ namespace HTM.Net.Research.Swarming
                 // Override parameter values
                 if (@params?.modelParams?.inferenceType != null)
                 {
-                    cloneDescr.InferenceType = (InferenceType) TypeConverter.Convert<int>(@params.modelParams.inferenceType);
+                    cloneDescr.InferenceType = (InferenceType)TypeConverter.Convert<int>(@params.modelParams.inferenceType);
                 }
                 if (@params?.modelParams?.clParams?.alpha != null)
                 {
-                    cloneDescr.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 
+                    cloneDescr.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA,
                         TypeConverter.Convert<double>(@params.modelParams.clParams.alpha));
                 }
                 if (@params?.modelParams?.spParams?.synPermInactiveDec != null)
@@ -140,7 +141,7 @@ namespace HTM.Net.Research.Swarming
                     string encoderName = encoderDict.Key;
                     EncoderSetting encoderValues = encoderDict.Value;
 
-                    var permutedEncoder = (EncoderSetting)@params.modelParams.sensorParams.encoders[encoderName];
+                    var permutedEncoder = (EncoderSetting)@params.modelParams.sensorParams.encoders.Get(encoderName);
                     if (permutedEncoder == null) continue;
                     foreach (var key in permutedEncoder.Keys)
                     {
@@ -206,9 +207,10 @@ namespace HTM.Net.Research.Swarming
                 }
                 catch (Exception ex)
                 {
+                    completionStatus = _handleModelRunnerException(jobID, modelID, jobsDAO, cloneDescr, logger, ex);
                     Debug.WriteLine(ex);
                     if (Debugger.IsAttached) Debugger.Break();
-                    throw;
+                    return completionStatus;
                 }
 
                 //    try
@@ -256,6 +258,45 @@ namespace HTM.Net.Research.Swarming
             //// Return completion reason and msg
             //return completionStatus;
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Perform standard handling of an exception that occurs while running a model.
+        /// </summary>
+        /// <param name="jobId">ID for this hypersearch job in the jobs table</param>
+        /// <param name="modelId">model ID</param>
+        /// <param name="jobsDao">ClientJobsDAO instance</param>
+        /// <param name="cloneDescr">experiment</param>
+        /// <param name="logger">the logger to use</param>
+        /// <param name="e">the exception that occurred</param>
+        /// <returns></returns>
+        private static ModelCompletionStatus _handleModelRunnerException(uint? jobId, ulong? modelId, BaseClientJobDao jobsDao, ClaExperimentParameters cloneDescr, ILog logger, Exception e)
+        {
+            StringBuilder msg = new StringBuilder();
+            msg.Append($"Exception occurred while running model {modelId}: {e} ({e.GetType()})");
+            string completionMsg = msg.ToString();
+            ModelCompletionStatus status = new ModelCompletionStatus(BaseClientJobDao.CMPL_REASON_ERROR, completionMsg);
+            logger.Error(completionMsg);
+
+            /*
+             if type(e) is not InvalidConnectionException:
+                jobsDAO.modelUpdateResults(modelID,  results=None, numRecords=0)
+            */
+            if (e is JobFailException)
+            {
+                string workerCompReason = jobsDao.jobGetFields(jobId, new[] { "workerCompletionReason" })[0] as string;
+                if (workerCompReason == BaseClientJobDao.CMPL_REASON_SUCCESS)
+                {
+                    jobsDao.jobSetFields(jobId, new Map<string, object>
+                    {
+                        {"cancel",true},
+                        {"workerCompletionReason ",BaseClientJobDao.CMPL_REASON_ERROR},
+                        {"workerCompletionMsg ",e.ToString()},
+                        {"cancel",true},
+                    }, false, true);
+                }
+            }
+            return status;
         }
 
         public static ModelCompletionStatus runDummyModel(int modelID, int? jobID, ModelDescription @params

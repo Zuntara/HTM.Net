@@ -687,6 +687,8 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public class ClaExperimentParameters : Parameters
     {
+        private bool _groupedEncoders = false;
+
         protected ClaExperimentParameters()
         {
             Control = new ExperimentControl();
@@ -740,12 +742,39 @@ namespace HTM.Net.Research.Swarming
 
         public ExperimentControl Control { get; set; }
 
+        /// <summary>
+        /// Type of model that the rest of these parameters apply to.
+        /// </summary>
         public string Model { get; set; } = "CLA";
+        /// <summary>
+        /// The type of inference that this model will perform
+        /// </summary>
         public InferenceType InferenceType { get; set; }
         public bool EnableSpatialPooler { get; set; }
+        /// <summary>
+        /// Controls whether TP is enabled or disabled;
+        /// TP is necessary for making temporal predictions, such as predicting
+        /// the next inputs.  Without TP, the model is only capable of
+        /// reconstructing missing sensor inputs (via SP).
+        /// </summary>
         public bool EnableTemporalMemory { get; set; }
         public bool EnableClassification { get; set; }
+        /// <summary>
+        /// A dictionary specifying the period for automatically-generated
+        /// resets from a RecordSensor;
+        ///
+        /// None = disable automatically-generated resets (also disabled if
+        /// all of the specified values evaluate to 0).
+        /// Valid keys is the desired combination of the following:
+        ///   days, hours, minutes, seconds, milliseconds, microseconds, weeks
+        ///
+        /// Example for 1.5 days: sensorAutoReset = dict(days=1,hours=12),
+        /// </summary>
         public AggregationSettings SensorAutoReset { get; set; }
+        /// <summary>
+        /// Intermediate variables used to compute fields in modelParams and also
+        /// referenced from the control section.
+        /// </summary>
         public AggregationSettings AggregationInfo { get; set; }
 
         public bool TrainSPNetOnlyIfRequested { get; set; }
@@ -754,6 +783,53 @@ namespace HTM.Net.Research.Swarming
 
         public EncoderSettingsList GetEncoderSettings()
         {
+            if (_groupedEncoders)
+            {
+                return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+            }
+            _groupedEncoders = true;
+
+            // Lookup DateEncoders and group them if needed
+            EncoderSettingsList list = (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+
+            var selection = list.Where(e => e.Key.Contains("_") && e.Value.GetEncoderType() == "DateEncoder").ToList();
+            var grouped = selection.GroupBy(k => k.Value.fieldName, e => e.Key);
+            if (selection.Count > 1)
+            {
+                foreach (var grouping in grouped)
+                {
+                    string fieldName = grouping.Key;
+                    EncoderSetting setting = new EncoderSetting();
+                    setting.encoderType = "DateEncoder";
+                    setting.fieldName = fieldName;
+
+                    foreach (string name in grouping)
+                    {
+                        if (name.EndsWith("timeOfDay"))
+                        {
+                            setting.timeOfDay = selection.Single(s => s.Key == name).Value.timeOfDay;
+                        }
+                        else if (name.EndsWith("dayOfWeek"))
+                        {
+                            setting.dayOfWeek = selection.Single(s => s.Key == name).Value.dayOfWeek;
+                        }
+                        else if (name.EndsWith("weekend"))
+                        {
+                            setting.weekend = selection.Single(s => s.Key == name).Value.weekend;
+                        }
+                        else if (name.EndsWith("season"))
+                        {
+                            setting.season = selection.Single(s => s.Key == name).Value.season;
+                        }
+                        else if (name.EndsWith("holiday"))
+                        {
+                            setting.holiday = selection.Single(s => s.Key == name).Value.holiday;
+                        }
+                        list.Remove(name);
+                    }
+                    list.Add(fieldName, setting);
+                }
+            }
             return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
         }
 
@@ -788,7 +864,18 @@ namespace HTM.Net.Research.Swarming
         public StreamDef DatasetSpec { get; set; }
         public FieldMetaInfo[] InputRecordSchema { get; set; }
         public InferenceArgsDescription InferenceArgs { get; set; }
+        /// <summary>
+        /// Logged Metrics: A sequence of regular expressions that specify which of
+        /// the metrics from the Inference Specifications section MUST be logged for
+        /// every prediction. The regex"s correspond to the automatically generated
+        /// metric labels. This is similar to the way the optimization metric is
+        /// specified in permutations.py.
+        /// </summary>
         public string[] LoggedMetrics { get; set; }
+        /// <summary>
+        /// Metrics: A list of MetricSpecs that instantiate the metrics that are
+        /// computed for this experiment
+        /// </summary>
         public MetricSpec[] Metrics { get; set; }
         public int? IterationCount { get; set; }
         public int? IterationCountInferOnly { get; set; }

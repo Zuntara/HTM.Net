@@ -97,7 +97,7 @@
          */
         public static SensorFlags FromString(object o)
         {
-            string val = o.ToString().ToLower();
+            string val = o.ToString().ToLower().Trim();
             switch (val)
             {
                 case "r":

@@ -13,7 +13,7 @@ namespace HTM.Net.Network.Sensor
         IBaseStream GetOutputStream();
 
         IDictionary<string, object> GetInputMap();
-        void AssignBasicInputMap(string[] rawData);
+        void AssignBasicInputMap(Map<string, object> inputRecord, string[] rawData);
 
         void SetEncoder(MultiEncoder encoder);
 
@@ -507,14 +507,15 @@ namespace HTM.Net.Network.Sensor
         }
 
         // Used for setting the input map when we use the CLAModel
-        public void AssignBasicInputMap(string[] rawData)
+        public void AssignBasicInputMap(Map<string, object> inputRecord, string[] rawData)
         {
             var fieldNames = GetFieldNames();
             if (!indexFieldMap.Any())
             {
                 for (int i = 0; i < fieldNames.Length; i++)
                 {
-                    indexFieldMap.Add(fieldNames[i], i);
+                    int index = inputRecord.Keys.ToList().IndexOf(fieldNames[i]);
+                    indexFieldMap.Add(fieldNames[i], index);
                 }
             }
 

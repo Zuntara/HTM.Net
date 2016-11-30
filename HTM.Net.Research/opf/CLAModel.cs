@@ -381,7 +381,7 @@ namespace HTM.Net.Research.opf
             try
             {
                 // Push record into the sensor
-                ((IHTMSensor) _getSensorRegion()).AssignBasicInputMap(rawData);
+                ((IHTMSensor) _getSensorRegion()).AssignBasicInputMap(inputRecord, rawData);
                 _inputProvider.OnNext(string.Join(",", inputRecord.Values.Select(v => v?.ToString()).ToArray()));
                 this._currentInferenceOutput = _netInfo.net.ComputeImmediate(inputRecord);
             }
@@ -756,7 +756,7 @@ namespace HTM.Net.Research.opf
                 var fieldNames = sensor.GetEncoder().GetScalarNames();// encoderList.Select(et => et.GetFieldName()).ToList();
                 if (fieldNames != null && fieldNames.Contains(predictedFieldName))
                 {
-                    this._predictedFieldIdx = fieldNames.IndexOf(predictedFieldName);
+                    this._predictedFieldIdx = fieldNames.OrderBy(k=>k).ToList().IndexOf(predictedFieldName);
                 }
                 else
                 {

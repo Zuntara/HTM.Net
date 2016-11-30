@@ -56,7 +56,7 @@ namespace HTM.Net.Encoders
         {
             foreach (var t in GetEncoders(this))
             {
-                string name = t.GetName();
+                string name = t.GetFieldName();
                 IEncoder encoder = t.GetEncoder();
                 int offset = t.GetOffset();
 
@@ -106,9 +106,9 @@ namespace HTM.Net.Encoders
             return encodings;
         }
 
-        public void AddEncoder(string fieldName, string encoderName, IEncoder child)
+        public void AddEncoder(string fieldName, string name, IEncoder child)
         {
-            base.AddEncoder(this, fieldName, encoderName, child, width);
+            base.AddEncoder(this, fieldName, name, child, width);
 
             foreach (Tuple d in child.GetDescription())
             {

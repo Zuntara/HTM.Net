@@ -135,6 +135,7 @@
     <Compile Include="Swarming\HyperSearchV2.cs" />
     <Compile Include="Swarming\HyperSearchWorker.cs" />
     <Compile Include="Swarming\ModelChooser.cs" />
+    <Compile Include="Swarming\Particle.cs" />
     <Compile Include="Swarming\PermutationsRunner.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />

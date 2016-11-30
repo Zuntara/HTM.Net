@@ -587,8 +587,8 @@ namespace HTM.Net.Research.Tests.Swarming
         }
 
         // nupic/src/nupic/datafiles/swarming/test_data.csv
-        //[TestMethod]
-        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
@@ -713,30 +713,14 @@ namespace HTM.Net.Research.Tests.Swarming
         [TestMethod]
         public void TestDescriptionSerialization()
         {
-            SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
+            SimpleV2DescriptionParameters parameters = new SimpleV2DescriptionParameters();
 
-            string json = JsonConvert.SerializeObject(file, Formatting.Indented, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
+            string json = Json.Serialize(parameters);
             Debug.WriteLine(json);
-            var deserialized = JsonConvert.DeserializeObject(json, typeof(DescriptionBase), new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
+            var deserialized = Json.Deserialize<ClaExperimentParameters>(json);
             Assert.IsNotNull(deserialized);
-            Assert.IsInstanceOfType(deserialized, typeof(SimpleV2DescriptionFile));
-
-
-        }
-
-        [TestMethod]
-        public void TestDescriptionNetworkCreation()
-        {
-            SimpleV2DescriptionFile file = new SimpleV2DescriptionFile();
-
-            var network = file.BuildNetwork();
-            Assert.IsNull(network); // for now
+            Assert.IsInstanceOfType(deserialized, typeof(SimpleV2DescriptionParameters));
+            Assert.AreEqual(parameters,deserialized);
         }
 
         //[TestMethod]

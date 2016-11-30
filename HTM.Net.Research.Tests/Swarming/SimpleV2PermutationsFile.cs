@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using HTM.Net.Encoders;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
@@ -23,7 +24,7 @@ namespace HTM.Net.Research.Tests.Swarming
                             {"gym",new PermuteEncoder(fieldName: "gym", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
                             {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
                             {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})},
-                            {"consumption",new PermuteEncoder(fieldName: "consumption", encoderType: "ScalarEncoder",kwArgs:new KWArgsModel{{"maxval", new PermuteInt(100, 300, 25)},{"n", new PermuteInt(13, 500, 20)},{"w", 7},{"minval", 0}})},
+                            {"consumption",new PermuteEncoder(fieldName: "consumption", encoderType: "ScalarEncoder",kwArgs:new KWArgsModel{{"maxval", new PermuteInt(100, 300, 25)},{"n", new PermuteInt(13, 500, 20)},{"w", 7},{"minval", 0}, {"forced", true} })},
                             {"address",new PermuteEncoder(fieldName: "address", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
                         }
                     },
@@ -83,7 +84,7 @@ namespace HTM.Net.Research.Tests.Swarming
         public override bool permutationFilter(PermutationModelParameters perm)
         {
             int limit = int.Parse(Environment.GetEnvironmentVariable("NTA_TEST_maxvalFilter") ?? "300");
-            if ((double)((PermuteEncoder)perm.modelParams.sensorParams.encoders["consumption"]).maxval > limit)
+            if (((EncoderSetting)perm.modelParams.sensorParams.encoders["consumption"])?.maxVal > limit)
                 return false;
 
             return true;
