@@ -254,7 +254,7 @@ namespace HTM.Net.Research.Tests.Swarming
             // errors being chosen more often.
             var choices = new[] { 1, 11.0, 21, 31 };
             pc = new PermuteChoices(choices);
-            IList<Tuple<int, List<double>>> resultsPerChoice = new List<Tuple<int, List<double>>>();
+           List<Tuple<int, List<double>>> resultsPerChoice = new List<Tuple<int, List<double>>>();
             var counts2 = new Map<int, int>();
             foreach (var choice in choices)
             {
@@ -284,7 +284,7 @@ namespace HTM.Net.Research.Tests.Swarming
             // biasing the probabilities to the one with the lowest error.
             choices = new[] { 1, 11, 21.0, 31 };
             pc = new PermuteChoices(choices, fixEarly: true);
-            var resultsPerChoiceDict = new Dictionary<int, Tuple<int, List<double>>>();
+            var resultsPerChoiceDict = new Map<int, Tuple<int, List<double>>>();
             counts2 = new Map<int, int>();
 
             foreach (var choice in choices)

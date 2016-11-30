@@ -1297,8 +1297,8 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public class PermutationModelDescriptionParams
     {
-        [TokenReplace("$PERM_INFERENCE_TYPE_CHOICES")]
-        public PermuteVariable inferenceType { get; set; }
+        [TokenReplace("$PERM_INFERENCE_TYPE_CHOICES_inferenceType")]
+        public object inferenceType { get; set; }
         public PermutationSensorParams sensorParams { get; set; }
         public PermutationSpatialPoolerParams spParams { get; set; }
         public PermutationTemporalPoolerParams tpParams { get; set; }

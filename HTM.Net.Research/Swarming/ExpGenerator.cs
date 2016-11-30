@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
 using HTM.Net.Research.Data;
@@ -464,6 +465,7 @@ namespace HTM.Net.Research.Swarming
 
             // Get token replacements
             ClaExperimentParameters claParameters = ClaExperimentParameters.Default();
+            claParameters.EnableClassification = true;
             Map<string, object> tokenReplacements = new Map<string, object>();
 
             // Generate the encoder related substitution strings
@@ -578,7 +580,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             //tokenReplacements["$ANOMALY_PARAMS"] = Options.anomalyParams;
-            claParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Options.anomalyParams?.mode);
+            claParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Options.anomalyParams?.mode ?? Anomaly.Mode.PURE);
             claParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE, Options.anomalyParams?.slidingWindowSize);
 
             claParameters.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, encoderSpecs);
@@ -602,7 +604,8 @@ namespace HTM.Net.Research.Swarming
             tokenReplacements["$SP_POOL_PCT"] = Options.spCoincInputPoolPct;
             tokenReplacements["$HS_MIN_PARTICLES"] = Options.minParticlesPerSwarm;
 
-            tokenReplacements["$SP_PERM_CONNECTED"] = Options.spSynPermConnected;
+            //tokenReplacements["$SP_PERM_CONNECTED"] = Options.spSynPermConnected;
+            claParameters.SetSynPermConnected(Options.spSynPermConnected);
             tokenReplacements["$FIELD_PERMUTATION_LIMIT"] = Options.fieldPermutationLimit;
 
             tokenReplacements["$PERM_ENCODER_CHOICES"] = permEncoderChoices;
@@ -638,6 +641,7 @@ namespace HTM.Net.Research.Swarming
             if (Options.inferenceType == InferenceType.MultiStep)
             {
                 tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES_inferenceType"] = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
+                
             }
             else
             {
@@ -996,7 +1000,7 @@ namespace HTM.Net.Research.Swarming
             }
             tokenReplacements["$PREDICTED_FIELD"] = predictedField;
             tokenReplacements["$PREDICTED_FIELD_report"] = new[] { ".*" + predictedField + ".*" };
-            tokenReplacements["$INFERENCE_ARGS"] = resultInferenceArgs;
+            //tokenReplacements["$INFERENCE_ARGS"] = resultInferenceArgs;
             claExperimentParameters.Control.InferenceArgs = resultInferenceArgs;
         }
 

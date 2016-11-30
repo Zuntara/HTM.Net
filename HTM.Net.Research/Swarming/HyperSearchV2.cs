@@ -1030,10 +1030,9 @@ namespace HTM.Net.Research.Swarming
         /// <param name="maxGenIdx">max generation index to consider from other models, ignored if None</param>
         /// <param name="varName">which variable to retrieve</param>
         /// <returns>list of the errors obtained from each choice.</returns>
-        public IList<Tuple<int, List<double>>> getResultsPerChoice(string swarmId, int? maxGenIdx, string varName)
+        public Map<int, Tuple<int, List<double>>> getResultsPerChoice(string swarmId, int? maxGenIdx, string varName)
         {
-
-            var results = new List<Tuple<int, List<double>>>();
+            var results = new Map<int, Tuple<int, List<double>>>();
             // Get all the completed particles in this swarm
             //(allParticles, _, resultErrs, _, _) = this.getParticleInfos(swarmId,
             //                                          genIdx = None, matured = True);
@@ -1054,7 +1053,7 @@ namespace HTM.Net.Research.Swarming
                 }
 
                 // Ignore unless this model completed successfully
-                if (resultErr == double.PositiveInfinity)
+                if (double.IsPositiveInfinity(resultErr))
                 {
                     continue;
                 }
@@ -1062,8 +1061,8 @@ namespace HTM.Net.Research.Swarming
                 var position = Particle.getPositionFromState(particleState);
                 double varPosition = position[varName];
                 //var varPositionStr = varPosition.ToString();
-                //if (results.ContainsKey(varPositionStr))
-                if (results.Any(r => r.Item1 == (int)varPosition))
+
+                if (results.ContainsKey((int)varPosition))
                 {
                     results[(int)varPosition].Item2.Add(resultErr);
                     //results[varPositionStr][1].Add(resultErr);
@@ -1071,7 +1070,6 @@ namespace HTM.Net.Research.Swarming
                 else
                 {
                     //results[varPositionStr] = (varPosition, [resultErr]);
-                    //results[varPositionStr] = new Dictionary<int, List<double>> { { varPosition, new List<double> { resultErr } } };
                     results[(int)varPosition] = new Tuple<int, List<double>>((int)varPosition, new List<double> { resultErr });
                 }
             }
@@ -1222,7 +1220,7 @@ namespace HTM.Net.Research.Swarming
 
                         var resultsPerChoice = this._resultsDB.getResultsPerChoice(
                             swarmId: swarmId, maxGenIdx: maxGenIdx, varName: varName);
-                        ((PermuteChoices)this.permuteVars[varName]).SetResultsPerChoice(resultsPerChoice);
+                        ((PermuteChoices)this.permuteVars[varName]).SetResultsPerChoice(resultsPerChoice.Values.ToList());
                     }
                 }
             };

@@ -109,6 +109,10 @@ namespace HTM.Net.Research.Swarming
                 var cloneDescr = baseDescription.Copy();
 
                 // Override parameter values
+                if (@params?.modelParams?.inferenceType != null)
+                {
+                    cloneDescr.InferenceType = (InferenceType) TypeConverter.Convert<int>(@params.modelParams.inferenceType);
+                }
                 if (@params?.modelParams?.clParams?.alpha != null)
                 {
                     cloneDescr.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 

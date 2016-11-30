@@ -4,7 +4,7 @@ using System.Linq;
 using HTM.Net.Model;
 using HTM.Net.Util;
 using MathNet.Numerics;
-using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Single;
 
 namespace HTM.Net.Algorithms
 {
@@ -97,7 +97,7 @@ namespace HTM.Net.Algorithms
 
             c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
             
-            c.SetConnectedMatrix(Matrix<float>.Build.Sparse(numColumns, numInputs));
+            c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
 
             //Initialize state meta-management statistics
             c.SetOverlapDutyCycles(new double[numColumns]);

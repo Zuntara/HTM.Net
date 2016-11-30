@@ -369,7 +369,7 @@ namespace HTM.Net.Swarming.HyperSearch
         public double _fixEarlyFactor;
         public double[] choices;
         public double? _bestResult;
-        public Dictionary<int, List<double>> _resultsPerChoice;
+        public List<List<double>> _resultsPerChoice;
 
         [Obsolete("Don't use")]
         public PermuteChoices()
@@ -384,9 +384,9 @@ namespace HTM.Net.Swarming.HyperSearch
 
             // Keep track of the results obtained for each choice
             //this._resultsPerChoice = [[]] *len(this.choices);
-            this._resultsPerChoice = new Dictionary<int, List<double>>();
+            this._resultsPerChoice = new List<List<double>>();
             for (int i = 0; i < choices.Length; i++)
-                _resultsPerChoice.Add(i, new List<double>());
+                _resultsPerChoice.Add(new List<double>());
 
             // The particle's local best position and the best global position
             this._bestPositionIdx = this._positionIdx;
@@ -561,22 +561,23 @@ namespace HTM.Net.Swarming.HyperSearch
         /// [('a', [0.1, 0.2, 0.3]), ('b', [0.5, 0.1, 0.6]), ('c', [0.2])]
         /// </summary>
         /// <param name="resultsPerChoice"></param>
-        public void SetResultsPerChoice(IList<Tuple<int, List<double>>> resultsPerChoice)
+        public void SetResultsPerChoice(List<Tuple<int, List<double>>> resultsPerChoice)
         {
             // Keep track of the results obtained for each choice.
 
             //this._resultsPerChoice = [[]] *len(this.choices);
-            this._resultsPerChoice = new Dictionary<int, List<double>>();
+            _resultsPerChoice = new List<List<double>>();
             for (int i = 0; i < choices.Length; i++)
-                _resultsPerChoice.Add(i, new List<double>());
+                _resultsPerChoice.Add(new List<double>());
 
             //for (choiceValue, values) in resultsPerChoice
             foreach (var pair in resultsPerChoice)
             {
                 double choiceValue = pair.Item1;
                 List<double> values = pair.Item2;
-                int choiceIndex = this.choices.ToList().IndexOf(choiceValue);
-                this._resultsPerChoice[choiceIndex] = values.ToList();
+
+                int choiceIndex = Array.IndexOf(this.choices, choiceValue);
+                _resultsPerChoice[choiceIndex] = values.ToList();
             }
         }
     }
