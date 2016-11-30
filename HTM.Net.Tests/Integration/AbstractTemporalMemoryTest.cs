@@ -20,9 +20,9 @@ namespace HTM.Net.Tests.Integration
         protected SequenceMachine sequenceMachine;
         protected MonitoredTemporalMemory tm;
 
-        public void init(Parameters overrides, PatternMachine pm)
+        public void Init(Parameters overrides, PatternMachine pm)
         {
-            this.parameters = createTMParams(overrides);
+            this.parameters = CreateTmParams(overrides);
             this.connections = new Connections();
             parameters.Apply(connections);
 
@@ -37,7 +37,7 @@ namespace HTM.Net.Tests.Integration
         /**
      * Creates {@link Parameters} for tests
      */
-        protected Parameters createTMParams(Parameters overrides)
+        protected Parameters CreateTmParams(Parameters overrides)
         {
             parameters = Parameters.GetAllDefaultParameters();
             parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 100 });
@@ -58,7 +58,7 @@ namespace HTM.Net.Tests.Integration
             return parameters;
         }
 
-        public virtual void feedTM(List<HashSet<int>> sequence, String label, bool learn, int num)
+        public virtual void FeedTm(List<HashSet<int>> sequence, String label, bool learn, int num)
         {
             List<HashSet<int>> repeatedSequence = new List<HashSet<int>>(sequence);
             if (num > 1)
@@ -93,10 +93,9 @@ namespace HTM.Net.Tests.Integration
         /// Basic sequence learner.  M=1, N=100, P=1.
         /// </summary>
         [TestMethod]
-        public void testB1()
+        public void TestB1()
         {
-
-            init(null, PATTERN_MACHINE);
+            Init(null, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[] {
@@ -110,21 +109,21 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 1);
+            FeedTm(sequence, "", true, 1);
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
-            assertAllInactiveWereUnpredicted();
+            AssertAllActiveWerePredicted();
+            AssertAllInactiveWereUnpredicted();
         }
 
         /// <summary>
         /// Basic sequence learner.  M=1, N=100, P=1.
         /// </summary>
         [TestMethod]
-        public void testB3()
+        public void TestB3()
         {
-            init(null, PATTERN_MACHINE);
+            Init(null, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -150,21 +149,21 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 1);
+            FeedTm(sequence, "", true, 1);
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
-            assertAllInactiveWereUnpredicted();
+            AssertAllActiveWerePredicted();
+            AssertAllInactiveWereUnpredicted();
         }
 
         /// <summary>
         /// Basic sequence learner.  M=1, N=100, P=1.
         /// </summary>
         [TestMethod]
-        public void testB4()
+        public void TestB4()
         {
-            init(null, PATTERN_MACHINE);
+            Init(null, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -191,10 +190,10 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 3);
-            testTM(sequence, "");
+            FeedTm(sequence, "", true, 3);
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
+            AssertAllActiveWerePredicted();
         }
 
         /// <summary>
@@ -202,11 +201,11 @@ namespace HTM.Net.Tests.Integration
         /// First order sequences should still work just fine.
         /// </summary>
         [TestMethod]
-        public void testB5()
+        public void TestB5()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetCellsPerColumn() == 4);
 
@@ -223,23 +222,23 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 1);
+            FeedTm(sequence, "", true, 1);
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
-            assertAllInactiveWereUnpredicted();
+            AssertAllActiveWerePredicted();
+            AssertAllInactiveWereUnpredicted();
         }
         /// <summary>
         /// Like B4 but with cellsPerColumn = 4.
         /// First order sequences should still work just fine.
         /// </summary>
         [TestMethod]
-        public void testB6()
+        public void TestB6()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetCellsPerColumn() == 4);
 
@@ -267,11 +266,11 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 3);
-            testTM(sequence, "");
+            FeedTm(sequence, "", true, 3);
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
-            assertAllInactiveWereUnpredicted();
+            AssertAllActiveWerePredicted();
+            AssertAllInactiveWereUnpredicted();
         }
         /// <summary>
         /// Like B1 but with slower learning.
@@ -287,13 +286,13 @@ namespace HTM.Net.Tests.Integration
         /// working correctly.
         /// </summary>
         [TestMethod]
-        public void testB7()
+        public void TestB7()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);
             p.SetParameterByKey(Parameters.KEY.CONNECTED_PERMANENCE, 0.7);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.2);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetInitialPermanence() == 0.2);
             Assert.IsTrue(tm.getConnections().GetConnectedPermanence() == 0.7);
@@ -314,27 +313,27 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 4; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
-            assertAllInactiveWereUnpredicted();
+            AssertAllActiveWerePredicted();
+            AssertAllInactiveWereUnpredicted();
         }
         /// <summary>
         /// Like B7 but with 4 cells per column.
         /// Should still work.
         /// </summary>
         [TestMethod]
-        public void testB8()
+        public void TestB8()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);
             p.SetParameterByKey(Parameters.KEY.CONNECTED_PERMANENCE, 0.7);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.2);
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetInitialPermanence() == 0.2);
             Assert.IsTrue(tm.getConnections().GetConnectedPermanence() == 0.7);
@@ -356,26 +355,26 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 4; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
-            assertAllActiveWerePredicted();
-            assertAllInactiveWereUnpredicted();
+            AssertAllActiveWerePredicted();
+            AssertAllInactiveWereUnpredicted();
         }
         /// <summary>
         /// Like B7 but present the sequence less than 4 times.
         /// The inference should be incorrect.
         /// </summary>
         [TestMethod]
-        public void testB9()
+        public void TestB9()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);
             p.SetParameterByKey(Parameters.KEY.CONNECTED_PERMANENCE, 0.7);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.2);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetInitialPermanence() == 0.2);
             Assert.IsTrue(tm.getConnections().GetConnectedPermanence() == 0.7);
@@ -397,12 +396,12 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 3; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
-            assertAllActiveWereUnpredicted();
+            AssertAllActiveWereUnpredicted();
         }
         /// <summary>
         /// Like B5, but with activationThreshold = 8 and with each pattern
@@ -423,12 +422,12 @@ namespace HTM.Net.Tests.Integration
         /// </ol>     
         /// </summary>
         [TestMethod]
-        public void testB11()
+        public void TestB11()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
             p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 8);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetCellsPerColumn() == 4);
             Assert.IsTrue(tm.getConnections().GetActivationThreshold() == 8);
@@ -446,9 +445,9 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 1);
+            FeedTm(sequence, "", true, 1);
 
-            sequence = translateSequence(
+            sequence = TranslateSequence(
                 "set([96, 1, 66, 43, 48, 33, 72, 31, 10, 71, 44, 16, 49, 19, 20, 87, 89, 58, 63, 74, 52]), " +
                 "set([0, 1, 4, 10, 15, 16, 23, 28, 31, 40, 46, 48, 50, 58, 67, 71, 77, 79, 90, 92, 93, 97, 99]), " +
                 "set([5, 7, 10, 14, 17, 21, 29, 31, 39, 46, 53, 61, 67, 69, 71, 77, 80, 81, 85, 86, 87, 88, 93, 97]), " +
@@ -550,7 +549,7 @@ namespace HTM.Net.Tests.Integration
                 "set([1, 3, 5, 8, 14, 15, 22, 23, 26, 33, 35, 43, 48, 59, 61, 68, 74, 77, 79, 80, 90, 98]), " +
                 "set([1, 3, 13, 24, 25, 26, 30, 33, 37, 43, 49, 58, 63, 66, 67, 71, 76, 77, 78, 79, 90, 91, 97])");
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
             Metric<int> unpredictedActiveColumnsMetric = tm.mmGetMetricFromTrace(
                 tm.mmGetTraceUnpredictedActiveColumns());
@@ -563,9 +562,9 @@ namespace HTM.Net.Tests.Integration
         /// Since cellsPerColumn == 1, it should make more predictions than necessary.
         /// </summary>
         [TestMethod]
-        public void testH1()
+        public void TestH1()
         {
-            init(null, PATTERN_MACHINE);
+            Init(null, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -577,10 +576,10 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 1);
+            FeedTm(sequence, "", true, 1);
 
-            testTM(sequence, "");
-            assertAllActiveWerePredicted();
+            TestTm(sequence, "");
+            AssertAllActiveWerePredicted();
 
             IndicesTrace predictedInactiveTrace = tm.mmGetTracePredictedInactiveColumns();
             Metric<int> predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(predictedInactiveTrace);
@@ -596,11 +595,11 @@ namespace HTM.Net.Tests.Integration
         /// It should make just the right number of predictions.
         /// </summary>
         [TestMethod]
-        public void testH2()
+        public void TestH2()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -614,11 +613,11 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 10; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            testTM(sequence, "");
-            assertAllActiveWerePredicted();
+            TestTm(sequence, "");
+            AssertAllActiveWerePredicted();
 
             // Without some kind of decay, expect predicted inactive columns at the
             // end of the first shared sequence
@@ -639,11 +638,11 @@ namespace HTM.Net.Tests.Integration
         /// prediction.
         /// </summary>
         [TestMethod]
-        public void testH3()
+        public void TestH3()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -655,10 +654,10 @@ namespace HTM.Net.Tests.Integration
             List<int> numberList = Arrays.AsList(shuffledNums);
             List<HashSet<int>> sequence = sequenceMachine.generateFromNumbers(numberList);
 
-            feedTM(sequence, "", true, 1);
+            FeedTm(sequence, "", true, 1);
 
-            testTM(sequence, "");
-            assertAllActiveWerePredicted();
+            TestTm(sequence, "");
+            AssertAllActiveWerePredicted();
 
             // Without some kind of decay, expect predicted inactive columns at the
             // end of the first shared sequence
@@ -683,11 +682,11 @@ namespace HTM.Net.Tests.Integration
         /// patterns (there is no shared subsequence).
         /// </summary>
         [TestMethod]
-        public void testH4()
+        public void TestH4()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -701,11 +700,11 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 20; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            testTM(sequence, "");
-            assertAllActiveWerePredicted();
+            TestTm(sequence, "");
+            AssertAllActiveWerePredicted();
 
             IndicesTrace predictedInactiveTrace = tm.mmGetTracePredictedInactiveColumns();
             Metric< int> predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(predictedInactiveTrace);
@@ -716,11 +715,11 @@ namespace HTM.Net.Tests.Integration
         /// Shared patterns in different sequences, with a shared subsequence.
         /// </summary>
         [TestMethod]
-        public void testH5()
+        public void TestH5()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -734,11 +733,11 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 20; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            testTM(sequence, "");
-            assertAllActiveWerePredicted();
+            TestTm(sequence, "");
+            AssertAllActiveWerePredicted();
 
             IndicesTrace predictedInactiveTrace = tm.mmGetTracePredictedInactiveColumns();
             Metric<int> predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(predictedInactiveTrace);
@@ -749,12 +748,12 @@ namespace HTM.Net.Tests.Integration
         /// (X = 0.05). Parameters the same as B11, and sequences like H2.
         /// </summary>
         [TestMethod]
-        public void testH9()
+        public void TestH9()
         {
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
             p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 8);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             // Instead of implementing the Python "shuffle" method, just use the exact output
             int[] shuffledNums = new int[]
@@ -768,10 +767,10 @@ namespace HTM.Net.Tests.Integration
 
             for (int i = 0; i < 10; i++)
             {
-                feedTM(sequence, "", true, 1);
+                FeedTm(sequence, "", true, 1);
             }
 
-            sequence = translateSequence(
+            sequence = TranslateSequence(
                 "set([0, 4, 10, 18, 22, 26, 30, 31, 33, 44, 45, 53, 55, 70, 72, 73, 76, 77, 80, 83, 87, 88, 90]), " +
                 "set([35, 4, 6, 41, 43, 76, 77, 78, 47, 48, 67, 21, 86, 23, 55, 58, 27, 92, 60, 94, 95]), " +
                 "set([1, 10, 13, 17, 18, 19, 28, 30, 31, 35, 36, 37, 44, 53, 66, 71, 75, 80, 81, 84, 86, 90]), " +
@@ -815,7 +814,7 @@ namespace HTM.Net.Tests.Integration
 
 
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
             IndicesTrace unpredictedActiveTrace = tm.mmGetTraceUnpredictedActiveColumns();
             Metric<int> predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(unpredictedActiveTrace);
@@ -828,13 +827,13 @@ namespace HTM.Net.Tests.Integration
         /// Parameters the same as B11, and sequences like H9.
         /// </summary>
         [TestMethod]
-        public void testH10()
+        public void TestH10()
         {
             // train TM on noisy sequences with orphan decay turned off
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
             p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 8);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetPredictedSegmentDecrement() == 0);
 
@@ -852,10 +851,10 @@ namespace HTM.Net.Tests.Integration
             for (int i = 0; i < 10; i++)
             {
                 sequenceNoisy.Add(sequenceMachine.addSpatialNoise(sequence, 0.05));
-                feedTM(sequenceNoisy[i], "", true, 1);
+                FeedTm(sequenceNoisy[i], "", true, 1);
             }
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
             IndicesTrace predictedInactiveTrace = tm.mmGetTracePredictedInactiveColumns();
             Metric<int> predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(predictedInactiveTrace);
@@ -865,16 +864,16 @@ namespace HTM.Net.Tests.Integration
             p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
             p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 8);
             p.SetParameterByKey(Parameters.KEY.PREDICTED_SEGMENT_DECREMENT, 0.04);
-            init(p, PATTERN_MACHINE);
+            Init(p, PATTERN_MACHINE);
 
             Assert.IsTrue(tm.getConnections().GetPredictedSegmentDecrement() == 0.04);
 
             for (int i = 0; i < 10; i++)
             {
-                feedTM(sequenceNoisy[0], "", true, 1);
+                FeedTm(sequenceNoisy[0], "", true, 1);
             }
 
-            testTM(sequence, "");
+            TestTm(sequence, "");
 
             predictedInactiveTrace = tm.mmGetTracePredictedInactiveColumns();
             predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(predictedInactiveTrace);
@@ -884,9 +883,9 @@ namespace HTM.Net.Tests.Integration
             Assert.IsTrue(predictedInactiveColumnsMean1 > predictedInactiveColumnsMean2);
         }
 
-        public override void feedTM(List<HashSet<int>> sequence, String label, bool learn, int num)
+        public override void FeedTm(List<HashSet<int>> sequence, String label, bool learn, int num)
         {
-            base.feedTM(sequence, label, learn, num);
+            base.FeedTm(sequence, label, learn, num);
 
             if (VERBOSITY >= 2)
             {
@@ -902,14 +901,14 @@ namespace HTM.Net.Tests.Integration
             }
         }
 
-        public void testTM(List<HashSet<int>> sequence, String label)
+        public void TestTm(List<HashSet<int>> sequence, String label)
         {
-            feedTM(sequence, label, false, 1);
+            FeedTm(sequence, label, false, 1);
 
             Console.WriteLine(tm.mmPrettyPrintMetrics(tm.mmGetDefaultMetrics(1), 7));
         }
 
-        private List<HashSet<int>> translateSequence(string s)
+        private List<HashSet<int>> TranslateSequence(string s)
         {
             List<HashSet<int>> retVal = new List<HashSet<int>>();
 
@@ -944,7 +943,7 @@ namespace HTM.Net.Tests.Integration
             return retVal;
         }
 
-        public void assertAllActiveWerePredicted()
+        public void AssertAllActiveWerePredicted()
         {
             Metric<int> unpredictedActiveColumnsMetric = tm.mmGetMetricFromTrace(tm.mmGetTraceUnpredictedActiveColumns());
 
@@ -955,14 +954,14 @@ namespace HTM.Net.Tests.Integration
             Assert.AreEqual(predictedActiveColumnsMetric.max, 25, 0);
         }
 
-        public void assertAllInactiveWereUnpredicted()
+        public void AssertAllInactiveWereUnpredicted()
         {
             Metric<int> predictedInactiveColumnsMetric = tm.mmGetMetricFromTrace(tm.mmGetTracePredictedInactiveColumns());
 
             Assert.AreEqual(predictedInactiveColumnsMetric.sum, 0, 0);
         }
 
-        public void assertAllActiveWereUnpredicted()
+        public void AssertAllActiveWereUnpredicted()
         {
             Metric<int> unpredictedActiveColumnsMetric = tm.mmGetMetricFromTrace(
                 tm.mmGetTraceUnpredictedActiveColumns());
