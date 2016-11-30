@@ -8,7 +8,7 @@
         "pdb": "../../HTM.Net/obj/{configuration}/HTM.Net.pdb"
       },
       "dependencies": {
-        "ImageLibrary": "2.0.5",
+        "ImageLibrary": "3.0.0",
         "DeepEqual": "1.6.0.0",
         "log4net": "2.0.5",
         "MathNet.Numerics": "3.13.1",

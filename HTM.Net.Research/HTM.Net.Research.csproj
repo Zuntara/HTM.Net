@@ -186,6 +186,7 @@
     <Compile Include="Vision\VisionTestBench.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
     <None Include="Resources\metrics - Copy.json" />
     <EmbeddedResource Include="Resources\metrics.json" />

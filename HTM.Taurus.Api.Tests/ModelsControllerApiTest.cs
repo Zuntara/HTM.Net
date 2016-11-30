@@ -8,9 +8,10 @@ using HTM.Net.Research.Taurus.MetricCollectors;
 using HTM.Taurus.Api.Controllers;
 using log4net;
 using Microsoft.AspNet.Mvc;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
-using Xunit;
+
 
 namespace HTM.Taurus.Api.Tests
 {
@@ -21,12 +22,12 @@ namespace HTM.Taurus.Api.Tests
     /// metriclistener to have the other side that fills up the datasamples
     /// goes to metric_streamer through metric_storer > database
     /// </summary>
-    //[TestClass]
+    [TestClass]
     public class ModelsControllerApiTest
     {
         private readonly ILog _log = LogManager.GetLogger(typeof(ModelsControllerApiTest));
 
-        [Fact]
+        [TestMethod]
         public void TestPut()
         {
             RepositoryFactory.Metric.MetricAdded += m =>
@@ -66,7 +67,7 @@ namespace HTM.Taurus.Api.Tests
             });
         }
 
-        [Fact]
+        [TestMethod]
         public void TestCreateModelsBatch()
         {
             DataAdapterFactory.ClearRegistrations();
@@ -102,19 +103,19 @@ namespace HTM.Taurus.Api.Tests
                     requests.Add(createRequest);
                 }
             }
-            Assert.True(requests.Count > 0);
+            Assert.IsTrue(requests.Count > 0);
 
             ModelsController app = new ModelsController();
             var result = app.Put(null, requests.ToArray());
-            Assert.NotNull(result);
-            Assert.IsType(typeof(CreatedResult), result);
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result, typeof(CreatedResult));
             CreatedResult created = (CreatedResult)result;
             var metrics = created.Value as List<Metric>;
-            Assert.NotNull(metrics);
-            Assert.Equal(requests.Count, metrics.Count);
+            Assert.IsNotNull(metrics);
+            Assert.AreEqual(requests.Count, metrics.Count);
         }
 
-        [Fact]
+        [TestMethod]
         public void TestCreateModelsSingle()
         {
             ModelsController app = new ModelsController();
@@ -151,25 +152,25 @@ namespace HTM.Taurus.Api.Tests
                     createRequest.ModelParams = ModelParams.FromDict(metricVal.ModelParams);
 
                     var result = app.Put(null, new[] { createRequest });
-                    Assert.NotNull(result);
-                    Assert.IsType(typeof(CreatedResult), result);
+                    Assert.IsNotNull(result);
+                    Assert.IsInstanceOfType(result, typeof (CreatedResult));
                     CreatedResult created = (CreatedResult)result;
                     List<Metric> metrics = created.Value as List<Metric>;
-                    Assert.NotNull(metrics);
-                    Assert.Equal(1, metrics.Count);
+                    Assert.IsNotNull(metrics);
+                    Assert.AreEqual(1, metrics.Count);
                     var responseModel = metrics.First();
 
-                    Assert.Equal(metricName, responseModel.Name);
-                    Assert.Equal(resName, responseModel.Server);
-                    Assert.NotNull(responseModel.Parameters);
-                    Assert.True(responseModel.Parameters.Contains("ModelParams"));
-                    Assert.True(responseModel.Parameters.Contains("MinResolution"));
+                    Assert.AreEqual(metricName, responseModel.Name);
+                    Assert.AreEqual(resName, responseModel.Server);
+                    Assert.IsNotNull(responseModel.Parameters);
+                    Assert.IsTrue(responseModel.Parameters.Contains("ModelParams"));
+                    Assert.IsTrue(responseModel.Parameters.Contains("MinResolution"));
                     CreateModelRequest mp = JsonConvert.DeserializeObject<CreateModelRequest>(responseModel.Parameters);
-                    Assert.Equal(metricVal.ModelParams["minResolution"], mp.ModelParams.MinResolution);
-                    Assert.True(responseModel.Parameters.Contains("MetricSpec"));
-                    Assert.True(responseModel.Parameters.Contains("Metric"));
-                    Assert.Equal(metricName, mp.MetricSpec.Metric);
-                    Assert.Equal(resName, mp.MetricSpec.Resource);
+                    Assert.AreEqual(metricVal.ModelParams["minResolution"], mp.ModelParams.MinResolution);
+                    Assert.IsTrue(responseModel.Parameters.Contains("MetricSpec"));
+                    Assert.IsTrue(responseModel.Parameters.Contains("Metric"));
+                    Assert.AreEqual(metricName, mp.MetricSpec.Metric);
+                    Assert.AreEqual(resName, mp.MetricSpec.Resource);
                     //Assert.AreEqual(resVal.Symbol, mp.MetricSpec.UserInfo.Symbol);
 
                 }
@@ -178,7 +179,7 @@ namespace HTM.Taurus.Api.Tests
 
         }
 
-        [Fact]
+        [TestMethod]
         public void TestDelete()
         {
             Mock<IDataSourceAdapter> mockDs = new Mock<IDataSourceAdapter>();
@@ -201,8 +202,8 @@ namespace HTM.Taurus.Api.Tests
 
             // remove it again
             var result = app.Delete("dummy");
-            Assert.NotNull(result);
-            Assert.IsType(typeof(HttpOkResult), result);
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result,typeof(HttpOkResult));
 
             mockDs.Verify(ds => ds.UnmonitorMetric(It.IsAny<string>()));
 
