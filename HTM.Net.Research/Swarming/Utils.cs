@@ -12,6 +12,7 @@ using HTM.Net.Encoders;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using log4net;
@@ -25,7 +26,7 @@ namespace HTM.Net.Research.Swarming
     public class ModelParams
     {
         //public Dictionary<string, Dictionary<string, object>> structuredParams { get; set; }
-        public PermutationModelParameters structuredParams { get; set; }
+        public ExperimentPermutationParameters structuredParams { get; set; }
         public ParticleStateModel particleState { get; set; }
 
         /*
@@ -84,13 +85,13 @@ namespace HTM.Net.Research.Swarming
         /// <param name="reportKeys">Which metrics of the experiment to store into the results dict of the model's database entry</param>
         /// <param name="optimizeKey">Which metric we are optimizing for</param>
         /// <param name="jobsDAO">Jobs data access object - the interface to the jobs database which has the model's table.</param>
-        /// <param name="modelCheckpointGUID">A persistent, globally-unique identifier for constructing the model checkpoint key</param>
+        /// <param name="modelCheckpointGuid">A persistent, globally-unique identifier for constructing the model checkpoint key</param>
         /// <param name="predictionCacheMaxRecords"></param>
         /// <returns>completion reason and msg</returns>
         public static ModelCompletionStatus runModelGivenBaseAndParams(ulong? modelID, uint? jobID,
-            ExperimentParameters baseDescription, PermutationModelParameters @params,
+            ExperimentParameters baseDescription, ExperimentPermutationParameters @params,
             string predictedField, string[] reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
-            string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
+            string modelCheckpointGuid, int? predictionCacheMaxRecords = null)
         {
             //// --------------------------------------------------------------------------
             //// Create a temp directory for the experiment and the description files
@@ -110,58 +111,7 @@ namespace HTM.Net.Research.Swarming
 
                 var cloneDescr = baseDescription.Copy();
 
-                // Override parameter values
-                if (@params?.modelParams?.inferenceType != null)
-                {
-                    cloneDescr.InferenceType = (InferenceType)TypeConverter.Convert<int>(@params.modelParams.inferenceType);
-                }
-                if (@params?.modelParams?.clParams?.alpha != null)
-                {
-                    cloneDescr.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA,
-                        TypeConverter.Convert<double>(@params.modelParams.clParams.alpha));
-                    Debug.WriteLine($">> clParams.alpha = {@params?.modelParams?.clParams?.alpha}");
-                }
-                if (@params?.modelParams?.spParams?.synPermInactiveDec != null)
-                {
-                    cloneDescr.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC,
-                        TypeConverter.Convert<double>(@params.modelParams.spParams.synPermInactiveDec));
-                    Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.spParams.synPermInactiveDec}");
-                }
-                if (@params?.modelParams?.tpParams?.activationThreshold != null)
-                {
-                    cloneDescr.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD,
-                        TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold));
-                    Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.tpParams.activationThreshold}");
-                }
-                if (@params?.modelParams?.tpParams?.minThreshold != null)
-                {
-                    cloneDescr.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD,
-                        TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold));
-                    Debug.WriteLine($">> tpParams.minThreshold = {@params.modelParams.tpParams.minThreshold}");
-                }
-
-                //cloneDescr.SetParameterByKey(Parameters.KEY.PAM_LENGTH,
-                //        TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
-
-                Debug.WriteLine($">> tpParams.pamLength = {@params.modelParams.tpParams.pamLength}");
-
-                foreach (var encoderDict in cloneDescr.GetEncoderSettings())
-                {
-                    string encoderName = encoderDict.Key;
-                    EncoderSetting encoderValues = encoderDict.Value;
-
-                    var permutedEncoder = (EncoderSetting)@params.modelParams.sensorParams.encoders.Get(encoderName);
-                    if (permutedEncoder == null) continue;
-                    foreach (var key in permutedEncoder.Keys)
-                    {
-                        // overload permuted encoder values when they are there
-                        if (permutedEncoder[key] != null)
-                        {
-                            Debug.WriteLine($">> sensorParams.{key} = {permutedEncoder[key]}");
-                            encoderValues[key] = permutedEncoder[key];
-                        }
-                    }
-                }
+                cloneDescr.OverrideWith(@params);
 
                 //    //items.sort();
                 //    //for (key, value) in items
@@ -208,7 +158,7 @@ namespace HTM.Net.Research.Swarming
                         reportKeyPatterns: reportKeys,
                         optimizeKeyPattern: optimizeKey,
                         jobsDAO: jobsDAO,
-                        modelCheckpointGUID: modelCheckpointGUID,
+                        modelCheckpointGUID: modelCheckpointGuid,
                         predictionCacheMaxRecords: predictionCacheMaxRecords);
 
                     completionStatus = runner.run();
@@ -405,6 +355,20 @@ namespace HTM.Net.Research.Swarming
                 rApply(value, f, keys.ToArray());
             }
 
+            if (d is Parameters)
+            {
+                Parameters p = d as Parameters;
+                // apply each item in the parameter list also
+                foreach (Parameters.KEY key in p.Keys())
+                {
+                    List<string> keys = new List<string>(currentKeys);
+                    keys.Add(key.GetFieldName());
+                    var value = p.GetParameterByKey(key);
+                    f(value, keys.ToArray());
+                    rApply(value, f, keys.ToArray());
+                }
+            }
+
             //remainingDicts = [(d, ())];
             //while (len(remainingDicts) > 0)
             //{
@@ -469,19 +433,8 @@ namespace HTM.Net.Research.Swarming
                     ((IDictionary)d)[dictKey] = converted;
                     rCopy(converted, f, discardNoneKeys, deepCopy, keys.ToArray());
                 }
-                //foreach (DictionaryEntry entry in (IDictionary)d)
-                //{
-                //    List<string> keys = new List<string>(currentKeys);
-                //    keys.Add(entry.Key as string);
-                //    var value = entry.Value;
-                //    var converted = f(value, keys.ToArray());
-                //    ((IDictionary)d)[entry.Key] = converted;
-                //    rCopy(converted, f, discardNoneKeys, deepCopy, keys.ToArray());
-                //}
                 return d;
             }
-
-
 
             // We have an object
             // Get the properties of this object and loop over them
@@ -507,30 +460,20 @@ namespace HTM.Net.Research.Swarming
                 property.SetValue(d, TypeConverter.Convert(rcObj, property.PropertyType));
             }
 
-            //newDict = { };
-            //toCopy = [(k, v, newDict, ()) for k, v in d.iteritems()];
-            //while (len(toCopy) > 0)
-            //{
-            //  k, v, d, prevKeys = toCopy.pop();
-            //  prevKeys = prevKeys + (k,);
-            //  if (isinstance(v, dict))
-            //  {
-            //      d[k] = dict();
-            //      toCopy[0:0] = [(innerK, innerV, d[k], prevKeys)
-            //      for innerK, innerV in v.iteritems()];
-            //  }
-            //  else
-            //  {
-            //      # print k, v, prevKeys
-            //      newV = f(v, prevKeys);
-            //      if (not discardNoneKeys or newV is not None)
-            //      {
-            //          d[k] = newV;
-            //      }
-            //  }
-            //}
-            //return newDict;
-            //}
+            if (d is Parameters)
+            {
+                Parameters p = d as Parameters;
+                // apply each item in the parameter list also
+                foreach (Parameters.KEY key in p.Keys())
+                {
+                    List<string> keys = new List<string>(currentKeys);
+                    keys.Add(key.GetFieldName());
+                    var value = p.GetParameterByKey(key);
+                    var converted = f(value, keys.ToArray());
+                    p.SetParameterByKey(key, TypeConverter.Convert(converted, key.GetFieldType()));
+                    //rCopy(converted, f, discardNoneKeys, deepCopy, keys.ToArray());
+                }
+            }
             return d;
         }
 
@@ -801,76 +744,76 @@ namespace HTM.Net.Research.Swarming
 
 
 
-    [JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
-    public abstract class PermutionFilterBase2// : IPermutionFilter
-    {
-        public string Type { get; set; }
-        public string predictedField { get; set; }
-        public ModelDescription permutations { get; set; }
-        public string[] report { get; set; }
-        public string minimize { get; set; }
-        public ModelDescription fastSwarmModelParams { get; set; }
-        public List<string> fixedFields { get; set; }
-        public int? minParticlesPerSwarm { get; set; }
-        public bool? killUselessSwarms { get; set; }
-        public string inputPredictedField { get; set; }
-        public bool? tryAll3FieldCombinations { get; set; }
-        public bool? tryAll3FieldCombinationsWTimestamps { get; set; }
-        public int? minFieldContribution { get; set; }
-        public int? maxFieldBranching { get; set; }
-        public string maximize { get; set; }
-        public int? maxModels { get; set; }
+    //[JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
+    //public abstract class PermutionFilterBase2// : IPermutionFilter
+    //{
+    //    public string Type { get; set; }
+    //    public string predictedField { get; set; }
+    //    public ModelDescription permutations { get; set; }
+    //    public string[] report { get; set; }
+    //    public string minimize { get; set; }
+    //    public ModelDescription fastSwarmModelParams { get; set; }
+    //    public List<string> fixedFields { get; set; }
+    //    public int? minParticlesPerSwarm { get; set; }
+    //    public bool? killUselessSwarms { get; set; }
+    //    public string inputPredictedField { get; set; }
+    //    public bool? tryAll3FieldCombinations { get; set; }
+    //    public bool? tryAll3FieldCombinationsWTimestamps { get; set; }
+    //    public int? minFieldContribution { get; set; }
+    //    public int? maxFieldBranching { get; set; }
+    //    public string maximize { get; set; }
+    //    public int? maxModels { get; set; }
 
-        protected PermutionFilterBase2()
-        {
-            Type = GetType().AssemblyQualifiedName;
-        }
+    //    protected PermutionFilterBase2()
+    //    {
+    //        Type = GetType().AssemblyQualifiedName;
+    //    }
 
-        public virtual IDictionary<string, object> dummyModelParams(ModelDescription perm)
-        {
-            throw new NotImplementedException();
-        }
+    //    public virtual IDictionary<string, object> dummyModelParams(ModelDescription perm)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public virtual bool permutationFilter(ModelDescription perm)
-        {
-            throw new NotImplementedException();
-        }
-    }
+    //    public virtual bool permutationFilter(ModelDescription perm)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
 
-    public class TypedPermutionFilterJsonConverter : JsonConverter
-    {
-        #region Overrides of JsonConverter
+    //public class TypedPermutionFilterJsonConverter : JsonConverter
+    //{
+    //    #region Overrides of JsonConverter
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            Debug.WriteLine("Writing json");
-            serializer.Serialize(writer, value);
-        }
+    //    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+    //    {
+    //        Debug.WriteLine("Writing json");
+    //        serializer.Serialize(writer, value);
+    //    }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-        {
-            Debug.WriteLine("Reading json (PermutionFilterBase)");
+    //    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    //    {
+    //        Debug.WriteLine("Reading json (PermutionFilterBase)");
 
-            var jObj = JObject.Load(reader);
+    //        var jObj = JObject.Load(reader);
 
-            object retVal = null;
-            string type = jObj.Value<string>("Type");
-            retVal = Activator.CreateInstance(Type.GetType(type));
+    //        object retVal = null;
+    //        string type = jObj.Value<string>("Type");
+    //        retVal = Activator.CreateInstance(Type.GetType(type));
 
-            JsonReader reader2 = new JTokenReader(jObj);
-            serializer.Populate(reader2, retVal);
+    //        JsonReader reader2 = new JTokenReader(jObj);
+    //        serializer.Populate(reader2, retVal);
 
-            return retVal;
-        }
+    //        return retVal;
+    //    }
 
-        public override bool CanConvert(Type objectType)
-        {
-            return typeof(BasePermutations).IsAssignableFrom(objectType);
-        }
-        public override bool CanWrite { get { return false; } }
+    //    public override bool CanConvert(Type objectType)
+    //    {
+    //        return typeof(BasePermutations).IsAssignableFrom(objectType);
+    //    }
+    //    public override bool CanWrite { get { return false; } }
 
-        #endregion
-    }
+    //    #endregion
+    //}
 
     //public class TypedDescriptionBaseJsonConverter : JsonConverter
     //{

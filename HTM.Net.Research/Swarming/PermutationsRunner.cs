@@ -10,6 +10,7 @@ using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Tuple = HTM.Net.Util.Tuple;
@@ -42,13 +43,13 @@ namespace HTM.Net.Research.Swarming
             return _runAction(options, exp);
         }
 
-        private static uint _runAction(Map<string, object> options, Tuple<ExperimentParameters, ClaPermutations> exp)
+        private static uint _runAction(Map<string, object> options, Tuple<ExperimentParameters, ExperimentPermutationParameters> exp)
         {
             var returnValue = _runHyperSearch(options, exp);
             return returnValue;
         }
 
-        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ExperimentParameters, ClaPermutations> exp)
+        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ExperimentParameters, ExperimentPermutationParameters> exp)
         {
             var search = new HyperSearchRunner(runOptions);
             // Save in global for the signal handler.
@@ -66,7 +67,7 @@ namespace HTM.Net.Research.Swarming
             return search.peekSearchJob().getJobId().GetValueOrDefault();
         }
 
-        private static Tuple<ExperimentParameters, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
+        private static Tuple<ExperimentParameters, ExperimentPermutationParameters> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
         {
             return new ExpGenerator(swarmConfig).GenerateParams();
         }
@@ -99,7 +100,7 @@ namespace HTM.Net.Research.Swarming
         /// Start a new hypersearch job and monitor it to completion
         /// </summary>
         /// <param name="exp"></param>
-        public void runNewSearch(Tuple<ExperimentParameters, ClaPermutations> exp)
+        public void runNewSearch(Tuple<ExperimentParameters, ExperimentPermutationParameters> exp)
         {
             __searchJob = this.__startSearch(exp);
             monitorSearchJob();
@@ -109,7 +110,7 @@ namespace HTM.Net.Research.Swarming
         /// Starts HyperSearch as a worker or runs it inline for the "dryRun" action
         /// </summary>
         /// <returns></returns>
-        private HyperSearchJob __startSearch(Tuple<ExperimentParameters, ClaPermutations> exp)
+        private HyperSearchJob __startSearch(Tuple<ExperimentParameters, ExperimentPermutationParameters> exp)
         {
             // TODO: only dryrun supported, maybe support the queing for workers also
             var @params = ClientJobUtils.MakeSearchJobParamsDict(_options, exp);
@@ -289,7 +290,7 @@ namespace HTM.Net.Research.Swarming
 
     internal class ClientJobUtils
     {
-        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ExperimentParameters, ClaPermutations> exp)
+        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ExperimentParameters, ExperimentPermutationParameters> exp)
         {
             string hsVersion = "v2";
             //int maxModels = 1;
@@ -679,7 +680,7 @@ namespace HTM.Net.Research.Swarming
         bool permutationFilter(PermutationModelParameters perm);
     }
 
-    [JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
+    //[JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
     [Serializable]
     public abstract class BasePermutations : IPermutionFilter
     {
@@ -1078,7 +1079,7 @@ namespace HTM.Net.Research.Swarming
         /// and instead using the same fields used by the seed model. 
         /// Normally, fixedFields should NOT be specified along with this option because the fixedFields will be extracted from these model params.
         /// </summary>
-        public PermutationModelParameters fastSwarmModelParams { get; set; }
+        public ExperimentPermutationParameters fastSwarmModelParams { get; set; }
 
         /// <summary>
         /// Additional metrics to be generated, along with thedefault ones for the given inferenceType. 

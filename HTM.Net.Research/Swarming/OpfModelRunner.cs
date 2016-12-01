@@ -523,7 +523,7 @@ namespace HTM.Net.Research.Swarming
         {
             // -----------------------------------------------------------------------
             // Get metrics
-            var metrics = _getMetrics();
+            Map<string, double?> metrics = _getMetrics();
 
             // -----------------------------------------------------------------------
             // Extract report metrics that match the requested report REs

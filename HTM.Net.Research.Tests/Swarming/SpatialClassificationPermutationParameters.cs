@@ -1,24 +1,17 @@
 using System;
 using System.Collections.Generic;
-using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
-    public class SpatialClassificationPermutationsFile : BasePermutations
+    public class SpatialClassificationPermutationParameters : ExperimentPermutationParameters
     {
-        public SpatialClassificationPermutationsFile()
+        public SpatialClassificationPermutationParameters()
         {
-            predictedField = "consumption";
-
-            permutations = new PermutationModelParameters
-            {
-                modelParams = new PermutationModelDescriptionParams
-                {
-                    sensorParams = new PermutationSensorParams
-                    {
-                        encoders = new Map<string, object>
+            PredictedField = "consumption";
+            Encoders = new Map<string, object>
                         {
                             {"gym",new PermuteEncoder(fieldName: "gym", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
                             {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
@@ -47,43 +40,34 @@ namespace HTM.Net.Research.Tests.Swarming
                             //        }
                             //    }},
                             {"address",new PermuteEncoder(fieldName: "address", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
-                        }
-                    },
-                    tpParams = new PermutationTemporalPoolerParams
-                    {
-                        
-                    },
-                    // TODO: clParams & spParams
-                }
-            };
-
-            report = new[] { ".*consumption.*" };
-            minimize = @"multiStepBestPredictions:multiStep:errorMetric=""avg_err"":steps=\[0\]:window=1000:field=consumption".ToLower();
-            minParticlesPerSwarm = null;
+                        };
+            Report = new[] { ".*consumption.*" };
+            Minimize = @"multiStepBestPredictions:multiStep:errorMetric=""avg_err"":steps=\[0\]:window=1000:field=consumption".ToLower();
+            MinParticlesPerSwarm = null;
         }
 
-        #region Implementation of IPermutionFilter
+        #region Overrides of ExperimentPermutationParameters
 
-        public override IDictionary<string, object> dummyModelParams(PermutationModelParameters perm)
+        public override IDictionary<string, object> DummyModelParams(ExperimentPermutationParameters parameters)
         {
             double errScore = 50;
 
             //errScore += Math.Abs((int)perm.modelParams.sensorParams.encoders["consumption"]["maxval"] - 250);
             //errScore += Math.Abs((int)perm.modelParams.sensorParams.encoders["consumption"]["n"] - 53);
 
-            if (perm.modelParams.sensorParams.encoders["address"] != null)
+            if (parameters.Encoders["address"] != null)
             {
                 errScore -= 20;
             }
-            if (perm.modelParams.sensorParams.encoders["gym"] != null)
+            if (parameters.Encoders["gym"] != null)
             {
                 errScore -= 10;
             }
-            if (perm.modelParams.sensorParams.encoders["timestamp_dayOfWeek"] != null)
+            if (parameters.Encoders["timestamp_dayOfWeek"] != null)
             {
                 errScore += 30;
             }
-            if (perm.modelParams.sensorParams.encoders["timestamp_timeOfDay"] != null)
+            if (parameters.Encoders["timestamp_timeOfDay"] != null)
             {
                 errScore += 40;
             }
@@ -110,12 +94,8 @@ namespace HTM.Net.Research.Tests.Swarming
             return dummyModelParams;
         }
 
-        public override bool permutationFilter(PermutationModelParameters perm)
+        public override bool PermutationFilter(ExperimentPermutationParameters parameters)
         {
-            //int limit = int.Parse(Environment.GetEnvironmentVariable("NTA_TEST_maxvalFilter") ?? "300");
-            //if ((double)perm.modelParams.sensorParams.encoders["consumption"].maxval > limit)
-            //    return false;
-
             return true;
         }
 

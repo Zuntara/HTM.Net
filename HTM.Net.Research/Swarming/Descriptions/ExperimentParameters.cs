@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
+using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.Swarming.Descriptions
@@ -66,6 +68,8 @@ namespace HTM.Net.Research.Swarming.Descriptions
 
         public ExperimentControl Control { get; set; }
 
+        public string Environment { get; set; } = "Nupic";
+
         /// <summary>
         /// Type of model that the rest of these parameters apply to.
         /// </summary>
@@ -112,7 +116,7 @@ namespace HTM.Net.Research.Swarming.Descriptions
         public AggregationSettings AggregationInfo { get; set; }
 
         public bool TrainSPNetOnlyIfRequested { get; set; }
-
+        public AggregationSettings PredictAheadTime { get; set; }
 
 
         public EncoderSettingsList GetEncoderSettings()
@@ -189,6 +193,37 @@ namespace HTM.Net.Research.Swarming.Descriptions
             p.Control = Control.Clone();
 
             return p;
+        }
+
+        public void OverrideWith(ExperimentPermutationParameters @params)
+        {
+            // Overload the normal values
+            foreach (KEY key in @params.Keys())
+            {
+                var value = @params.GetParameterByKey(key);
+                if (value != null)
+                {
+                    SetParameterByKey(key, value);
+                }
+            }
+
+            // Loose field that can be permuted over
+            if (@params.InferenceType != null)
+            {
+                InferenceType = (InferenceType)TypeConverter.Convert<int>(@params.InferenceType);
+            }
+
+            // Encoder overloading
+            var encoders = GetEncoderSettings();
+            foreach (KeyValuePair<string, object> pair in @params.Encoders)
+            {
+                string name = pair.Key;
+                EncoderSetting setting = pair.Value as EncoderSetting;
+                if (setting != null)
+                {
+                    encoders[name] = setting;   // TODO, check that this correct, maybe we need to overload individual values from the settings
+                }
+            }
         }
     }
 }

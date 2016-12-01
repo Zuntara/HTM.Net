@@ -6,6 +6,7 @@ using System.Linq;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using log4net;
@@ -146,7 +147,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// </param>
         /// <param name="maxRecords"></param>
         /// <returns></returns>
-        protected Map<string, object> _generateHSJobParams(Tuple<ExperimentParameters, BasePermutations> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
+        protected Map<string, object> _generateHSJobParams(Tuple<ExperimentParameters, ExperimentPermutationParameters> expDirectory = null, string hsImp = "v2", int? maxModels = 2,
                            int? predictionCacheMaxRecords = null, string dataPath = null, int? maxRecords = 10)
         {
             Map<string, object> jobParams = null;
@@ -402,7 +403,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// the prediction cache.</param>
         /// <param name="kwargs"></param>
         /// <returns>(jobID, jobInfo, resultsInfoForAllModels, metricResults, minErrScore)</returns>
-        public PermutationsLocalResult RunPermutations(Tuple<ExperimentParameters, BasePermutations> expDirectory, string hsImp = "v2", int? maxModels = 2,
+        public PermutationsLocalResult RunPermutations(Tuple<ExperimentParameters, ExperimentPermutationParameters> expDirectory, string hsImp = "v2", int? maxModels = 2,
                       int maxNumWorkers = 4, bool onCluster = false, bool waitForCompletion = true,
                       int? continueJobId = null, string dataPath = null, int? maxRecords = null,
                       int? timeoutSec = null, bool ignoreErrModels = false,
@@ -558,8 +559,8 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestSimpleV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
         {
             //this._printTestHeader();
-            var expDir = new Tuple<ExperimentParameters, BasePermutations>(
-                new SimpleV2DescriptionParameters(), new SimpleV2PermutationsFile());
+            var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
+                new SimpleV2DescriptionParameters(), new SimpleV2PermutationParameters());
             // Test it out
             //if (env is None)
             //{
@@ -610,7 +611,7 @@ namespace HTM.Net.Research.Tests.Swarming
             //description.Item2.permutations.modelParams.tpParams.minThreshold = 4;
             //description.Item2.permutations.modelParams.tpParams.pamLength = 4;
 
-            var expDir = new Tuple<ExperimentParameters, BasePermutations>(
+            var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
                 description.Item1, description.Item2);
 
             
@@ -690,8 +691,8 @@ namespace HTM.Net.Research.Tests.Swarming
         [DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSpatialClassification()
         {
-            var expDir = new Tuple<ExperimentParameters, BasePermutations>(
-                new SpatialClassificationDescriptionParameters(), new SpatialClassificationPermutationsFile());
+            var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
+                new SpatialClassificationDescriptionParameters(), new SpatialClassificationPermutationParameters());
             // spatial_classification
             var permutationResult = this.RunPermutations(expDirectory: expDir,
                                    hsImp: "v2",
@@ -755,26 +756,26 @@ namespace HTM.Net.Research.Tests.Swarming
         [TestMethod]
         public void TestPermutationSerialization()
         {
-            SimpleV2PermutationsFile file = new SimpleV2PermutationsFile();
+            SimpleV2PermutationParameters permutationParameters = new SimpleV2PermutationParameters();
 
-            string json = Json.Serialize(file);
-            var deserialized = Json.Deserialize<BasePermutations>(json);
+            string json = Json.Serialize(permutationParameters);
+            var deserialized = Json.Deserialize<ExperimentPermutationParameters>(json);
             Assert.IsNotNull(deserialized);
-            Assert.IsInstanceOfType(deserialized, typeof(SimpleV2PermutationsFile));
+            Assert.IsInstanceOfType(deserialized, typeof(SimpleV2PermutationParameters));
 
-            SimpleV2PermutationsFile des = (SimpleV2PermutationsFile)deserialized;
-            Assert.AreEqual(7, ((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
-            Assert.IsInstanceOfType(((PermuteEncoder)file.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
+            SimpleV2PermutationParameters des = (SimpleV2PermutationParameters)deserialized;
+            Assert.AreEqual(7, ((PermuteEncoder)permutationParameters.Encoders["consumption"]).kwArgs["w"]);
+            Assert.IsInstanceOfType(((PermuteEncoder)permutationParameters.Encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
 
-            Assert.AreEqual((long)7, ((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["w"]);
-            Assert.IsInstanceOfType(((PermuteEncoder)des.permutations.modelParams.sensorParams.encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
+            Assert.AreEqual((long)7, ((PermuteEncoder)des.Encoders["consumption"]).kwArgs["w"]);
+            Assert.IsInstanceOfType(((PermuteEncoder)des.Encoders["consumption"]).kwArgs["n"], typeof(PermuteInt));
         }
 
         [TestMethod]
         public void TestParamsDeserialisation()
         {
-            var expDir = new Tuple<ExperimentParameters, BasePermutations>(
-                new SimpleV2DescriptionParameters(), new SimpleV2PermutationsFile());
+            var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
+                new SimpleV2DescriptionParameters(), new SimpleV2PermutationParameters());
 
             var jobParamsDict = this._generateHSJobParams(expDirectory: expDir, hsImp: "v2");
             jobParamsDict.Update(null);

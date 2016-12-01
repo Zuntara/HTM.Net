@@ -8,6 +8,7 @@ using HTM.Net.Encoders;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
@@ -384,7 +385,7 @@ namespace HTM.Net.Research.Swarming
         //    return new Tuple<ClaExperimentDescription, ClaPermutations>(descr, perms);
         //}
 
-        public Tuple<ExperimentParameters, ClaPermutations> GenerateParams()
+        public Tuple<ExperimentParameters, ExperimentPermutationParameters> GenerateParams()
         {
             if (Options.streamDef == null) throw new InvalidOperationException("define 'streamDef' for datasource");
             // If the user specified nonTemporalClassification, make sure prediction steps is 0
@@ -465,9 +466,10 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Get token replacements
+            ExperimentPermutationParameters permutationParameters = new ExperimentPermutationParameters();
             ExperimentParameters claParameters = ExperimentParameters.Default();
             claParameters.EnableClassification = true;
-            Map<string, object> tokenReplacements = new Map<string, object>();
+            //Map<string, object> tokenReplacements = new Map<string, object>();
 
             // Generate the encoder related substitution strings
 
@@ -475,7 +477,7 @@ namespace HTM.Net.Research.Swarming
 
             var encoderTuple = _generateEncoderStringsV2(includedFields, Options);
             EncoderSettingsList encoderSpecs = encoderTuple.Item1;
-            var permEncoderChoices = encoderTuple.Item2;
+            Map<string, object> permEncoderChoices = encoderTuple.Item2;
 
             // Generate the string containing the sensor auto-reset dict.
             var sensorAutoReset = Options.resetPeriod;
@@ -602,26 +604,31 @@ namespace HTM.Net.Research.Swarming
             //tokenReplacements["$ITERATION_COUNT"] = Options.iterationCount;
             claParameters.Control.IterationCount = Options.iterationCount;
 
-            tokenReplacements["$SP_POOL_PCT"] = Options.spCoincInputPoolPct;
-            tokenReplacements["$HS_MIN_PARTICLES"] = Options.minParticlesPerSwarm;
-
+            claParameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, Options.spCoincInputPoolPct);
+            //tokenReplacements["$SP_POOL_PCT"] = Options.spCoincInputPoolPct;
+            //tokenReplacements["$HS_MIN_PARTICLES"] = Options.minParticlesPerSwarm;
+            permutationParameters.MinParticlesPerSwarm = Options.minParticlesPerSwarm;
             //tokenReplacements["$SP_PERM_CONNECTED"] = Options.spSynPermConnected;
             claParameters.SetSynPermConnected(Options.spSynPermConnected);
-            tokenReplacements["$FIELD_PERMUTATION_LIMIT"] = Options.fieldPermutationLimit;
+            permutationParameters.FieldPermutationLimit = Options.fieldPermutationLimit;
+            //tokenReplacements["$FIELD_PERMUTATION_LIMIT"] = Options.fieldPermutationLimit;
 
-            tokenReplacements["$PERM_ENCODER_CHOICES"] = permEncoderChoices;
+            //tokenReplacements["$PERM_ENCODER_CHOICES"] = permEncoderChoices;
+            permutationParameters.Encoders = permEncoderChoices;
 
             predictionSteps = Options.inferenceArgs.predictionSteps ?? new[] { 1 };
             //tokenReplacements["$PREDICTION_STEPS"] = predictionSteps;
             claParameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, predictionSteps);
 
-            tokenReplacements["$PREDICT_AHEAD_TIME"] = predictAheadTime;
+            claParameters.PredictAheadTime = predictAheadTime;
+            //tokenReplacements["$PREDICT_AHEAD_TIME"] = predictAheadTime;
 
             // Option permuting over SP synapse decrement value
             //tokenReplacements["$PERM_SP_CHOICES"] = "";
             if (Options.spPermuteDecrement && Options.inferenceType != InferenceType.NontemporalClassification)
             {
-                tokenReplacements["$PERM_SP_CHOICES_synPermInactiveDec"] = new PermuteFloat(0.0003, 0.1);
+                permutationParameters.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, new PermuteFloat(0.0003, 0.1));
+                //tokenReplacements["$PERM_SP_CHOICES_synPermInactiveDec"] = new PermuteFloat(0.0003, 0.1);
             }
 
             // The TP permutation parameters are not required for non-temporal networks
@@ -632,17 +639,20 @@ namespace HTM.Net.Research.Swarming
             }
             else
             {
-                tokenReplacements["$PERM_TP_CHOICES_activationThreshold"] = new PermuteInt(12, 16);
-                tokenReplacements["$PERM_TP_CHOICES_minThreshold"] = new PermuteInt(9, 12);
-                tokenReplacements["$PERM_TP_CHOICES_pamLength"] = new PermuteInt(1, 5);
+                permutationParameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, new PermuteInt(12, 16));
+                permutationParameters.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, new PermuteInt(9, 12));
+                //permutationParameters.SetParameterByKey(Parameters.KEY.PAM_LENGTH, new PermuteFloat(0.0003, 0.1));
+                //tokenReplacements["$PERM_TP_CHOICES_activationThreshold"] = new PermuteInt(12, 16);
+                //tokenReplacements["$PERM_TP_CHOICES_minThreshold"] = new PermuteInt(9, 12);
+                //tokenReplacements["$PERM_TP_CHOICES_pamLength"] = new PermuteInt(1, 5);
             }
 
             // If the inference type is just the generic 'MultiStep', then permute over
             // temporal/nonTemporal multistep
             if (Options.inferenceType == InferenceType.MultiStep)
             {
-                tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES_inferenceType"] = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
-                
+                //tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES_inferenceType"] = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
+                permutationParameters.InferenceType = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
             }
             else
             {
@@ -654,7 +664,8 @@ namespace HTM.Net.Research.Swarming
             if (new[] { InferenceType.NontemporalMultiStep, InferenceType.TemporalMultiStep, InferenceType.MultiStep,
                 InferenceType.TemporalAnomaly, InferenceType.NontemporalClassification }.Contains(Options.inferenceType))
             {
-                tokenReplacements["$PERM_CL_CHOICES_alpha"] = new PermuteFloat(0.0001, 0.1);
+                permutationParameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, new PermuteFloat(0.0001, 0.1));
+                //tokenReplacements["$PERM_CL_CHOICES_alpha"] = new PermuteFloat(0.0001, 0.1);
             }
 
             // The Permutations alwaysIncludePredictedField setting. 
@@ -665,47 +676,35 @@ namespace HTM.Net.Research.Swarming
             // * When 'inputPredictedField' is set to 'yes', we include this setting in
             // the permutations file which informs swarming to always use the
             // predicted field (the first swarm will be the predicted field only) 
-            tokenReplacements["$PERM_ALWAYS_INCLUDE_PREDICTED_FIELD"] = Options.inferenceArgs.inputPredictedField;
-
+            permutationParameters.InputPredictedField = Options.inferenceArgs.inputPredictedField;
+            //tokenReplacements["$PERM_ALWAYS_INCLUDE_PREDICTED_FIELD"] = Options.inferenceArgs.inputPredictedField;
             // The Permutations minFieldContribution setting
-            if (Options.minFieldContribution.HasValue) tokenReplacements["$PERM_MIN_FIELD_CONTRIBUTION"] = Options.minFieldContribution;
+            if (Options.minFieldContribution.HasValue) permutationParameters.MinFieldContribution = Options.minFieldContribution;
             // The Permutations killUselessSwarms setting
-            if (Options.killUselessSwarms.HasValue) tokenReplacements["$PERM_KILL_USELESS_SWARMS"] = Options.killUselessSwarms;
+            if (Options.killUselessSwarms.HasValue) permutationParameters.KillUselessSwarms = Options.killUselessSwarms;
             // The Permutations maxFieldBranching setting
-            if (Options.maxFieldBranching.HasValue) tokenReplacements["$PERM_MAX_FIELD_BRANCHING"] = Options.maxFieldBranching;
+            if (Options.maxFieldBranching.HasValue) permutationParameters.MaxFieldBranching = Options.maxFieldBranching;
             // The Permutations tryAll3FieldCombinations setting
-            if (Options.tryAll3FieldCombinations.HasValue) tokenReplacements["$PERM_TRY_ALL_3_FIELD_COMBINATIONS"] = Options.tryAll3FieldCombinations;
+            if (Options.tryAll3FieldCombinations.HasValue) permutationParameters.TryAll3FieldCombinations = Options.tryAll3FieldCombinations;
             //The Permutations tryAll3FieldCombinationsWTimestamps setting
-            if (Options.tryAll3FieldCombinationsWTimestamps.HasValue) tokenReplacements["$PERM_TRY_ALL_3_FIELD_COMBINATIONS_W_TIMESTAMPS"] = Options.tryAll3FieldCombinationsWTimestamps;
+            if (Options.tryAll3FieldCombinationsWTimestamps.HasValue) permutationParameters.TryAll3FieldCombinationsWTimestamps = Options.tryAll3FieldCombinationsWTimestamps;
 
             // The Permutations fieldFields setting
             if (Options.fixedFields != null)
             {
-                tokenReplacements["$PERM_FIXED_FIELDS"] = Options.fixedFields;
-            }
-            else
-            {
-                tokenReplacements["$PERM_FIXED_FIELDS"] = null;
+                permutationParameters.FixedFields = Options.fixedFields;
             }
 
             // The Permutations fastSwarmModelParams setting
             if (Options.fastSwarmModelParams != null)
             {
-                tokenReplacements["$PERM_FAST_SWARM_MODEL_PARAMS"] = Options.fastSwarmModelParams;
-            }
-            else
-            {
-                tokenReplacements["$PERM_FAST_SWARM_MODEL_PARAMS"] = null;
+                permutationParameters.FastSwarmModelParams = Options.fastSwarmModelParams;
             }
 
             // The Permutations maxModels setting
             if (Options.maxModels.HasValue)
             {
-                tokenReplacements["$PERM_MAX_MODELS"] = Options.maxModels;
-            }
-            else
-            {
-                tokenReplacements["$PERM_MAX_MODELS"] = null;
+                permutationParameters.MaxModels = Options.maxModels;
             }
 
             // --------------------------------------------------------------------------
@@ -717,14 +716,14 @@ namespace HTM.Net.Research.Swarming
             }
             else
             {
-                tokenReplacements["$PERM_AGGREGATION_CHOICES"] = aggregationInfo;
+                permutationParameters.AggregationInfo = aggregationInfo;
             }
 
             // Generate the inferenceArgs replacement tokens
-            _generateInferenceArgs(Options, claParameters, tokenReplacements);
+            _generateInferenceArgs(Options, claParameters, permutationParameters);
 
             // Generate the metric replacement tokens
-            _generateMetricsSubstitutions(Options, claParameters, tokenReplacements);
+            _generateMetricsSubstitutions(Options, claParameters, permutationParameters);
 
             // Generate input record schema
             _generateInputRecordSchema(Options, claParameters);
@@ -732,27 +731,21 @@ namespace HTM.Net.Research.Swarming
             // -----------------------------------------------------------------------
             // Generate Control dictionary
 
-            tokenReplacements["$ENVIRONMENT"] = "Nupic";
-
-            // Generate 'files' / descriptions etc from the token replacements
-
-            ClaPermutations perms = new ClaPermutations();
-            TokenReplacer.ReplaceIn(perms, tokenReplacements);
-
             //Debug.WriteLine("");
             //Debug.WriteLine(JsonConvert.SerializeObject(descr, Formatting.Indented));
             //Debug.WriteLine("");
             //Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
 
-            return new Tuple<ExperimentParameters, ClaPermutations>(claParameters, perms);
+            return new Tuple<ExperimentParameters, ExperimentPermutationParameters>(claParameters, permutationParameters);
         }
 
         /// <summary>
         /// Generate the token substitution for metrics related fields.
         /// </summary>
         /// <param name="options"></param>
-        /// <param name="tokenReplacements"></param>
-        private void _generateMetricsSubstitutions(SwarmDefinition options, ExperimentParameters experimentParameters, Map<string, object> tokenReplacements)
+        /// <param name="experimentParameters"></param>
+        /// <param name="permutationParameters"></param>
+        private void _generateMetricsSubstitutions(SwarmDefinition options, ExperimentParameters experimentParameters, ExperimentPermutationParameters permutationParameters)
         {
             // -----------------------------------------------------------------------
             //
@@ -763,7 +756,7 @@ namespace HTM.Net.Research.Swarming
             MetricSpec[] metricList = mSpecs.Item1;
             var optimizeMetricLabel = mSpecs.Item2;
 
-            tokenReplacements["$PERM_OPTIMIZE_SETTING"] = optimizeMetricLabel;
+            permutationParameters.Minimize = optimizeMetricLabel;
             experimentParameters.Control.LoggedMetrics = options.loggedMetrics;
             experimentParameters.Control.Metrics = metricList;
         }
@@ -969,8 +962,9 @@ namespace HTM.Net.Research.Swarming
         /// Generates the token substitutions related to the predicted field and the supplemental arguments for prediction
         /// </summary>
         /// <param name="options"></param>
-        /// <param name="tokenReplacements"></param>
-        private void _generateInferenceArgs(SwarmDefinition options, ExperimentParameters experimentParameters, Map<string, object> tokenReplacements)
+        /// <param name="experimentParameters"></param>
+        /// <param name="permutationParameters"></param>
+        private void _generateInferenceArgs(SwarmDefinition options, ExperimentParameters experimentParameters, ExperimentPermutationParameters permutationParameters)
         {
             var inferenceType = options.inferenceType;
             var optionInferenceArgs = options.inferenceArgs;
@@ -999,8 +993,8 @@ namespace HTM.Net.Research.Swarming
                     resultInferenceArgs = optionInferenceArgs;
                 }
             }
-            tokenReplacements["$PREDICTED_FIELD"] = predictedField;
-            tokenReplacements["$PREDICTED_FIELD_report"] = new[] { ".*" + predictedField + ".*" };
+            permutationParameters.PredictedField = predictedField;
+            permutationParameters.Report = new[] { ".*" + predictedField + ".*" };
             //tokenReplacements["$INFERENCE_ARGS"] = resultInferenceArgs;
             experimentParameters.Control.InferenceArgs = resultInferenceArgs;
         }
@@ -1229,7 +1223,7 @@ namespace HTM.Net.Research.Swarming
 
                 // Check for bad characters (?)
 
-                object encoderPerms = _generatePermEncoderStr(options, encoderDict);
+                PermuteEncoder encoderPerms = _generatePermEncoderStr(options, encoderDict);
                 string encoderKey = encoderDict.name;
                 //encoderSpecsList.Add($"{encoderKey}: {encoderDict}");
                 encoders.Add(encoderKey, encoderDict);
