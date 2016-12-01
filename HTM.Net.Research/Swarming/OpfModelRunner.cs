@@ -37,7 +37,7 @@ namespace HTM.Net.Research.Swarming
         private ulong? _modelID;
         private uint? _jobID;
         private string _predictedField;
-        private ClaExperimentParameters _experimentDir;
+        private ExperimentParameters _experimentDir;
         private string[] _reportKeyPatterns;
         private string _optimizeKeyPattern;
         private BaseClientJobDao _jobsDAO;
@@ -46,7 +46,7 @@ namespace HTM.Net.Research.Swarming
         private bool _isMaturityEnabled;
         private string _optimizedMetricLabel;
         private string _cmpReason;
-        private ClaExperimentParameters _modelControl; // ControlModelDescription
+        private ExperimentParameters _modelControl; // ControlModelDescription
         private opf.Model _model;
         private MetricsManager __metricMgr;
         private BatchedCsvStream<string[]> _inputSource;
@@ -76,7 +76,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="modelCheckpointGUID">A persistent, globally-unique identifier for constructing the model checkpoint key. If None, then don't bother creating a model checkpoint.</param>
         /// <param name="predictionCacheMaxRecords">Maximum number of records for the prediction output cache.
         /// Pass None for default value.</param>
-        public OpfModelRunner(ulong? modelID, uint? jobID, string predictedField, ClaExperimentParameters experimentDir,
+        public OpfModelRunner(ulong? modelID, uint? jobID, string predictedField, ExperimentParameters experimentDir,
                string[] reportKeyPatterns, string optimizeKeyPattern, BaseClientJobDao jobsDAO,
                string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
         {

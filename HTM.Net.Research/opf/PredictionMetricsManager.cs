@@ -134,7 +134,7 @@ namespace HTM.Net.Research.opf
                             inference = null;
                         }
                     }
-
+                    
                     if (groundTruth != null)
                     {
                         if (groundTruth is IList)

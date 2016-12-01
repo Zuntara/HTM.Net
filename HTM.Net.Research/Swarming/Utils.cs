@@ -17,6 +17,7 @@ using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Swarming
 {
@@ -87,7 +88,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="predictionCacheMaxRecords"></param>
         /// <returns>completion reason and msg</returns>
         public static ModelCompletionStatus runModelGivenBaseAndParams(ulong? modelID, uint? jobID,
-            ClaExperimentParameters baseDescription, PermutationModelParameters @params,
+            ExperimentParameters baseDescription, PermutationModelParameters @params,
             string predictedField, string[] reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
             string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
         {
@@ -118,22 +119,30 @@ namespace HTM.Net.Research.Swarming
                 {
                     cloneDescr.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA,
                         TypeConverter.Convert<double>(@params.modelParams.clParams.alpha));
+                    Debug.WriteLine($">> clParams.alpha = {@params?.modelParams?.clParams?.alpha}");
                 }
                 if (@params?.modelParams?.spParams?.synPermInactiveDec != null)
                 {
                     cloneDescr.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC,
                         TypeConverter.Convert<double>(@params.modelParams.spParams.synPermInactiveDec));
+                    Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.spParams.synPermInactiveDec}");
                 }
-                cloneDescr.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD,
+                if (@params?.modelParams?.tpParams?.activationThreshold != null)
+                {
+                    cloneDescr.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD,
                         TypeConverter.Convert<int>(@params.modelParams.tpParams.activationThreshold));
-                cloneDescr.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD,
+                    Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.tpParams.activationThreshold}");
+                }
+                if (@params?.modelParams?.tpParams?.minThreshold != null)
+                {
+                    cloneDescr.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD,
                         TypeConverter.Convert<int>(@params.modelParams.tpParams.minThreshold));
+                    Debug.WriteLine($">> tpParams.minThreshold = {@params.modelParams.tpParams.minThreshold}");
+                }
+
                 //cloneDescr.SetParameterByKey(Parameters.KEY.PAM_LENGTH,
                 //        TypeConverter.Convert<int>(@params.modelParams.tpParams.pamLength);
 
-                Debug.WriteLine($">> clParams.alpha = {@params?.modelParams?.clParams?.alpha}");
-                Debug.WriteLine($">> tpParams.activationThreshold = {@params.modelParams.tpParams.activationThreshold}");
-                Debug.WriteLine($">> tpParams.minThreshold = {@params.modelParams.tpParams.minThreshold}");
                 Debug.WriteLine($">> tpParams.pamLength = {@params.modelParams.tpParams.pamLength}");
 
                 foreach (var encoderDict in cloneDescr.GetEncoderSettings())
@@ -270,7 +279,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="logger">the logger to use</param>
         /// <param name="e">the exception that occurred</param>
         /// <returns></returns>
-        private static ModelCompletionStatus _handleModelRunnerException(uint? jobId, ulong? modelId, BaseClientJobDao jobsDao, ClaExperimentParameters cloneDescr, ILog logger, Exception e)
+        private static ModelCompletionStatus _handleModelRunnerException(uint? jobId, ulong? modelId, BaseClientJobDao jobsDao, ExperimentParameters cloneDescr, ILog logger, Exception e)
         {
             StringBuilder msg = new StringBuilder();
             msg.Append($"Exception occurred while running model {modelId}: {e} ({e.GetType()})");
@@ -429,7 +438,7 @@ namespace HTM.Net.Research.Swarming
         public static object rCopy(object d, Func<object, string[], object> f = null
             , bool discardNoneKeys = true, bool deepCopy = true, string[] currentKeys = null)
         {
-            if (d == null || (d.GetType().Namespace == null || !d.GetType().Namespace.StartsWith("HTM")))
+            if (d == null || (d.GetType().Namespace == null || !d.GetType().Namespace.StartsWith("HTM")) || d.GetType() == typeof(Tuple))
             {
                 return d;
             }
@@ -489,6 +498,10 @@ namespace HTM.Net.Research.Swarming
                 keys.Add(property.Name);
                 var value = property.GetValue(d);
                 var converted = f(value, keys.ToArray());
+                if (!property.CanWrite)
+                {
+                    logger.Error($"Property {property.Name} on type {d.GetType().Name} has not setter?");
+                }
                 property.SetValue(d, TypeConverter.Convert(converted, property.PropertyType));
                 var rcObj = rCopy(converted, f, discardNoneKeys, deepCopy, keys.ToArray());
                 property.SetValue(d, TypeConverter.Convert(rcObj, property.PropertyType));
@@ -859,43 +872,43 @@ namespace HTM.Net.Research.Swarming
         #endregion
     }
 
-    public class TypedDescriptionBaseJsonConverter : JsonConverter
-    {
+    //public class TypedDescriptionBaseJsonConverter : JsonConverter
+    //{
 
-        public override bool CanWrite { get { return false; } }
+    //    public override bool CanWrite { get { return false; } }
 
-        #region Overrides of JsonConverter
+    //    #region Overrides of JsonConverter
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            Debug.WriteLine("Writing json");
-            serializer.Serialize(writer, value);
-        }
+    //    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+    //    {
+    //        Debug.WriteLine("Writing json");
+    //        serializer.Serialize(writer, value);
+    //    }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-        {
-            Debug.WriteLine("Reading json (DescriptionBase)");
+    //    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    //    {
+    //        Debug.WriteLine("Reading json (DescriptionBase)");
 
-            var jObj = JObject.Load(reader);
+    //        var jObj = JObject.Load(reader);
 
-            object retVal = null;
-            string type = jObj.Value<string>("Type");
-            retVal = Activator.CreateInstance(Type.GetType(type));
+    //        object retVal = null;
+    //        string type = jObj.Value<string>("Type");
+    //        retVal = Activator.CreateInstance(Type.GetType(type));
 
-            JsonReader reader2 = new JTokenReader(jObj);
-            serializer.Populate(reader2, retVal);
+    //        JsonReader reader2 = new JTokenReader(jObj);
+    //        serializer.Populate(reader2, retVal);
 
-            return retVal;
-        }
+    //        return retVal;
+    //    }
 
-        public override bool CanConvert(Type objectType)
-        {
-            Debug.WriteLine("CanConvert json");
-            return typeof(BaseDescription).IsAssignableFrom(objectType);
-        }
+    //    public override bool CanConvert(Type objectType)
+    //    {
+    //        Debug.WriteLine("CanConvert json");
+    //        return typeof(BaseDescription).IsAssignableFrom(objectType);
+    //    }
 
-        #endregion
-    }
+    //    #endregion
+    //}
 
     [Serializable]
     public class ModelDescription

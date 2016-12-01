@@ -7,6 +7,7 @@ using HTM.Net.Data;
 using HTM.Net.Encoders;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
@@ -383,7 +384,7 @@ namespace HTM.Net.Research.Swarming
         //    return new Tuple<ClaExperimentDescription, ClaPermutations>(descr, perms);
         //}
 
-        public Tuple<ClaExperimentParameters, ClaPermutations> GenerateParams()
+        public Tuple<ExperimentParameters, ClaPermutations> GenerateParams()
         {
             if (Options.streamDef == null) throw new InvalidOperationException("define 'streamDef' for datasource");
             // If the user specified nonTemporalClassification, make sure prediction steps is 0
@@ -464,7 +465,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             // Get token replacements
-            ClaExperimentParameters claParameters = ClaExperimentParameters.Default();
+            ExperimentParameters claParameters = ExperimentParameters.Default();
             claParameters.EnableClassification = true;
             Map<string, object> tokenReplacements = new Map<string, object>();
 
@@ -743,7 +744,7 @@ namespace HTM.Net.Research.Swarming
             //Debug.WriteLine("");
             //Debug.WriteLine(JsonConvert.SerializeObject(perms, Formatting.Indented));
 
-            return new Tuple<ClaExperimentParameters, ClaPermutations>(claParameters, perms);
+            return new Tuple<ExperimentParameters, ClaPermutations>(claParameters, perms);
         }
 
         /// <summary>
@@ -751,7 +752,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="options"></param>
         /// <param name="tokenReplacements"></param>
-        private void _generateMetricsSubstitutions(SwarmDefinition options, ClaExperimentParameters claExperimentParameters, Map<string, object> tokenReplacements)
+        private void _generateMetricsSubstitutions(SwarmDefinition options, ExperimentParameters experimentParameters, Map<string, object> tokenReplacements)
         {
             // -----------------------------------------------------------------------
             //
@@ -763,8 +764,8 @@ namespace HTM.Net.Research.Swarming
             var optimizeMetricLabel = mSpecs.Item2;
 
             tokenReplacements["$PERM_OPTIMIZE_SETTING"] = optimizeMetricLabel;
-            claExperimentParameters.Control.LoggedMetrics = options.loggedMetrics;
-            claExperimentParameters.Control.Metrics = metricList;
+            experimentParameters.Control.LoggedMetrics = options.loggedMetrics;
+            experimentParameters.Control.Metrics = metricList;
         }
 
         /// <summary>
@@ -969,7 +970,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="options"></param>
         /// <param name="tokenReplacements"></param>
-        private void _generateInferenceArgs(SwarmDefinition options, ClaExperimentParameters claExperimentParameters, Map<string, object> tokenReplacements)
+        private void _generateInferenceArgs(SwarmDefinition options, ExperimentParameters experimentParameters, Map<string, object> tokenReplacements)
         {
             var inferenceType = options.inferenceType;
             var optionInferenceArgs = options.inferenceArgs;
@@ -1001,7 +1002,7 @@ namespace HTM.Net.Research.Swarming
             tokenReplacements["$PREDICTED_FIELD"] = predictedField;
             tokenReplacements["$PREDICTED_FIELD_report"] = new[] { ".*" + predictedField + ".*" };
             //tokenReplacements["$INFERENCE_ARGS"] = resultInferenceArgs;
-            claExperimentParameters.Control.InferenceArgs = resultInferenceArgs;
+            experimentParameters.Control.InferenceArgs = resultInferenceArgs;
         }
 
         /// <summary>
@@ -1361,7 +1362,7 @@ namespace HTM.Net.Research.Swarming
             return enc;
         }
 
-        private void _generateInputRecordSchema(SwarmDefinition options, ClaExperimentParameters claExperimentParameters)
+        private void _generateInputRecordSchema(SwarmDefinition options, ExperimentParameters experimentParameters)
         {
             if (options.includedFields == null)
             {
@@ -1378,7 +1379,7 @@ namespace HTM.Net.Research.Swarming
             }
 
             //tokenReplacements["$INPUT_RECORD_SCHEMA"] = infos;
-            claExperimentParameters.Control.InputRecordSchema = infos;
+            experimentParameters.Control.InputRecordSchema = infos;
         }
     }
 }

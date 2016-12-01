@@ -120,6 +120,9 @@
     <Compile Include="opf\ModelFactory.cs" />
     <Compile Include="opf\ModelResult.cs" />
     <Compile Include="opf\NetworkInfo.cs" />
+    <Compile Include="Swarming\Descriptions\ExperimentControl.cs" />
+    <Compile Include="Swarming\Descriptions\ExperimentParameters.cs" />
+    <Compile Include="Swarming\Descriptions\InferenceArgsDescription.cs" />
     <Compile Include="Swarming\ExpGenerator.cs" />
     <Compile Include="Swarming\OpfModelRunner.cs" />
     <Compile Include="opf\PredictionMetricsManager.cs" />
@@ -131,12 +134,12 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Swarming\BaseClientJobDao.cs" />
-    <Compile Include="Swarming\Descriptions\IDescription.cs" />
     <Compile Include="Swarming\HyperSearchV2.cs" />
     <Compile Include="Swarming\HyperSearchWorker.cs" />
     <Compile Include="Swarming\ModelChooser.cs" />
     <Compile Include="Swarming\Particle.cs" />
     <Compile Include="Swarming\PermutationsRunner.cs" />
+    <Compile Include="Swarming\Permutations\ExperimentPermutationParameters.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />
     <Compile Include="Swarming\Utils.cs" />
     <Compile Include="Taurus\HtmEngine\Adapters\CustomDatasourceAdapter.cs" />
@@ -206,6 +209,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\packages\MathNet.Numerics.MKL.Win.2.2.0\build\MathNet.Numerics.MKL.Win.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

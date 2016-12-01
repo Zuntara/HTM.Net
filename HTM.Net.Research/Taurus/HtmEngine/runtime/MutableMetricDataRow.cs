@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
@@ -226,321 +225,135 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 
     #region Swarming model stuff
 
-    public class BestSingleMetricAnomalyParamsDescription : BaseDescription
+    public class BestSingleMetricAnomalyParameters : ExperimentParameters
     {
-
-        public BestSingleMetricAnomalyParamsDescription()
+        public BestSingleMetricAnomalyParameters()
         {
-            control = new ControlModelDescription
+            Initialize();
+        }
+
+        public void Initialize()
+        {
+            SetupProperties();
+
+            // Spatial defaults
+            SetParameterByKey(KEY.SP_VERBOSITY, 0);
+            SetParameterByKey(KEY.GLOBAL_INHIBITION, true);
+            SetParameterByKey(KEY.POTENTIAL_PCT, 0.8);
+            SetParameterByKey(KEY.COLUMN_DIMENSIONS, new[] { 2048 });
+            SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 40.0);
+            SetParameterByKey(KEY.SEED_SP, 1956);
+            SetParameterByKey(KEY.RANDOM_SP, new XorshiftRandom((int)paramMap[KEY.SEED_SP]));
+            SetParameterByKey(KEY.SYN_PERM_ACTIVE_INC, 0.003);
+            SetParameterByKey(KEY.SYN_PERM_CONNECTED, 0.2);
+            SetParameterByKey(KEY.SYN_PERM_INACTIVE_DEC, 0.0005);
+            SetParameterByKey(KEY.MAX_BOOST, 1.0);
+            // Temporal defaults
+            SetParameterByKey(KEY.TM_VERBOSITY, 0);
+            SetParameterByKey(KEY.CELLS_PER_COLUMN, 32);
+            SetParameterByKey(KEY.INPUT_DIMENSIONS, new[] { 2048 });
+            SetParameterByKey(KEY.SEED_TM, 1960);
+            SetParameterByKey(KEY.RANDOM_TM, new XorshiftRandom((int)paramMap[KEY.SEED_TM]));
+            SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
+            // Maximum number of synapses per segment
+            //  > 0 for fixed-size CLA
+            // -1 for non-fixed-size CLA
+            SetParameterByKey(KEY.MAX_SYNAPSES_PER_SEGMENT, 32);
+            // Maximum number of segments per cell
+            //  > 0 for fixed-size CLA
+            // -1 for non-fixed-size CLA
+            SetParameterByKey(KEY.MAX_SEGMENTS_PER_CELL, 128);
+            SetParameterByKey(KEY.INITIAL_PERMANENCE, 0.21);
+            SetParameterByKey(KEY.PERMANENCE_INCREMENT, 0.1);
+            SetParameterByKey(KEY.PERMANENCE_DECREMENT, 0.1);
+            //SetParameterByKey(KEY.GLOBAL_DECAY, 0);
+            //SetParameterByKey(KEY.MAX_AGE, 0);
+            SetParameterByKey(KEY.MIN_THRESHOLD, 10);
+            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, 13);
+            //SetParameterByKey(KEY.PAM_LENGTH, 3);
+
+            // Classifier params
+            SetParameterByKey(KEY.CLASSIFIER_ALPHA, 0.035828933612157998);
+            SetParameterByKey(KEY.AUTO_CLASSIFY, EnableClassification);
+            SetParameterByKey(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
+            SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 1 });
+
+            SetParameterByKey(KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
+        }
+
+        private void SetupProperties()
+        {
+            InferenceType = InferenceType.TemporalAnomaly;
+
+            // Intermediate variables used to compute fields in modelParams and also
+            // referenced from the control section.
+            AggregationInfo = new AggregationSettings
             {
-                inferenceArgs = new InferenceArgsDescription
-                {
-                    predictionSteps = new[] { 1 },
-                    predictedField = "c1",
-                    inputPredictedField = InputPredictedField.Auto
-                }
+                days = 0,
+                fields = new Map<string, object>(),
+                hours = 0,
+                microseconds = 0,
+                milliseconds = 0,
+                minutes = 0,
+                months = 0,
+                seconds = 0,
+                weeks = 0,
+                years = 0
             };
 
-            var config = new ConfigModelDescription
+            EnableSpatialPooler = true;
+            EnableClassification = false;
+            EnableTemporalMemory = true;
+
+            Control.InputRecordSchema = new[]
             {
-                // Type of model that the rest of these parameters apply to.
-                model = "CLA",
+                new FieldMetaInfo("c0", FieldMetaType.DateTime, SensorFlags.Timestamp),
+                new FieldMetaInfo("c1", FieldMetaType.Float, SensorFlags.Blank)
+            };
+            Control.InferenceArgs = new InferenceArgsDescription
+            {
+                inputPredictedField = InputPredictedField.Auto,
+                predictedField = "c1",
+                predictionSteps = new[] { 1 }
+            };
+            
 
-                // Version that specifies the format of the config.
-                version = 1,
+            #region Encoder setup
 
-                // Intermediate variables used to compute fields in modelParams and also
-                // referenced from the control section.
-                aggregationInfo = new AggregationSettings
+            SetParameterByKey(KEY.FIELD_ENCODING_MAP, new EncoderSettingsList
+            {
                 {
-                    days = 0,
-                    fields = new Map<string, object>(),
-                    hours = 0,
-                    microseconds = 0,
-                    milliseconds = 0,
-                    minutes = 0,
-                    months = 0,
-                    seconds = 0,
-                    weeks = 0,
-                    years = 0
+                    "c0_timeOfDay", new EncoderSetting
+                    {
+                        dayOfWeek = new Tuple(21, 9.49),
+                        fieldName = "c0",
+                        name = "c0",
+                        type = "DateEncoder"
+                    }
                 },
-
-                predictAheadTime = null,
-
-                // Model parameter dictionary.
-                modelParams = new ModelParamsDescription
                 {
-                    // The type of inference that this model will perform
-                    inferenceType = InferenceType.TemporalAnomaly,
-
-                    sensorParams = new SensorParamsDescription
+                    "c0_dayOfWeek", null
+                },
+                {
+                    "c0_weekend", null
+                },
+                {
+                    "c1", new EncoderSetting
                     {
-                        // Sensor diagnostic output verbosity control;
-                        // if > 0: sensor region will print out on screen what it"s sensing
-                        // at each step 0: silent; >=1: some info; >=2: more info;
-                        // >=3: even more info (see compute() in py/regions/RecordSensor.py)
-                        verbosity = 0,
-
-                        // Example:
-                        //     dsEncoderSchema = [
-                        //       DeferredDictLookup("__field_name_encoder"),
-                        //     ],
-                        //
-                        // (value generated from DS_ENCODER_SCHEMA)
-                        encoders = new EncoderSettingsList
-                                {
-                                    {
-                                        "c0_timeOfDay", new EncoderSetting
-                                        {
-                                            dayOfWeek= new Tuple(21, 9.49),
-                                            fieldName= "c0",
-                                            name= "c0",
-                                            type= "DateEncoder"
-                                        }
-                                    },
-                                    {
-                                        "c0_dayOfWeek", null
-                                    },
-                                    {
-                                        "c0_weekend", null
-                                    },
-                                    {
-                                        "c1", new EncoderSetting
-                                        {
-                                            fieldName= "c1",
-                                            name= "c1",
-                                            type= "RandomDistributedScalarEncoder",
-                                            numBuckets= 130.0
-                                        }
-                                    }
-                                },
-
-                        // A dictionary specifying the period for automatically-generated
-                        // resets from a RecordSensor;
-                        //
-                        // None = disable automatically-generated resets (also disabled if
-                        // all of the specified values evaluate to 0).
-                        // Valid keys is the desired combination of the following:
-                        //   days, hours, minutes, seconds, milliseconds, microseconds, weeks
-                        //
-                        // Example for 1.5 days: sensorAutoReset = dict(days=1,hours=12),
-                        //
-                        // (value generated from SENSOR_AUTO_RESET)
-                        sensorAutoReset = null,
-                    },
-
-                    spEnable = true,
-
-                    spParams = new SpatialParamsDescription
-                    {
-                        // SP diagnostic output verbosity control;
-                        // 0: silent; >=1: some info; >=2: more info;
-                        spVerbosity = 0,
-
-                        globalInhibition = true,
-
-                        // Number of cell columns in the cortical region (same number for
-                        // SP and TP)
-                        // (see also tpNCellsPerCol)
-                        columnCount = new int[] { 2048 },
-
-                        inputWidth = new int[] { 0 },
-
-                        // SP inhibition control (absolute value);
-                        // Maximum number of active columns in the SP region"s output (when
-                        // there are more, the weaker ones are suppressed)
-                        numActiveColumnsPerInhArea = 40.0,
-
-                        seed = 1956,
-
-                        // potentialPct
-                        // What percent of the columns"s receptive field is available
-                        // for potential synapses. At initialization time, we will
-                        // choose potentialPct * (2*potentialRadius+1)^2
-                        potentialPct = 0.8,
-
-                        // The default connected threshold. Any synapse whose
-                        // permanence value is above the connected threshold is
-                        // a "connected synapse", meaning it can contribute to the
-                        // cell"s firing. Typical value is 0.10. Cells whose activity
-                        // level before inhibition falls below minDutyCycleBeforeInh
-                        // will have their own internal synPermConnectedCell
-                        // threshold set below this default value.
-                        // (This concept applies to both SP and TP and so "cells"
-                        // is correct here as opposed to "columns")
-                        synPermConnected = 0.2,
-
-                        synPermActiveInc = 0.003,
-
-                        synPermInactiveDec = 0.0005,
-
-                        maxBoost = 1.0
-                    },
-
-                    // Controls whether TP is enabled or disabled;
-                    // TP is necessary for making temporal predictions, such as predicting
-                    // the next inputs.  Without TP, the model is only capable of
-                    // reconstructing missing sensor inputs (via SP).
-                    tpEnable = true,
-
-                    tpParams = new TemporalParamsDescription
-                    {
-                        // TP diagnostic output verbosity control;
-                        // 0: silent; [1..6]: increasing levels of verbosity
-                        // (see verbosity in nupic/trunk/py/nupic/research/TP.py and TP10X*.py)
-                        verbosity = 0,
-
-                        // Number of cell columns in the cortical region (same number for
-                        // SP and TP)
-                        // (see also tpNCellsPerCol)
-                        columnCount = new[] { 2048 },
-
-                        // The number of cells (i.e., states), allocated per column.
-                        cellsPerColumn = 32,
-
-                        inputWidth = new[] { 2048 },
-
-                        seed = 1960,
-
-                        // Temporal Pooler implementation selector (see _getTPClass in
-                        // CLARegion.py).
-                        temporalImp = "cpp",
-
-                        // New Synapse formation count
-                        // NOTE: If None, use spNumActivePerInhArea
-                        //
-                        // TODO: need better explanation
-                        newSynapseCount = 20,
-
-                        // Maximum number of synapses per segment
-                        //  > 0 for fixed-size CLA
-                        // -1 for non-fixed-size CLA
-                        //
-                        // TODO: for Ron: once the appropriate value is placed in TP
-                        // constructor, see if we should eliminate this parameter from
-                        // description.py.
-                        maxSynapsesPerSegment = 32,
-
-                        // Maximum number of segments per cell
-                        //  > 0 for fixed-size CLA
-                        // -1 for non-fixed-size CLA
-                        //
-                        // TODO: for Ron: once the appropriate value is placed in TP
-                        // constructor, see if we should eliminate this parameter from
-                        // description.py.
-                        maxSegmentsPerCell = 128,
-
-                        // Initial Permanence
-                        // TODO: need better explanation
-                        initialPerm = 0.21,
-
-                        // Permanence Increment
-                        permanenceInc = 0.1,
-
-                        // Permanence Decrement
-                        // If set to None, will automatically default to tpPermanenceInc
-                        // value.
-                        permanenceDec = 0.1,
-
-                        globalDecay = 0.0,
-
-                        maxAge = 0,
-
-                        // Minimum number of active synapses for a segment to be considered
-                        // during search for the best-matching segments.
-                        // None=use default
-                        // Replaces: tpMinThreshold
-                        minThreshold = 10,
-
-                        // Segment activation threshold.
-                        // A segment is active if it has >= tpSegmentActivationThreshold
-                        // connected synapses that are active due to infActiveState
-                        // None=use default
-                        // Replaces: tpActivationThreshold
-                        activationThreshold = 13,
-
-                        outputType = "normal",
-
-                        // "Pay Attention Mode" length. This tells the TP how many new
-                        // elements to append to the end of a learned sequence at a time.
-                        // Smaller values are better for datasets with short sequences,
-                        // higher values are better for datasets with long sequences.
-                        pamLength = 3,
-                    },
-
-                    clEnable = false,
-
-                    clParams = new ClassifierParamsDescription
-                    {
-                        regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
-
-                        // Classifier diagnostic output verbosity control;
-                        // 0: silent; [1..6]: increasing levels of verbosity
-                        verbosity = 0,
-
-                        // This controls how fast the classifier learns/forgets. Higher values
-                        // make it adapt faster and forget older patterns faster.
-                        alpha = 0.035828933612157998,
-
-                        // This is set after the call to updateConfigFromSubConfig and is
-                        // computed from the aggregationInfo and predictAheadTime.
-                        steps = new[] { 1 },
-                    },
-                    anomalyParams = new AnomalyParamsDescription
-                    {
-                        anomalyCacheRecords = null,
-                        autoDetectThreshold = null,
-                        autoDetectWaitRecords = 5030
-                    },
-                    trainSPNetOnlyIfRequested = false,
+                        fieldName = "c1",
+                        name = "c1",
+                        type = "RandomDistributedScalarEncoder",
+                        numBuckets = 130.0
+                    }
                 }
-            };
-            // end of config dictionary
+            });
 
-            // Adjust base config dictionary for any modifications if imported from a
-            // sub-experiment
-            UpdateConfigFromSubConfig(config);
-            modelConfig = config;
-
-            // Compute predictionSteps based on the predictAheadTime and the aggregation
-            // period, which may be permuted over.
-            if (config.predictAheadTime != null)
-            {
-                int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
-                Debug.Assert(predictionSteps >= 1);
-                config.modelParams.clParams.steps = new[] { predictionSteps };
-            }
-
-
+            #endregion
         }
 
-        public void UpdateConfigFromSubConfig(ConfigModelDescription config)
+        public static BestSingleMetricAnomalyParameters BestSingleMetricAnomalyParams
         {
-
-        }
-
-        public override Network.Network BuildNetwork()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Parameters GetParameters()
-        {
-            Parameters p = Parameters.GetAllDefaultParameters();
-
-            // Spatial pooling parameters
-            SpatialParamsDescription spParams = modelConfig.modelParams.spParams;
-            TemporalParamsDescription tpParams = modelConfig.modelParams.tpParams;
-
-            Parameters.ApplyParametersFromDescription(spParams, p);
-            Parameters.ApplyParametersFromDescription(tpParams, p);
-
-            return p;
-        }
-
-        public static BestSingleMetricAnomalyParamsDescription BestSingleMetricAnomalyParams
-        {
-            get { return new BestSingleMetricAnomalyParamsDescription(); }
+            get { return new BestSingleMetricAnomalyParameters(); }
         }
     }
 
@@ -551,7 +364,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public double? MinResolution { get; set; }
 
         public Map<string, object> AnomalyLikelihoodParams { get; set; }
-        public ConfigModelDescription ModelConfig { get; set; }
+        public ExperimentParameters ModelConfig { get; set; }
         public InferenceArgsDescription InferenceArgs { get; set; }
         public FieldMetaInfo[] InputSchema { get; set; }
 
@@ -607,7 +420,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
     /// </summary>
     public class ModelSwapperInterface
     {
-        public void DefineModel(string modelId, IDescription args, Guid commandId)
+        public void DefineModel(string modelId, ExperimentParameters args, Guid commandId)
         {
             // Sends defineModel command over the bus, for now we ignore the bus system
             // Calls the modelRunner which is the other end of the bus system.
@@ -682,9 +495,9 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
             {
                 ModelParams = new ModelParams
                 {
-                    ModelConfig = command.Args.modelConfig,
-                    InferenceArgs = command.Args.control.inferenceArgs,
-                    InputSchema = command.Args.modelConfig.inputRecordSchema
+                    ModelConfig = command.Args,
+                    InferenceArgs = command.Args.Control.InferenceArgs,
+                    InputSchema = command.Args.Control.InputRecordSchema
                 }
             };
 
@@ -919,15 +732,15 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         public Guid Id { get; set; }
         public string ModelId { get; set; }
 
-        public IDescription Args { get; set; }
+        public ExperimentParameters Args { get; set; }
     }
 
-    public class ModelCommandArgs
-    {
-        public ConfigModelDescription modelConfig { get; set; }
-        public InferenceArgsDescription inferenceArgs { get; set; }
-        public FieldMetaInfo[] inputRecordSchema { get; set; }
-    }
+    //public class ModelCommandArgs
+    //{
+    //    public ConfigModelDescription modelConfig { get; set; }
+    //    public InferenceArgsDescription inferenceArgs { get; set; }
+    //    public FieldMetaInfo[] inputRecordSchema { get; set; }
+    //}
 
     public class ModelInferenceResult
     {
@@ -952,7 +765,7 @@ namespace HTM.Net.Research.Taurus.HtmEngine.runtime
         /// </summary>
         /// <param name="modelId"> unique identifier of the metric row</param>
         /// <param name="params">model params for creating a scalar model per ModelSwapper interface</param>
-        public static void CreateHtmModel(string modelId, IDescription @params)
+        public static void CreateHtmModel(string modelId, ExperimentParameters @params)
         {
             ModelSwapperInterface modelSwapper = new ModelSwapperInterface();
             modelSwapper.DefineModel(modelId: modelId, args: @params, commandId: Guid.NewGuid());

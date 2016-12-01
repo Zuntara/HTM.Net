@@ -5,13 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using HTM.Net.Algorithms;
 using HTM.Net.Data;
-using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.opf;
-using HTM.Net.Swarming.HyperSearch;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Tuple = HTM.Net.Util.Tuple;
@@ -44,13 +42,13 @@ namespace HTM.Net.Research.Swarming
             return _runAction(options, exp);
         }
 
-        private static uint _runAction(Map<string, object> options, Tuple<ClaExperimentParameters, ClaPermutations> exp)
+        private static uint _runAction(Map<string, object> options, Tuple<ExperimentParameters, ClaPermutations> exp)
         {
             var returnValue = _runHyperSearch(options, exp);
             return returnValue;
         }
 
-        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ClaExperimentParameters, ClaPermutations> exp)
+        private static uint _runHyperSearch(Map<string, object> runOptions, Tuple<ExperimentParameters, ClaPermutations> exp)
         {
             var search = new HyperSearchRunner(runOptions);
             // Save in global for the signal handler.
@@ -68,7 +66,7 @@ namespace HTM.Net.Research.Swarming
             return search.peekSearchJob().getJobId().GetValueOrDefault();
         }
 
-        private static Tuple<ClaExperimentParameters, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
+        private static Tuple<ExperimentParameters, ClaPermutations> _generateExpFilesFromSwarmDescription(SwarmDefinition swarmConfig, string outDir)
         {
             return new ExpGenerator(swarmConfig).GenerateParams();
         }
@@ -101,7 +99,7 @@ namespace HTM.Net.Research.Swarming
         /// Start a new hypersearch job and monitor it to completion
         /// </summary>
         /// <param name="exp"></param>
-        public void runNewSearch(Tuple<ClaExperimentParameters, ClaPermutations> exp)
+        public void runNewSearch(Tuple<ExperimentParameters, ClaPermutations> exp)
         {
             __searchJob = this.__startSearch(exp);
             monitorSearchJob();
@@ -111,7 +109,7 @@ namespace HTM.Net.Research.Swarming
         /// Starts HyperSearch as a worker or runs it inline for the "dryRun" action
         /// </summary>
         /// <returns></returns>
-        private HyperSearchJob __startSearch(Tuple<ClaExperimentParameters, ClaPermutations> exp)
+        private HyperSearchJob __startSearch(Tuple<ExperimentParameters, ClaPermutations> exp)
         {
             // TODO: only dryrun supported, maybe support the queing for workers also
             var @params = ClientJobUtils.MakeSearchJobParamsDict(_options, exp);
@@ -291,7 +289,7 @@ namespace HTM.Net.Research.Swarming
 
     internal class ClientJobUtils
     {
-        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ClaExperimentParameters, ClaPermutations> exp)
+        public static Map<string, object> MakeSearchJobParamsDict(object options, Tuple<ExperimentParameters, ClaPermutations> exp)
         {
             string hsVersion = "v2";
             //int maxModels = 1;
@@ -630,358 +628,7 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
-
-    #region Description Objects
-
-    public interface IDescription
-    {
-        ConfigModelDescription modelConfig { get; set; }
-        ControlModelDescription control { get; set; }
-
-        Parameters GetParameters();
-
-        IDescription Clone();
-    }
-
-    [JsonConverter(typeof(TypedDescriptionBaseJsonConverter))]
-    [Serializable]
-    public abstract class BaseDescription : IDescription
-    {
-        protected BaseDescription()
-        {
-            Type = GetType().AssemblyQualifiedName;
-        }
-
-        public virtual Network.Network BuildNetwork()
-        {
-            return null;
-        }
-
-        public virtual Parameters GetParameters()
-        {
-            Parameters p = Parameters.Empty();
-
-            p.Union(modelConfig.GetParameters());
-
-            return p;
-        }
-
-        public IDescription Clone()
-        {
-            return Json.Deserialize<BaseDescription>(Json.Serialize(this));
-        }
-
-        /// <summary>
-        /// Model Configuration Dictionary
-        /// </summary>
-        public ConfigModelDescription modelConfig { get; set; }
-
-        public ControlModelDescription control { get; set; }
-
-        /// <summary>
-        /// Used for deserialisation of this description
-        /// </summary>
-        public string Type { get; set; }
-    }
-
-    [Serializable]
-    public class ClaExperimentParameters : Parameters
-    {
-        private bool _groupedEncoders = false;
-
-        protected ClaExperimentParameters()
-        {
-            Control = new ExperimentControl();
-            InitializeParameters();
-        }
-
-        private void InitializeParameters()
-        {
-            // Spatial defaults
-            SetParameterByKey(KEY.SP_VERBOSITY, 0);
-            SetParameterByKey(KEY.SP_VERBOSITY, 0);
-            SetParameterByKey(KEY.SP_VERBOSITY, 0);
-            SetParameterByKey(KEY.SP_VERBOSITY, 0);
-            SetParameterByKey(KEY.GLOBAL_INHIBITION, true);
-            SetParameterByKey(KEY.COLUMN_DIMENSIONS, new[] { 2048 });
-            SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 40.0);
-            SetParameterByKey(KEY.SEED_SP, 1956);
-            SetParameterByKey(KEY.RANDOM_SP, new XorshiftRandom((int)paramMap[KEY.SEED_SP]));
-            SetParameterByKey(KEY.SYN_PERM_ACTIVE_INC, 0.05);
-            SetParameterByKey(KEY.SYN_PERM_INACTIVE_DEC, 0.0005);
-            SetParameterByKey(KEY.MAX_BOOST, 1.0);
-            // Temporal defaults
-            SetParameterByKey(KEY.TM_VERBOSITY, 0);
-            SetParameterByKey(KEY.CELLS_PER_COLUMN, 32);
-            SetParameterByKey(KEY.INPUT_DIMENSIONS, new[] { 2048 });
-            SetParameterByKey(KEY.SEED_TM, 1960);
-            SetParameterByKey(KEY.RANDOM_TM, new XorshiftRandom((int)paramMap[KEY.SEED_TM]));
-            SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
-            SetParameterByKey(KEY.MAX_SYNAPSES_PER_SEGMENT, 32);
-            SetParameterByKey(KEY.MAX_SEGMENTS_PER_CELL, 128);
-            SetParameterByKey(KEY.INITIAL_PERMANENCE, 0.21);
-            SetParameterByKey(KEY.PERMANENCE_INCREMENT, 0.1);
-            SetParameterByKey(KEY.PERMANENCE_DECREMENT, 0.1);
-            //SetParameterByKey(KEY.GLOBAL_DECAY, 0);
-            //SetParameterByKey(KEY.MAX_AGE, 0);
-            SetParameterByKey(KEY.MIN_THRESHOLD, 12);
-            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, 16);
-            //SetParameterByKey(KEY.PAM_LENGTH, 1);
-
-            // Classifier params
-            SetParameterByKey(KEY.CLASSIFIER_ALPHA, 0.001);
-            SetParameterByKey(KEY.AUTO_CLASSIFY, true);
-            SetParameterByKey(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
-            SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 1 });
-        }
-
-        public static ClaExperimentParameters Default()
-        {
-            return new ClaExperimentParameters();
-        }
-
-        public ExperimentControl Control { get; set; }
-
-        /// <summary>
-        /// Type of model that the rest of these parameters apply to.
-        /// </summary>
-        public string Model { get; set; } = "CLA";
-        /// <summary>
-        /// The type of inference that this model will perform
-        /// </summary>
-        public InferenceType InferenceType { get; set; }
-        public bool EnableSpatialPooler { get; set; }
-        /// <summary>
-        /// Controls whether TP is enabled or disabled;
-        /// TP is necessary for making temporal predictions, such as predicting
-        /// the next inputs.  Without TP, the model is only capable of
-        /// reconstructing missing sensor inputs (via SP).
-        /// </summary>
-        public bool EnableTemporalMemory { get; set; }
-        public bool EnableClassification { get; set; }
-        /// <summary>
-        /// A dictionary specifying the period for automatically-generated
-        /// resets from a RecordSensor;
-        ///
-        /// None = disable automatically-generated resets (also disabled if
-        /// all of the specified values evaluate to 0).
-        /// Valid keys is the desired combination of the following:
-        ///   days, hours, minutes, seconds, milliseconds, microseconds, weeks
-        ///
-        /// Example for 1.5 days: sensorAutoReset = dict(days=1,hours=12),
-        /// </summary>
-        public AggregationSettings SensorAutoReset { get; set; }
-        /// <summary>
-        /// Intermediate variables used to compute fields in modelParams and also
-        /// referenced from the control section.
-        /// </summary>
-        public AggregationSettings AggregationInfo { get; set; }
-
-        public bool TrainSPNetOnlyIfRequested { get; set; }
-
-
-
-        public EncoderSettingsList GetEncoderSettings()
-        {
-            if (_groupedEncoders)
-            {
-                return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
-            }
-            _groupedEncoders = true;
-
-            // Lookup DateEncoders and group them if needed
-            EncoderSettingsList list = (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
-
-            var selection = list.Where(e => e.Key.Contains("_") && e.Value.GetEncoderType() == "DateEncoder").ToList();
-            var grouped = selection.GroupBy(k => k.Value.fieldName, e => e.Key);
-            if (selection.Count > 1)
-            {
-                foreach (var grouping in grouped)
-                {
-                    string fieldName = grouping.Key;
-                    EncoderSetting setting = new EncoderSetting();
-                    setting.encoderType = "DateEncoder";
-                    setting.fieldName = fieldName;
-
-                    foreach (string name in grouping)
-                    {
-                        if (name.EndsWith("timeOfDay"))
-                        {
-                            setting.timeOfDay = selection.Single(s => s.Key == name).Value.timeOfDay;
-                        }
-                        else if (name.EndsWith("dayOfWeek"))
-                        {
-                            setting.dayOfWeek = selection.Single(s => s.Key == name).Value.dayOfWeek;
-                        }
-                        else if (name.EndsWith("weekend"))
-                        {
-                            setting.weekend = selection.Single(s => s.Key == name).Value.weekend;
-                        }
-                        else if (name.EndsWith("season"))
-                        {
-                            setting.season = selection.Single(s => s.Key == name).Value.season;
-                        }
-                        else if (name.EndsWith("holiday"))
-                        {
-                            setting.holiday = selection.Single(s => s.Key == name).Value.holiday;
-                        }
-                        list.Remove(name);
-                    }
-                    list.Add(fieldName, setting);
-                }
-            }
-            return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
-        }
-
-        public ClaExperimentParameters Union(ClaExperimentParameters p)
-        {
-            foreach (KEY k in p.paramMap.Keys)
-            {
-                SetParameterByKey(k, p.GetParameterByKey(k));
-            }
-            return this;
-        }
-
-        public new ClaExperimentParameters Copy()
-        {
-            var p = new ClaExperimentParameters().Union(this);
-            p.InferenceType = InferenceType;
-            p.EnableSpatialPooler = EnableSpatialPooler;
-            p.EnableTemporalMemory = EnableTemporalMemory;
-            p.EnableClassification = EnableClassification;
-            p.SensorAutoReset = SensorAutoReset?.Clone();
-            p.AggregationInfo = AggregationInfo?.Clone();
-            p.TrainSPNetOnlyIfRequested = TrainSPNetOnlyIfRequested;
-            p.Control = Control.Clone();
-
-            return p;
-        }
-    }
-
-    [Serializable]
-    public class ExperimentControl
-    {
-        public StreamDef DatasetSpec { get; set; }
-        public FieldMetaInfo[] InputRecordSchema { get; set; }
-        public InferenceArgsDescription InferenceArgs { get; set; }
-        /// <summary>
-        /// Logged Metrics: A sequence of regular expressions that specify which of
-        /// the metrics from the Inference Specifications section MUST be logged for
-        /// every prediction. The regex"s correspond to the automatically generated
-        /// metric labels. This is similar to the way the optimization metric is
-        /// specified in permutations.py.
-        /// </summary>
-        public string[] LoggedMetrics { get; set; }
-        /// <summary>
-        /// Metrics: A list of MetricSpecs that instantiate the metrics that are
-        /// computed for this experiment
-        /// </summary>
-        public MetricSpec[] Metrics { get; set; }
-        public int? IterationCount { get; set; }
-        public int? IterationCountInferOnly { get; set; }
-
-        public ExperimentControl Clone()
-        {
-            ExperimentControl c = new ExperimentControl();
-            c.InputRecordSchema = (FieldMetaInfo[])InputRecordSchema.Clone();
-            c.InferenceArgs = InferenceArgs.Clone();
-            c.LoggedMetrics = (string[])LoggedMetrics.Clone();
-            c.Metrics = (MetricSpec[])Metrics.Clone();
-            c.DatasetSpec = DatasetSpec;
-            c.IterationCount = IterationCount;
-            c.IterationCountInferOnly = IterationCountInferOnly;
-            return c;
-        }
-    }
-
-    /// <summary>
-    /// Template file used by the OPF Experiment Generator to generate the actual description
-    /// </summary>
-    [Serializable]
-    public class ClaExperimentDescription : BaseDescription
-    {
-        public ClaExperimentDescription()
-        {
-            // Fill in the default values, enrich with token replaces
-            var config = new ConfigModelDescription
-            {
-                model = "CLA",
-                version = 1,
-                modelParams = new ModelParamsDescription
-                {
-                    sensorParams = new SensorParamsDescription
-                    {
-                        verbosity = 0
-                    },
-                    spParams = new SpatialParamsDescription
-                    {
-                        spVerbosity = 0,
-                        globalInhibition = true,
-                        columnCount = new[] { 2048 },
-                        inputWidth = new[] { 0 },
-                        numActiveColumnsPerInhArea = 40,
-                        seed = 1956,
-                        synPermActiveInc = 0.05,
-                        synPermInactiveDec = 0.0005,
-                        maxBoost = 1.0
-                    },
-                    tpParams = new TemporalParamsDescription
-                    {
-                        verbosity = 0,
-                        columnCount = new[] { 2048 },
-                        cellsPerColumn = 32,
-                        inputWidth = new[] { 2048 },
-                        seed = 1960,
-                        temporalImp = "cpp",
-                        newSynapseCount = 20,
-                        maxSynapsesPerSegment = 32,
-                        maxSegmentsPerCell = 128,
-                        initialPerm = 0.21,
-                        permanenceInc = 0.1,
-                        permanenceDec = 0.1,
-                        globalDecay = 0.0,
-                        maxAge = 0,
-                        minThreshold = 12,
-                        activationThreshold = 16,
-                        outputType = "normal",
-                        pamLength = 1
-                    },
-                    clEnable = true,
-                    clParams = new ClassifierParamsDescription
-                    {
-                        regionName = typeof(CLAClassifier).AssemblyQualifiedName,
-                        verbosity = 0,
-                        alpha = 0.001
-                    },
-                    trainSPNetOnlyIfRequested = false
-                }
-            };
-
-            control = new ControlModelDescription();
-
-            // Adjust base config dictionary for any modifications if imported from a
-            // sub-experiment
-            updateConfigFromSubConfig(config);
-            modelConfig = config;
-
-            // Compute predictionSteps based on the predictAheadTime and the aggregation
-            // period, which may be permuted over.
-            if (config.predictAheadTime != null)
-            {
-                int predictionSteps = (int)Math.Round(Utils.aggregationDivide(config.predictAheadTime, config.aggregationInfo));
-                Debug.Assert(predictionSteps >= 1);
-                config.modelParams.clParams.steps = new[] { predictionSteps };
-            }
-
-        }
-
-
-
-        public void updateConfigFromSubConfig(ConfigModelDescription config)
-        {
-
-        }
-    }
+    #region Permutation Objects
 
     public class TokenReplaceAttribute : Attribute
     {
@@ -992,264 +639,6 @@ namespace HTM.Net.Research.Swarming
             TokenName = tokenName;
         }
     }
-
-    [Serializable]
-    public class ConfigModelDescription
-    {
-        /// <summary>
-        /// Type of model that the rest of these parameters apply to.
-        /// </summary>
-        public string model { get; set; }
-
-        /// <summary>
-        /// Version that specifies the format of the config.
-        /// </summary>
-        public int? version { get; set; }
-
-        // Intermediate variables used to compute fields in modelParams and also
-        // referenced from the control section.
-        [TokenReplace("$AGGREGATION_INFO")]
-        public AggregationSettings aggregationInfo { get; set; }
-        [TokenReplace("$PREDICT_AHEAD_TIME")]
-        public AggregationSettings predictAheadTime { get; set; }
-
-        /// <summary>
-        /// Model parameter dictionary.
-        /// </summary>
-        public ModelParamsDescription modelParams { get; set; }
-
-        [TokenReplace("$INPUT_RECORD_SCHEMA")]
-        public FieldMetaInfo[] inputRecordSchema { get; set; }
-
-        public Map<string, object> GetDictionary()
-        {
-            return new Map<string, object>
-            {
-                {"model",model },
-                {"version",version },
-                {"aggregationInfo",aggregationInfo },
-                {"predictAheadTime",predictAheadTime },
-                {"modelParams",modelParams },
-            };
-        }
-
-        public Parameters GetParameters()
-        {
-            var parameters = Parameters.Empty();
-            parameters.Union(modelParams.GetParameters());
-            return parameters;
-        }
-
-        public object this[string key]
-        {
-            get { return GetDictionary()[key]; }
-        }
-
-        public void SetDictValue(string key, object value)
-        {
-            switch (key)
-            {
-                case "model":
-                    model = (string)value;
-                    break;
-                case "version":
-                    version = (int)value;
-                    break;
-                case "aggregationInfo":
-                    aggregationInfo = (AggregationSettings)value;
-                    break;
-                case "predictAheadTime":
-                    predictAheadTime = (AggregationSettings)value;
-                    break;
-                case "modelParams":
-                    modelParams = (ModelParamsDescription)value;
-                    break;
-            }
-        }
-    }
-
-    [Serializable]
-    public class ControlModelDescription
-    {
-        [TokenReplace("$ENVIRONMENT")]
-        public string environment { get; set; }
-        [TokenReplace("$DATASET_SPEC")]
-        public StreamDef dataset { get; set; }
-        [TokenReplace("$LOGGED_METRICS")]
-        public string[] loggedMetrics { get; set; }
-        [TokenReplace("$METRICS")]
-        public MetricSpec[] metrics { get; set; }
-        [TokenReplace("$INFERENCE_ARGS")]
-        public InferenceArgsDescription inferenceArgs { get; set; }
-        [TokenReplace("$ITERATION_COUNT")]
-        public int? iterationCount { get; set; }
-        public int? iterationCountInferOnly { get; set; }
-    }
-
-    [Serializable]
-    public class SensorParamsDescription
-    {
-        [TokenReplace("$ENCODER_SPECS")]
-        [ParameterMapping("fieldEncodings")]
-        public EncoderSettingsList encoders { get; set; }
-        public int verbosity { get; set; }
-        [TokenReplace("$SENSOR_AUTO_RESET")]
-        public IDictionary<string, object> sensorAutoReset { get; set; }
-    }
-
-    [Serializable]
-    public class ModelParamsDescription
-    {
-        /// <summary>
-        /// The type of inference that this model will perform
-        /// </summary>
-        [TokenReplace("$INFERENCE_TYPE")]
-        public InferenceType inferenceType { get; set; }
-
-        public SensorParamsDescription sensorParams { get; set; }
-
-        [TokenReplace("$SP_ENABLE")]
-        public bool spEnable { get; set; }
-        public SpatialParamsDescription spParams { get; set; }
-
-        [TokenReplace("$TP_ENABLE")]
-        public bool tpEnable { get; set; }
-        public TemporalParamsDescription tpParams { get; set; }
-
-        [TokenReplace("$ANOMALY_PARAMS")]
-        public AnomalyParamsDescription anomalyParams { get; set; }
-
-        public bool clEnable;
-        public ClassifierParamsDescription clParams { get; set; }
-
-        public bool trainSPNetOnlyIfRequested { get; set; }
-
-
-        public Parameters GetParameters()
-        {
-            Parameters p = Parameters.Empty();
-            Parameters.ApplyParametersFromDescription(sensorParams, p);
-            if (spEnable)
-            {
-                Parameters.ApplyParametersFromDescription(spParams, p);
-            }
-            if (tpEnable)
-            {
-                // NOTE: Temporary fix
-                if (tpParams.minThreshold is PermuteVariable)
-                {
-                    tpParams.minThreshold = (int)((PermuteVariable)tpParams.minThreshold).GetPosition();
-                }
-                if (tpParams.activationThreshold is PermuteVariable)
-                {
-                    tpParams.activationThreshold = (int)((PermuteVariable)tpParams.activationThreshold).GetPosition();
-                }
-
-                Parameters.ApplyParametersFromDescription(tpParams, p);
-            }
-            if (clEnable)
-            {
-                Parameters.ApplyParametersFromDescription(clParams, p);
-            }
-            p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false);
-            if (!string.IsNullOrWhiteSpace(clParams.regionName))
-            {
-                p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, Type.GetType(clParams.regionName, true));
-            }
-
-            return p;
-        }
-    }
-
-    [Serializable]
-    public class SpatialParamsDescription
-    {
-        [ParameterMapping]
-        public int spVerbosity { get; set; }
-        [ParameterMapping]
-        public bool globalInhibition { get; set; }
-        [ParameterMapping("columnDimensions")]
-        public int[] columnCount { get; set; }
-        [ParameterMapping("inputDimensions")]
-        public int[] inputWidth { get; set; }
-        [ParameterMapping]
-        public double numActiveColumnsPerInhArea { get; set; }
-        [ParameterMapping("seedSpatial")]
-        public int seed { get; set; }
-        [ParameterMapping]
-        [TokenReplace("$SP_POOL_PCT")]
-        public double potentialPct { get; set; }
-        [ParameterMapping]
-        [TokenReplace("$SP_PERM_CONNECTED")]
-        public double synPermConnected { get; set; }
-        [ParameterMapping]
-        public double synPermActiveInc { get; set; }
-        [ParameterMapping]
-        [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
-        public double synPermInactiveDec { get; set; }
-        [ParameterMapping]
-        public double maxBoost { get; set; }
-    }
-
-    [Serializable]
-    public class TemporalParamsDescription
-    {
-        [ParameterMapping]
-        [TokenReplace("$PERM_TP_CHOICES_minThreshold")]
-        public object minThreshold { get; set; }
-        [ParameterMapping]
-        [TokenReplace("$PERM_TP_CHOICES_activationThreshold")]
-        public object activationThreshold { get; set; }
-        [ParameterMapping("tmVerbosity")]
-        public int verbosity { get; set; }
-        [ParameterMapping("columnDimensions")]
-        public int[] columnCount { get; set; }
-        [ParameterMapping]
-        public int cellsPerColumn { get; set; }
-        [ParameterMapping("inputDimensions")]
-        public int[] inputWidth { get; set; }
-        [ParameterMapping("seedTemporal")]
-        public int seed { get; set; }
-        //[ParameterMapping]
-        public string temporalImp { get; set; }
-        [ParameterMapping("maxNewSynapseCount")]
-        public int newSynapseCount { get; set; }
-        [ParameterMapping("maxSynapsesPerSegment")]
-        public int maxSynapsesPerSegment { get; set; }
-        [ParameterMapping("maxSegmentsPerCell")]
-        public int maxSegmentsPerCell { get; set; }
-        [ParameterMapping("initialPermanence")]
-        public double initialPerm { get; set; }
-        [ParameterMapping("permanenceIncrement")]
-        public double permanenceInc { get; set; }
-        [ParameterMapping("permanenceDecrement")]
-        public double permanenceDec { get; set; }
-        //[ParameterMapping]
-        public double globalDecay { get; set; }
-        //[ParameterMapping]
-        public int maxAge { get; set; }
-        //[ParameterMapping]
-        public string outputType { get; set; }
-        //[ParameterMapping]
-        [TokenReplace("$PERM_TP_CHOICES_pamLength")]
-        public object pamLength { get; set; }
-    }
-
-    [Serializable]
-    public class ClassifierParamsDescription
-    {
-        public string regionName { get; set; }
-        public int verbosity { get; set; }
-        [ParameterMapping("classifierAlpha")]
-        public double alpha { get; set; }
-        [TokenReplace("$PREDICTION_STEPS")]
-        [ParameterMapping("classifierSteps")]
-        public int[] steps { get; set; }
-    }
-
-    #endregion
-
-    #region Permutation Objects
 
     public interface IPermutionFilter
     {
@@ -1379,6 +768,31 @@ namespace HTM.Net.Research.Swarming
         [TokenReplace("$PERM_AGGREGATION_CHOICES")]
         public AggregationSettings aggregationInfo { get; set; }
         public PermutationModelDescriptionParams modelParams { get; set; }
+
+        #region Equality members
+
+        protected bool Equals(PermutationModelParameters other)
+        {
+            return Equals(aggregationInfo, other.aggregationInfo) && Equals(modelParams, other.modelParams);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PermutationModelParameters) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((aggregationInfo != null ? aggregationInfo.GetHashCode() : 0)*397) ^ (modelParams != null ? modelParams.GetHashCode() : 0);
+            }
+        }
+
+        #endregion
     }
 
     [Serializable]
@@ -1390,6 +804,38 @@ namespace HTM.Net.Research.Swarming
         public PermutationSpatialPoolerParams spParams { get; set; }
         public PermutationTemporalPoolerParams tpParams { get; set; }
         public PermutationClassifierParams clParams { get; set; }
+
+        #region Equality members
+
+        protected bool Equals(PermutationModelDescriptionParams other)
+        {
+            return Equals(inferenceType, other.inferenceType) && Equals(sensorParams, other.sensorParams) &&
+                   Equals(spParams, other.spParams) && Equals(tpParams, other.tpParams) &&
+                   Equals(clParams, other.clParams);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PermutationModelDescriptionParams) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (inferenceType != null ? inferenceType.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (sensorParams != null ? sensorParams.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (spParams != null ? spParams.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (tpParams != null ? tpParams.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (clParams != null ? clParams.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        #endregion
     }
 
     [Serializable]
@@ -1397,6 +843,28 @@ namespace HTM.Net.Research.Swarming
     {
         [TokenReplace("$PERM_ENCODER_CHOICES")]
         public Map<string, object> encoders { get; set; }
+
+        #region Equality members
+
+        protected bool Equals(PermutationSensorParams other)
+        {
+            return Equals(encoders, other.encoders);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PermutationSensorParams) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (encoders != null ? encoders.GetHashCode() : 0);
+        }
+
+        #endregion
     }
 
     [Serializable]
@@ -1404,6 +872,28 @@ namespace HTM.Net.Research.Swarming
     {
         [TokenReplace("$PERM_SP_CHOICES_synPermInactiveDec")]
         public object synPermInactiveDec { get; set; }
+
+        #region Equality members
+
+        protected bool Equals(PermutationSpatialPoolerParams other)
+        {
+            return Equals(synPermInactiveDec, other.synPermInactiveDec);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PermutationSpatialPoolerParams) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (synPermInactiveDec != null ? synPermInactiveDec.GetHashCode() : 0);
+        }
+
+        #endregion
     }
 
     [Serializable]
@@ -1415,6 +905,35 @@ namespace HTM.Net.Research.Swarming
         public object activationThreshold { get; set; } // float, int or permutevar
         [TokenReplace("$PERM_TP_CHOICES_pamLength")]
         public object pamLength { get; set; } // int or permutevar
+
+        #region Equality members
+
+        protected bool Equals(PermutationTemporalPoolerParams other)
+        {
+            return Equals(minThreshold, other.minThreshold) && Equals(activationThreshold, other.activationThreshold) &&
+                   Equals(pamLength, other.pamLength);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PermutationTemporalPoolerParams) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (minThreshold != null ? minThreshold.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (activationThreshold != null ? activationThreshold.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (pamLength != null ? pamLength.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        #endregion
     }
 
     [Serializable]
@@ -1422,6 +941,28 @@ namespace HTM.Net.Research.Swarming
     {
         [TokenReplace("$PERM_CL_CHOICES_alpha")]
         public object alpha { get; set; } // float or PermuteVariable
+
+        #region Equality members
+
+        protected bool Equals(PermutationClassifierParams other)
+        {
+            return Equals(alpha, other.alpha);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PermutationClassifierParams) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (alpha != null ? alpha.GetHashCode() : 0);
+        }
+
+        #endregion
     }
 
     #endregion
@@ -1625,36 +1166,7 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
-    [Serializable]
-    public class InferenceArgsDescription
-    {
-        public bool? useReconstruction;
-
-        /// <summary>
-        /// A list of integers that specifies which steps size(s) to learn/infer on
-        /// </summary>
-        public int[] predictionSteps { get; set; } = new[] { 1 };
-        /// <summary>
-        /// Name of the field being optimized for during prediction
-        /// </summary>
-        public string predictedField { get; set; }
-        /// <summary>
-        /// Whether or not to use the predicted field as an input. When set to 'auto', 
-        /// swarming will use it only if it provides better performance. 
-        /// When the inferenceType is NontemporalClassification, this value is forced to 'no'
-        /// </summary>
-        public InputPredictedField? inputPredictedField { get; set; }
-
-        public InferenceArgsDescription Clone()
-        {
-            return new InferenceArgsDescription
-            {
-                predictionSteps = (int[])predictionSteps.Clone(),
-                predictedField = predictedField,
-                inputPredictedField = inputPredictedField
-            };
-        }
-    }
+   
 
     [Serializable]
     public enum InputPredictedField

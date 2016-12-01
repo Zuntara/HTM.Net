@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using DeepEqual.Syntax;
@@ -334,6 +333,10 @@ namespace HTM.Net
             /// </summary>
             public static readonly KEY AUTO_CLASSIFY = new KEY("hasClassifiers", typeof(bool));
             public static readonly KEY AUTO_CLASSIFY_TYPE = new KEY("defaultClassifierType", typeof(IClassifier));
+            /// <summary>
+            /// This controls how fast the classifier learns/forgets.Higher values 
+            /// make it adapt faster and forget older patterns faster.
+            /// </summary>
             public static readonly KEY CLASSIFIER_ALPHA = new KEY("classifierAlpha", typeof(double));
             public static readonly KEY CLASSIFIER_STEPS = new KEY("classifierSteps", typeof(int[]));
 
@@ -619,7 +622,7 @@ namespace HTM.Net
             /**
              * Default serialvers
              */
-            private const long serialVersionUID = 1L;
+            private const long SerialVersionUid = 1L;
 
             public ParametersMap()
             {
@@ -887,6 +890,7 @@ namespace HTM.Net
                 .Select(p => new Tuple<KEY, PermuteVariable>(p.Key, p.Value as PermuteVariable))
                 .ToList();
         }
+        #region Utility Setter Methods
 
         /**
          * Convenience method to log difference this {@code Parameters} and specified
@@ -1375,6 +1379,8 @@ namespace HTM.Net
         {
             paramMap.Add(KEY.MAX_BOOST, maxBoost);
         }
+
+        #endregion
 
         /**
          * {@inheritDoc}

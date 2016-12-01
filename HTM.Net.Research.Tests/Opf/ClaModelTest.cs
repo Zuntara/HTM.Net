@@ -9,6 +9,8 @@ using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Taurus.HtmEngine.runtime;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Tuple = HTM.Net.Util.Tuple;
@@ -165,7 +167,7 @@ namespace HTM.Net.Research.Tests.Opf
         [TestMethod]
         public void TestTemporalAnomalyModelFactory()
         {
-            ClaExperimentParameters exp = new TemporalAnomalyModelDescriptionParams();
+            ExperimentParameters exp = new TemporalAnomalyModelDescriptionParams();
 
             var data = new List<Tuple<Map<string, object>, string[]>>
             {
@@ -360,7 +362,7 @@ namespace HTM.Net.Research.Tests.Opf
         //    #endregion
         //}
 
-        class TemporalAnomalyModelDescriptionParams : ClaExperimentParameters
+        class TemporalAnomalyModelDescriptionParams : ExperimentParameters
         {
             public TemporalAnomalyModelDescriptionParams()
             {
@@ -475,6 +477,27 @@ namespace HTM.Net.Research.Tests.Opf
             }
         }
 
+        /// <summary>
+        /// Test that clusterParams loads returns a valid dict that can be instantiated as a CLAModel.
+        /// </summary>
+        [TestMethod]
+        public void TestModelParams()
+        {
+            var @params = ScalarMetricUtils.GetScalarMetricWithTimeOfDayAnomalyParams(new int[0], 23.42, 23.420001, null);
+            var encodersDict = @params.GetEncoderSettings();
+
+            var model = ModelFactory.Create(@params);
+            Assert.IsInstanceOfType(model, typeof(CLAModel), "JSON returned cannot be used to create a model");
+            // Ensure we have a time of day field
+            Assert.IsNotNull(encodersDict.Get("c0_timeOfDay"));
+            // Ensure resolution doesn't get too low
+            if (encodersDict["c1"].GetEncoderType() == "RandomDistributedScalarEncoder")
+            {
+                Assert.IsTrue(encodersDict["c1"].resolution  >= 0.001, "Resolution is too low");
+            }
+            
+        }
+
         [TestMethod]
         [DeploymentItem("Resources\\rec-center-hourly.csv")]
         public void TestFileHeader_BatchedCsvStream()
@@ -497,5 +520,6 @@ namespace HTM.Net.Research.Tests.Opf
             Assert.IsNotNull(maxValue);
             Debug.WriteLine(maxValue);
         }
+
     }
 }

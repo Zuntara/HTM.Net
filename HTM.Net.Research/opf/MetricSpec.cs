@@ -449,7 +449,7 @@ namespace HTM.Net.Research.opf
                     int step = (int)item.Get(0);
                     MetricIFace subErrorMetric = (MetricIFace)item.Get(1);
 
-                    var stepPrediction = ((IDictionary)prediction)[step];
+                    var stepPrediction = (prediction as IDictionary)?[step];
                     // Unless this is a custom_error_metric, when we have a dict of 
                     // probabilities, get the most probable one. For custom error metrics, 
                     // we pass the probabilities in so that it can decide how best to deal with

@@ -6,7 +6,7 @@ namespace HTM.Net.Research.opf
 {
     public class ModelFactory
     {
-        public static Model Create(ClaExperimentParameters modelConfig)
+        public static Model Create(ExperimentParameters modelConfig)
         {
             Type modelClass;
             if (modelConfig.Model == "CLA")

@@ -1,0 +1,194 @@
+using System;
+using System.Linq;
+using HTM.Net.Algorithms;
+using HTM.Net.Data;
+using HTM.Net.Encoders;
+using HTM.Net.Util;
+
+namespace HTM.Net.Research.Swarming.Descriptions
+{
+    [Serializable]
+    public class ExperimentParameters : Parameters
+    {
+        private bool _groupedEncoders = false;
+        private bool _enableClassification;
+
+        protected ExperimentParameters()
+        {
+            Control = new ExperimentControl();
+            InitializeParameters();
+        }
+
+        private void InitializeParameters()
+        {
+            // Spatial defaults
+            SetParameterByKey(KEY.SP_VERBOSITY, 0);
+            SetParameterByKey(KEY.SP_VERBOSITY, 0);
+            SetParameterByKey(KEY.SP_VERBOSITY, 0);
+            SetParameterByKey(KEY.SP_VERBOSITY, 0);
+            SetParameterByKey(KEY.GLOBAL_INHIBITION, true);
+            SetParameterByKey(KEY.COLUMN_DIMENSIONS, new[] { 2048 });
+            SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 40.0);
+            SetParameterByKey(KEY.SEED_SP, 1956);
+            SetParameterByKey(KEY.RANDOM_SP, new XorshiftRandom((int)paramMap[KEY.SEED_SP]));
+            SetParameterByKey(KEY.SYN_PERM_ACTIVE_INC, 0.05);
+            SetParameterByKey(KEY.SYN_PERM_INACTIVE_DEC, 0.0005);
+            SetParameterByKey(KEY.MAX_BOOST, 1.0);
+            // Temporal defaults
+            SetParameterByKey(KEY.TM_VERBOSITY, 0);
+            SetParameterByKey(KEY.CELLS_PER_COLUMN, 32);
+            SetParameterByKey(KEY.INPUT_DIMENSIONS, new[] { 2048 });
+            SetParameterByKey(KEY.SEED_TM, 1960);
+            SetParameterByKey(KEY.RANDOM_TM, new XorshiftRandom((int)paramMap[KEY.SEED_TM]));
+            SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
+            SetParameterByKey(KEY.MAX_SYNAPSES_PER_SEGMENT, 32);
+            SetParameterByKey(KEY.MAX_SEGMENTS_PER_CELL, 128);
+            SetParameterByKey(KEY.INITIAL_PERMANENCE, 0.21);
+            SetParameterByKey(KEY.PERMANENCE_INCREMENT, 0.1);
+            SetParameterByKey(KEY.PERMANENCE_DECREMENT, 0.1);
+            //SetParameterByKey(KEY.GLOBAL_DECAY, 0);
+            //SetParameterByKey(KEY.MAX_AGE, 0);
+            SetParameterByKey(KEY.MIN_THRESHOLD, 12);
+            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, 16);
+            //SetParameterByKey(KEY.PAM_LENGTH, 1);
+
+            // Classifier params
+            SetParameterByKey(KEY.CLASSIFIER_ALPHA, 0.001);
+            SetParameterByKey(KEY.AUTO_CLASSIFY, true);
+            SetParameterByKey(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
+            SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 1 });
+        }
+
+        public static ExperimentParameters Default()
+        {
+            return new ExperimentParameters();
+        }
+
+        public ExperimentControl Control { get; set; }
+
+        /// <summary>
+        /// Type of model that the rest of these parameters apply to.
+        /// </summary>
+        public string Model { get; set; } = "CLA";
+        /// <summary>
+        /// The type of inference that this model will perform
+        /// </summary>
+        public InferenceType InferenceType { get; set; }
+        public bool EnableSpatialPooler { get; set; }
+        /// <summary>
+        /// Controls whether TP is enabled or disabled;
+        /// TP is necessary for making temporal predictions, such as predicting
+        /// the next inputs.  Without TP, the model is only capable of
+        /// reconstructing missing sensor inputs (via SP).
+        /// </summary>
+        public bool EnableTemporalMemory { get; set; }
+
+        public bool EnableClassification
+        {
+            get { return _enableClassification; }
+            set
+            {
+                _enableClassification = value;
+                SetParameterByKey(KEY.AUTO_CLASSIFY, value);
+            }
+        }
+
+        /// <summary>
+        /// A dictionary specifying the period for automatically-generated
+        /// resets from a RecordSensor;
+        ///
+        /// None = disable automatically-generated resets (also disabled if
+        /// all of the specified values evaluate to 0).
+        /// Valid keys is the desired combination of the following:
+        ///   days, hours, minutes, seconds, milliseconds, microseconds, weeks
+        ///
+        /// Example for 1.5 days: sensorAutoReset = dict(days=1,hours=12),
+        /// </summary>
+        public AggregationSettings SensorAutoReset { get; set; }
+        /// <summary>
+        /// Intermediate variables used to compute fields in modelParams and also
+        /// referenced from the control section.
+        /// </summary>
+        public AggregationSettings AggregationInfo { get; set; }
+
+        public bool TrainSPNetOnlyIfRequested { get; set; }
+
+
+
+        public EncoderSettingsList GetEncoderSettings()
+        {
+            if (_groupedEncoders)
+            {
+                return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+            }
+            _groupedEncoders = true;
+
+            // Lookup DateEncoders and group them if needed
+            EncoderSettingsList list = (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+
+            var selection = list.Where(e => e.Key.Contains("_") && e.Value?.GetEncoderType() == "DateEncoder").ToList();
+            var grouped = selection.GroupBy(k => k.Value.fieldName, e => e.Key);
+            if (selection.Count > 1)
+            {
+                foreach (var grouping in grouped)
+                {
+                    string fieldName = grouping.Key;
+                    EncoderSetting setting = new EncoderSetting();
+                    setting.encoderType = "DateEncoder";
+                    setting.fieldName = fieldName;
+
+                    foreach (string name in grouping)
+                    {
+                        if (name.EndsWith("timeOfDay"))
+                        {
+                            setting.timeOfDay = selection.Single(s => s.Key == name).Value.timeOfDay;
+                        }
+                        else if (name.EndsWith("dayOfWeek"))
+                        {
+                            setting.dayOfWeek = selection.Single(s => s.Key == name).Value.dayOfWeek;
+                        }
+                        else if (name.EndsWith("weekend"))
+                        {
+                            setting.weekend = selection.Single(s => s.Key == name).Value.weekend;
+                        }
+                        else if (name.EndsWith("season"))
+                        {
+                            setting.season = selection.Single(s => s.Key == name).Value.season;
+                        }
+                        else if (name.EndsWith("holiday"))
+                        {
+                            setting.holiday = selection.Single(s => s.Key == name).Value.holiday;
+                        }
+                        list.Remove(name);
+                    }
+                    list.Add(fieldName, setting);
+                }
+            }
+            return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+        }
+
+        public ExperimentParameters Union(ExperimentParameters p)
+        {
+            foreach (KEY k in p.paramMap.Keys)
+            {
+                SetParameterByKey(k, p.GetParameterByKey(k));
+            }
+            return this;
+        }
+
+        public new ExperimentParameters Copy()
+        {
+            var p = new ExperimentParameters().Union(this);
+            p.InferenceType = InferenceType;
+            p.EnableSpatialPooler = EnableSpatialPooler;
+            p.EnableTemporalMemory = EnableTemporalMemory;
+            p.EnableClassification = EnableClassification;
+            p.SensorAutoReset = SensorAutoReset?.Clone();
+            p.AggregationInfo = AggregationInfo?.Clone();
+            p.TrainSPNetOnlyIfRequested = TrainSPNetOnlyIfRequested;
+            p.Control = Control.Clone();
+
+            return p;
+        }
+    }
+}

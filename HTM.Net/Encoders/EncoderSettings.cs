@@ -21,7 +21,10 @@ namespace HTM.Net.Encoders
 
         public EncoderSettingsList(IDictionary<string, EncoderSetting> otherList)
         {
-            this.AddAll(otherList);
+            foreach (var encoderSetting in otherList)
+            {
+                Add(encoderSetting.Key, encoderSetting.Value.Clone());
+            }
         }
 
         public EncoderSetting For(string encoderName)

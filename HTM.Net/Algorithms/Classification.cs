@@ -107,11 +107,11 @@ namespace HTM.Net.Algorithms
             }
         }
 
-        /**
-         * Returns the probabilities for the specified step
-         * @param step
-         * @return
-         */
+        /// <summary>
+        /// Returns the probabilities for the specified step
+        /// </summary>
+        /// <param name="step"></param>
+        /// <returns></returns>
         public double[] GetStats(int step)
         {
             return _probabilities[step];

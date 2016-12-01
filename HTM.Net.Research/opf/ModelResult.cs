@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.opf
@@ -12,7 +11,7 @@ namespace HTM.Net.Research.opf
         public Map<string,double?> metrics;
         public int? predictedFieldIdx;
         public string predictedFieldName;
-        public object classifierInput;
+        public ClassifierInput classifierInput;
 
         public ModelResult(int? predictionNumber = null,
             Map<string, object> rawInput = null,
@@ -21,7 +20,7 @@ namespace HTM.Net.Research.opf
             Map<string, double?> metrics = null,
             int? predictedFieldIdx = null,
             string predictedFieldName = null,
-            object classifierInput = null)
+            ClassifierInput classifierInput = null)
         {
             this.predictionNumber = predictionNumber;
             this.rawInput = rawInput;

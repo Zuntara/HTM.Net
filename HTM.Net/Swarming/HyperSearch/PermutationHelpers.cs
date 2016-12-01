@@ -776,15 +776,23 @@ namespace HTM.Net.Swarming.HyperSearch
             // If one of these, we need to intelligently set the constructor args.
             if (this.encoderType.Contains("."))
             {
-                // (encoder['type'], argName) = this.encoderClass.Split('.');
-                string[] splitted = this.encoderType.Split('.');
-                encoder.type = splitted[0];
-                string argName = splitted[1];
+                try
+                {
+                    // (encoder['type'], argName) = this.encoderClass.Split('.');
+                    string[] splitted = this.encoderType.Split('.');
+                    encoder.type = splitted[0];
+                    string argName = splitted[1];
 
-                Tuple argValue = new Tuple(encoder.w.GetValueOrDefault((int) this.w), encoder.radius.GetValueOrDefault((double) this.radius));
-                encoder[argName] = argValue;
-                encoder.w = null;
-                encoder.radius = null;
+                    Tuple argValue = new Tuple(encoder.w ?? this.w, encoder.radius ?? this.radius);
+                    encoder[argName] = argValue;
+                    encoder.w = null;
+                    encoder.radius = null;
+                }
+                catch (Exception e)
+                {
+                    if(Debugger.IsAttached) Debugger.Break();
+                    throw;
+                }
             }
             else
             {

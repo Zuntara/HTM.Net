@@ -1,17 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
-using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
-using HTM.Net.Research.Taurus.HtmEngine.runtime;
 using HTM.Net.Util;
 using log4net;
 
@@ -24,7 +21,7 @@ namespace HTM.Net.Research.opf
 
         #region Fields
 
-        private ClaExperimentParameters _modelConfig;
+        private ExperimentParameters _modelConfig;
 
         private IInference _currentInferenceOutput;
         private Publisher _inputProvider;
@@ -78,12 +75,14 @@ namespace HTM.Net.Research.opf
         private string _predictedFieldName;
         private int? _numFields;
         private IEncoder _classifierInputEncoder;
+        private MultiEncoder _disabledSensorEncoder;
+        private IClassifier _predictedFieldClassifier;
         private double? _ms_prevVal;
         private Map<int, Deque<object>> _ms_predHistories;
 
         #endregion
 
-        public CLAModel(ClaExperimentParameters modelConfig)
+        public CLAModel(ExperimentParameters modelConfig)
             : base(modelConfig.InferenceType)
         {
             _modelConfig = modelConfig;
@@ -134,7 +133,11 @@ namespace HTM.Net.Research.opf
             this._hasSP = spEnable;
             this._hasTP = tpEnable;
             this._hasCL = clEnable;
-
+            if (clEnable)
+            {
+                _predictedFieldClassifier = new CLAClassifier();
+                _predictedFieldClassifier.ApplyParameters(modelConfig);
+            }
             //var anomalyParams = modelConfig.modelParams.anomalyParams;
 
             //this._classifierInputEncoder = null;
@@ -381,7 +384,7 @@ namespace HTM.Net.Research.opf
             try
             {
                 // Push record into the sensor
-                ((IHTMSensor) _getSensorRegion()).AssignBasicInputMap(inputRecord, rawData);
+                ((IHTMSensor)_getSensorRegion()).AssignBasicInputMap(inputRecord, rawData);
                 _inputProvider.OnNext(string.Join(",", inputRecord.Values.Select(v => v?.ToString()).ToArray()));
                 this._currentInferenceOutput = _netInfo.net.ComputeImmediate(inputRecord);
             }
@@ -453,13 +456,13 @@ namespace HTM.Net.Research.opf
         /// Returns reference to the network's Classifier region
         /// </summary>
         /// <returns></returns>
-        private IClassifier _getClassifierRegion()
+        private ILayer _getClassifierRegion()
         {
-            if (_netInfo.net != null && _hasCL /*&& (bool)_netInfo.net.GetParameters().GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, false)*/)
+            if (_netInfo.net != null && _hasCL && _netInfo.GetLayer().GetMask().HasFlag(LayerMask.ClaClassifier))
             {
                 var layer = _netInfo.GetLayer();
-                var classifier = (IClassifier) layer.GetInference().GetClassifiers()[_predictedFieldName];
-                return classifier;
+                //var classifier = (IClassifier)layer.GetInference().GetClassifiers()[_predictedFieldName];
+                return layer;
             }
             return null;
         }
@@ -601,31 +604,6 @@ namespace HTM.Net.Research.opf
             //.get("AnomalyClassifier", None);
         }
 
-        private void _tpCompute()
-        {
-            //var tp = this._getTPRegion();
-            //if (tp == null)
-            //    return;
-
-            //bool topDownCompute;
-            //if (this.getInferenceType() == InferenceType.TemporalAnomaly ||
-            //    this._isReconstructionModel())
-            //{
-            //    topDownCompute = true;
-            //}
-            //else
-            //{
-            //    topDownCompute = false;
-            //}
-
-            //tp = this._getTPRegion();
-            //tp.setParameter("topDownMode", topDownCompute);
-            //tp.setParameter("inferenceMode", this.isInferenceEnabled());
-            //tp.setParameter("learningMode", this.isLearningEnabled());
-            //tp.prepareInputs();
-            //tp.compute();
-        }
-
         private bool _isReconstructionModel()
         {
             InferenceType inferenceType = this.getInferenceType();
@@ -677,6 +655,7 @@ namespace HTM.Net.Research.opf
                 var sp = this._getSPRegion();
                 //spOutput = sp.getOutputData('bottomUpOut');
                 var spOutput = _netInfo.GetLayer().GetInference().GetFeedForwardActiveColumns();
+                patternNZ = ArrayUtils.Where(spOutput, o => o != 0).ToList();
                 //patternNZ = spOutput.nonzero()[0];
             }
             else if (this._getSensorRegion() != null)
@@ -744,10 +723,10 @@ namespace HTM.Net.Research.opf
             // Get the classifier input encoder, if we don't have it already
             if (_classifierInputEncoder == null)
             {
-                if (predictedFieldName == null)
-                {
-                    throw new InvalidOperationException("This experiment description is missing the 'predictedField' in its config, which is required for multi-step prediction inference.");
-                }
+                //if (predictedFieldName == null)
+                //{
+                //    throw new InvalidOperationException("This experiment description is missing the 'predictedField' in its config, which is required for multi-step prediction inference.");
+                //}
 
                 List<EncoderTuple> encoderList = sensor.GetEncoder().GetEncoders(sensor.GetEncoder());//.getEncoderList();
                 this._numFields = encoderList.Count;
@@ -756,7 +735,7 @@ namespace HTM.Net.Research.opf
                 var fieldNames = sensor.GetEncoder().GetScalarNames();// encoderList.Select(et => et.GetFieldName()).ToList();
                 if (fieldNames != null && fieldNames.Contains(predictedFieldName))
                 {
-                    this._predictedFieldIdx = fieldNames.OrderBy(k=>k).ToList().IndexOf(predictedFieldName);
+                    this._predictedFieldIdx = fieldNames.ToList().IndexOf(predictedFieldName);
                 }
                 else
                 {
@@ -767,19 +746,18 @@ namespace HTM.Net.Research.opf
                 // In a multi-step model, the classifier input encoder is separate from
                 //  the other encoders and always disabled from going into the bottom of
                 // the network.
-                //if (sensor.GetDisabledEncoder() != null)
-                //{
-                //    encoderList = sensor.GetDisabledEncoder().GetEncoders();
-                //}
-                //else
-                //{
-                encoderList = new List<EncoderTuple>();
-                //}
-                if (encoderList.Count >= 1)
+                if (_disabledSensorEncoder != null)
                 {
-                    //    fieldNames = sensor.getSelf().disabledEncoder.getScalarNames();
-                    //    this._classifierInputEncoder = encoderList[fieldNames.index(
-                    //                                                    predictedFieldName)];
+                    encoderList = _disabledSensorEncoder.GetEncoders(_disabledSensorEncoder);
+                }
+                else
+                {
+                    encoderList = new List<EncoderTuple>();
+                }
+                if (encoderList.Count >= 1 && _disabledSensorEncoder != null)
+                {
+                    fieldNames = _disabledSensorEncoder.GetScalarNames();
+                    _classifierInputEncoder = encoderList[fieldNames.IndexOf(predictedFieldName)].GetEncoder();
                 }
                 else
                 {
@@ -787,7 +765,7 @@ namespace HTM.Net.Research.opf
                     //  classifier, so use the one that goes into the bottom of the network
                     //encoderList = sensor.getSelf().encoder.getEncoderList();
                     encoderList = sensor.GetEncoder().GetEncoders(sensor.GetEncoder());
-                    this._classifierInputEncoder = encoderList[_predictedFieldIdx.GetValueOrDefault()].GetEncoder();
+                    _classifierInputEncoder = encoderList[_predictedFieldIdx.GetValueOrDefault()].GetEncoder();
                     //throw new NotImplementedException("check line above");
                 }
             }
@@ -800,7 +778,8 @@ namespace HTM.Net.Research.opf
             // TODO: All this logic could be simpler if in the encoder itself
             if (!rawInput.ContainsKey(predictedFieldName))
             {
-                throw new InvalidOperationException("Input row does not contain a value for the predicted field configured for this model. Missing value for " + predictedFieldName);
+                throw new InvalidOperationException("Input row does not contain a value for the predicted field configured for this model. " +
+                                                    $"Missing value for {predictedFieldName}");
             }
             double absoluteValue = TypeConverter.Convert<double>(rawInput[predictedFieldName]);
             int bucketIdx = this._classifierInputEncoder.GetBucketIndices(absoluteValue)[0];
@@ -808,16 +787,16 @@ namespace HTM.Net.Research.opf
             double actualValue;
             // Convert the absolute values to deltas if necessary
             // The bucket index should be handled correctly by the underlying delta encoder
-            if ((this._classifierInputEncoder is DeltaEncoder))
+            if ((_classifierInputEncoder is DeltaEncoder))
             {
                 // Make the delta before any values have been seen 0 so that we do not mess up the
                 // range for the adaptive scalar encoder.
-                if (!this._ms_prevVal.HasValue)
+                if (!_ms_prevVal.HasValue)
                 {
-                    this._ms_prevVal = absoluteValue;
+                    _ms_prevVal = absoluteValue;
                 }
-                var prevValue = this._ms_prevVal.GetValueOrDefault();
-                this._ms_prevVal = absoluteValue;
+                var prevValue = _ms_prevVal.GetValueOrDefault();
+                _ms_prevVal = absoluteValue;
                 actualValue = absoluteValue - prevValue;
             }
             else
@@ -853,12 +832,16 @@ namespace HTM.Net.Research.opf
             {
                 recordNum = this.__numRunCalls;
             }
+
+            // We need the classification of all the fields
             // The parameters should be applied there automaticly through the parameters in the network
-            IClassifier classifierImpl = _getClassifierRegion();
+            IClassifier classifierImpl = _predictedFieldClassifier;
             //Debug.WriteLine($"-> Current alpha in classifier: {classifierImpl.Alpha}");
 
             Classification<double> clResults = classifierImpl.Compute<double>(recordNum: recordNum, patternNonZero: patternNZ.ToArray(),
                 classification: classificationIn, learn: needLearning, infer: true);
+
+            //(IClassifier)layer.GetInference()
 
             //        clResults = classifier.getSelf().customCompute(recordNum = recordNum,
             //                                               patternNZ = patternNZ,
@@ -921,7 +904,7 @@ namespace HTM.Net.Research.opf
 
                 // Remove entries with 0 likelihood or likelihood less than
                 // minLikelihoodThreshold, but don't leave an empty dict.
-                likelihoodsDict = (Map<object, double?>)CLAModel._removeUnlikelyPredictions(likelihoodsDict, minLikelihoodThreshold, maxPredictionsPerStep);
+                likelihoodsDict = _removeUnlikelyPredictions(likelihoodsDict, minLikelihoodThreshold, maxPredictionsPerStep);
 
                 // calculate likelihood for each bucket
                 var bucketLikelihood = new Map<int, double?>();
@@ -935,6 +918,7 @@ namespace HTM.Net.Research.opf
                 //  by the sum of the deltas
                 if (this._classifierInputEncoder is DeltaEncoder)
                 {
+                    #region Delta Encoder
                     // Get the prediction history for this number of timesteps.
                     // The prediction history is a store of the previous best predicted values.
                     // This is used to get the final shift from the current absolute value.
@@ -1007,7 +991,8 @@ namespace HTM.Net.Research.opf
                     else
                     {
                         ((Map<int, double?>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (absoluteValue + sumDelta + (double)bestActValue);
-                    }
+                    } 
+                    #endregion
                 }
 
                 // ---------------------------------------------------------------------
@@ -1096,7 +1081,7 @@ namespace HTM.Net.Research.opf
         /// dict containing the input to the sensor 
         /// </param>
         /// <returns>Return a 'ClassifierInput' object, which contains the mapped bucket index for input Record</returns>
-        private object _getClassifierInputRecord(Map<string, object> inputRecord)
+        private ClassifierInput _getClassifierInputRecord(Map<string, object> inputRecord)
         {
             double? absoluteValue = null;
             int? bucketIdx = null;
@@ -1428,11 +1413,21 @@ namespace HTM.Net.Research.opf
 
             MultiEncoder encoder = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build(); // enabledEncoders
             MultiEncoderAssembler.Assemble(encoder, enabledEncoders);
+            fieldNames = enabledEncoders.Select(e => e.Value.fieldName).Distinct().ToList();
             encoder.SetScalarNames(fieldNames);
 
             sensor.InitEncoder(parameters);
             sensor.SetEncoder(encoder);
 
+            if (disabledEncoders.Count > 0)
+            {
+                MultiEncoder disabledEncoder = (MultiEncoder) MultiEncoder.GetBuilder().Name("").Build(); // disabledEncoders
+                MultiEncoderAssembler.Assemble(disabledEncoder, disabledEncoders);
+                fieldNames = disabledEncoders.Select(e => e.Value.fieldName).Distinct().ToList();
+                disabledEncoder.SetScalarNames(fieldNames);
+
+                _disabledSensorEncoder = disabledEncoder;
+            }
 
             layer.Add(sensor);
 
@@ -1465,15 +1460,15 @@ namespace HTM.Net.Research.opf
                 if (!spEnable)
                 {
                     //tpParams.inputWidth[0] = tpParams.columnCount[0] = prevRegionWidth;
-                    parameters.SetInputDimensions(new [] {prevRegionWidth});
-                    parameters.SetColumnDimensions(new [] {prevRegionWidth});
+                    parameters.SetInputDimensions(new[] { prevRegionWidth });
+                    parameters.SetColumnDimensions(new[] { prevRegionWidth });
                 }
                 else
                 {
                     Debug.Assert(((int[])parameters.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS))[0] == prevRegionWidth);
                     //tpParams.inputWidth = tpParams.columnCount;
                     parameters.SetInputDimensions((int[])parameters.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS));
-                    
+
                     //parameters.SetInputDimensions(tpParams.inputWidth);
                 }
 
@@ -1516,7 +1511,7 @@ namespace HTM.Net.Research.opf
         /// minLikelihoodThreshold, but don't leave an empty dict.
         /// </summary>
         /// <returns></returns>
-        public static IDictionary<object, double?> _removeUnlikelyPredictions(IDictionary<object, double?> likelihoodsDict,
+        public static Map<object, double?> _removeUnlikelyPredictions(Map<object, double?> likelihoodsDict,
             double minLikelihoodThreshold, int maxPredictionsPerStep)
         {
             var maxVal = new Util.Tuple(null, null);
@@ -1582,17 +1577,17 @@ namespace HTM.Net.Research.opf
         public override List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false)
         {
             //var fieldNames = _modelConfig.inputRecordSchema.Select(v => v.name).ToList();// _modelConfig.inputRecordSchema.Select(m=>m.name).ToList();
-            var sensorFlags = _modelConfig.Control.InputRecordSchema.OrderBy(v => v.name).Select(v => v.special).ToList();
+            var sensorFlags = _modelConfig.Control.InputRecordSchema.Select(v => v.special).ToList();
 
             MultiEncoder encoder = _getEncoder();
 
-            var fieldNames = encoder.GetScalarNames();
+            var fieldNames = _modelConfig.Control.InputRecordSchema.Select(v => v.name).ToList();
             //var fieldTypes = encoder.GetDecoderOutputFieldTypes();
-            var fieldTypes = _modelConfig.Control.InputRecordSchema.OrderBy(v => v.name).Select(v => v.type).ToList();
+            var fieldTypes = _modelConfig.Control.InputRecordSchema.Select(v => v.type).ToList();
             Debug.Assert(fieldNames.Count == fieldTypes.Count);
 
             // Also include the classifierOnly field?
-            MultiEncoder clEncoder = (MultiEncoder)_getClassifierOnlyEncoder();
+            MultiEncoder clEncoder = _getClassifierOnlyEncoder();
             if (includeClassifierOnlyField && clEncoder != null)
             {
                 var addFieldNames = clEncoder.GetScalarNames();
@@ -1641,14 +1636,13 @@ namespace HTM.Net.Research.opf
         /// not to the bottom of the network
         /// </summary>
         /// <returns></returns>
-        private IEncoder _getClassifierOnlyEncoder()
+        private MultiEncoder _getClassifierOnlyEncoder()
         {
-            //_getSensorRegion().disabledEncoder;
-            return null;
+            return _disabledSensorEncoder;
         }
     }
 
-    internal class ClassifierInput
+    public class ClassifierInput
     {
         private readonly double? _dataRow;
         private readonly int? _bucketIndex;

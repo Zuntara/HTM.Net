@@ -5,14 +5,14 @@ using HTM.Net.Encoders;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
-using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
-    public class SimpleV2DescriptionParameters : ClaExperimentParameters
+    public class SpatialClassificationDescriptionParameters : ExperimentParameters
     {
-        public SimpleV2DescriptionParameters()
+        public SpatialClassificationDescriptionParameters()
         {
             InitializeParameters();
         }
@@ -33,13 +33,14 @@ namespace HTM.Net.Research.Tests.Swarming
             SetParameterByKey(KEY.SYN_PERM_ACTIVE_INC, 0.1);
             SetParameterByKey(KEY.SYN_PERM_CONNECTED, 0.1);
             SetParameterByKey(KEY.SYN_PERM_INACTIVE_DEC, 0.01);
+
             // Temporal defaults
             SetParameterByKey(KEY.TM_VERBOSITY, 0);
             SetParameterByKey(KEY.CELLS_PER_COLUMN, 32);
             SetParameterByKey(KEY.INPUT_DIMENSIONS, new[] { 2048 });
             SetParameterByKey(KEY.SEED_TM, 1960);
             SetParameterByKey(KEY.RANDOM_TM, new XorshiftRandom((int)paramMap[KEY.SEED_TM]));
-            SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 15);
+            SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
             // Maximum number of synapses per segment
             //  > 0 for fixed-size CLA
             // -1 for non-fixed-size CLA
@@ -59,27 +60,23 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // Classifier params
             SetParameterByKey(KEY.CLASSIFIER_ALPHA, 0.001);
-            SetParameterByKey(KEY.AUTO_CLASSIFY, true);
+            SetParameterByKey(KEY.AUTO_CLASSIFY, EnableClassification);
             SetParameterByKey(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
-            SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 1 });
+            SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 0 });
 
             SetParameterByKey(KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
         }
 
         private void SetProperties()
         {
+            InferenceType = InferenceType.NontemporalClassification;
+
             // Intermediate variables used to compute fields in modelParams and also
             // referenced from the control section.
             AggregationInfo = new AggregationSettings
             {
                 days = 0,
-                fields = new Map<string, object>
-                    {
-                        {"timestamp", "first"},
-                        {"gym", "first"},
-                        {"consumption", "mean"},
-                        {"address", "first"}
-                    },
+                fields = new Map<string, object>(),
                 hours = 0,
                 microseconds = 0,
                 milliseconds = 0,
@@ -92,13 +89,12 @@ namespace HTM.Net.Research.Tests.Swarming
 
             EnableSpatialPooler = true;
             EnableClassification = true;
-            EnableTemporalMemory = true;
+            EnableTemporalMemory = false;
 
-            InferenceType = InferenceType.TemporalNextStep;
             Control.InputRecordSchema = new[]
             {
-                new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank),
                 new FieldMetaInfo("address", FieldMetaType.String, SensorFlags.Blank),
+                new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank),
                 new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp),
                 new FieldMetaInfo("consumption", FieldMetaType.Float, SensorFlags.Blank),
             };
@@ -106,11 +102,11 @@ namespace HTM.Net.Research.Tests.Swarming
             {
                 inputPredictedField = InputPredictedField.Auto,
                 predictedField = "consumption",
-                predictionSteps = new[] { 1 }
+                predictionSteps = new[] { 0 }
             };
             Control.DatasetSpec = new StreamDef
             {
-                info = "test_NoProviders",
+                info = "testSpatialClassification",
                 streams = new[]
                 {
                     new StreamDef.StreamItem
@@ -119,13 +115,21 @@ namespace HTM.Net.Research.Tests.Swarming
                         info = "test data",
                         source = "test_data.csv"
                     }
-                }
+                },
+                version = 1
             };
             Control.Metrics = new[]
             {
-                new MetricSpec(field: "consumption", inferenceElement: InferenceElement.Prediction, metric: "rmse")
+                new MetricSpec(field: "consumption",
+                    inferenceElement: InferenceElement.MultiStepBestPredictions,
+                    metric: "multiStep", @params: new Map<string, object>
+                    {
+                        {"window", 1000},
+                        {"steps", new[] {0}},
+                        {"errorMetric", "avg_err"}
+                    })
             };
-            Control.LoggedMetrics = new[] {".*nupicScore.*"};
+            Control.LoggedMetrics = new[] { ".*" };
 
             #region Encoder setup
 
@@ -143,16 +147,18 @@ namespace HTM.Net.Research.Tests.Swarming
                     }
                 },
                 {
-                    "consumption", new EncoderSetting
+                    "_classifierInput", new EncoderSetting
                     {
-                        clipInput = true,
+                        name = "_classifierInput",
                         fieldName = "consumption",
+                        classifierOnly = true,
+                        clipInput = true,
                         maxVal = 200,
                         minVal = 0,
                         n = 1500,
-                        name = "consumption",
                         type = "ScalarEncoder",
-                        w = 21
+                        w = 21,
+                        //{"categoryList", new List<string>() }
                     }
                 },
                 {
@@ -166,15 +172,6 @@ namespace HTM.Net.Research.Tests.Swarming
                         categoryList = new List<string>()
                     }
                 },
-                //{
-                //    "timestamp", new EncoderSetting
-                //    {
-                //        fieldName = "timestamp",
-                //        type = "DateEncoder",
-                //        dayOfWeek = new Tuple(7, 3),
-                //        timeOfDay = new Tuple(7, 8),
-                //    }
-                //},
                 {
                     "timestamp_dayOfWeek", new EncoderSetting
                     {

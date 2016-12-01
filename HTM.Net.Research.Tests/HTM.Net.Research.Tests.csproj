@@ -124,9 +124,9 @@
     </Compile>
     <Compile Include="Regression\OpfBenchMarkTest.cs" />
     <Compile Include="Swarming\PermutationHelperTest.cs" />
-    <Compile Include="Swarming\SimpleV2DescriptionFile.cs" />
+    <Compile Include="Swarming\SimpleV2DescriptionParameters.cs" />
     <Compile Include="Swarming\SimpleV2PermutationsFile.cs" />
-    <Compile Include="Swarming\SpatialClassificationDescriptionFile.cs" />
+    <Compile Include="Swarming\SpatialClassificationDescriptionParameters.cs" />
     <Compile Include="Swarming\SpatialClassificationPermutationsFile.cs" />
     <Compile Include="Swarming\SwarmingTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

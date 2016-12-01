@@ -2,6 +2,7 @@
 using System.Linq;
 using HTM.Net.Encoders;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -52,7 +53,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public void TestClaExperimentParameters()
         {
             // Should return a filled parameter list with default values
-            var pars = ClaExperimentParameters.Default();
+            var pars = ExperimentParameters.Default();
             Assert.IsNotNull(pars);
             Assert.AreEqual(26, pars.Size());
         }

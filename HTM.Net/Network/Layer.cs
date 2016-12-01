@@ -1494,7 +1494,7 @@ namespace HTM.Net.Network
         /// <em><b>NOT</b></em> be shared between layers. <see cref="Region"/>s
         /// <em><b>NEVER</b></em> share <see cref="IInference"/>s
         /// </remarks>
-        internal LayerMask GetMask()
+        public LayerMask GetMask()
         {
             return AlgoContentMask;
         }

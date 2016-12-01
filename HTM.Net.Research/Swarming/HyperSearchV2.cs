@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -2518,12 +2517,12 @@ namespace HTM.Net.Research.Swarming
         // Added myself, is the description holder (file)
         public string baseDescriptionFileName;
         public string hsVersion = "v2";
-        public ClaExperimentParameters descriptionPyContents;
+        public ExperimentParameters descriptionPyContents;
 
         public void Populate(Map<string, object> jobParamsMap)
         {
             this.persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
-            this.descriptionPyContents = (ClaExperimentParameters)jobParamsMap["descriptionPyContents"];
+            this.descriptionPyContents = (ExperimentParameters)jobParamsMap["descriptionPyContents"];
             this.permutationsPyContents = (BasePermutations)jobParamsMap["permutationsPyContents"];
             this.maxModels = TypeConverter.Convert<int?>(jobParamsMap.Get("maxModels"));
             this.hsVersion = (string)jobParamsMap["hsVersion"];
@@ -2641,7 +2640,7 @@ namespace HTM.Net.Research.Swarming
         private HsState _hsState;
         private SwarmTerminator _swarmTerminator;
         //private string _basePath;
-        private ClaExperimentParameters _baseDescription;
+        private ExperimentParameters _baseDescription;
         private int _baseDescriptionHash;
         private int _maxUniqueModelAttempts;
         private double _modelOrphanIntervalSecs;
@@ -3150,7 +3149,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="filename">Name of permutations file</param>
         /// <param name="modelDescription"></param>
         /// <returns>None</returns>
-        private void _readPermutationsFile(string permFileJson, ClaExperimentParameters modelDescription)
+        private void _readPermutationsFile(string permFileJson, ExperimentParameters modelDescription)
         {
             // Open and execute the permutations file
             //Dictionary<string, object> vars = new Dictionary<string, object>();
@@ -4485,7 +4484,6 @@ namespace HTM.Net.Research.Swarming
                     // that this is where we incorporate encoders that have no permuted
                     // values in them.
                     var position = candidateParticle.GetPosition();
-                    PermutationModelParameters structuredParams = new PermutationModelParameters();
                     Func<object, string[], object> _buildStructuredParams = (value, keys) =>
                     {
                         string flatKey = _flattenKeys(keys);
@@ -4516,7 +4514,7 @@ namespace HTM.Net.Research.Swarming
                         }
                     };
 
-                    structuredParams = (PermutationModelParameters)Utils.rCopy(this._permutations,
+                    var structuredParams = (PermutationModelParameters)Utils.rCopy(this._permutations,
                         _buildStructuredParams,
                         discardNoneKeys: false);
 
@@ -4528,13 +4526,14 @@ namespace HTM.Net.Research.Swarming
                     };
 
                     // And the hashes.
-                    //MD5 m = MD5.Create();
+                    MD5 m = MD5.Create();
                     //m.update(sortedJSONDumpS(structuredParams));
                     //m.update(this._baseDescriptionHash);
                     //paramsHash = m.digest();
-                    paramsHash = GetMd5Hash(MD5.Create(), Json.Serialize(structuredParams) + Json.Serialize(_baseDescriptionHash));
-                    string particleInst = string.Format("{0}.{1}", modelParams.particleState.id, modelParams.particleState.genIdx);
-                    particleHash = GetMd5Hash(MD5.Create(), particleInst);// hashlib.md5(particleInst).digest();
+                    //paramsHash = GetMd5Hash(m, Json.Serialize(structuredParams) + Json.Serialize(_baseDescriptionHash));
+                    paramsHash = GetMd5Hash(m, (structuredParams.GetHashCode().ToString() + _baseDescription.GetHashCode()).ToString());
+                    string particleInst = $"{modelParams.particleState.id}.{modelParams.particleState.genIdx}";
+                    particleHash = GetMd5Hash(m, particleInst);// hashlib.md5(particleInst).digest();
 
                     // Increase attempt counter
                     numAttempts += 1;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using HTM.Net.Data;
 using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
 

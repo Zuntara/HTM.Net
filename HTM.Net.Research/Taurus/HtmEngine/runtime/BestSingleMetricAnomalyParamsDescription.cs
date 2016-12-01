@@ -1,26 +1,29 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
-using HTM.Net.Network.Sensor;
-using HTM.Net.Research.opf;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
-namespace HTM.Net.Research.Tests.Swarming
+namespace HTM.Net.Research.Taurus.HtmEngine.runtime
 {
-    public class SpatialClassificationDescriptionParameters : ClaExperimentParameters
+    public class BestSingleMetricAnomalyParamsDescription : BaseDescription
     {
-        
-    }
 
-    public class SpatialClassificationDescriptionFile : BaseDescription
-    {
-        public SpatialClassificationDescriptionFile()
+        public BestSingleMetricAnomalyParamsDescription()
         {
+            control = new ControlModelDescription
+            {
+                inferenceArgs = new InferenceArgsDescription
+                {
+                    predictionSteps = new[] { 1 },
+                    predictedField = "c1",
+                    inputPredictedField = InputPredictedField.Auto
+                }
+            };
+
             var config = new ConfigModelDescription
             {
                 // Type of model that the rest of these parameters apply to.
@@ -47,19 +50,11 @@ namespace HTM.Net.Research.Tests.Swarming
 
                 predictAheadTime = null,
 
-                inputRecordSchema = new[]
-                {
-                    new FieldMetaInfo("address", FieldMetaType.String, SensorFlags.Blank),
-                    new FieldMetaInfo("gym", FieldMetaType.String, SensorFlags.Blank),
-                    new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.Timestamp),
-                    new FieldMetaInfo("consumption", FieldMetaType.Float, SensorFlags.Blank),
-                },
-
                 // Model parameter dictionary.
                 modelParams = new ModelParamsDescription
                 {
                     // The type of inference that this model will perform
-                    inferenceType = InferenceType.NontemporalClassification,
+                    inferenceType = InferenceType.TemporalAnomaly,
 
                     sensorParams = new SensorParamsDescription
                     {
@@ -78,58 +73,27 @@ namespace HTM.Net.Research.Tests.Swarming
                         encoders = new EncoderSettingsList
                         {
                             {
-                                "address", new EncoderSetting
+                                "c0_timeOfDay", new EncoderSetting
                                 {
-                                    fieldName= "address",
-                                    n= 300,
-                                    name= "address",
-                                    type= "SDRCategoryEncoder",
-                                    w= 21,
-                                    categoryList= new List<string>()
-                                }
-                            },
-                            {
-                                "_classifierInput", new EncoderSetting
-                                {
-                                    name= "_classifierInput",
-                                    fieldName= "consumption",
-                                    classifierOnly= true,
-                                    clipInput= true,
-                                    maxVal= 200,
-                                    minVal= 0,
-                                    n= 1500,
-                                    type= "ScalarEncoder",
-                                    w= 21,
-                                    //{"categoryList", new List<string>() }
-                                }
-                            },
-                            {
-                                "gym", new EncoderSetting
-                                {
-                                    fieldName= "gym",
-                                    n= 300,
-                                    name= "gym",
-                                    type= "SDRCategoryEncoder",
-                                    w= 21,
-                                    categoryList= new List<string>()
-                                }
-                            },
-                            {
-                                "timestamp_dayOfWeek", new EncoderSetting
-                                {
-                                    dayOfWeek= new Tuple(7, 3),
-                                    fieldName= "timestamp",
-                                    name= "timestamp_dayOfWeek",
+                                    dayOfWeek= new Tuple(21, 9.49),
+                                    fieldName= "c0",
+                                    name= "c0",
                                     type= "DateEncoder"
                                 }
                             },
                             {
-                                "timestamp_timeOfDay", new EncoderSetting
+                                "c0_dayOfWeek", null
+                            },
+                            {
+                                "c0_weekend", null
+                            },
+                            {
+                                "c1", new EncoderSetting
                                 {
-                                    fieldName= "timestamp",
-                                    name= "timestamp_timeOfDay",
-                                    timeOfDay= new Tuple(7, 8),
-                                    type= "DateEncoder"
+                                    fieldName= "c1",
+                                    name= "c1",
+                                    type= "RandomDistributedScalarEncoder",
+                                    numBuckets= 130.0
                                 }
                             }
                         },
@@ -176,7 +140,7 @@ namespace HTM.Net.Research.Tests.Swarming
                         // What percent of the columns"s receptive field is available
                         // for potential synapses. At initialization time, we will
                         // choose potentialPct * (2*potentialRadius+1)^2
-                        potentialPct = 0.5,
+                        potentialPct = 0.8,
 
                         // The default connected threshold. Any synapse whose
                         // permanence value is above the connected threshold is
@@ -187,18 +151,20 @@ namespace HTM.Net.Research.Tests.Swarming
                         // threshold set below this default value.
                         // (This concept applies to both SP and TP and so "cells"
                         // is correct here as opposed to "columns")
-                        synPermConnected = 0.1,
+                        synPermConnected = 0.2,
 
-                        synPermActiveInc = 0.1,
+                        synPermActiveInc = 0.003,
 
-                        synPermInactiveDec = 0.01,
+                        synPermInactiveDec = 0.0005,
+
+                        maxBoost = 1.0
                     },
 
                     // Controls whether TP is enabled or disabled;
                     // TP is necessary for making temporal predictions, such as predicting
                     // the next inputs.  Without TP, the model is only capable of
                     // reconstructing missing sensor inputs (via SP).
-                    tpEnable = false,
+                    tpEnable = true,
 
                     tpParams = new TemporalParamsDescription
                     {
@@ -267,14 +233,14 @@ namespace HTM.Net.Research.Tests.Swarming
                         // during search for the best-matching segments.
                         // None=use default
                         // Replaces: tpMinThreshold
-                        minThreshold = 12,
+                        minThreshold = 10,
 
                         // Segment activation threshold.
                         // A segment is active if it has >= tpSegmentActivationThreshold
                         // connected synapses that are active due to infActiveState
                         // None=use default
                         // Replaces: tpActivationThreshold
-                        activationThreshold = 16,
+                        activationThreshold = 13,
 
                         outputType = "normal",
 
@@ -282,14 +248,14 @@ namespace HTM.Net.Research.Tests.Swarming
                         // elements to append to the end of a learned sequence at a time.
                         // Smaller values are better for datasets with short sequences,
                         // higher values are better for datasets with long sequences.
-                        pamLength = 1,
+                        pamLength = 3,
                     },
 
-                    clEnable = true,
+                    clEnable = false,
 
                     clParams = new ClassifierParamsDescription
                     {
-                        regionName = typeof(SDRClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
+                        regionName = typeof(CLAClassifier).AssemblyQualifiedName,// "CLAClassifierRegion",
 
                         // Classifier diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
@@ -297,38 +263,26 @@ namespace HTM.Net.Research.Tests.Swarming
 
                         // This controls how fast the classifier learns/forgets. Higher values
                         // make it adapt faster and forget older patterns faster.
-                        alpha = 0.001,
+                        alpha = 0.035828933612157998,
 
                         // This is set after the call to updateConfigFromSubConfig and is
                         // computed from the aggregationInfo and predictAheadTime.
-                        steps = new[] { 0 },
+                        steps = new[] { 1 },
                     },
-
-                    trainSPNetOnlyIfRequested = false,
-
                     anomalyParams = new AnomalyParamsDescription
                     {
+                        anomalyCacheRecords = null,
                         autoDetectThreshold = null,
-                        autoDetectWaitRecords = null,
-                        anomalyCacheRecords = null
-                    }
+                        autoDetectWaitRecords = 5030
+                    },
+                    trainSPNetOnlyIfRequested = false,
                 }
             };
             // end of config dictionary
 
-
-
-            //inputRecordSchema = new Map<string, Tuple<FieldMetaType, SensorFlags>>
-            //{
-            //    { "address", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
-            //    { "consumption", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.Float, SensorFlags.Blank) },
-            //    { "gym", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.String, SensorFlags.Blank) },
-            //    { "timestamp", new Tuple<FieldMetaType, SensorFlags>(FieldMetaType.DateTime, SensorFlags.Timestamp) },
-            //};
-
             // Adjust base config dictionary for any modifications if imported from a
             // sub-experiment
-            updateConfigFromSubConfig(config);
+            UpdateConfigFromSubConfig(config);
             modelConfig = config;
 
             // Compute predictionSteps based on the predictAheadTime and the aggregation
@@ -340,78 +294,17 @@ namespace HTM.Net.Research.Tests.Swarming
                 config.modelParams.clParams.steps = new[] { predictionSteps };
             }
 
-            // Adjust config by applying ValueGetterBase-derived
-            // futures. NOTE: this MUST be called after updateConfigFromSubConfig() in order
-            // to support value-getter-based substitutions from the sub-experiment (if any)
-            //applyValueGettersToContainer(config);
 
-            control = new ControlModelDescription
-            {
-                // The environment that the current model is being run in
-                environment = "nupic",
-
-                // Input stream specification per py/nupicengine/cluster/database/StreamDef.json.
-                //
-                dataset = new StreamDef
-                {
-                    info = "testSpatialClassification",
-                    streams = new StreamDef.StreamItem[]
-                    {
-                        new StreamDef.StreamItem {
-                            columns= new[] {"*"},
-                            info= "test data",
-                            source= "test_data.csv"
-                        }
-                    },
-                    version = 1
-                },
-
-
-                // Iteration count: maximum number of iterations.  Each iteration corresponds
-                // to one record from the (possibly aggregated) dataset.  The task is
-                // terminated when either number of iterations reaches iterationCount or
-                // all records in the (possibly aggregated) database have been processed,
-                // whichever occurs first.
-                //
-                // iterationCount of -1 = iterate over the entire dataset
-                //"iterationCount" : ITERATION_COUNT,
-
-                // Metrics: A list of MetricSpecs that instantiate the metrics that are
-                // computed for this experiment
-                metrics = new[] { new MetricSpec(field: "consumption",
-                    inferenceElement: InferenceElement.MultiStepBestPredictions,
-                    metric: "multiStep", @params: new Map<string, object>
-                    {
-                        {"window", 1000}, {"steps", new[] {0}}, { "errorMetric", "avg_err"}
-                    })
-                },
-
-                inferenceArgs = new InferenceArgsDescription
-                {
-                    inputPredictedField = InputPredictedField.Auto,
-                    predictedField = "consumption",
-                    predictionSteps = new[] { 0 }
-                },
-
-                // Logged Metrics: A sequence of regular expressions that specify which of
-                // the metrics from the Inference Specifications section MUST be logged for
-                // every prediction. The regex"s correspond to the automatically generated
-                // metric labels. This is similar to the way the optimization metric is
-                // specified in permutations.py.
-                loggedMetrics = new[] { ".*" }
-            };
         }
 
-        public void updateConfigFromSubConfig(ConfigModelDescription config)
+        public void UpdateConfigFromSubConfig(ConfigModelDescription config)
         {
 
         }
 
         public override Network.Network BuildNetwork()
         {
-            Parameters p = GetParameters();
-
-            return null;
+            throw new NotImplementedException();
         }
 
         public override Parameters GetParameters()
@@ -428,9 +321,9 @@ namespace HTM.Net.Research.Tests.Swarming
             return p;
         }
 
-        public IDescription Clone()
+        public static BestSingleMetricAnomalyParamsDescription BestSingleMetricAnomalyParams
         {
-            return new SpatialClassificationDescriptionFile();
+            get { return new BestSingleMetricAnomalyParamsDescription(); }
         }
     }
 }
