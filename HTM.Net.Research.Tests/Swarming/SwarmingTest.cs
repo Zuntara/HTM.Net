@@ -585,8 +585,8 @@ namespace HTM.Net.Research.Tests.Swarming
         }
 
         // nupic/src/nupic/datafiles/swarming/test_data.csv
-        //[TestMethod]
-        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
@@ -221,7 +222,17 @@ namespace HTM.Net.Research.Swarming.Descriptions
                 EncoderSetting setting = pair.Value as EncoderSetting;
                 if (setting != null)
                 {
-                    encoders[name] = setting;   // TODO, check that this correct, maybe we need to overload individual values from the settings
+                    var origSetting = encoders.Get(name);
+                    if(Debugger.IsAttached && origSetting==null) Debugger.Break();
+                    foreach (string subKey in setting.Keys)
+                    {
+                        var obj = setting[subKey];
+                        if (!obj.Equals(origSetting[subKey]))
+                        {
+                            origSetting[subKey] = obj;
+                        }
+                    }
+                    encoders[name] = origSetting;
                 }
             }
         }

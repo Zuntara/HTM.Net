@@ -124,6 +124,8 @@
     <Compile Include="Swarming\Descriptions\ExperimentParameters.cs" />
     <Compile Include="Swarming\Descriptions\InferenceArgsDescription.cs" />
     <Compile Include="Swarming\ExpGenerator.cs" />
+    <Compile Include="Swarming\HyperSearch\HsState.cs" />
+    <Compile Include="Swarming\HyperSearch\SwarmTerminator.cs" />
     <Compile Include="Swarming\OpfModelRunner.cs" />
     <Compile Include="opf\PredictionMetricsManager.cs" />
     <Compile Include="opf\SensorInput.cs" />
@@ -137,7 +139,7 @@
     <Compile Include="Swarming\HyperSearchV2.cs" />
     <Compile Include="Swarming\HyperSearchWorker.cs" />
     <Compile Include="Swarming\ModelChooser.cs" />
-    <Compile Include="Swarming\Particle.cs" />
+    <Compile Include="Swarming\HyperSearch\Particle.cs" />
     <Compile Include="Swarming\PermutationsRunner.cs" />
     <Compile Include="Swarming\Permutations\ExperimentPermutationParameters.cs" />
     <Compile Include="Swarming\SwarmApi.cs" />

@@ -672,74 +672,31 @@ namespace HTM.Net.Research.Swarming
         public string completionMsg;
     }
 
-    public class OneFieldPermuationFilter : IPermutionFilter
+    public class OneFieldPermuationFilter : ExperimentPermutationParameters
     {
         public OneFieldPermuationFilter()
         {
-            predictedField = "consumption";
-            permutations = new PermutationModelParameters
+            PredictedField = "consumption";
+
+            Encoders = new Map<string, object>
             {
-                modelParams = new PermutationModelDescriptionParams()
                 {
-                    sensorParams = new PermutationSensorParams()
-                    {
-                        encoders =
+                    "",
+                    new PermuteEncoder(
+                        fieldName: "consumption",
+                        encoderType: "ScalarEncoder",
+                        kwArgs: new KWArgsModel
                         {
-                            {
-                                "", new PermuteEncoder(
-                                    fieldName: "consumption",
-                                    encoderType: "ScalarEncoder",
-                                    kwArgs: new KWArgsModel
-                                    {
-                                        {"maxval", new PermuteInt(100, 300, 1)},
-                                        {"n", new PermuteInt(13, 500, 1)},
-                                        {"w", 7},
-                                        {"minval", 0},
-                                    }
-                                    )
-                            }
-                        }
-                    },
-                    tpParams = new PermutationTemporalPoolerParams
-                    {
-                        minThreshold = new PermuteInt(9, 12),
-                        activationThreshold = new PermuteInt(12, 16),
-                    }
+                            {"maxval", new PermuteInt(100, 300, 1)},
+                            {"n", new PermuteInt(13, 500, 1)},
+                            {"w", 7},
+                            {"minval", 0},
+                        })
                 }
             };
-            report = new[] { ".*consumption.*" };
-            minimize = "prediction:rmse:field=consumption";
+            Report = new[] { ".*consumption.*" };
+            Minimize = "prediction:rmse:field=consumption";
         }
-
-        #region Implementation of IPermutionFilter
-
-        public string predictedField { get; set; }
-        public PermutationModelParameters permutations { get; set; }
-        public string[] report { get; set; }
-        public string minimize { get; set; }
-        public PermutationModelParameters fastSwarmModelParams { get; set; }
-        public List<string> fixedFields { get; set; }
-        public int? minParticlesPerSwarm { get; set; }
-        public bool? killUselessSwarms { get; set; }
-        public InputPredictedField? inputPredictedField { get; set; }
-        public bool? tryAll3FieldCombinations { get; set; }
-        public bool? tryAll3FieldCombinationsWTimestamps { get; set; }
-        public int? minFieldContribution { get; set; }
-        public int? maxFieldBranching { get; set; }
-        public string maximize { get; set; }
-        public int? maxModels { get; set; }
-
-        public IDictionary<string, object> dummyModelParams(PermutationModelParameters perm)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool permutationFilter(PermutationModelParameters perm)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
     }
 
 

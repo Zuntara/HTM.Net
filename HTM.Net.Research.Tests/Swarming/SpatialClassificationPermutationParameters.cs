@@ -6,6 +6,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Swarming
 {
+    [Serializable]
     public class SpatialClassificationPermutationParameters : ExperimentPermutationParameters
     {
         public SpatialClassificationPermutationParameters()

@@ -7,7 +7,7 @@ using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using log4net;
 
-namespace HTM.Net.Research.Swarming
+namespace HTM.Net.Research.Swarming.HyperSearch
 {
     /// <summary>
     /// Construct a particle. Each particle evaluates one or more models
