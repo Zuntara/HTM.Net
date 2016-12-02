@@ -9,7 +9,7 @@ namespace HTM.Net.Encoders
      *
      * @see {@link Encoder}
      */
- [Serializable]
+    [Serializable]
     public class EncoderResult : Util.Tuple
     {
         /**
@@ -25,7 +25,7 @@ namespace HTM.Net.Encoders
         public EncoderResult(object value, int scalar, int[] encoding)
                 : base("EncoderResult", value, scalar, encoding)
         {
-           //super("EncoderResult", value, scalar, encoding);
+            //super("EncoderResult", value, scalar, encoding);
         }
 
         public EncoderResult(object value, double scalar, int[] encoding)
@@ -70,6 +70,7 @@ namespace HTM.Net.Encoders
         {
             return (int[])Item4;
         }
+        #region Overrides of Tuple
 
         public override bool Equals(object obj)
         {
@@ -86,20 +87,27 @@ namespace HTM.Net.Encoders
                 return false;
             }
             EncoderResult other = (EncoderResult)obj;
-            if (!this.GetScalar().Equals(other.GetScalar()))
+            if (!GetScalar().Equals(other.GetScalar()))
             {
                 return false;
             }
-            if (!this.GetValue().Equals(other.GetValue()))
+            if (!GetValue().Equals(other.GetValue()))
             {
                 return false;
             }
-            if (!Arrays.AreEqual(this.GetEncoding(), other.GetEncoding()))
+            if (!Arrays.AreEqual(GetEncoding(), other.GetEncoding()))
             {
                 return false;
             }
             return true;
         }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        #endregion
     }
 
 
