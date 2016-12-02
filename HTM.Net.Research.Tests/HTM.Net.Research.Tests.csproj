@@ -123,6 +123,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Regression\OpfBenchMarkTest.cs" />
+    <Compile Include="Swarming\Experiments\DeltaDescriptionParameters.cs" />
     <Compile Include="Swarming\Experiments\OneFieldPermuationFilter.cs" />
     <Compile Include="Swarming\PermutationHelperTest.cs" />
     <Compile Include="Swarming\Experiments\SimpleV2DescriptionParameters.cs" />
@@ -173,6 +174,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Resources\foxeat.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\sawtooth.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Resources\RandomData.csv">

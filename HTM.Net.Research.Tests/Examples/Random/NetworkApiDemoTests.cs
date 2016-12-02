@@ -108,8 +108,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
         //    Assert.IsNotNull(s);
         //}
 
-        [TestMethod]
-        [DeploymentItem("Resources\\RandomData.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\RandomData.csv")]
         public void RunBasicNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_CLA);
@@ -141,8 +141,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
         }
 
-        [TestMethod]
-        [DeploymentItem("Resources\\RandomData.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\RandomData.csv")]
         public void RunBasicNetworkSdr()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_SDR);
@@ -169,8 +169,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
         }
 
-        [TestMethod]
-        [DeploymentItem("Resources\\RandomData.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\RandomData.csv")]
         public void RunMultiLayerNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.MULTILAYER);
@@ -197,8 +197,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
         }
 
-        [TestMethod]
-        [DeploymentItem("Resources\\RandomData.csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\RandomData.csv")]
         public void RunMultiRegionNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.MULTIREGION);

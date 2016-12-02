@@ -35,7 +35,7 @@ namespace HTM.Net.Research.Tests.Swarming
             var var = (T)Activator.CreateInstance(typeof(T), minValue, maxValue, stepSize, inertia, cogRate, socRate);
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                var pos = var.GetPosition();
+                var pos = (double)var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -91,7 +91,7 @@ namespace HTM.Net.Research.Tests.Swarming
             var var = (T)Activator.CreateInstance(typeof(T), minValue, maxValue, stepSize, inertia, cogRate, socRate);
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                var pos = var.GetPosition();
+                var pos = (double)var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -152,7 +152,7 @@ namespace HTM.Net.Research.Tests.Swarming
             double pos = 0;
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                pos = var.GetPosition();
+                pos = (double)var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -199,7 +199,7 @@ namespace HTM.Net.Research.Tests.Swarming
             double pos = 0;
             foreach (var nothing in ArrayUtils.XRange(0, iterations, 1))
             {
-                pos = var.GetPosition();
+                pos = (double)var.GetPosition();
                 if (this.verbosity >= 1)
                 {
                     Console.WriteLine("pos: {0}", pos);
@@ -234,7 +234,7 @@ namespace HTM.Net.Research.Tests.Swarming
         [TestMethod]
         public void TestChoices()
         {
-            var pc = new PermuteChoices(new[] { 0, 1.0, 2, 3 });
+            var pc = new PermuteChoices(new object[] { 0, 1.0, 2, 3 });
             int[] counts = new int[4];
             var rng = new MersenneTwister(42);
             // Check the without results the choices are chosen uniformly.
@@ -252,7 +252,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // Check that with some results the choices are chosen with the lower
             // errors being chosen more often.
-            var choices = new[] { 1, 11.0, 21, 31 };
+            var choices = new object[] { 1, 11.0, 21, 31 };
             pc = new PermuteChoices(choices);
            List<Tuple<int, List<double>>> resultsPerChoice = new List<Tuple<int, List<double>>>();
             var counts2 = new Map<int, int>();
@@ -267,7 +267,7 @@ namespace HTM.Net.Research.Tests.Swarming
             // Check the without results the choices are chosen uniformly.
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
-                double choice = pc.NewPosition(null, rng).GetValueOrDefault();
+                double choice = ((double?)pc.NewPosition(null, rng)).GetValueOrDefault();
                 counts2[(int)choice] += 1;
             }
             // Make sure that as the error goes up, the number of times the choice is
@@ -282,7 +282,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // Check that with fixEarly as you see more data points you begin heavily
             // biasing the probabilities to the one with the lowest error.
-            choices = new[] { 1, 11, 21.0, 31 };
+            choices = new object[] { 1, 11, 21.0, 31 };
             pc = new PermuteChoices(choices, fixEarly: true);
             var resultsPerChoiceDict = new Map<int, Tuple<int, List<double>>>();
             counts2 = new Map<int, int>();
@@ -311,7 +311,7 @@ namespace HTM.Net.Research.Tests.Swarming
                 // Check the without results the choices are chosen uniformly.
                 foreach (var nothing2 in ArrayUtils.Range(0, 1000))
                 {
-                    double choice = pc.NewPosition(null, rng).GetValueOrDefault();
+                    double choice = ((double?)pc.NewPosition(null, rng)).GetValueOrDefault();
                     counts2[(int)choice] += 1;
                 }
                 // Make sure that as the error goes up, the number of times the choice is

@@ -3,7 +3,7 @@ namespace HTM.Net.Swarming.HyperSearch
     public class VarState
     {
         public double? position;
-        public double _position;
+        public object _position;
         public double? velocity;
         public double? bestPosition;
         public double? bestResult;

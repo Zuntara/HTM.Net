@@ -64,7 +64,7 @@ namespace HTM.Net.Swarming.HyperSearch
         /// for int vars, returns position to nearest int
         /// </summary>
         /// <returns>current position</returns>
-        public virtual double GetPosition()
+        public virtual object GetPosition()
         {
             throw new System.NotImplementedException();
         }
@@ -85,7 +85,7 @@ namespace HTM.Net.Swarming.HyperSearch
         /// </summary>
         /// <param name="globalBestPosition">global best position for this colony</param>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual double? NewPosition(double? globalBestPosition, IRandom rng)
+        public virtual object NewPosition(double? globalBestPosition, IRandom rng)
         {
             throw new System.NotImplementedException();
         }
@@ -144,7 +144,7 @@ namespace HTM.Net.Swarming.HyperSearch
             this._socRate = socRate ?? SwarmConfiguration.socRate;
             
             // The particle's local best position and the best global position.
-            this._bestPosition = this.GetPosition();
+            this._bestPosition = (double)this.GetPosition();
             this._bestResult = null;
         }
 
@@ -155,7 +155,7 @@ namespace HTM.Net.Swarming.HyperSearch
             return new VarState
             {
                 _position = this._position,
-                position = this.GetPosition(),
+                position = (double)this.GetPosition(),
                 velocity = this._velocity,
                 bestPosition = this._bestPosition,
                 bestResult = this._bestResult
@@ -164,13 +164,13 @@ namespace HTM.Net.Swarming.HyperSearch
 
         public override void SetState(VarState varState)
         {
-            this._position = varState._position;
+            this._position = (double) varState._position;
             this._velocity = varState.velocity;
             this._bestPosition = varState.bestPosition;
             this._bestResult = varState.bestResult;
         }
 
-        public override double GetPosition()
+        public override object GetPosition()
         {
             if (!this.stepSize.HasValue)
             {
@@ -215,7 +215,7 @@ namespace HTM.Net.Swarming.HyperSearch
             }
         }
 
-        public override double? NewPosition(double? globalBestPosition, IRandom rng)
+        public override object NewPosition(double? globalBestPosition, IRandom rng)
         {
             // First, update the velocity. The new velocity is given as:
             // v = (inertia * v)  + (cogRate * r1 * (localBest-pos))
@@ -226,11 +226,11 @@ namespace HTM.Net.Swarming.HyperSearch
             double ub = SwarmConfiguration.randomUpperBound;
 
             this._velocity = (this._velocity * this._inertia + rng.NextDouble(lb, ub) *
-                              this._cogRate * (this._bestPosition - this.GetPosition()));
+                              _cogRate * (_bestPosition - (double)GetPosition()));
             if (globalBestPosition.HasValue)
             {
                 this._velocity += rng.NextDouble(lb, ub) * this._socRate * (
-                    globalBestPosition.Value - this.GetPosition());
+                    globalBestPosition.Value - (double)this.GetPosition());
             }
 
             // update position based on velocity
@@ -289,7 +289,7 @@ namespace HTM.Net.Swarming.HyperSearch
             this._position = positions[positionIdx];
 
             // Set its best position to this.
-            this._bestPosition = this.GetPosition();
+            this._bestPosition = (double)this.GetPosition();
 
             // Give it a random direction.
             this._velocity *= rng.Choice(new[] { 1, -1 });
@@ -336,9 +336,9 @@ namespace HTM.Net.Swarming.HyperSearch
 
         #region Overrides of PermuteFloat
 
-        public override double GetPosition()
+        public override object GetPosition()
         {
-            double position = base.GetPosition();
+            double position = (double)base.GetPosition();
             position = (int)Math.Round(position);
             return position;
         }
@@ -367,7 +367,7 @@ namespace HTM.Net.Swarming.HyperSearch
         public int _bestPositionIdx;
         public bool _fixEarly;
         public double _fixEarlyFactor;
-        public double[] choices;
+        public object[] choices;
         public double? _bestResult;
         public List<List<double>> _resultsPerChoice;
 
@@ -377,7 +377,7 @@ namespace HTM.Net.Swarming.HyperSearch
 
         }
 
-        public PermuteChoices(double[] choices, bool fixEarly = false)
+        public PermuteChoices(object[] choices, bool fixEarly = false)
         {
             this.choices = choices;
             this._positionIdx = 0;
@@ -408,7 +408,7 @@ namespace HTM.Net.Swarming.HyperSearch
             return new VarState
             {
                 _position = this.GetPosition(),
-                position = (int)this.GetPosition(),
+                position = (double)this.GetPosition(),
                 velocity = null,
                 bestPosition = (double)this.choices[this._bestPositionIdx],
                 bestResult = this._bestResult
@@ -422,7 +422,7 @@ namespace HTM.Net.Swarming.HyperSearch
             this._bestResult = varState.bestResult;
         }
 
-        public override double GetPosition()
+        public override object GetPosition()
         {
             return this.choices[this._positionIdx];
         }
@@ -433,7 +433,7 @@ namespace HTM.Net.Swarming.HyperSearch
             // TODO: figure this out
         }
 
-        public override double? NewPosition(double? globalBestPosition, IRandom rng)
+        public override object NewPosition(double? globalBestPosition, IRandom rng)
         {
             // Compute the mean score per choice.
             int numChoices = this.choices.Length;

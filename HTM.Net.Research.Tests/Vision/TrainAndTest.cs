@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Model;
@@ -200,27 +201,27 @@ namespace HTM.Net.Research.Tests.Vision
 
             pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
 
-            Map<string, object> catInnerSettings = new Map<string, object>();
-            catInnerSettings.Add("fieldName", "category");
-            catInnerSettings.Add("name", "category");
-            catInnerSettings.Add("n", 8);
-            catInnerSettings.Add("w", 3);
-            catInnerSettings.Add("forced", true);
-            catInnerSettings.Add("resolution", 1);
-            catInnerSettings.Add("radius", 0);
-            catInnerSettings.Add("minVal", 0);
-            catInnerSettings.Add("maxVal", 10);
-            catInnerSettings.Add("fieldType", "int");
-            catInnerSettings.Add("encoderType", "ScalarEncoder");
+            EncoderSetting catInnerSettings = new EncoderSetting();
+            catInnerSettings.fieldName = "category";
+            catInnerSettings.name = "category";
+            catInnerSettings.n = 8;
+            catInnerSettings.w = 3;
+            catInnerSettings.forced = true;
+            catInnerSettings.resolution = 1;
+            catInnerSettings.radius = 0;
+            catInnerSettings.minVal = 0;
+            catInnerSettings.maxVal = 10;
+            catInnerSettings.fieldType = FieldMetaType.Integer;
+            catInnerSettings.encoderType = "ScalarEncoder";
 
-            Map<string, object> imgInnerSettings = new Map<string, object>();
-            imgInnerSettings.Add("fieldName", "imageIn");
-            imgInnerSettings.Add("n", 1024); // width
-            imgInnerSettings.Add("name", "imageIn");
-            imgInnerSettings.Add("fieldType", "darr");
-            imgInnerSettings.Add("encoderType", "SDRPassThroughEncoder");
+            EncoderSetting imgInnerSettings = new EncoderSetting();
+            imgInnerSettings.fieldName = "imageIn";
+            imgInnerSettings.n = 1024; // width
+            imgInnerSettings.name = "imageIn";
+            imgInnerSettings.fieldType = FieldMetaType.DenseArray;
+            imgInnerSettings.encoderType = "SDRPassThroughEncoder";
 
-            Map<String, Map<String, Object>> settings = new Map<string, Map<string, object>>();
+            EncoderSettingsList settings = new EncoderSettingsList();
             settings.Add("imageIn", imgInnerSettings);
             settings.Add("category", catInnerSettings);
 
@@ -277,7 +278,7 @@ namespace HTM.Net.Research.Tests.Vision
             Assert.IsTrue(!b2.ByteArray.All(i => i == 255));
             Assert.IsTrue(!b2.ByteArray.SequenceEqual(b1.ByteArray));
 
-            sensor.LoadSpecificImages(new[] {b1, b2}, new[] {"1", "2"});
+            sensor.LoadSpecificImages(new[] { b1, b2 }, new[] { "1", "2" });
 
             ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
             //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
@@ -331,27 +332,27 @@ namespace HTM.Net.Research.Tests.Vision
 
             pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
 
-            Map<string, object> catInnerSettings = new Map<string, object>();
-            catInnerSettings.Add("fieldName", "category");
-            catInnerSettings.Add("name", "category");
-            catInnerSettings.Add("n", 8);
-            catInnerSettings.Add("w", 3);
-            catInnerSettings.Add("forced", true);
-            catInnerSettings.Add("resolution", 1);
-            catInnerSettings.Add("radius", 0);
-            catInnerSettings.Add("minVal", 0);
-            catInnerSettings.Add("maxVal", 10);
-            catInnerSettings.Add("fieldType", "int");
-            catInnerSettings.Add("encoderType", "ScalarEncoder");
+            EncoderSetting catInnerSettings = new EncoderSetting();
+            catInnerSettings.fieldName = "category";
+            catInnerSettings.name = "category";
+            catInnerSettings.n = 8;
+            catInnerSettings.w = 3;
+            catInnerSettings.forced = true;
+            catInnerSettings.resolution = 1;
+            catInnerSettings.radius = 0;
+            catInnerSettings.minVal = 0;
+            catInnerSettings.maxVal = 10;
+            catInnerSettings.fieldType = FieldMetaType.Integer;
+            catInnerSettings.encoderType = "ScalarEncoder";
 
-            Map<string, object> imgInnerSettings = new Map<string, object>();
-            imgInnerSettings.Add("fieldName", "imageIn");
-            imgInnerSettings.Add("n", 1024); // width
-            imgInnerSettings.Add("name", "imageIn");
-            imgInnerSettings.Add("fieldType", "darr");
-            imgInnerSettings.Add("encoderType", "SDRPassThroughEncoder");
+            EncoderSetting imgInnerSettings = new EncoderSetting();
+            imgInnerSettings.fieldName = "imageIn";
+            imgInnerSettings.n = 1024; // width
+            imgInnerSettings.name = "imageIn";
+            imgInnerSettings.fieldType = FieldMetaType.DenseArray;
+            imgInnerSettings.encoderType = "SDRPassThroughEncoder";
 
-            Map<String, Map<String, Object>> settings = new Map<string, Map<string, object>>();
+            EncoderSettingsList settings = new EncoderSettingsList();
             settings.Add("imageIn", imgInnerSettings);
             settings.Add("category", catInnerSettings);
 
@@ -470,27 +471,27 @@ namespace HTM.Net.Research.Tests.Vision
 
             pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
 
-            Map<string, object> catInnerSettings = new Map<string, object>();
-            catInnerSettings.Add("fieldName", "category");
-            catInnerSettings.Add("name", "category");
-            catInnerSettings.Add("n", 8);
-            catInnerSettings.Add("w", 3);
-            catInnerSettings.Add("forced", true);
-            catInnerSettings.Add("resolution", 1);
-            catInnerSettings.Add("radius", 0);
-            catInnerSettings.Add("minVal", 0);
-            catInnerSettings.Add("maxVal", 10);
-            catInnerSettings.Add("fieldType", "int");
-            catInnerSettings.Add("encoderType", "ScalarEncoder");
+            EncoderSetting catInnerSettings = new EncoderSetting();
+            catInnerSettings.fieldName = "category";
+            catInnerSettings.name = "category";
+            catInnerSettings.n = 8;
+            catInnerSettings.w = 3;
+            catInnerSettings.forced = true;
+            catInnerSettings.resolution = 1;
+            catInnerSettings.radius = 0;
+            catInnerSettings.minVal = 0;
+            catInnerSettings.maxVal = 10;
+            catInnerSettings.fieldType = FieldMetaType.Integer;
+            catInnerSettings.encoderType = "ScalarEncoder";
 
-            Map<string, object> imgInnerSettings = new Map<string, object>();
-            imgInnerSettings.Add("fieldName", "imageIn");
-            imgInnerSettings.Add("n", 1024); // width
-            imgInnerSettings.Add("name", "imageIn");
-            imgInnerSettings.Add("fieldType", "darr");
-            imgInnerSettings.Add("encoderType", "SDRPassThroughEncoder");
+            EncoderSetting imgInnerSettings = new EncoderSetting();
+            imgInnerSettings.fieldName = "imageIn";
+            imgInnerSettings.n = 1024; // width
+            imgInnerSettings.name = "imageIn";
+            imgInnerSettings.fieldType = FieldMetaType.DenseArray;
+            imgInnerSettings.encoderType = "SDRPassThroughEncoder";
 
-            Map<String, Map<String, Object>> settings = new Map<string, Map<string, object>>();
+            EncoderSettingsList settings = new EncoderSettingsList();
             settings.Add("imageIn", imgInnerSettings);
             settings.Add("category", catInnerSettings);
 
@@ -593,7 +594,7 @@ namespace HTM.Net.Research.Tests.Vision
             // Now test the network to make sure it categories the images correctly
             int numCorrect = 0;
             tailLayer.Compute(inputObject1);
-            
+
 
             IInference inference = tailLayer.GetInference();
 

@@ -552,12 +552,20 @@ namespace HTM.Net.Research.Tests.Swarming
             XmlConfigurator.Configure();
         }
 
+        [TestCleanup]
+        public void Cleanup()
+        {
+            Environment.SetEnvironmentVariable("NTA_TEST_numIterations", null);
+            Environment.SetEnvironmentVariable("NTA_TEST_exitAfterNModels", null);
+            Environment.SetEnvironmentVariable("NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow", null);
+        }
+
         /// <summary>
         /// Try running simple permutations
         /// </summary>
         /// <param name="onCluster"></param>
         /// <param name="kwargs"></param>
-        public void TestSimpleV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
+        private void TestSimpleV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
         {
             //this._printTestHeader();
             var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
@@ -587,12 +595,44 @@ namespace HTM.Net.Research.Tests.Swarming
             //this.assertLess(len(resultInfos), 350);
         }
 
+        /// <summary>
+        /// Try running a simple permutations with delta encoder
+        /// Test which tests the delta encoder.Runs a swarm of the sawtooth dataset
+        /// With a functioning delta encoder this should give a perfect result
+        /// DEBUG: disabled temporarily because this test takes too long!!!
+        /// </summary>
+        /// <param name="onCluster"></param>
+        private void TestDeltaV2Internal(bool onCluster = false, KWArgsModel kwargs = null)
+        {
+            var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
+                new DeltaDescriptionParameters(), new DeltaPermutationParameters());
+
+            Environment.SetEnvironmentVariable("NTA_TEST_exitAfterNModels", "20");
+            Environment.SetEnvironmentVariable("NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow", "5");
+
+            var permutationResult = this.RunPermutations(expDirectory: expDir,
+                                   hsImp: "v2",
+                                   //loggingLevel = g_myEnv.options.logLevel,
+                                   onCluster: onCluster,
+                                   //env = env,
+                                   maxModels: null,
+                                   kwargs: kwargs);
+            Assert.IsTrue(permutationResult.minErrScore < 0.002);
+        }
+
         // nupic/src/nupic/datafiles/swarming/test_data.csv
         [TestMethod]
         [DeploymentItem("Resources\\swarming\\test_data.csv")]
         public void TestSimpleV2()
         {
             TestSimpleV2Internal();
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\swarming\\sawtooth.csv")]
+        public void TestDeltaV2()
+        {
+            TestDeltaV2Internal();
         }
 
         [TestMethod]

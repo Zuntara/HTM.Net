@@ -23,12 +23,12 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
                 {
                     "timestamp_dayOfWeek",
                     new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",
-                        kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})
+                        kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new object[] {1.0, 3.0})}, {"w", 7}})
                 },
                 {
                     "timestamp_timeOfDay",
                     new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.timeOfDay",
-                        kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})
+                        kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new object[] {1.0, 8.0})}, {"w", 7}})
                 },
                 {
                     "consumption",

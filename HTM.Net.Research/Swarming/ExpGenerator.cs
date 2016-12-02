@@ -652,7 +652,7 @@ namespace HTM.Net.Research.Swarming
             if (Options.inferenceType == InferenceType.MultiStep)
             {
                 //tokenReplacements["$PERM_INFERENCE_TYPE_CHOICES_inferenceType"] = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
-                permutationParameters.InferenceType = new PermuteChoices(new double[] { (int)InferenceType.NontemporalMultiStep, (int)InferenceType.TemporalMultiStep });
+                permutationParameters.InferenceType = new PermuteChoices(new object[] { InferenceType.NontemporalMultiStep, InferenceType.TemporalMultiStep });
             }
             else
             {
@@ -1336,7 +1336,7 @@ namespace HTM.Net.Research.Swarming
                         else if (key == "weekend")
                         {
                             enc.encoderType = $"{encoderType}.weekend";
-                            enc.radius = new PermuteChoices(new double[] { 1 });
+                            enc.radius = new PermuteChoices(new object[] { 1 });
                             enc.w = ((Tuple)value).Get(0);
                         }
                         else

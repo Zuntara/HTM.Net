@@ -15,8 +15,8 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
             Encoders = new Map<string, object>
                         {
                             {"gym",new PermuteEncoder(fieldName: "gym", encoderType: "SDRCategoryEncoder",kwArgs: new KWArgsModel {{"w", 7}, {"n", 100}})},
-                            {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 3.0})}, {"w", 7}})},
-                            {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new[] {1.0, 8.0})}, {"w", 7}})},
+                            {"timestamp_dayOfWeek",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.dayOfWeek",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new object[] {1.0, 3.0})}, {"w", 7}})},
+                            {"timestamp_timeOfDay",new PermuteEncoder(fieldName: "timestamp", encoderType: "DateEncoder.timeOfDay",kwArgs: new KWArgsModel {{"radius", new PermuteChoices(new object[] {1.0, 8.0})}, {"w", 7}})},
 
                             {"_classifierInput",new PermuteEncoder(fieldName: "consumption", encoderType: "ScalarEncoder",kwArgs: new KWArgsModel {
                                             {"maxval", new PermuteInt(100, 300, 25)},

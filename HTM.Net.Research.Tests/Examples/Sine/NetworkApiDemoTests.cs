@@ -54,7 +54,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         #endregion
 
         //[TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void TestCreateBasicNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC);
@@ -66,7 +66,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         }
 
 
-        [TestMethod]
+        //[TestMethod]
         public void RunBasicNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC);
@@ -88,7 +88,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         }
 
 
-        [TestMethod]
+        //[TestMethod]
         //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         //[DeploymentItem("Resources\\rec-center-15m.Csv")]
         public void RunMultiLayerNetwork()
@@ -111,7 +111,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             }
         }
 
-        [TestMethod]
+        //[TestMethod]
         //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         //[DeploymentItem("Resources\\rec-center-15m.Csv")]
         public void RunMultiRegionNetwork()
