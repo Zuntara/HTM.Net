@@ -176,7 +176,7 @@
     <None Include="Resources\foxeat.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Resources\sawtooth.csv">
+    <None Include="Resources\Swarming\sawtooth.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Resources\RandomData.csv">

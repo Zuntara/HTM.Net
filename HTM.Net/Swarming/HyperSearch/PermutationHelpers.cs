@@ -26,7 +26,7 @@ namespace HTM.Net.Swarming.HyperSearch
         /// </summary>
         /// <param name="otherVars">list of other PermuteVariables to push away from</param>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual void PushAwayFrom(List<double> otherVars, IRandom rng)
+        public virtual void PushAwayFrom(List<object> otherVars, IRandom rng)
         {
             throw new System.NotImplementedException();
         }
@@ -85,7 +85,7 @@ namespace HTM.Net.Swarming.HyperSearch
         /// </summary>
         /// <param name="globalBestPosition">global best position for this colony</param>
         /// <param name="rng">instance of random.Random() used for generating random numbers</param>
-        public virtual object NewPosition(double? globalBestPosition, IRandom rng)
+        public virtual object NewPosition(object globalBestPosition, IRandom rng)
         {
             throw new System.NotImplementedException();
         }
@@ -166,7 +166,7 @@ namespace HTM.Net.Swarming.HyperSearch
         {
             this._position = (double) varState._position;
             this._velocity = varState.velocity;
-            this._bestPosition = varState.bestPosition;
+            this._bestPosition = (double?)varState.bestPosition;
             this._bestResult = varState.bestResult;
         }
 
@@ -215,7 +215,7 @@ namespace HTM.Net.Swarming.HyperSearch
             }
         }
 
-        public override object NewPosition(double? globalBestPosition, IRandom rng)
+        public override object NewPosition(object globalBestPosition, IRandom rng)
         {
             // First, update the velocity. The new velocity is given as:
             // v = (inertia * v)  + (cogRate * r1 * (localBest-pos))
@@ -227,10 +227,10 @@ namespace HTM.Net.Swarming.HyperSearch
 
             this._velocity = (this._velocity * this._inertia + rng.NextDouble(lb, ub) *
                               _cogRate * (_bestPosition - (double)GetPosition()));
-            if (globalBestPosition.HasValue)
+            if (globalBestPosition !=null)
             {
                 this._velocity += rng.NextDouble(lb, ub) * this._socRate * (
-                    globalBestPosition.Value - (double)this.GetPosition());
+                    (double)globalBestPosition - (double)this.GetPosition());
             }
 
             // update position based on velocity
@@ -244,7 +244,7 @@ namespace HTM.Net.Swarming.HyperSearch
             return this.GetPosition();
         }
 
-        public override void PushAwayFrom(List<double> otherPositions, IRandom rng)
+        public override void PushAwayFrom(List<object> otherPositions, IRandom rng)
         {
             // If min and max are the same, nothing to do
             if (Math.Abs(this.max - this.min) < double.Epsilon)
@@ -408,9 +408,9 @@ namespace HTM.Net.Swarming.HyperSearch
             return new VarState
             {
                 _position = this.GetPosition(),
-                position = (double)this.GetPosition(),
+                position = this.GetPosition(),
                 velocity = null,
-                bestPosition = (double)this.choices[this._bestPositionIdx],
+                bestPosition = this.choices[this._bestPositionIdx],
                 bestResult = this._bestResult
             };
         }
@@ -433,7 +433,7 @@ namespace HTM.Net.Swarming.HyperSearch
             // TODO: figure this out
         }
 
-        public override object NewPosition(double? globalBestPosition, IRandom rng)
+        public override object NewPosition(object globalBestPosition, IRandom rng)
         {
             // Compute the mean score per choice.
             int numChoices = this.choices.Length;
@@ -515,7 +515,7 @@ namespace HTM.Net.Swarming.HyperSearch
         }
 
 
-        public override void PushAwayFrom(List<double> otherPositions, IRandom rng)
+        public override void PushAwayFrom(List<object> otherPositions, IRandom rng)
         {
             // Get the count of how many in each position
             //positions = [this.choices.index(x) for x in otherPositions];

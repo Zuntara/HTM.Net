@@ -181,10 +181,10 @@ namespace HTM.Net.Research.Swarming.HyperSearch
                 {
                     foreach (var varName in _permuteVars.Keys)
                     {
-                        var otherPositions = new List<double>();
+                        var otherPositions = new List<object>();
                         foreach (var particleState in newFarFrom)
                         {
-                            otherPositions.Add(particleState.varStates[varName].position.GetValueOrDefault());
+                            otherPositions.Add(particleState.varStates[varName].position);
                         }
                         _permuteVars[varName].PushAwayFrom(otherPositions, _rng);
 
@@ -307,7 +307,7 @@ namespace HTM.Net.Research.Swarming.HyperSearch
         {
             // Get the update best position and result?
             double? bestResult;
-            Dictionary<string, double> bestPosition;
+            Dictionary<string, object> bestPosition;
             if (newBest)
             {
                 var tuplePositions = _resultsDb.getParticleBest(particleId);
@@ -361,7 +361,7 @@ namespace HTM.Net.Research.Swarming.HyperSearch
 
                     // Set the best position to the copied position
                     VarState state = particleState.varStates[varName].Clone();
-                    state._position = state.position.GetValueOrDefault();
+                    state._position = state.position;
                     state.bestPosition = state.position;
 
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
@@ -408,7 +408,7 @@ namespace HTM.Net.Research.Swarming.HyperSearch
 
                     // Set the best position to the copied position
                     var state = particleState.varStates[varName].Clone();
-                    state._position = state.position.GetValueOrDefault();
+                    state._position = state.position;
                     state.bestPosition = state.position;
 
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
@@ -474,7 +474,7 @@ namespace HTM.Net.Research.Swarming.HyperSearch
             // TODO: make sure we're calling this when appropriate.
 
             // Get the global best position for this swarm generation
-            Dictionary<string, double> globalBestPosition = null;
+            Dictionary<string, object> globalBestPosition = null;
             // If speculative particles are enabled, use the global best considering
             //  even particles in the current generation. This gives better results
             //  but does not provide repeatable results because it depends on
@@ -552,13 +552,13 @@ namespace HTM.Net.Research.Swarming.HyperSearch
         /// </summary>
         /// <param name="pState"></param>
         /// <returns>dict() of particle position, keys are the variable names, values are their positions</returns>
-        public static Map<string, double> GetPositionFromState(ParticleStateModel pState)
+        public static Map<string, object> GetPositionFromState(ParticleStateModel pState)
         {
-            Map<string, double> result = new Map<string, double>();
+            Map<string, object> result = new Map<string, object>();
             foreach (var pair in pState.varStates)
             //for (varName, value) in pState["varStates"].iteritems()
             {
-                result[pair.Key] = pair.Value.position.GetValueOrDefault();
+                result[pair.Key] = pair.Value.position;
             }
 
             return result;

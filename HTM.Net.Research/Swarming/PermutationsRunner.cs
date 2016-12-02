@@ -464,7 +464,7 @@ namespace HTM.Net.Research.Swarming
                     var output = varState.retval;
                     var k = pair.Key;
                     var v = pair.Value;
-                    if (v.position.HasValue && v.bestPosition.HasValue && v.velocity.HasValue)
+                    if (v.position != null && v.bestPosition != null && v.velocity.HasValue)
                     {
                         output[k] = v.position;
                     }

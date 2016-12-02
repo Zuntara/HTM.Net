@@ -241,7 +241,7 @@ namespace HTM.Net.Research.Tests.Swarming
             int pos = -1;
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
-                pos = (int)(pc.NewPosition(null, rng));
+                pos = TypeConverter.Convert<int>((pc.NewPosition(null, rng)));
                 counts[pos] += 1;
             }
             foreach (int count in counts)
@@ -258,8 +258,8 @@ namespace HTM.Net.Research.Tests.Swarming
             var counts2 = new Map<int, int>();
             foreach (var choice in choices)
             {
-                resultsPerChoice.Add(new Tuple<int, List<double>>((int)choice, new List<double> { (double)choice }));
-                counts2[(int)choice] = 0;
+                resultsPerChoice.Add(new Tuple<int, List<double>>(TypeConverter.Convert<int>(choice), new List<double> { TypeConverter.Convert<double>(choice) }));
+                counts2[TypeConverter.Convert<int>(choice)] = 0;
             }
             pc.SetResultsPerChoice(resultsPerChoice);
 
@@ -268,15 +268,15 @@ namespace HTM.Net.Research.Tests.Swarming
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
                 double choice = ((double?)pc.NewPosition(null, rng)).GetValueOrDefault();
-                counts2[(int)choice] += 1;
+                counts2[TypeConverter.Convert<int>(choice)] += 1;
             }
             // Make sure that as the error goes up, the number of times the choice is
             // seen goes down.
             int prevCount = 1001;
             foreach (var choice in choices)
             {
-                Assert.IsTrue(prevCount > counts2[(int)choice]);
-                prevCount = counts2[(int)choice];
+                Assert.IsTrue(prevCount > counts2[TypeConverter.Convert<int>(choice)]);
+                prevCount = counts2[TypeConverter.Convert<int>(choice)];
             }
             Console.WriteLine("Results permuteChoice test passed");
 
@@ -290,10 +290,10 @@ namespace HTM.Net.Research.Tests.Swarming
             foreach (var choice in choices)
             {
                 //resultsPerChoiceDict[choice] = (choice, []);
-                resultsPerChoiceDict[(int)choice] = new Tuple<int, List<double>>((int)choice, new List<double>());
+                resultsPerChoiceDict[TypeConverter.Convert<int>(choice)] = new Tuple<int, List<double>>(TypeConverter.Convert<int>(choice), new List<double>());
                 //resultsPerChoiceDict[(int)choice] = new Dictionary<int, List<double>> { { (int)choice, new List<double>() } };
 
-                counts2[(int)choice] = 0;
+                counts2[TypeConverter.Convert<int>(choice)] = 0;
             }
             // The count of the highest probability entry, this should go up as more
             // results are seen.
@@ -303,8 +303,8 @@ namespace HTM.Net.Research.Tests.Swarming
                 foreach (var choice in choices)
                 {
                     //resultsPerChoiceDict[(int)choice][1].Add((double) choice);
-                    resultsPerChoiceDict[(int)choice].Item2.Add((double)choice);
-                    counts2[(int)choice] = 0;
+                    resultsPerChoiceDict[TypeConverter.Convert<int>(choice)].Item2.Add(TypeConverter.Convert<double>(choice));
+                    counts2[TypeConverter.Convert<int>(choice)] = 0;
                 }
                 pc.SetResultsPerChoice(resultsPerChoiceDict.Values.ToList());
 
@@ -312,7 +312,7 @@ namespace HTM.Net.Research.Tests.Swarming
                 foreach (var nothing2 in ArrayUtils.Range(0, 1000))
                 {
                     double choice = ((double?)pc.NewPosition(null, rng)).GetValueOrDefault();
-                    counts2[(int)choice] += 1;
+                    counts2[TypeConverter.Convert<int>(choice)] += 1;
                 }
                 // Make sure that as the error goes up, the number of times the choice is
                 // seen goes down.

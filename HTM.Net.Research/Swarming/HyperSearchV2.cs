@@ -57,7 +57,7 @@ namespace HTM.Net.Research.Swarming
         private Dictionary<string, List<int>> _swarmNumParticlesPerGeneration;
         private HashSet<Tuple<string, int>> _modifiedSwarmGens;
         private HashSet<Tuple<string, int>> _maturedSwarmGens;
-        private Map<string, Tuple<double?, Map<string, double>>> _particleBest;
+        private Map<string, Tuple<double?, Map<string, object>>> _particleBest;
         private Dictionary<string, int> _particleLatestGenIdx;
         private Dictionary<string, List<int>> _swarmIdToIndexes;
         private Dictionary<string, int?> _paramsHashToIndexes;
@@ -124,7 +124,7 @@ namespace HTM.Net.Research.Swarming
             // generations) and the position it was at when it got that score. The keys
             // in this dict are the particleId, the values are (bestResult, position),
             // where position is a dict with varName:position items in it.
-            this._particleBest = new Map<string, Tuple<double?, Map<string, double>>>();
+            this._particleBest = new Map<string, Tuple<double?, Map<string, object>>>();
 
             // For each particle, we keep track of it's latest generation index.
             this._particleLatestGenIdx = new Dictionary<string, int>();
@@ -346,11 +346,11 @@ namespace HTM.Net.Research.Swarming
             if (matured && !hidden)
             {
                 //(oldResult, pos) = this._particleBest.get(particleId, (numpy.inf, None));
-                Tuple<double?, Map<string, double>> oldResultPos = this._particleBest.Get(particleId, new Tuple<double?, Map<string, double>>(double.PositiveInfinity, null));// TODO check!
+                Tuple<double?, Map<string, object>> oldResultPos = this._particleBest.Get(particleId, new Tuple<double?, Map<string, object>>(double.PositiveInfinity, null));// TODO check!
                 if (errScore < oldResultPos.Item1 /*oldResult*/)
                 {
-                    Map<string, double> pos1 = Particle.GetPositionFromState(modelParams.particleState);
-                    this._particleBest[particleId] = new Tuple<double?, Map<string, double>>(errScore, pos1);
+                    Map<string, object> pos1 = Particle.GetPositionFromState(modelParams.particleState);
+                    this._particleBest[particleId] = new Tuple<double?, Map<string, object>>(errScore, pos1);
                     // this._particleBest[particleId] = (errScore, pos1);
                 }
             }
@@ -840,7 +840,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="particleId">which particle</param>
         /// <returns>(bestResult, bestPosition)</returns>
-        public Tuple<double?, Map<string, double>> getParticleBest(string particleId)
+        public Tuple<double?, Map<string, object>> getParticleBest(string particleId)
         {
             return this._particleBest.Get(particleId, null);
         }
@@ -860,9 +860,9 @@ namespace HTM.Net.Research.Swarming
         /// <param name="maxGenIdx">max generation index to consider from other models, ignored if None</param>
         /// <param name="varName">which variable to retrieve</param>
         /// <returns>list of the errors obtained from each choice.</returns>
-        public Map<int, Tuple<int, List<double>>> getResultsPerChoice(string swarmId, int? maxGenIdx, string varName)
+        public Map<string, Tuple<int, List<double>>> getResultsPerChoice(string swarmId, int? maxGenIdx, string varName)
         {
-            var results = new Map<int, Tuple<int, List<double>>>();
+            var results = new Map<string, Tuple<int, List<double>>>();
             // Get all the completed particles in this swarm
             //(allParticles, _, resultErrs, _, _) = this.getParticleInfos(swarmId,
             //                                          genIdx = None, matured = True);
@@ -889,18 +889,18 @@ namespace HTM.Net.Research.Swarming
                 }
 
                 var position = Particle.GetPositionFromState(particleState);
-                double varPosition = position[varName];
-                //var varPositionStr = varPosition.ToString();
+                object varPosition = position[varName];
+                var varPositionStr = varPosition.ToString();
 
-                if (results.ContainsKey((int)varPosition))
+                if (results.ContainsKey(varPositionStr))
                 {
-                    results[(int)varPosition].Item2.Add(resultErr);
+                    results[varPositionStr].Item2.Add(resultErr);
                     //results[varPositionStr][1].Add(resultErr);
                 }
                 else
                 {
                     //results[varPositionStr] = (varPosition, [resultErr]);
-                    results[(int)varPosition] = new Tuple<int, List<double>>((int)varPosition, new List<double> { resultErr });
+                    results[varPositionStr] = new Tuple<int, List<double>>(TypeConverter.Convert<int>(varPosition), new List<double> { resultErr });
                 }
             }
 
