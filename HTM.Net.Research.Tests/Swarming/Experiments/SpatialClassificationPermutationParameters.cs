@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
+using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 
-namespace HTM.Net.Research.Tests.Swarming
+namespace HTM.Net.Research.Tests.Swarming.Experiments
 {
     [Serializable]
     public class SpatialClassificationPermutationParameters : ExperimentPermutationParameters
@@ -49,8 +49,9 @@ namespace HTM.Net.Research.Tests.Swarming
 
         #region Overrides of ExperimentPermutationParameters
 
-        public override IDictionary<string, object> DummyModelParams(ExperimentPermutationParameters parameters)
+        public override DummyModelParameters DummyModelParams(ExperimentPermutationParameters parameters, bool forTesting)
         {
+            if(forTesting) return new DummyModelParameters();
             double errScore = 50;
 
             //errScore += Math.Abs((int)perm.modelParams.sensorParams.encoders["consumption"]["maxval"] - 250);
@@ -73,23 +74,14 @@ namespace HTM.Net.Research.Tests.Swarming
                 errScore += 40;
             }
 
-            // Make models that contain the __timestamp_timeOfDay encoder run a bit
-            // slower so we can test that we successfully kill running models
-            //double? waitTime = null;
-            //if (Environment.GetEnvironmentVariable("NTA_TEST_variableWaits") == "false")
-            //{
-            //    if (perm.modelParams.sensorParams.encoders["timestamp_timeOfDay"] != null)
-            //        waitTime = 0.01;
-            //}
-
-            var dummyModelParams = new Map<string, object>
+            var dummyModelParams = new DummyModelParameters
             {
-                { "metricValue", errScore},
-                { "iterations", Environment.GetEnvironmentVariable("NTA_TEST_numIterations") ?? "1"},
-                { "waitTime", null},
-                { "sysExitModelRange", Environment.GetEnvironmentVariable("NTA_TEST_sysExitModelRange")},
-                { "errModelRange", Environment.GetEnvironmentVariable("NTA_TEST_errModelRange")},
-                { "jobFailErr", bool.Parse(Environment.GetEnvironmentVariable("NTA_TEST_jobFailErr") ?? "false") }
+                metricValue = errScore,
+                iterations = int.Parse(Environment.GetEnvironmentVariable("NTA_TEST_numIterations") ?? "1"),
+                waitTime = null,
+                sysExitModelRange = Environment.GetEnvironmentVariable("NTA_TEST_sysExitModelRange"),
+                errModelRange = Environment.GetEnvironmentVariable("NTA_TEST_errModelRange"),
+                jobFailErr = bool.Parse(Environment.GetEnvironmentVariable("NTA_TEST_jobFailErr") ?? "false")
             };
 
             return dummyModelParams;

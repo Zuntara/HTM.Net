@@ -7,6 +7,7 @@ using HTM.Net.Research.Data;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Swarming.Permutations;
+using HTM.Net.Research.Tests.Swarming.Experiments;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using log4net;
@@ -271,7 +272,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// <returns>(jobId, jobInfo, resultsInfoForAllModels, metricResults)</returns>
         private PermutationsLocalResult _runPermutationsLocal(Map<string, object> jobParams,
                             bool waitForCompletion = true,
-                            int? continueJobId = null, bool ignoreErrModels = false)
+                            uint? continueJobId = null, bool ignoreErrModels = false)
         {
             Debug.WriteLine("");
             Debug.WriteLine("==================================================================");
@@ -287,10 +288,10 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // Insert the job entry into the database in the pre-running state
             var cjDAO = BaseClientJobDao.Create();
-            int jobID = -1;
+            uint? jobID = null;
             if (!continueJobId.HasValue)
             {
-                jobID = (int)cjDAO.jobInsert(client: "test", cmdLine: "<started manually>",
+                jobID = (uint)cjDAO.jobInsert(client: "test", cmdLine: "<started manually>",
                         @params: Json.Serialize(jobParams),
                         alreadyRunning: true, minimumWorkers: 1, maximumWorkers: 1,
                         jobType: BaseClientJobDao.JOB_TYPE_HS);
@@ -405,7 +406,7 @@ namespace HTM.Net.Research.Tests.Swarming
         /// <returns>(jobID, jobInfo, resultsInfoForAllModels, metricResults, minErrScore)</returns>
         public PermutationsLocalResult RunPermutations(Tuple<ExperimentParameters, ExperimentPermutationParameters> expDirectory, string hsImp = "v2", int? maxModels = 2,
                       int maxNumWorkers = 4, bool onCluster = false, bool waitForCompletion = true,
-                      int? continueJobId = null, string dataPath = null, int? maxRecords = null,
+                      uint? continueJobId = null, string dataPath = null, int? maxRecords = null,
                       int? timeoutSec = null, bool ignoreErrModels = false,
                       int? predictionCacheMaxRecords = null, KWArgsModel kwargs = null)
         {
@@ -460,7 +461,7 @@ namespace HTM.Net.Research.Tests.Swarming
                 return permutationResult;
             }
 
-            var jobID = permutationResult.jobID;
+            uint? jobID = permutationResult.jobID;
             var jobInfo = permutationResult.jobInfo;
             var metricResults = permutationResult.metricResults;
             var resultInfos = permutationResult.results;
@@ -527,7 +528,7 @@ namespace HTM.Net.Research.Tests.Swarming
 
         public class PermutationsLocalResult
         {
-            public int? jobID { get; set; }
+            public uint? jobID { get; set; }
             public NamedTuple jobInfo { get; set; }
             public List<ResultAndStatusModel> results { get; set; }
             public List<double?> metricResults { get; set; }
@@ -566,6 +567,8 @@ namespace HTM.Net.Research.Tests.Swarming
             //{
             //    env = dict();
             //}
+            Environment.SetEnvironmentVariable("NTA_TEST_numIterations", "99");
+            Environment.SetEnvironmentVariable("NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow", "5");
             //env["NTA_TEST_numIterations"] = "99";
             //env["NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow"] = "%d" % (g_repeatableSwarmMaturityWindow);
 
@@ -693,6 +696,10 @@ namespace HTM.Net.Research.Tests.Swarming
         {
             var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
                 new SpatialClassificationDescriptionParameters(), new SpatialClassificationPermutationParameters());
+
+            Environment.SetEnvironmentVariable("NTA_TEST_numIterations", "99");
+            Environment.SetEnvironmentVariable("NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow", "5");
+
             // spatial_classification
             var permutationResult = this.RunPermutations(expDirectory: expDir,
                                    hsImp: "v2",
@@ -705,7 +712,29 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.AreEqual(20, permutationResult.minErrScore);
             Assert.IsTrue(permutationResult.results.Count < 350);
 
+            //  Check the expected field contributions
+            var cjDAO = BaseClientJobDao.Create();
+            var jobResultsStr = cjDAO.jobGetFields(permutationResult.jobID, new[] {"results"})[0] as string;
+            var jobResults = Json.Deserialize<Map<string,object>>(jobResultsStr);
+            var bestModel = cjDAO.modelsInfo(new List<ulong> {TypeConverter.Convert<ulong>(jobResults["bestModel"])})[0];
+            var @params = Json.Deserialize<ModelParams>(bestModel.@params);
 
+            var actualFieldContributions = (Map<string,double>)jobResults["fieldContributions"];
+            Console.WriteLine(Arrays.ToString(actualFieldContributions));
+            var expectedFieldContributions = new Map<string, double>
+            {
+                {"address", 100 * (90.0-30)/90.0},
+                {"gym", 100 * (90.0-40)/90.0},
+                {"timestamp_dayOfWeek", 100 * (90.0-80.0)/90.0},
+                {"timestamp_timeOfDay", 100 * (90.0-90.0)/90.0},
+            };
+            foreach (var expectedFieldContribution in expectedFieldContributions)
+            {
+                Assert.AreEqual(actualFieldContributions[expectedFieldContribution.Key], expectedFieldContribution.Value);
+            }
+
+            Console.WriteLine(@params.particleState.swarmId);
+            Assert.AreEqual("Encoders|address.Encoders|gym", @params.particleState.swarmId);
         }
 
         [TestMethod]
@@ -787,6 +816,8 @@ namespace HTM.Net.Research.Tests.Swarming
             HyperSearchSearchParams p = new HyperSearchSearchParams();
             p.Populate(jobParams);
         }
+
+
     }
 
     /*

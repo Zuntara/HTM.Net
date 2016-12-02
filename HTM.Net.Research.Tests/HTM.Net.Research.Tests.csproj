@@ -123,11 +123,12 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Regression\OpfBenchMarkTest.cs" />
+    <Compile Include="Swarming\Experiments\OneFieldPermuationFilter.cs" />
     <Compile Include="Swarming\PermutationHelperTest.cs" />
-    <Compile Include="Swarming\SimpleV2DescriptionParameters.cs" />
-    <Compile Include="Swarming\SimpleV2PermutationParameters.cs" />
-    <Compile Include="Swarming\SpatialClassificationDescriptionParameters.cs" />
-    <Compile Include="Swarming\SpatialClassificationPermutationParameters.cs" />
+    <Compile Include="Swarming\Experiments\SimpleV2DescriptionParameters.cs" />
+    <Compile Include="Swarming\Experiments\SimpleV2PermutationParameters.cs" />
+    <Compile Include="Swarming\Experiments\SpatialClassificationDescriptionParameters.cs" />
+    <Compile Include="Swarming\Experiments\SpatialClassificationPermutationParameters.cs" />
     <Compile Include="Swarming\SwarmingTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Taurus\AnomalyLikelihoodHelperTests.cs" />

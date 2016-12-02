@@ -642,6 +642,38 @@ namespace HTM.Net.Research.Swarming
         {
             throw new NotImplementedException();
         }
+        /// <summary>
+        /// Fetch all the modelIDs that correspond to a given jobID; empty sequence if none
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <returns></returns>
+        public virtual List<ulong> jobGetModelIDs(uint? jobId)
+        {
+            throw new NotImplementedException();
+        }
+        /// <summary>
+        /// Gets the specified fields for all the models for a single job. This is similar to modelsGetFields
+        /// </summary>
+        /// <param name="jobId">jobID for the models to be searched</param>
+        /// <param name="fields">A list  of fields to return</param>
+        /// <param name="ignoreKilled">(True/False). If True, this will ignore models that have been killed</param>
+        /// <returns>
+        /// a (possibly empty) list of tuples as follows
+        /// [
+        ///     (model_id1, [field1, ..., fieldn]),
+        ///     (model_id2, [field1, ..., fieldn]),
+        ///     (model_id3, [field1, ..., fieldn])
+        ///     ...
+        /// ]
+        /// 
+        /// NOTE: since there is a window of time between a job getting inserted into
+        /// jobs table and the job's worker(s) starting up and creating models, an
+        /// empty-list result is one of the normal outcomes.
+        /// </returns>
+        public virtual List<Tuple<ulong?, object[]>> modelsGetFieldsForJob(uint? jobId, string[] fields, bool ignoreKilled = false)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MemoryClientJobDao : BaseClientJobDao
@@ -1233,6 +1265,64 @@ namespace HTM.Net.Research.Swarming
             model.cpu_time = cpuTime.GetValueOrDefault(0);
             model._eng_last_update_time = DateTime.Now;
             model.update_counter += 1;
+        }
+
+        /// <summary>
+        /// Fetch all the modelIDs that correspond to a given jobID; empty sequence if none
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <returns></returns>
+        public override List<ulong> jobGetModelIDs(uint? jobId)
+        {
+            var rows = _getMatchingRowsWithRetries(Models, m => m.job_id == jobId.GetValueOrDefault(), m=>m.model_id);
+            return rows;
+        }
+
+        /// <summary>
+        /// Gets the specified fields for all the models for a single job. This is similar to modelsGetFields
+        /// </summary>
+        /// <param name="jobId">jobID for the models to be searched</param>
+        /// <param name="fields">A list  of fields to return</param>
+        /// <param name="ignoreKilled">(True/False). If True, this will ignore models that have been killed</param>
+        /// <returns>
+        /// a (possibly empty) list of tuples as follows
+        /// [
+        ///     (model_id1, [field1, ..., fieldn]),
+        ///     (model_id2, [field1, ..., fieldn]),
+        ///     (model_id3, [field1, ..., fieldn])
+        ///     ...
+        /// ]
+        /// 
+        /// NOTE: since there is a window of time between a job getting inserted into
+        /// jobs table and the job's worker(s) starting up and creating models, an
+        /// empty-list result is one of the normal outcomes.
+        /// </returns>
+        public override List<Tuple<ulong?, object[]>> modelsGetFieldsForJob(uint? jobId, string[] fields, bool ignoreKilled = false)
+        {
+            Debug.Assert(fields.Length >= 1, "fields empty");
+
+            var models = Models.Where(m => m.job_id == jobId.GetValueOrDefault()).ToList();
+
+            List<Tuple<ulong?, object[]>> retVal = new List<Tuple<ulong?, object[]>>();
+
+            foreach (var model in models)
+            {
+                int index = 0;
+                Tuple<ulong?, object[]> item = new Tuple<ulong?, object[]>(model.job_id, new object[fields.Length]);
+
+                foreach (var field in fields)
+                {
+                    if (field == "params")
+                    {
+                        item.Item2[index++] = model.@params;
+                    }
+                    else { throw new InvalidOperationException($"field {field} not known");}
+                }
+
+                retVal.Add(item);
+            }
+
+            return retVal;
         }
 
         #endregion

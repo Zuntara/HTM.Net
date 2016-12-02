@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using HTM.Net.Encoders;
+using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 
-namespace HTM.Net.Research.Tests.Swarming
+namespace HTM.Net.Research.Tests.Swarming.Experiments
 {
     [Serializable]
     public class SimpleV2PermutationParameters : ExperimentPermutationParameters
@@ -40,7 +40,6 @@ namespace HTM.Net.Research.Tests.Swarming
                                 {"n", new PermuteInt(13, 500, 20)},
                                 {"w", 7},
                                 {"minval", 0},
-                                {"forced", true}
                             })
                 },
                 {
@@ -59,12 +58,14 @@ namespace HTM.Net.Research.Tests.Swarming
 
         #region Overrides of ExperimentPermutationParameters
 
-        public override IDictionary<string, object> DummyModelParams(ExperimentPermutationParameters parameters)
+        public override DummyModelParameters DummyModelParams(ExperimentPermutationParameters parameters, bool forTesting)
         {
+            if(forTesting) return new DummyModelParameters();
+
             double errScore = 50;
 
-            errScore += Math.Abs((int)((PermuteEncoder)parameters.Encoders["consumption"]).maxval - 250);
-            errScore += Math.Abs((int)((PermuteEncoder)parameters.Encoders["consumption"]).n - 53);
+            errScore += Math.Abs(((EncoderSetting)parameters.Encoders["consumption"]).maxVal.GetValueOrDefault() - 250);
+            errScore += Math.Abs(((EncoderSetting)parameters.Encoders["consumption"]).n.GetValueOrDefault() - 53);
 
             if (parameters.Encoders["address"] != null)
             {
@@ -84,15 +85,15 @@ namespace HTM.Net.Research.Tests.Swarming
                     waitTime = 0.01;
             }
 
-            var dummyModelParams = new Map<string, object>
-                {
-                    { "metricValue", errScore},
-                    { "iterations", Environment.GetEnvironmentVariable("NTA_TEST_numIterations") ?? "1"},
-                    { "waitTime", waitTime},
-                    { "sysExitModelRange", Environment.GetEnvironmentVariable("NTA_TEST_sysExitModelRange")},
-                    { "errModelRange", Environment.GetEnvironmentVariable("NTA_TEST_errModelRange")},
-                    { "jobFailErr", bool.Parse(Environment.GetEnvironmentVariable("NTA_TEST_jobFailErr") ?? "false") }
-                };
+            var dummyModelParams = new DummyModelParameters
+            {
+                metricValue = errScore,
+                iterations = int.Parse(Environment.GetEnvironmentVariable("NTA_TEST_numIterations") ?? "1"),
+                waitTime = waitTime,
+                sysExitModelRange = Environment.GetEnvironmentVariable("NTA_TEST_sysExitModelRange"),
+                errModelRange = Environment.GetEnvironmentVariable("NTA_TEST_errModelRange"),
+                jobFailErr = bool.Parse(Environment.GetEnvironmentVariable("NTA_TEST_jobFailErr") ?? "false")
+            };
 
             return dummyModelParams;
         }

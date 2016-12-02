@@ -25,7 +25,9 @@ namespace HTM.Net.Research.Swarming
     // Class helper for model params definitions (less casting needed)
     public class ModelParams
     {
-        //public Dictionary<string, Dictionary<string, object>> structuredParams { get; set; }
+        /// <summary>
+        /// This parameters-property contain permutation variables and gets re-used to contain the actual values
+        /// </summary>
         public ExperimentPermutationParameters structuredParams { get; set; }
         public ParticleStateModel particleState { get; set; }
 
@@ -258,58 +260,37 @@ namespace HTM.Net.Research.Swarming
             return status;
         }
 
-        public static ModelCompletionStatus runDummyModel(int modelID, int? jobID, ModelDescription @params
-            , string predictedField, object reportKeys, string optimizeKey, BaseClientJobDao jobsDAO,
-           string modelCheckpointGUID
+        public static ModelCompletionStatus runDummyModel(ulong? modelID, uint? jobID, DummyModelParameters @params
+            , string predictedField, string[] reportKeys, string optimizeKey, BaseClientJobDao jobsDAO, string modelCheckpointGuid
             , int? predictionCacheMaxRecords)
         {
-            throw new NotImplementedException();
-            //// The logger for this method
-            ////logger = logging.getLogger('com.numenta.nupic.hypersearch.utils');
+            ModelCompletionStatus completionStatus;
+            // The logger for this method
+            var logger = LogManager.GetLogger(typeof (Utils));
 
+            // Run the experiment now
+            try
+            {
+                var runner = new OpfDummyModelRunner(
+                        modelID: modelID,
+                        jobID: jobID,
+                        predictedField: predictedField,
+                        @params: @params,
+                        reportKeyPatterns: reportKeys,
+                        optimizeKeyPattern: optimizeKey,
+                        jobsDAO: jobsDAO,
+                        modelCheckpointGUID: modelCheckpointGuid,
+                        predictionCacheMaxRecords: predictionCacheMaxRecords);
 
-            //// Run the experiment now
-            //try
-            //{
-            //    if (type(@params) is bool)
-            //    {
-            //        @params = { };
-            //    }
-
-            //    runner = OPFDummyModelRunner(modelID = modelID,
-            //                                 jobID = jobID,
-            //                                 params=params,
-            //                                 predictedField = predictedField,
-            //                                 reportKeyPatterns = reportKeys,
-            //                                 optimizeKeyPattern = optimizeKey,
-            //                                 jobsDAO = jobsDAO,
-            //                                 modelCheckpointGUID = modelCheckpointGUID,
-            //                                 logLevel = logLevel,
-            //                                 predictionCacheMaxRecords = predictionCacheMaxRecords);
-
-            //    (completionReason, completionMsg) = runner.run();
-            //}
-
-            //// The dummy model runner will call sys.exit(1) if
-            ////  NTA_TEST_sysExitFirstNModels is set and the number of models in the
-            ////  models table is <= NTA_TEST_sysExitFirstNModels
-            //catch (SystemExit)
-            //{
-            //    sys.exit(1);
-            //}
-            //catch (InvalidConnectionException)
-            //{
-            //    raise;
-            //}
-            //catch (Exception e)
-            //{
-            //    (completionReason, completionMsg) = _handleModelRunnerException(jobID,
-            //                                   modelID, jobsDAO, "NA",
-            //                                   logger, e);
-            //}
-
-            //// Return completion reason and msg
-            //return (completionReason, completionMsg);
+                completionStatus = runner.run();
+            }
+            catch (Exception e)
+            {
+                completionStatus = _handleModelRunnerException(jobID, modelID, jobsDAO, null, logger, e);
+                throw;
+            }
+            // Return completion reason and msg
+            return completionStatus;
         }
 
         /// <summary>
@@ -659,6 +640,14 @@ namespace HTM.Net.Research.Swarming
         }
     }
 
+    public class JobFailException : Exception
+    {
+        public JobFailException(string message, Exception exception)
+            : base(message, exception)
+        {
+
+        }
+    }
 
     public struct ModelCompletionStatus
     {
@@ -672,291 +661,10 @@ namespace HTM.Net.Research.Swarming
         public string completionMsg;
     }
 
-    public class OneFieldPermuationFilter : ExperimentPermutationParameters
-    {
-        public OneFieldPermuationFilter()
-        {
-            PredictedField = "consumption";
-
-            Encoders = new Map<string, object>
-            {
-                {
-                    "",
-                    new PermuteEncoder(
-                        fieldName: "consumption",
-                        encoderType: "ScalarEncoder",
-                        kwArgs: new KWArgsModel
-                        {
-                            {"maxval", new PermuteInt(100, 300, 1)},
-                            {"n", new PermuteInt(13, 500, 1)},
-                            {"w", 7},
-                            {"minval", 0},
-                        })
-                }
-            };
-            Report = new[] { ".*consumption.*" };
-            Minimize = "prediction:rmse:field=consumption";
-        }
-    }
-
-
-
-    //[JsonConverter(typeof(TypedPermutionFilterJsonConverter))]
-    //public abstract class PermutionFilterBase2// : IPermutionFilter
-    //{
-    //    public string Type { get; set; }
-    //    public string predictedField { get; set; }
-    //    public ModelDescription permutations { get; set; }
-    //    public string[] report { get; set; }
-    //    public string minimize { get; set; }
-    //    public ModelDescription fastSwarmModelParams { get; set; }
-    //    public List<string> fixedFields { get; set; }
-    //    public int? minParticlesPerSwarm { get; set; }
-    //    public bool? killUselessSwarms { get; set; }
-    //    public string inputPredictedField { get; set; }
-    //    public bool? tryAll3FieldCombinations { get; set; }
-    //    public bool? tryAll3FieldCombinationsWTimestamps { get; set; }
-    //    public int? minFieldContribution { get; set; }
-    //    public int? maxFieldBranching { get; set; }
-    //    public string maximize { get; set; }
-    //    public int? maxModels { get; set; }
-
-    //    protected PermutionFilterBase2()
-    //    {
-    //        Type = GetType().AssemblyQualifiedName;
-    //    }
-
-    //    public virtual IDictionary<string, object> dummyModelParams(ModelDescription perm)
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-
-    //    public virtual bool permutationFilter(ModelDescription perm)
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
-
-    //public class TypedPermutionFilterJsonConverter : JsonConverter
-    //{
-    //    #region Overrides of JsonConverter
-
-    //    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-    //    {
-    //        Debug.WriteLine("Writing json");
-    //        serializer.Serialize(writer, value);
-    //    }
-
-    //    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-    //    {
-    //        Debug.WriteLine("Reading json (PermutionFilterBase)");
-
-    //        var jObj = JObject.Load(reader);
-
-    //        object retVal = null;
-    //        string type = jObj.Value<string>("Type");
-    //        retVal = Activator.CreateInstance(Type.GetType(type));
-
-    //        JsonReader reader2 = new JTokenReader(jObj);
-    //        serializer.Populate(reader2, retVal);
-
-    //        return retVal;
-    //    }
-
-    //    public override bool CanConvert(Type objectType)
-    //    {
-    //        return typeof(BasePermutations).IsAssignableFrom(objectType);
-    //    }
-    //    public override bool CanWrite { get { return false; } }
-
-    //    #endregion
-    //}
-
-    //public class TypedDescriptionBaseJsonConverter : JsonConverter
-    //{
-
-    //    public override bool CanWrite { get { return false; } }
-
-    //    #region Overrides of JsonConverter
-
-    //    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-    //    {
-    //        Debug.WriteLine("Writing json");
-    //        serializer.Serialize(writer, value);
-    //    }
-
-    //    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-    //    {
-    //        Debug.WriteLine("Reading json (DescriptionBase)");
-
-    //        var jObj = JObject.Load(reader);
-
-    //        object retVal = null;
-    //        string type = jObj.Value<string>("Type");
-    //        retVal = Activator.CreateInstance(Type.GetType(type));
-
-    //        JsonReader reader2 = new JTokenReader(jObj);
-    //        serializer.Populate(reader2, retVal);
-
-    //        return retVal;
-    //    }
-
-    //    public override bool CanConvert(Type objectType)
-    //    {
-    //        Debug.WriteLine("CanConvert json");
-    //        return typeof(BaseDescription).IsAssignableFrom(objectType);
-    //    }
-
-    //    #endregion
-    //}
-
-    [Serializable]
-    public class ModelDescription
-    {
-        public ModelDescriptionParams modelParams { get; set; }
-
-        //public StructuredParams structuredParams { get; set; }
-    }
-
-    [Serializable]
-    public class ModelDescriptionParams
-    {
-        public string inferenceType { get; set; }
-        public SensorParamsModel sensorParams { get; set; }
-        public TemporalParams tpParams { get; set; }
-    }
-
-    public class ModelDescriptionParamsDescrModel
-    {
-        public bool clEnable;
-        public InferenceType inferenceType { get; set; }
-        public SensorParamsDescrModel sensorParams { get; set; }
-        public TemporalParamsDescr tpParams { get; set; }
-        public bool spEnable { get; set; }
-        public SpatialParamsDescr spParams { get; set; }
-        public bool tpEnable { get; set; }
-        public bool trainSPNetOnlyIfRequested { get; set; }
-        public ClassifierParamsDescr clParams { get; set; }
-        public AnomalyParamsDescription anomalyParams { get; set; }
-
-        public Parameters GetParameters()
-        {
-            Parameters pars = Parameters.Empty();
-            if (spEnable)
-            {
-                pars.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, spParams.globalInhibition);
-            }
-
-            return pars;
-        }
-    }
-
-
-    [Serializable]
-    public class SensorParamsModel
-    {
-        public Map<string, object> encoders { get; set; }
-        public TemporalParams tpParams { get; set; }
-    }
-
-    public class SensorParamsDescrModel
-    {
-        public Map<string, Map<string, object>> encoders { get; set; }
-        public int verbosity { get; set; }
-        public IDictionary<string, object> sensorAutoReset { get; set; }
-    }
-
-    [Serializable]
-    public class TemporalParams
-    {
-        /// <summary>
-        /// int or PermuteInt
-        /// </summary>
-        public object minThreshold { get; set; }
-        /// <summary>
-        /// int or PermuteInt
-        /// </summary>
-        public object activationThreshold { get; set; }
-    }
-
-    public class TemporalParamsDescr
-    {
-        [ParameterMapping]
-        public int minThreshold { get; set; }
-        [ParameterMapping]
-        public int activationThreshold { get; set; }
-        [ParameterMapping("tmVerbosity")]
-        public int verbosity { get; set; }
-        [ParameterMapping("columnDimensions")]
-        public int[] columnCount { get; set; }
-        [ParameterMapping]
-        public int cellsPerColumn { get; set; }
-        [ParameterMapping("inputDimensions")]
-        public int[] inputWidth { get; set; }
-        [ParameterMapping]
-        public int seed { get; set; }
-        //[ParameterMapping]
-        public string temporalImp { get; set; }
-        [ParameterMapping("maxNewSynapseCount")]
-        public int newSynapseCount { get; set; }
-        //[ParameterMapping]
-        public int maxSynapsesPerSegment { get; set; }
-        //[ParameterMapping]
-        public int maxSegmentsPerCell { get; set; }
-        [ParameterMapping("initialPermanence")]
-        public double initialPerm { get; set; }
-        [ParameterMapping("permanenceIncrement")]
-        public double permanenceInc { get; set; }
-        [ParameterMapping("permanenceDecrement")]
-        public double permanenceDec { get; set; }
-        //[ParameterMapping]
-        public double globalDecay { get; set; }
-        //[ParameterMapping]
-        public int maxAge { get; set; }
-        //[ParameterMapping]
-        public string outputType { get; set; }
-        //[ParameterMapping]
-        public int pamLength { get; set; }
-    }
-
-    public class SpatialParamsDescr
-    {
-        [ParameterMapping]
-        public int spVerbosity { get; set; }
-        [ParameterMapping]
-        public bool globalInhibition { get; set; }
-        [ParameterMapping("columnDimensions")]
-        public int[] columnCount { get; set; }
-        [ParameterMapping("inputDimensions")]
-        public int[] inputWidth { get; set; }
-        [ParameterMapping]
-        public double numActiveColumnsPerInhArea { get; set; }
-        [ParameterMapping]
-        public int seed { get; set; }
-        [ParameterMapping]
-        public double potentialPct { get; set; }
-        [ParameterMapping]
-        public double synPermConnected { get; set; }
-        [ParameterMapping]
-        public double synPermActiveInc { get; set; }
-        [ParameterMapping]
-        public double synPermInactiveDec { get; set; }
-        [ParameterMapping]
-        public double maxBoost { get; set; }
-    }
-
-    public class ClassifierParamsDescr
-    {
-        public string regionName { get; set; }
-        public int clVerbosity { get; set; }
-        public double alpha { get; set; }
-        public int steps { get; set; }
-    }
-
     public class AnomalyParamsDescription
     {
         public int? slidingWindowSize { get; set; }
-        public Anomaly.Mode? mode { get; set; }
+        public Anomaly.Mode? mode { get; set; } = Anomaly.Mode.PURE;
 
         /// <summary>
         /// Number of records to store in internal anomaly classifier record cache
@@ -970,72 +678,6 @@ namespace HTM.Net.Research.Swarming
         /// Number of records to wait until auto detection begins
         /// </summary>
         public int? autoDetectWaitRecords { get; set; }
-    }
-
-    public class DescriptionConfigModel
-    {
-        public string model { get; set; }
-        public int? version { get; set; }
-        public AggregationSettings aggregationInfo { get; set; }
-        public AggregationSettings predictAheadTime { get; set; }
-        public ModelDescriptionParamsDescrModel modelParams { get; set; }
-
-        public Map<string, object> GetDictionary()
-        {
-            return new Map<string, object>
-            {
-                {"model",model },
-                {"version",version },
-                {"aggregationInfo",aggregationInfo },
-                {"predictAheadTime",predictAheadTime },
-                {"modelParams",modelParams },
-            };
-        }
-
-        public Parameters GetParameters()
-        {
-            var parameters = Parameters.Empty();
-            parameters.Union(modelParams.GetParameters());
-            return parameters;
-        }
-
-        public object this[string key]
-        {
-            get { return GetDictionary()[key]; }
-        }
-
-        public void SetDictValue(string key, object value)
-        {
-            switch (key)
-            {
-                case "model":
-                    model = (string)value;
-                    break;
-                case "version":
-                    version = (int)value;
-                    break;
-                case "aggregationInfo":
-                    aggregationInfo = (AggregationSettings)value;
-                    break;
-                case "predictAheadTime":
-                    predictAheadTime = (AggregationSettings)value;
-                    break;
-                case "modelParams":
-                    modelParams = (ModelDescriptionParamsDescrModel)value;
-                    break;
-            }
-        }
-    }
-
-    public class DescriptionControlModel
-    {
-        public string environment { get; set; }
-        public Map<string, object> dataset { get; set; }
-        public string[] loggedMetrics { get; set; }
-        public MetricSpec[] metrics { get; set; }
-        public Map<string, object> inferenceArgs { get; set; }
-        public int? iterationCount { get; set; }
-        public int? iterationCountInferOnly { get; set; }
     }
 }
 

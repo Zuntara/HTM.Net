@@ -13,6 +13,8 @@ namespace HTM.Net.Research.Swarming.Permutations
     [Serializable]
     public class ExperimentPermutationParameters : Parameters
     {
+        public int? __model_num { get; set; }
+
         /// <summary>
         /// The name of the field being predicted.  Any allowed permutation MUST contain the prediction field.
         /// </summary>
@@ -57,6 +59,7 @@ namespace HTM.Net.Research.Swarming.Permutations
         public string[] FixedFields { get; set; }
         public ExperimentPermutationParameters FastSwarmModelParams { get; set; }
         public int? MaxModels { get; set; }
+        public int Generation { get; set; }
 
         /// <summary>
         /// Checks that this parameter container has permutable values in it
@@ -68,7 +71,7 @@ namespace HTM.Net.Research.Swarming.Permutations
 
             if (Encoders.Any())
             {
-                hasPermuteParams = hasPermuteParams || Encoders.Any(e=>e.Value is PermuteEncoder);
+                hasPermuteParams = hasPermuteParams || Encoders.Any(e => e.Value is PermuteEncoder);
             }
             hasPermuteParams = hasPermuteParams || InferenceType is PermuteVariable;
             return hasPermuteParams;
@@ -79,9 +82,55 @@ namespace HTM.Net.Research.Swarming.Permutations
             return true;
         }
 
-        public virtual IDictionary<string, object> DummyModelParams(ExperimentPermutationParameters parameters)
+        /// <summary>
+        /// This function can be used for Hypersearch algorithm development. When
+        /// present, Hypersearch doesn't actually run the CLA model in the OPF, but instead run
+        /// a dummy model.This function returns the dummy model params that will be
+        /// used.See the OPFDummyModelRunner class source code(in
+        /// nupic.swarming.ModelRunner) for a description of the schema for
+        /// the dummy model params.
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <param name="forTesting">set to true when this call is just for checking that the method is defined.</param>
+        /// <returns></returns>
+        public virtual DummyModelParameters DummyModelParams(ExperimentPermutationParameters parameters, bool forTesting)
         {
             return null;
+        }
+
+        public ExperimentPermutationParameters Union(ExperimentPermutationParameters p)
+        {
+            foreach (KEY k in p.paramMap.Keys)
+            {
+                SetParameterByKey(k, p.GetParameterByKey(k));
+            }
+            return this;
+        }
+
+        public new ExperimentPermutationParameters Copy()
+        {
+            var p = new ExperimentPermutationParameters().Union(this);
+            p.__model_num = __model_num;
+            p.AggregationInfo = p.AggregationInfo?.Clone();
+            if (Encoders != null) p.Encoders = new Map<string, object>(Encoders);
+            p.FastSwarmModelParams = FastSwarmModelParams;
+            p.FieldPermutationLimit = FieldPermutationLimit;
+            p.FixedFields = FixedFields;
+            p.InferenceType = InferenceType;
+            p.InputPredictedField = InputPredictedField;
+            p.KillUselessSwarms = KillUselessSwarms;
+            p.MaxFieldBranching = MaxFieldBranching;
+            p.MaxModels = MaxModels;
+            p.Maximize = Maximize;
+            p.Minimize = Minimize;
+            p.MinFieldContribution = MinFieldContribution;
+            p.PredictedField = PredictedField;
+            p.MinParticlesPerSwarm = MinParticlesPerSwarm;
+            p.Report = Report;
+            p.Generation = Generation;
+            p.TryAll3FieldCombinations = TryAll3FieldCombinations;
+            p.TryAll3FieldCombinationsWTimestamps = TryAll3FieldCombinationsWTimestamps;
+            return p;
         }
 
         #region Equality members
@@ -107,7 +156,7 @@ namespace HTM.Net.Research.Swarming.Permutations
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ExperimentPermutationParameters) obj);
+            return Equals((ExperimentPermutationParameters)obj);
         }
 
         public override int GetHashCode()
@@ -115,24 +164,24 @@ namespace HTM.Net.Research.Swarming.Permutations
             unchecked
             {
                 int hashCode = base.GetHashCode();
-                hashCode = (hashCode*397) ^ (PredictedField != null ? PredictedField.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ FieldPermutationLimit;
-                hashCode = (hashCode*397) ^ (Report != null ? Report.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Minimize != null ? Minimize.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Maximize != null ? Maximize.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (AggregationInfo != null ? AggregationInfo.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ InputPredictedField.GetHashCode();
-                hashCode = (hashCode*397) ^ MinFieldContribution.GetHashCode();
-                hashCode = (hashCode*397) ^ MaxFieldBranching.GetHashCode();
-                hashCode = (hashCode*397) ^ (InferenceType != null ? InferenceType.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ MinParticlesPerSwarm.GetHashCode();
-                hashCode = (hashCode*397) ^ (Encoders != null ? Encoders.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ KillUselessSwarms.GetHashCode();
-                hashCode = (hashCode*397) ^ TryAll3FieldCombinations.GetHashCode();
-                hashCode = (hashCode*397) ^ TryAll3FieldCombinationsWTimestamps.GetHashCode();
-                hashCode = (hashCode*397) ^ (FixedFields != null ? FixedFields.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (FastSwarmModelParams != null ? FastSwarmModelParams.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ MaxModels.GetHashCode();
+                hashCode = (hashCode * 397) ^ (PredictedField != null ? PredictedField.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ FieldPermutationLimit;
+                hashCode = (hashCode * 397) ^ (Report != null ? Report.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Minimize != null ? Minimize.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Maximize != null ? Maximize.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (AggregationInfo != null ? AggregationInfo.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ InputPredictedField.GetHashCode();
+                hashCode = (hashCode * 397) ^ MinFieldContribution.GetHashCode();
+                hashCode = (hashCode * 397) ^ MaxFieldBranching.GetHashCode();
+                hashCode = (hashCode * 397) ^ (InferenceType != null ? InferenceType.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ MinParticlesPerSwarm.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Encoders != null ? Encoders.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ KillUselessSwarms.GetHashCode();
+                hashCode = (hashCode * 397) ^ TryAll3FieldCombinations.GetHashCode();
+                hashCode = (hashCode * 397) ^ TryAll3FieldCombinationsWTimestamps.GetHashCode();
+                hashCode = (hashCode * 397) ^ (FixedFields != null ? FixedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FastSwarmModelParams != null ? FastSwarmModelParams.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ MaxModels.GetHashCode();
                 return hashCode;
             }
         }

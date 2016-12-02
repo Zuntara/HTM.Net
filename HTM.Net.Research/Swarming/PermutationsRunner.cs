@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using HTM.Net.Data;
 using HTM.Net.Network.Sensor;
@@ -921,6 +922,16 @@ namespace HTM.Net.Research.Swarming
             /// ["integer", "null"]
             /// </summary>
             public int?[] last_record { get; set; }
+        }
+
+        public StreamDef Clone()
+        {
+            BinaryFormatter formatter = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream();
+            formatter.Serialize(ms, this);
+            ms.Position = 0;
+            StreamDef obj = (StreamDef)formatter.Deserialize(ms);
+            return obj;
         }
     }
 }

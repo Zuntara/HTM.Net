@@ -947,29 +947,70 @@ namespace HTM.Net.Research.Swarming
     [Serializable]
     public class HyperSearchSearchParams
     {
-        public string persistentJobGUID;
-        public string permutationsPyFilename;
-        public ExperimentPermutationParameters permutationsPyContents;
-        [NonSerialized]
-        public JObject description;
-        public bool? createCheckpoints;
-        public bool? useTerminators;
-        public int? maxModels;
-        public bool? dummyModel;
-        public bool? speculativeParticles;
+        /// <summary>
+        /// REQUIRED.
+        /// Persistent, globally-unique identifier for this job for use in constructing persistent model checkpoint
+        /// keys.MUST be compatible with S3 key-naming rules, but MUST NOT contain forward slashes.This GUID is
+        /// expected to retain its global uniqueness across clusters and cluster software updates(unlike the
+        /// record IDs in the Engine's jobs table, which recycle upon table schema change and software update). In the
+        /// future, this may also be instrumental for checkpoint garbage collection.
+        /// </summary>
+        public string persistentJobGUID { get; set; }
+        /// <summary>
+        /// path to permutations.py file
+        /// </summary>
+        public string permutationsPyFilename { get; set; }
+        /// <summary>
+        /// JSON encoded string with contents of permutations.py file
+        /// </summary>
+        public ExperimentPermutationParameters permutationsPyContents { get; set; }
+        /// <summary>
+        /// JSON encoded string with contents of base description.py file
+        /// </summary>
+        public ExperimentParameters descriptionPyContents { get; set; }
+        /// <summary>
+        /// JSON description of the search
+        /// </summary>
+        public string description { get; set; }
+        /// <summary>
+        /// OPTIONAL - Whether to create checkpoints
+        /// </summary>
+        public bool? createCheckpoints { get; set; }
+        /// <summary>
+        /// OPTIONAL - True of False (default config.xml). 
+        /// When set to False, the model and swarm terminators are disabled.
+        /// </summary>
+        public bool? useTerminators { get; set; }
+        /// <summary>
+        /// OPTIONAL - max # of models to generate
+        /// NOTE: This is a deprecated location for this
+        /// setting.Now, it should be specified through the maxModels variable within the permutations
+        /// file, or maxModels in the JSON description
+        /// </summary>
+        public int? maxModels { get; set; }
+        /// <summary>
+        /// OPTIONAL - Either (True/False) or a dict of parameters
+        /// for a dummy model.If this key is absent, a real model is trained.
+        /// See utils.py/OPFDummyModel runner for the schema of the dummy parameters
+        /// </summary>
+        public object dummyModel { get; set; }
+        /// <summary>
+        /// OPTIONAL - True or False (default obtained from
+        /// nupic.hypersearch.speculative.particles.default
+        /// configuration property). See note below.
+        /// </summary>
+        public bool? speculativeParticles { get; set; }
         public int? predictionCacheMaxRecords;
-        // Added myself, is the description holder (file)
-        public string baseDescriptionFileName;
-        public string hsVersion = "v2";
-        public ExperimentParameters descriptionPyContents;
+
+        public string hsVersion { get; set; } = "v2";
 
         public void Populate(Map<string, object> jobParamsMap)
         {
-            this.persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
-            this.descriptionPyContents = (ExperimentParameters)jobParamsMap["descriptionPyContents"];
-            this.permutationsPyContents = (ExperimentPermutationParameters)jobParamsMap["permutationsPyContents"];
-            this.maxModels = TypeConverter.Convert<int?>(jobParamsMap.Get("maxModels"));
-            this.hsVersion = (string)jobParamsMap["hsVersion"];
+            persistentJobGUID = (string)jobParamsMap["persistentJobGUID"];
+            descriptionPyContents = (ExperimentParameters)jobParamsMap["descriptionPyContents"];
+            permutationsPyContents = (ExperimentPermutationParameters)jobParamsMap["permutationsPyContents"];
+            maxModels = TypeConverter.Convert<int?>(jobParamsMap.Get("maxModels"));
+            hsVersion = (string)jobParamsMap["hsVersion"];
         }
     }
 
@@ -1096,7 +1137,7 @@ namespace HTM.Net.Research.Swarming
         private string _optimizeKey;
         private string[] _reportKeys;
         private Func<ExperimentPermutationParameters, bool> _filterFunc;
-        private Func<ExperimentPermutationParameters, IDictionary<string, object>> _dummyModelParamsFunc;
+        private Func<ExperimentPermutationParameters, bool, DummyModelParameters> _dummyModelParamsFunc;
         private ExperimentPermutationParameters _fastSwarmModelParams;
         private ExperimentPermutationParameters _permutations;
 
@@ -1265,16 +1306,16 @@ namespace HTM.Net.Research.Swarming
                     }
 
                     // Calculate training period for anomaly models
-                    var searchParamObj = this._searchParams;
-                    JObject anomalyParams = (JObject)searchParamObj.description["anomalyParams"];//?? new Dictionary<string, string>();
+                    //var searchParamObj = this._searchParams;
+                    //JObject anomalyParams = (JObject)searchParamObj.description["anomalyParams"];//?? new Dictionary<string, string>();
                     //anomalyParams = searchParamObj.description.get("anomalyParams", dict());
 
                     // This is used in case searchParamObj["description"]["anomalyParams"]
                     // is set to None.
-                    if (anomalyParams == null)
-                    {
-                        anomalyParams = new JObject();
-                    }
+                    //if (anomalyParams == null)
+                    //{
+                    //    anomalyParams = new JObject();
+                    //}
 
                     //if ((!anomalyParams.Properties().Any(p => p.Name == "autoDetectWaitRecords")) ||
                     //    (anomalyParams["autoDetectWaitRecords"] == null))
@@ -1299,7 +1340,7 @@ namespace HTM.Net.Research.Swarming
 
                     // Call the experiment generator to generate the permutations and base
                     // description file.
-                    string outDir = this._tempDir = @"C:\temp\" + Path.GetRandomFileName();//tempfile.mkdtemp();
+                    // string outDir = this._tempDir = @"C:\temp\" + Path.GetRandomFileName();//tempfile.mkdtemp();
                     //expGenerator([
                     //    '--description=%s' % (
                     //        json.dumps(this._searchParams["description"])),
@@ -1404,13 +1445,13 @@ namespace HTM.Net.Research.Swarming
                 }
 
                 // if user provided an artificialMetric, force use of the dummy model
-                //if (this._dummyModelParamsFunc != null)
-                //{
-                //    if (this._dummyModel == null)
-                //    {
-                //        this._dummyModel = dict();
-                //    }
-                //}
+                if (this._dummyModelParamsFunc != null)
+                {
+                    if (this._dummyModel == null)
+                    {
+                        this._dummyModel = new DummyModelParameters();
+                    }
+                }
 
                 // If at DEBUG log level, print out permutations info to the log
                 if (this.logger.IsDebugEnabled)
@@ -1604,7 +1645,7 @@ namespace HTM.Net.Research.Swarming
             // Read in misc info.
             this._reportKeys = permFile.Report; // vars.Get("report", []);
             this._filterFunc = permFile.PermutationFilter; //vars.Get("permutationFilter", null);
-            this._dummyModelParamsFunc = permFile.DummyModelParams;// vars.Get("dummyModelParams", null);
+            this._dummyModelParamsFunc = permFile.DummyModelParams(permFile, true) != null ? permFile.DummyModelParams : (Func<ExperimentPermutationParameters, bool, DummyModelParameters>)null;// vars.Get("dummyModelParams", null);
             this._predictedField = null;   // default
             this._predictedFieldEncoder = null;   // default
             this._fixedFields = null; // default
@@ -1630,7 +1671,7 @@ namespace HTM.Net.Research.Swarming
             {
                 this._fixedFields = permFile.FixedFields.ToList();
             }
-            
+
             // Get min number of particles per swarm from either permutations file or
             // config.
             this._minParticlesPerSwarm = (int?)permFile.MinParticlesPerSwarm;
@@ -3214,28 +3255,28 @@ namespace HTM.Net.Research.Swarming
                 }
                 else
                 {
-                    //var dummyParams = dict(this._dummyModel);
-                    //dummyParams["permutationParams"] = structuredParams;
-                    //if (this._dummyModelParamsFunc != null)
-                    //{
-                    //    var permInfo = dict(structuredParams);
-                    //    permInfo["generation"] = modelParams.particleState.genIdx;
-                    //    dummyParams.update(this._dummyModelParamsFunc(permInfo));
-                    //}
-                    //// (cmpReason, cmpMsg) =
-                    //var pair = Utils.runDummyModel(
-                    //              modelID: modelID,
-                    //              jobID: jobID,
-                    //              @params: dummyParams,
-                    //              predictedField: this._predictedField,
-                    //              reportKeys: this._reportKeys,
-                    //              optimizeKey: this._optimizeKey,
-                    //              jobsDAO: jobsDAO,
-                    //              modelCheckpointGUID: modelCheckpointGUID,
-                    //              predictionCacheMaxRecords: this._predictionCacheMaxRecords);
-                    //cmpReason = pair.completionReason;
-                    //cmpMsg = pair.completionMsg;
-                    throw new NotImplementedException("Check the dummy stuff");
+                    var dummyParams = (DummyModelParameters)_dummyModel;
+                    dummyParams.permutationParams = structuredParams;
+                    if (_dummyModelParamsFunc != null)
+                    {
+                        var permInfo = structuredParams.Copy();
+                        permInfo.Generation = modelParams.particleState.genIdx;
+                        dummyParams = _dummyModelParamsFunc(permInfo, false);
+                        dummyParams.permutationParams = structuredParams;
+                    }
+
+                    var pair = Utils.runDummyModel(
+                                modelID: modelID,
+                                jobID: jobID,
+                                @params: dummyParams,
+                                predictedField: this._predictedField,
+                                reportKeys: this._reportKeys,
+                                optimizeKey: this._optimizeKey,
+                                jobsDAO: jobsDAO,
+                                modelCheckpointGuid: modelCheckpointGUID,
+                                predictionCacheMaxRecords: this._predictionCacheMaxRecords);
+                    cmpReason = pair.completionReason;
+                    cmpMsg = pair.completionMsg;
                 }
 
                 // Write out the completion reason and message
