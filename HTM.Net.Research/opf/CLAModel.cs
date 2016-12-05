@@ -986,11 +986,11 @@ namespace HTM.Net.Research.opf
 
                     if (bestActValue != null)
                     {
-                        ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = null;
+                        ((Map<int, Map<object, double?>>)inferences[InferenceElement.MultiStepPredictions])[steps] = null;
                     }
                     else
                     {
-                        ((Map<int, double?>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (absoluteValue + sumDelta + (double)bestActValue);
+                        ((Map<int, double?>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (absoluteValue + sumDelta + (double?)bestActValue);
                     } 
                     #endregion
                 }

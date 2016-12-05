@@ -122,7 +122,7 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
             Control.Metrics = new[]
             {
                 new MetricSpec(field: "value", metric:"multiStep", inferenceElement: InferenceElement.MultiStepBestPredictions, @params:new Map<string, object> { {"window", 10}, {"steps", 1}, {"errorMetric", "aae"} }),
-                new MetricSpec(field: "value", metric:"multiStep", inferenceElement: InferenceElement.MultiStepBestPredictions, @params:new Map<string, object> { {"window", 10}, {"steps", 1}, {"errorMetric", "aae"}  }),
+                new MetricSpec(field: "value", metric:"multiStep", inferenceElement: InferenceElement.MultiStepBestPredictions, @params:new Map<string, object> { {"window", 10}, {"steps", 5}, {"errorMetric", "aae"}  }),
             };
             Control.LoggedMetrics = new[] { ".*nupicScore.*" };
 
@@ -176,7 +176,7 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
             SetParameterByKey(KEY.CLASSIFIER_ALPHA, new PermuteFloat(0.000100,0.100000));
 
             Report = new[] {".*value.*"};
-            Minimize = "multiStepBestPredictions:multiStep:errorMetric='aae':steps=1:window=10:field=value";
+            Minimize = "multiStepBestPredictions:multiStep:errorMetric=\"aae\":steps=1:window=10:field=value";
             MinParticlesPerSwarm = null;
 
         }

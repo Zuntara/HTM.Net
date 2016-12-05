@@ -505,7 +505,7 @@ namespace HTM.Net.Swarming.HyperSearch
             //meanScorePerChoice /= total;
             meanScorePerChoice = meanScorePerChoice.Select(m => m / total).ToList();
             // Get distribution and choose one based on those probabilities.
-            var distribution = meanScorePerChoice.CumulativeSum();
+            var distribution = meanScorePerChoice.CumulativeSum().ToList();
             var r = rng.NextDouble() * distribution.Last();
             int choiceIdx = ArrayUtils.Where(distribution, d => r < d).First();
             // int choiceIdx = numpy.where(r <= distribution)[0][0];
@@ -561,7 +561,7 @@ namespace HTM.Net.Swarming.HyperSearch
         /// [('a', [0.1, 0.2, 0.3]), ('b', [0.5, 0.1, 0.6]), ('c', [0.2])]
         /// </summary>
         /// <param name="resultsPerChoice"></param>
-        public void SetResultsPerChoice(List<Tuple<int, List<double>>> resultsPerChoice)
+        public void SetResultsPerChoice(List<Tuple<object, List<double>>> resultsPerChoice)
         {
             // Keep track of the results obtained for each choice.
 
@@ -573,7 +573,7 @@ namespace HTM.Net.Swarming.HyperSearch
             //for (choiceValue, values) in resultsPerChoice
             foreach (var pair in resultsPerChoice)
             {
-                double choiceValue = pair.Item1;
+                object choiceValue = pair.Item1;
                 List<double> values = pair.Item2;
 
                 int choiceIndex = Array.IndexOf(this.choices, choiceValue);

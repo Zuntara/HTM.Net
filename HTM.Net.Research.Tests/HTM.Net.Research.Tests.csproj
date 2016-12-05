@@ -123,6 +123,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Regression\OpfBenchMarkTest.cs" />
+    <Compile Include="Swarming\Experiments\DummyV2DescriptionParameters.cs" />
     <Compile Include="Swarming\Experiments\DeltaDescriptionParameters.cs" />
     <Compile Include="Swarming\Experiments\OneFieldPermuationFilter.cs" />
     <Compile Include="Swarming\PermutationHelperTest.cs" />

@@ -121,7 +121,7 @@ namespace HTM.Net.Encoders
  *
  * @author metaware
  */
- [Serializable]
+    [Serializable]
     public class ScalarEncoder : Encoder<double>
     {
         [NonSerialized]
@@ -181,7 +181,8 @@ namespace HTM.Net.Encoders
             // bits to the right of the center bit of maxval
             SetPadding(IsPeriodic() ? 0 : GetHalfWidth());
 
-            if (!double.IsNaN(GetMinVal()) && !double.IsNaN(GetMaxVal()))
+            if (!double.IsNaN(GetMinVal()) && !double.IsNaN(GetMaxVal())
+                && !(this is DeltaEncoder || this is AdaptiveScalarEncoder))
             {
                 if (GetMinVal() >= GetMaxVal())
                 {
@@ -204,7 +205,8 @@ namespace HTM.Net.Encoders
                 {
                     SetName("[" + GetMinVal() + ":" + GetMaxVal() + "]");
                 }
-                else {
+                else
+                {
                     SetName("[" + (int)GetMinVal() + ":" + (int)GetMaxVal() + "]");
                 }
             }
@@ -238,7 +240,8 @@ namespace HTM.Net.Encoders
                     {
                         SetResolution(GetRangeInternal() / (GetN() - GetW()));
                     }
-                    else {
+                    else
+                    {
                         SetResolution(GetRangeInternal() / GetN());
                     }
 
@@ -248,12 +251,14 @@ namespace HTM.Net.Encoders
                     {
                         SetRange(GetRangeInternal());
                     }
-                    else {
+                    else
+                    {
                         SetRange(GetRangeInternal() + GetResolution());
                     }
                 }
             }
-            else {
+            else
+            {
                 if (radius != 0)
                 {
                     SetResolution(GetRadius() / w);
@@ -262,7 +267,8 @@ namespace HTM.Net.Encoders
                 {
                     SetRadius(GetResolution() * w);
                 }
-                else {
+                else
+                {
                     throw new InvalidOperationException("One of n, radius, resolution must be specified for a ScalarEncoder");
                 }
 
@@ -270,7 +276,8 @@ namespace HTM.Net.Encoders
                 {
                     SetRange(GetRangeInternal());
                 }
-                else {
+                else
+                {
                     SetRange(GetRangeInternal() + GetResolution());
                 }
 
@@ -294,7 +301,8 @@ namespace HTM.Net.Encoders
             {
                 return null;
             }
-            else {
+            else
+            {
                 if (input < GetMinVal())
                 {
                     if (ClipInput() && !IsPeriodic())
@@ -302,7 +310,8 @@ namespace HTM.Net.Encoders
                         LOGGER.Info("Clipped input " + GetName() + "=" + input + " to minval " + GetMinVal());
                         input = GetMinVal();
                     }
-                    else {
+                    else
+                    {
                         throw new InvalidOperationException("input (" + input + ") less than range (" +
                            GetMinVal() + " - " + GetMaxVal());
                     }
@@ -317,7 +326,8 @@ namespace HTM.Net.Encoders
                        GetMinVal() + " - " + GetMaxVal());
                 }
             }
-            else {
+            else
+            {
                 if (input > GetMaxVal())
                 {
                     if (ClipInput())
@@ -325,7 +335,8 @@ namespace HTM.Net.Encoders
                         LOGGER.Info("Clipped input " + GetName() + "=" + input + " to maxval " + GetMaxVal());
                         input = GetMaxVal();
                     }
-                    else {
+                    else
+                    {
                         throw new InvalidOperationException("input (" + input + ") greater than periodic range (" +
                            GetMinVal() + " - " + GetMaxVal());
                     }
@@ -337,7 +348,8 @@ namespace HTM.Net.Encoders
             {
                 centerbin = ((int)((input - GetMinVal()) * GetNInternal() / GetRange())) + GetPadding();
             }
-            else {
+            else
+            {
                 centerbin = ((int)(((input - GetMinVal()) + GetResolution() / 2) / GetResolution())) + GetPadding();
             }
 
@@ -397,7 +409,8 @@ namespace HTM.Net.Encoders
                     bucketIdx += GetN();
                 }
             }
-            else {//for non-periodic encoders, the bucket index is the index of the left bit
+            else
+            {//for non-periodic encoders, the bucket index is the index of the left bit
                 bucketIdx = minbin;
             }
 
@@ -431,9 +444,9 @@ namespace HTM.Net.Encoders
                 {
                     if (maxbin >= GetN())
                     {
-                        int bottombins = maxbin - GetN()+ 1;
+                        int bottombins = maxbin - GetN() + 1;
                         //if (bottombins > output.Length) bottombins = output.Length; // TODO: check that this is needed, added it for tests
-                        int[] range = ArrayUtils.Range(0,  bottombins);
+                        int[] range = ArrayUtils.Range(0, bottombins);
                         ArrayUtils.SetIndexesTo(output, range, 1);
                         maxbin = GetN() - 1;
                     }
@@ -473,7 +486,7 @@ namespace HTM.Net.Encoders
             }
             else if (o is double)
             {
-                EncodeIntoArray((double) o, tempArray);
+                EncodeIntoArray((double)o, tempArray);
             }
             else
             {
@@ -528,7 +541,8 @@ namespace HTM.Net.Encoders
                         }
                     }
                 }
-                else {
+                else
+                {
                     for (int j = 0; j < GetN() - subLen + 1; j++)
                     {
                         if (Arrays.AreEqual(searchStr, ArrayUtils.Sub(tmpOutput, ArrayUtils.Range(j, j + subLen))))
@@ -566,7 +580,8 @@ namespace HTM.Net.Encoders
                 {
                     run[1] += 1;
                 }
-                else {
+                else
+                {
                     runs.Add(new Tuple(run[0], run[1]));
                     run = new int[] { nz[i], 1 };
                 }
@@ -603,7 +618,8 @@ namespace HTM.Net.Encoders
                 {
                     left = right = start + runLen / 2;
                 }
-                else {
+                else
+                {
                     left = start + GetHalfWidth();
                     right = start + runLen - 1 - GetHalfWidth();
                 }
@@ -615,7 +631,8 @@ namespace HTM.Net.Encoders
                     inMin = (left - GetPadding()) * GetResolution() + GetMinVal();
                     inMax = (right - GetPadding()) * GetResolution() + GetMinVal();
                 }
-                else {
+                else
+                {
                     inMin = (left - GetPadding()) * GetRange() / GetNInternal() + GetMinVal();
                     inMax = (right - GetPadding()) * GetRange() / GetNInternal() + GetMinVal();
                 }
@@ -646,7 +663,8 @@ namespace HTM.Net.Encoders
                     ranges.Add(new MinMax(inMin, GetMaxVal()));
                     ranges.Add(new MinMax(GetMinVal(), inMax - GetRange()));
                 }
-                else {
+                else
+                {
                     if (inMax > GetMaxVal())
                     {
                         inMax = GetMaxVal();
@@ -666,7 +684,8 @@ namespace HTM.Net.Encoders
             {
                 fieldName = string.Format("%s.%s", parentFieldName, GetName());
             }
-            else {
+            else
+            {
                 fieldName = GetName();
             }
 
@@ -692,7 +711,8 @@ namespace HTM.Net.Encoders
                 {
                     desc.Append(string.Format("{0:#.00}-{1:#.00}", ranges[i].Min(), ranges[i].Max()));
                 }
-                else {
+                else
+                {
                     desc.Append(string.Format("{0:#.00}", ranges[i].Min()));
                 }
                 if (i < numRanges - 1)
@@ -724,7 +744,8 @@ namespace HTM.Net.Encoders
                           ArrayUtils.Arrange(GetMinVal() + GetResolution() / 2.0,
                             GetMaxVal(), GetResolution()));
                 }
-                else {
+                else
+                {
                     //Number of values is (max-min)/resolutions
                     SetTopDownValues(
                           ArrayUtils.Arrange(GetMinVal(), GetMaxVal() + GetResolution() / 2.0,
@@ -816,7 +837,8 @@ namespace HTM.Net.Encoders
             {
                 inputVal = GetMinVal() + GetResolution() / 2 + category * GetResolution();
             }
-            else {
+            else
+            {
                 inputVal = GetMinVal() + category * GetResolution();
             }
 

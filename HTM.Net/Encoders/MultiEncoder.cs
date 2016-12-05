@@ -164,6 +164,8 @@ namespace HTM.Net.Encoders
                     return DeltaEncoder.GetDeltaBuilder();
                 case "SDRPassThroughEncoder":
                     return SDRPassThroughEncoder.GetSptBuilder();
+                case "ScalarSpaceEncoder":
+                    return ScalarSpaceEncoder.GetScalarSpaceBuilder();
                 default:
                     throw new ArgumentException("Invalid encoder: " + encoderName);
             }
@@ -202,6 +204,9 @@ namespace HTM.Net.Encoders
                     break;
                 case "classifieronly":
                     builder.ClassifierOnly((bool) value);
+                    break;
+                case "space":
+                    builder.Space((string)value);
                     break;
                 case "fieldname":
                 case "name":

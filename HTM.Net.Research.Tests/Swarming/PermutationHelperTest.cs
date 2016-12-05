@@ -234,7 +234,7 @@ namespace HTM.Net.Research.Tests.Swarming
         [TestMethod]
         public void TestChoices()
         {
-            var pc = new PermuteChoices(new object[] { 0, 1.0, 2, 3 });
+            var pc = new PermuteChoices(new object[] { 0, 1, 2, 3 });
             int[] counts = new int[4];
             var rng = new MersenneTwister(42);
             // Check the without results the choices are chosen uniformly.
@@ -252,14 +252,14 @@ namespace HTM.Net.Research.Tests.Swarming
 
             // Check that with some results the choices are chosen with the lower
             // errors being chosen more often.
-            var choices = new object[] { 1, 11.0, 21, 31 };
+            var choices = new object[] { 1, 11, 21, 31 };
             pc = new PermuteChoices(choices);
-           List<Tuple<int, List<double>>> resultsPerChoice = new List<Tuple<int, List<double>>>();
-            var counts2 = new Map<int, int>();
+           List<Tuple<object, List<double>>> resultsPerChoice = new List<Tuple<object, List<double>>>();
+            var counts2 = new Map<object, int>();
             foreach (var choice in choices)
             {
-                resultsPerChoice.Add(new Tuple<int, List<double>>(TypeConverter.Convert<int>(choice), new List<double> { TypeConverter.Convert<double>(choice) }));
-                counts2[TypeConverter.Convert<int>(choice)] = 0;
+                resultsPerChoice.Add(new Tuple<object, List<double>>(choice, new List<double> { TypeConverter.Convert<double>(choice) }));
+                counts2[choice] = 0;
             }
             pc.SetResultsPerChoice(resultsPerChoice);
 
@@ -267,8 +267,8 @@ namespace HTM.Net.Research.Tests.Swarming
             // Check the without results the choices are chosen uniformly.
             foreach (var nothing in ArrayUtils.Range(0, 1000))
             {
-                double choice = ((double?)pc.NewPosition(null, rng)).GetValueOrDefault();
-                counts2[TypeConverter.Convert<int>(choice)] += 1;
+                object choice = pc.NewPosition(null, rng);
+                counts2[choice] += 1;
             }
             // Make sure that as the error goes up, the number of times the choice is
             // seen goes down.
@@ -284,16 +284,16 @@ namespace HTM.Net.Research.Tests.Swarming
             // biasing the probabilities to the one with the lowest error.
             choices = new object[] { 1, 11, 21.0, 31 };
             pc = new PermuteChoices(choices, fixEarly: true);
-            var resultsPerChoiceDict = new Map<int, Tuple<int, List<double>>>();
-            counts2 = new Map<int, int>();
+            var resultsPerChoiceDict = new Map<int, Tuple<object, List<double>>>();
+            counts2 = new Map<object, int>();
 
             foreach (var choice in choices)
             {
                 //resultsPerChoiceDict[choice] = (choice, []);
-                resultsPerChoiceDict[TypeConverter.Convert<int>(choice)] = new Tuple<int, List<double>>(TypeConverter.Convert<int>(choice), new List<double>());
+                resultsPerChoiceDict[TypeConverter.Convert<int>(choice)] = new Tuple<object, List<double>>(choice, new List<double>());
                 //resultsPerChoiceDict[(int)choice] = new Dictionary<int, List<double>> { { (int)choice, new List<double>() } };
 
-                counts2[TypeConverter.Convert<int>(choice)] = 0;
+                counts2[choice] = 0;
             }
             // The count of the highest probability entry, this should go up as more
             // results are seen.
@@ -304,15 +304,15 @@ namespace HTM.Net.Research.Tests.Swarming
                 {
                     //resultsPerChoiceDict[(int)choice][1].Add((double) choice);
                     resultsPerChoiceDict[TypeConverter.Convert<int>(choice)].Item2.Add(TypeConverter.Convert<double>(choice));
-                    counts2[TypeConverter.Convert<int>(choice)] = 0;
+                    counts2[choice] = 0;
                 }
                 pc.SetResultsPerChoice(resultsPerChoiceDict.Values.ToList());
 
                 // Check the without results the choices are chosen uniformly.
                 foreach (var nothing2 in ArrayUtils.Range(0, 1000))
                 {
-                    double choice = ((double?)pc.NewPosition(null, rng)).GetValueOrDefault();
-                    counts2[TypeConverter.Convert<int>(choice)] += 1;
+                    object choice = pc.NewPosition(null, rng);
+                    counts2[choice] += 1;
                 }
                 // Make sure that as the error goes up, the number of times the choice is
                 // seen goes down.

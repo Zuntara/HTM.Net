@@ -75,12 +75,12 @@ namespace HTM.Net.Encoders
 
         public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
         {
-            if (!(o is double))
+            if (!(o is double) && !(o is int) && !(o is float))
             {
                 throw new InvalidOperationException(
                         string.Format("Expected a Double input but got input of type {0}", o));
             }
-            EncodeIntoArray((double) o, tempArray);
+            EncodeIntoArray(TypeConverter.Convert<double>(o), tempArray);
         }
 
         #endregion

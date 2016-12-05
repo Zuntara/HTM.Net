@@ -29,10 +29,10 @@ namespace HTM.Net.Research.Swarming.Descriptions
         public ExperimentControl Clone()
         {
             ExperimentControl c = new ExperimentControl();
-            c.InputRecordSchema = (FieldMetaInfo[])InputRecordSchema.Clone();
-            c.InferenceArgs = InferenceArgs.Clone();
-            c.LoggedMetrics = (string[])LoggedMetrics.Clone();
-            c.Metrics = (MetricSpec[])Metrics.Clone();
+            c.InputRecordSchema = (FieldMetaInfo[])InputRecordSchema?.Clone();
+            c.InferenceArgs = InferenceArgs?.Clone();
+            c.LoggedMetrics = (string[])LoggedMetrics?.Clone();
+            c.Metrics = (MetricSpec[])Metrics?.Clone();
             c.DatasetSpec = DatasetSpec;
             c.IterationCount = IterationCount;
             c.IterationCountInferOnly = IterationCountInferOnly;

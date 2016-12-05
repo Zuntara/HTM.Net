@@ -860,9 +860,9 @@ namespace HTM.Net.Research.Swarming
         /// <param name="maxGenIdx">max generation index to consider from other models, ignored if None</param>
         /// <param name="varName">which variable to retrieve</param>
         /// <returns>list of the errors obtained from each choice.</returns>
-        public Map<string, Tuple<int, List<double>>> getResultsPerChoice(string swarmId, int? maxGenIdx, string varName)
+        public Map<string, Tuple<object, List<double>>> getResultsPerChoice(string swarmId, int? maxGenIdx, string varName)
         {
-            var results = new Map<string, Tuple<int, List<double>>>();
+            var results = new Map<string, Tuple<object, List<double>>>();
             // Get all the completed particles in this swarm
             //(allParticles, _, resultErrs, _, _) = this.getParticleInfos(swarmId,
             //                                          genIdx = None, matured = True);
@@ -900,7 +900,7 @@ namespace HTM.Net.Research.Swarming
                 else
                 {
                     //results[varPositionStr] = (varPosition, [resultErr]);
-                    results[varPositionStr] = new Tuple<int, List<double>>(TypeConverter.Convert<int>(varPosition), new List<double> { resultErr });
+                    results[varPositionStr] = new Tuple<object, List<double>>(varPosition, new List<double> { resultErr });
                 }
             }
 

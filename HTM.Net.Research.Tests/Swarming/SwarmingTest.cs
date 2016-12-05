@@ -620,6 +620,26 @@ namespace HTM.Net.Research.Tests.Swarming
             Assert.IsTrue(permutationResult.minErrScore < 0.002);
         }
 
+        private void TestCLAModelV2(bool onCluster = false, KWArgsModel kwargs = null, int? maxModels = 2)
+        {
+            //this._printTestHeader();
+            var expDir = new Tuple<ExperimentParameters, ExperimentPermutationParameters>(
+                new DummyV2DescriptionParameters(), new DummyV2PermutationParameters());
+
+            //Environment.SetEnvironmentVariable("NTA_TEST_numIterations", "99");
+            //Environment.SetEnvironmentVariable("NTA_CONF_PROP_nupic_hypersearch_swarmMaturityWindow", "5");
+            
+            //(jobID, jobInfo, resultInfos, metricResults, minErrScore) 
+            var permutationResult = this.RunPermutations(expDirectory: expDir,
+                                   hsImp: "v2",
+                                   onCluster: onCluster,
+                                   maxModels: maxModels,
+                                   kwargs: kwargs);
+
+
+            Assert.AreEqual(maxModels, permutationResult.results.Count);
+        }
+
         // nupic/src/nupic/datafiles/swarming/test_data.csv
         [TestMethod]
         [DeploymentItem("Resources\\swarming\\test_data.csv")]
@@ -633,6 +653,13 @@ namespace HTM.Net.Research.Tests.Swarming
         public void TestDeltaV2()
         {
             TestDeltaV2Internal();
+        }
+
+        //[TestMethod]
+        //[DeploymentItem("Resources\\swarming\\test_data.csv")]
+        public void TestCLAModelV2()
+        {
+            TestCLAModelV2(maxModels:4);
         }
 
         [TestMethod]

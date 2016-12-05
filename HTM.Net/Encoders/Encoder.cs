@@ -1420,7 +1420,7 @@ namespace HTM.Net.Encoders
             protected bool clipInput;
             protected bool forced, classifierOnly;
             protected string name;
-
+            protected string space;
             protected IEncoder encoder;
 
             public virtual IEncoder Build()
@@ -1485,6 +1485,11 @@ namespace HTM.Net.Encoders
                 this.clipInput = clipInput;
                 return this;
             }
+            public virtual IBuilder Space(string space)
+            {
+                this.space = space;
+                return this;
+            }
             public IBuilder Forced(bool forced)
             {
                 this.forced = forced;
@@ -1518,6 +1523,7 @@ namespace HTM.Net.Encoders
         IBuilder Forced(bool value);
         IBuilder ClassifierOnly(bool value);
         IBuilder Name(string value);
+        IBuilder Space(string value);
 
         IEncoder Build();
     }

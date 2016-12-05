@@ -104,6 +104,7 @@
     <Compile Include="Algorithms\CLAClassifier.cs" />
     <Compile Include="Algorithms\Classification.cs" />
     <Compile Include="Encoders\EncoderSettings.cs" />
+    <Compile Include="Encoders\ScalarSpaceEncoder.cs" />
     <Compile Include="Model\Connections.cs" />
     <Compile Include="Model\Persistable.cs" />
     <Compile Include="Monitor\MonitoredTemporalMemory.cs" />

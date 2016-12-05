@@ -214,7 +214,7 @@ namespace HTM.Net.Research.opf
                 // Make sure _predictionSteps is a list
                 if (!(predStepsFromParams is int[]))
                 {
-                    this._predictionSteps = new[] { (int)predStepsFromParams };
+                    this._predictionSteps = new[] { TypeConverter.Convert<int>(predStepsFromParams) };
                 }
                 else
                 {

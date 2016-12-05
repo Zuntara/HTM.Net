@@ -7,24 +7,24 @@ using log4net;
 namespace HTM.Net.Encoders
 {
     /**
- * This is an implementation of the scalar encoder that adapts the min and
- * max of the scalar encoder dynamically. This is essential to the streaming
- * model of the online prediction framework.
- * 
- * Initialization of an adaptive encoder using resolution or radius is not
- * supported; it must be initialized with n. This n is kept constant while
- * the min and max of the encoder changes.
- * 
- * The adaptive encoder must be have periodic set to false.
- * 
- * The adaptive encoder may be initialized with a minval and maxval or with
- * `None` for each of these. In the latter case, the min and max are set as
- * the 1st and 99th percentile over a window of the past 100 records.
- * 
- * *Note:** the sliding window may record duplicates of the values in the
- * data set, and therefore does not reflect the statistical distribution of
- * the input data and may not be used to calculate the median, mean etc.
- */
+     * This is an implementation of the scalar encoder that adapts the min and
+     * max of the scalar encoder dynamically. This is essential to the streaming
+     * model of the online prediction framework.
+     * 
+     * Initialization of an adaptive encoder using resolution or radius is not
+     * supported; it must be initialized with n. This n is kept constant while
+     * the min and max of the encoder changes.
+     * 
+     * The adaptive encoder must be have periodic set to false.
+     * 
+     * The adaptive encoder may be initialized with a minval and maxval or with
+     * `None` for each of these. In the latter case, the min and max are set as
+     * the 1st and 99th percentile over a window of the past 100 records.
+     * 
+     * *Note:** the sliding window may record duplicates of the values in the
+     * data set, and therefore does not reflect the statistical distribution of
+     * the input data and may not be used to calculate the median, mean etc.
+     */
     [Serializable]
     public class AdaptiveScalarEncoder : ScalarEncoder
     {
@@ -143,7 +143,7 @@ namespace HTM.Net.Encoders
 
         public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
         {
-            EncodeIntoArray((double)o, tempArray);
+            EncodeIntoArray(TypeConverter.Convert<double>(o), tempArray);
         }
 
         private void SetMinAndMax(double input, bool learn)
