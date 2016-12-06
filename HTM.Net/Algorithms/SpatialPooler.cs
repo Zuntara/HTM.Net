@@ -70,7 +70,7 @@ namespace HTM.Net.Algorithms
             //Control.UseMultiThreading();
 
             SparseObjectMatrix<Column> mem = c.GetMemory();
-            c.SetMemory(mem == null ? mem = new SparseObjectMatrix<Column>(c.GetColumnDimensions()) : mem);
+            c.SetMemory(mem ?? (mem = new SparseObjectMatrix<Column>(c.GetColumnDimensions())));
 
             c.SetInputMatrix(new SparseBinaryMatrix(c.GetInputDimensions()));
 

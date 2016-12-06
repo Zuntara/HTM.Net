@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Encoders;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Research.Vision;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -98,15 +100,6 @@ namespace HTM.Net.Research.Tests.Examples.Random
             Assert.IsNull(n.GetRegions().First().Lookup("Layer 4"));
             Assert.IsNull(n.GetRegions().First().Lookup("Layer 5"));
         }
-
-        //[TestMethod]
-        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
-        //public void TestGetSubscriber()
-        //{
-        //    NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.MULTIREGION);
-        //    IObserver<IInference> s = demo.GetSubscriber();
-        //    Assert.IsNotNull(s);
-        //}
 
         //[TestMethod]
         //[DeploymentItem("Resources\\RandomData.csv")]
@@ -223,6 +216,18 @@ namespace HTM.Net.Research.Tests.Examples.Random
             {
                 Console.WriteLine($"Correct: {i} = {allGuesses.Count(g => g == i)}");
             }
+        }
+
+        [TestMethod]
+        public void TestCombinationParameters()
+        {
+            CombiParameters combiParams = new CombiParameters();
+
+            combiParams.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, new PermuteInt(9, 16));
+            combiParams.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, new PermuteInt(11, 16));
+
+            var numCombinations = combiParams.GetNumCombinations();
+            Debug.WriteLine($"Combinations #: {numCombinations}");
         }
     }
 }

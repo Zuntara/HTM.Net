@@ -852,7 +852,7 @@ namespace HTM.Net
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void SetParameterByKey(KEY key, object value)
+        public virtual void SetParameterByKey(KEY key, object value)
         {
             paramMap.Add(key, value);
         }
