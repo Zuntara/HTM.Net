@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using HTM.Net.Research.Data;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
@@ -241,21 +242,14 @@ namespace HTM.Net.Research.Swarming.HyperSearch
                 };
 
                 // This will do nothing if the value of engWorkerState is not still None.
-                this._hsObj._cjDAO.jobSetFieldIfEqual(
-                    this._hsObj._jobID, "engWorkerState", JsonConvert.SerializeObject(this._state, new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.All
-                    }), null);
+                this._hsObj._cjDAO.jobSetFieldIfEqual(_hsObj._jobID, "engWorkerState", Json.Serialize(_state), null);
 
                 this._priorStateJSON = (string)this._hsObj._cjDAO.jobGetFields(this._hsObj._jobID, new[] { "engWorkerState" })[0];
                 Debug.Assert(this._priorStateJSON != null);
             }
 
             // Read state from the database
-            this._state = (HsStateModel)JsonConvert.DeserializeObject(this._priorStateJSON, typeof(HsStateModel), new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
+            this._state = Json.Deserialize<HsStateModel>(this._priorStateJSON);
             this._dirty = false;
         }
 

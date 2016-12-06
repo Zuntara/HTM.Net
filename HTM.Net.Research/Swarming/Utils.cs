@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using HTM.Net.Algorithms;
@@ -299,7 +300,7 @@ namespace HTM.Net.Research.Swarming
         /// <param name="d">The dict to recurse over.</param>
         /// <param name="f">A function to apply to values in d that takes the value and 
         /// a list of keys from the root of the dict to the value.</param>
-        public static void rApply(object d, Action<object, string[]> f, string[] currentKeys = null)
+        public static void rApply(object d, Func<object, string[], bool> f, string[] currentKeys = null)
         {
             if (d is IDictionary)
             {
@@ -308,8 +309,8 @@ namespace HTM.Net.Research.Swarming
                     List<string> keys = new List<string>(currentKeys);
                     keys.Add(entry.Key as string);
                     var value = entry.Value;
-                    f(value, keys.ToArray());
-                    rApply(value, f, keys.ToArray());
+                    bool apply = f(value, keys.ToArray());
+                    if(apply) rApply(value, f, keys.ToArray());
                 }
                 return;
             }
@@ -328,6 +329,9 @@ namespace HTM.Net.Research.Swarming
             {
                 if (property.Name == "Item" && property.GetGetMethod().GetParameters().Any())
                     continue;
+                if (property.GetCustomAttribute<DoNotApplyAttribute>() != null)
+                    continue;
+
                 List<string> keys = new List<string>(currentKeys);
                 keys.Add(property.Name);
                 var value = property.GetValue(d);

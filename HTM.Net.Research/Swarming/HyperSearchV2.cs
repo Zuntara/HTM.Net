@@ -1846,7 +1846,7 @@ namespace HTM.Net.Research.Swarming
             this._permutations = permFile; //vars["permutations"];
             this._flattenedPermutations = new Dictionary<string, PermuteVariable>();
 
-            Action<object, string[]> flattenPermutations = (value, keys) =>
+            Func<object, string[], bool> flattenPermutations = (value, keys) =>
             {
                 if (keys.Contains(":"))
                 {
@@ -1878,6 +1878,7 @@ namespace HTM.Net.Research.Swarming
                             this._flattenedPermutations[string.Format("{0}:{1}", flatKey, encKey)] = encValue as PermuteVariable;
                         }
                     }
+                    return false;
                 }
                 else if (value is PermuteVariable)
                 {
@@ -1890,6 +1891,7 @@ namespace HTM.Net.Research.Swarming
                         this._flattenedPermutations[flatKey/*key*/] = value as PermuteVariable;
                     }
                 }
+                return true;
             };
 
             Utils.rApply(this._permutations, flattenPermutations);

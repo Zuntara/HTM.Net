@@ -12,11 +12,11 @@ namespace HTM.Net.Swarming.HyperSearch
         {
             return new VarState
             {
-                position = this.position,
-                _position = this._position,
-                velocity = this.velocity,
-                bestPosition = this.bestPosition,
-                bestResult = this.bestResult
+                position = position,
+                _position = _position,
+                velocity = velocity,
+                bestPosition = bestPosition,
+                bestResult = bestResult
             };
         }
     }

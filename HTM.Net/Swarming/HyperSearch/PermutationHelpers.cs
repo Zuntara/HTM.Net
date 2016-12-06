@@ -142,7 +142,7 @@ namespace HTM.Net.Swarming.HyperSearch
             this._inertia = inertia ?? SwarmConfiguration.inertia;
             this._cogRate = cogRate ?? SwarmConfiguration.cogRate;
             this._socRate = socRate ?? SwarmConfiguration.socRate;
-            
+
             // The particle's local best position and the best global position.
             this._bestPosition = (double)this.GetPosition();
             this._bestResult = null;
@@ -164,7 +164,7 @@ namespace HTM.Net.Swarming.HyperSearch
 
         public override void SetState(VarState varState)
         {
-            this._position = (double) varState._position;
+            this._position = (double)varState._position;
             this._velocity = varState.velocity;
             this._bestPosition = (double?)varState.bestPosition;
             this._bestResult = varState.bestResult;
@@ -227,7 +227,7 @@ namespace HTM.Net.Swarming.HyperSearch
 
             this._velocity = (this._velocity * this._inertia + rng.NextDouble(lb, ub) *
                               _cogRate * (_bestPosition - (double)GetPosition()));
-            if (globalBestPosition !=null)
+            if (globalBestPosition != null)
             {
                 this._velocity += rng.NextDouble(lb, ub) * this._socRate * (
                     (double)globalBestPosition - (double)this.GetPosition());
@@ -277,7 +277,7 @@ namespace HTM.Net.Swarming.HyperSearch
             {
                 var distances = ArrayUtils.Sub(pos, positions);// pos - positions;
 
-                var varWeights = ArrayUtils.Exp(ArrayUtils.Divide(ArrayUtils.Power(distances,2),maxDistanceSq)).ToArray(); 
+                var varWeights = ArrayUtils.Exp(ArrayUtils.Divide(ArrayUtils.Power(distances, 2), maxDistanceSq)).ToArray();
                 // varWeights = numpy.exp(numpy.power(distances, 2) / maxDistanceSq)
 
                 weights = ArrayUtils.Add(weights, varWeights);
@@ -519,7 +519,7 @@ namespace HTM.Net.Swarming.HyperSearch
         {
             // Get the count of how many in each position
             //positions = [this.choices.index(x) for x in otherPositions];
-            var positions = otherPositions.Select(x => Array.IndexOf(this.choices,x)).ToList();
+            var positions = otherPositions.Select(x => Array.IndexOf(this.choices, x)).ToList();
             var positionCounts = new int[this.choices.Length];  // [0] * this.choices.Length;
             foreach (var pos in positions)
             {
@@ -589,15 +589,25 @@ namespace HTM.Net.Swarming.HyperSearch
     [Serializable]
     public class PermuteEncoder : PermuteVariable
     {
+        [DoNotApply]
         public string name { get { return this["name"] as string; } set { this["name"] = value; } }
+        [DoNotApply]
         public string fieldName { get { return this["fieldName"] as string; } set { this["fieldName"] = value; } }
+        [DoNotApply]
         public string encoderType { get { return this["encoderType"] as string; } set { this["encoderType"] = value; } }
+        [DoNotApply]
         public bool classifierOnly { get { return (bool)(this["classifierOnly"] ?? false); } set { this["classifierOnly"] = value; } }
+        [DoNotApply]
         public object maxval { get { return this["maxval"]; } set { this["maxval"] = value; } } // int or permuteint
+        [DoNotApply]
         public object radius { get { return this["radius"]; } set { this["radius"] = value; } } // float or permutefloat
+        [DoNotApply]
         public object n { get { return this["n"]; } set { this["n"] = value; } } // int or permuteint
+        [DoNotApply]
         public object w { get { return this["w"]; } set { this["w"] = value; } } // int or permuteint
+        [DoNotApply]
         public object minval { get { return this["minval"]; } set { this["minval"] = value; } } // int or permuteint
+        [DoNotApply]
         public bool clipInput { get { return (bool)(this["clipInput"] ?? false); } set { this["clipInput"] = value; } }
 
         public KWArgsModel kwArgs { get; set; }
@@ -644,13 +654,13 @@ namespace HTM.Net.Swarming.HyperSearch
         {
             get
             {
-                if(kwArgs.ContainsKey(key)) return kwArgs[key];
+                if (kwArgs.ContainsKey(key)) return kwArgs[key];
                 if (kwArgs.ContainsKey(key.ToLower())) return kwArgs[key.ToLower()];
                 return null;
             }
             set
             {
-                if(kwArgs.ContainsKey(key)) kwArgs[key] = value;
+                if (kwArgs.ContainsKey(key)) kwArgs[key] = value;
                 else kwArgs[key.ToLower()] = value;
             }
         }
@@ -751,7 +761,7 @@ namespace HTM.Net.Swarming.HyperSearch
         {
             EncoderSetting encoder = new EncoderSetting();
             encoder.fieldName = this.fieldName;
-            encoder.name= this.name;
+            encoder.name = this.name;
 
             // Get the position of each encoder argument
             //for (encoderArg, value in this.kwArgs.iteritems())
@@ -790,7 +800,7 @@ namespace HTM.Net.Swarming.HyperSearch
                 }
                 catch (Exception e)
                 {
-                    if(Debugger.IsAttached) Debugger.Break();
+                    if (Debugger.IsAttached) Debugger.Break();
                     throw;
                 }
             }
@@ -912,5 +922,11 @@ namespace HTM.Net.Swarming.HyperSearch
         {
             throw new NotImplementedException();
         }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public class DoNotApplyAttribute : Attribute
+    {
+
     }
 }
