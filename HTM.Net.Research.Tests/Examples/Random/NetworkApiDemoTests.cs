@@ -101,8 +101,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             Assert.IsNull(n.GetRegions().First().Lookup("Layer 5"));
         }
 
-        //[TestMethod]
-        //[DeploymentItem("Resources\\RandomData.csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\RandomData.csv")]
         public void RunBasicNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_CLA);
@@ -127,6 +127,13 @@ namespace HTM.Net.Research.Tests.Examples.Random
             {
                 Console.WriteLine($"Correct: {i} = {allGuesses.Count(g => g == i)}");
             }
+            Console.WriteLine("Last 10 Guesses bucket list (grouped)");
+            var lastGuesses = demo.GetLastGuesses(10);
+            for (int i = 0; i < 8; i++)
+            {
+                Console.WriteLine($"Last Correct: {i} = {lastGuesses.Count(g => g == i)}");
+            }
+            Console.WriteLine("Random Guesses bucket list (grouped)");
             allGuesses = demo.GetRandomGuessesCounts();
             for (int i = 0; i < 8; i++)
             {

@@ -345,6 +345,11 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return _predictions.Skip(1).Select(p => p.CorrectGuesses).ToArray();
         }
 
+        public int[] GetLastGuesses(int lastCount)
+        {
+            return _predictions.Skip(_predictions.Count- lastCount).Select(p => p.CorrectGuesses).ToArray();
+        }
+
         public int[] GetRandomGuessesCounts()
         {
             return _predictions.Skip(1).Select(p => p.CorrectRandomGuesses).ToArray();
@@ -358,9 +363,9 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public static int GetGuessCount(IEnumerable<double> actuals, IEnumerable<double> predicted)
         {
             int correct = 0;
-            Stack<double> predStack = new Stack<double>(predicted);
-            List<double> actList = new List<double>(actuals);
-            double predValue;
+            Stack<int> predStack = new Stack<int>(predicted.Select(p=>(int)p));
+            List<int> actList = new List<int>(actuals.Select(p => (int)p));
+            int predValue;
             while (predStack.Count > 0)
             {
                 predValue = predStack.Pop();
