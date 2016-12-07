@@ -180,10 +180,10 @@ namespace HTM.Net.Research.Tests.Examples.Random
             Parameters parameters = Parameters.GetAllDefaultParameters();
             parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 3000 });
             parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 3000 });
-            parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
+            parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 2);
 
             // Classifier Specific
-            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.1555);
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0555);
             parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
 
             // SpatialPooler specific

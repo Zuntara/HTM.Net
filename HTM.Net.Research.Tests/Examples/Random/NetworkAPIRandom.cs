@@ -107,7 +107,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 fileLinesReversed.Add(fileLines[i]);
             }
 
-            int takeCount = 50;
+            int takeCount = 100;
             int skipCount = fileLines.Count - 3 - takeCount - 10; // take last 110 records
             // Take the rest and reverse it
             for (int i = 0; i < 2; i++)
@@ -408,7 +408,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
     public class RandomGameData
     {
-        private static readonly IRandom Random = new XorshiftRandom(42);
+        private static readonly IRandom Random = new XorshiftRandom(1956);
 
         public RandomGameData(double[] actuals, double[] predicted)
         {
