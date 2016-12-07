@@ -103,7 +103,7 @@
     <Compile Include="Examples\HotGym\NetworkAPIDemo.cs" />
     <Compile Include="Examples\HotGym\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\HotGym\NetworkDemoHarness.cs" />
-    <Compile Include="Examples\Random\NetworkAPIDemo.cs" />
+    <Compile Include="Examples\Random\NetworkAPIRandom.cs" />
     <Compile Include="Examples\Random\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\Random\NetworkDemoHarness.cs" />
     <Compile Include="Examples\Sine\NetworkAPIDemo.cs" />

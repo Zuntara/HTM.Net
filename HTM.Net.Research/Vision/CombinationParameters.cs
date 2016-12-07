@@ -143,6 +143,11 @@ namespace HTM.Net.Research.Vision
         {
             return _results.Count;
         }
+
+        public List<List<object>> GetAllCombinations()
+        {
+            return _combinations;
+        }
     }
 
     public class CombiParameters : Parameters

@@ -3,12 +3,6 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.Random
 {
-    /**
- * Encapsulates setup methods which are shared among various tests
- * in the {@link org.numenta.nupic.network} package.
- * 
- * @author cogmission
- */
     public class NetworkDemoHarness
     {
 
@@ -88,7 +82,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     25,
                     3,
                     1, 45, 0, 1, null, null, null,
-                    $"Number {(i+1)}", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+                    $"Number {(i + 1)}", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
             }
             fieldEncodings = SetupMap(
                     fieldEncodings,
@@ -153,8 +147,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.21);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.1);
             p.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.1);
-            p.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 9); 
-            p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 12); 
+            p.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 9);
+            p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 12);
 
             p.SetParameterByKey(Parameters.KEY.CLIP_INPUT, true);
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -184,19 +178,20 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public static Parameters GetParameters()
         {
             Parameters parameters = Parameters.GetAllDefaultParameters();
-            parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 512 });
-            parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 512 });
-            parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
+            parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 2048 });
+            parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 2048 });
+            parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 2);
 
             // Classifier Specific
-            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.05);
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.055);
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1, 2, 3, 4, 5, 6 });
 
             // SpatialPooler specific
-            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 12);//3
+            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 15);//3
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.8);//0.5
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
             parameters.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0);
-            parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 5.0);
+            parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 4.0);
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 1.0);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.01);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.1);
@@ -213,12 +208,12 @@ namespace HTM.Net.Research.Tests.Examples.Random
             //Temporal Memory specific
             parameters.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);
             parameters.SetParameterByKey(Parameters.KEY.CONNECTED_PERMANENCE, 0.21);
-            parameters.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 11);
-            parameters.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 6);
+            parameters.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 15);
+            parameters.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 10);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.05);
-            parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 16);
-            
+            parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 20);
+
             parameters.SetParameterByKey(Parameters.KEY.SEED_TM, 1960);
             parameters.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(1960));
 
