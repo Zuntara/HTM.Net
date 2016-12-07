@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reactive;
@@ -106,8 +107,14 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 fileLinesReversed.Add(fileLines[i]);
             }
 
+            int takeCount = 50;
+            int skipCount = fileLines.Count - 3 - takeCount - 10; // take last 110 records
             // Take the rest and reverse it
-            fileLinesReversed.AddRange(fileLines.Skip(3).Reverse());
+            for (int i = 0; i < 2; i++)
+            {
+                fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount).Take(takeCount));
+            }
+            fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount)); // last 10 record given, not trained
 
             StreamWriter sw = new StreamWriter("RandomData_rev.csv");
             foreach (string line in fileLinesReversed)
@@ -234,11 +241,13 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 }
 
                 var gd = RandomGameData.From(_predictedValues, output, classifierFields);
+                gd.RecordNumber = output.GetRecordNum();
+                if(gd.RecordNumber>100)
                 _predictions.Add(gd);
 
                 _predictedValues = newPredictions;
 
-                //WriteToFile(gd);
+                WriteToFile(gd);
                 //RecordStep(gd);
             }, Console.WriteLine, () =>
             {
@@ -257,58 +266,42 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
         #endregion
 
-        ///**
+        //**
         // * Primitive file appender for collecting output. This just demonstrates how to use
         // * {@link Subscriber#onNext(Object)} to accomplish some work.
         // *
         // * @param infer             The {@link Inference} object produced by the Network
         // * @param classifierField   The field we use in this demo for anomaly computing.
         // */
-        //private void WriteToFile(IInference infer, string[] classifierFields)
-        //{
-        //    try
-        //    {
-        //        //double[] newPredictions;
-        //        //if (classifierFields.Any(cf => null != infer.GetClassification(cf).GetMostProbableValue(1)))
-        //        //{
-        //        //    newPredictions = classifierFields.Select(cf => ((double?)infer.GetClassification(cf).GetMostProbableValue(1)).GetValueOrDefault(-1)).ToArray();
-        //        //}
-        //        //else
-        //        //{
-        //        //    newPredictions = _predictedValues;
-        //        //}
-        //        // Start logging from item 1
-        //        if (infer.GetRecordNum() > 0)
-        //        {
-        //            double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)infer.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
-        //            //double[] errors = ArrayUtils.Abs(ArrayUtils.Subtract(_predictedValues, actuals));
-        //            int correctGuesses = GetGuessCount(actuals, _predictedValues);
-        //            StringBuilder sb = new StringBuilder()
-        //                    .Append(infer.GetRecordNum()).Append(", ")
-        //                    //.Append("classifier input=")
-        //                    .Append(string.Format("{0}", Arrays.ToString(actuals))).Append(",")
-        //                    //.Append("prediction= ")
-        //                    .Append(string.Format("{0}", Arrays.ToString(_predictedValues))).Append(",")
-        //                    //.Append("correctGuesses=")
-        //                    .Append(string.Format("{0}", correctGuesses)).Append(",")
-        //                    //.Append("anomaly score=")
-        //                    .Append(infer.GetAnomalyScore().ToString(NumberFormatInfo.InvariantInfo));
-        //            _pw.WriteLine(sb.ToString());
-        //            _pw.Flush();
-        //            //if (infer.GetRecordNum() % 100 == 0)
-        //            //{
-        //            //    Console.WriteLine(sb.ToString());
-        //            //}
-        //        }
-        //        //_predictedValues = newPredictions;
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        Console.WriteLine(e);
-        //        _pw.Flush();
-        //    }
+        private void WriteToFile(RandomGameData data)
+        {
+            try
+            {
+                // Start logging from item 1
+                if (data.RecordNumber > 100)
+                {
+                    StringBuilder sb = new StringBuilder()
+                            .Append(data.RecordNumber).Append(", ")
+                            //.Append("classifier input=")
+                            .Append(string.Format("{0}", Arrays.ToString(data.ActualNumbers))).Append(",")
+                            //.Append("prediction= ")
+                            .Append(string.Format("{0}", Arrays.ToString(data.PredictedNumbers))).Append(",")
+                            //.Append("correctGuesses=")
+                            .Append(string.Format("{0}", data.GetHighestCorrectPredictionScore())).Append(",")
+                            //.Append("anomaly score=")
+                            .Append(data.AnomalyFactor.ToString(NumberFormatInfo.InvariantInfo));
+                    _pw.WriteLine(sb.ToString());
+                    _pw.Flush();
+                }
+                //_predictedValues = newPredictions;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                _pw.Flush();
+            }
 
-        //}
+        }
 
         //private void RecordStep(IInference infer, string[] classifierFields)
         //{
@@ -617,6 +610,12 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
 
             return retVal;
+        }
+
+        public string GetHighestCorrectPredictionScore()
+        {
+            var strings = GetCountsOfCorrectPredictedGuessesInStrings(new List<RandomGameData> { this, this }).Keys.OrderByDescending(k => k).Where(k => k != "--").ToList();
+            return strings.FirstOrDefault() ?? "0";
         }
 
         public static Map<string, int> GetLastGuesses(IList<RandomGameData> collection, int lastCount)

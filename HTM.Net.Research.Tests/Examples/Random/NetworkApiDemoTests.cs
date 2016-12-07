@@ -194,8 +194,6 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
 
             Console.WriteLine("");
-            Console.WriteLine($"All time Cost: {RandomGameData.GetCost(allGuesses)}, Revenue: {RandomGameData.GetApproxRevenue(allGuesses)}, Profit: {RandomGameData.GetApproxRevenue(allGuesses) - RandomGameData.GetCost(allGuesses)}");
-            Console.WriteLine($"Last 10 guesses Cost: {RandomGameData.GetCost(lastGuesses)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuesses)}, Profit: {RandomGameData.GetApproxRevenue(lastGuesses) - RandomGameData.GetCost(lastGuesses)}");
             Console.WriteLine($"Random Cost: {RandomGameData.GetCost(randomGuesses)}, Revenue: {RandomGameData.GetApproxRevenue(randomGuesses)}, Profit: {RandomGameData.GetApproxRevenue(randomGuesses) - RandomGameData.GetCost(randomGuesses)}");
             Console.WriteLine("");
         }
