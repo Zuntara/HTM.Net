@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using HTM.Net.Encoders;
+using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Vision;
@@ -59,6 +61,154 @@ namespace HTM.Net.Research.Tests.Examples.Random
             var pars = ExperimentParameters.Default();
             Assert.IsNotNull(pars);
             Assert.AreEqual(26, pars.Size());
+        }
+
+        #endregion
+
+        #region Pick Three
+
+        private List<double[]> _pickActuals = new List<double[]>();
+
+        private List<PickThreeData> GetPickData(int take = 25)
+        {
+            if (_pickActuals.Count == 0)
+            {
+                foreach (string line in YieldingFileReader.ReadAllLines("Pick3GameData.csv", Encoding.UTF8).Skip(3).Skip(4293).Take(take))
+                {
+                    double[] actuals = line.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(v => double.Parse(v)).ToArray();
+                    _pickActuals.Add(actuals);
+                }
+            }
+
+            List<PickThreeData> data = new List<PickThreeData>();
+            int i = 0;
+            foreach (double[] actuals in _pickActuals)
+            {
+                PickThreeData d = new PickThreeData(i++, actuals, null);
+                data.Add(d);
+            }
+
+            Assert.IsTrue(data.Count > 0);
+            return data;
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\Pick3GameData.csv")]
+        public void TestDistribution()
+        {
+            PickThreeData.Random = new XorshiftRandom(398731);
+            List<PickThreeData> data = GetPickData(50);
+
+            int countPositive = data.Count(d => d.NettoRandomResult > 0);
+
+            Assert.IsTrue(countPositive > 0);
+
+            Console.WriteLine($"Number of correct random guesses: {countPositive}/{data.Count}");
+
+            var histo = data.GroupBy(d => d.RandomAnalysisResult).Select(g => new { g.Key, Count = g.Count() });
+            Console.WriteLine("");
+            foreach (var hLine in histo)
+            {
+                Console.WriteLine($"{hLine.Key} : {hLine.Count}");
+            }
+
+            Console.WriteLine($"Total Winnings: {data.Sum(d => d.NettoRandomResult)}");
+            Console.WriteLine($"Total Cost    : {data.Count * 5}");
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\Pick3GameData.csv")]
+        public void TestDistributionGetBestSeed()
+        {
+            Map<int, int> results = new Map<int, int>();
+            int maxCount = 0;
+            for (int i = 398000; i < 400000; i++)
+            {
+                PickThreeData.Random = new XorshiftRandom(i);
+
+                List<PickThreeData> data = GetPickData();
+                int countPositive = data.AsParallel().WithDegreeOfParallelism(4).Count(d => d.NettoRandomResult > 0);
+                if (countPositive > maxCount)
+                {
+                    results.Add(i, countPositive);
+                    maxCount = countPositive;
+                }
+            }
+
+            var bestCountPositive = results.Max(p => p.Value);
+            Assert.IsTrue(bestCountPositive > 0);
+            int seed = results.First(p => p.Value == bestCountPositive).Key;
+            PickThreeData.Random = new XorshiftRandom(seed);
+            Console.WriteLine($"Best seed was {seed} with {bestCountPositive} hits.");
+            List<PickThreeData> bestData = GetPickData();
+            Console.WriteLine($"Number of correct random guesses: {bestCountPositive}/{bestData.Count}");
+
+            var histo = bestData.GroupBy(d => d.RandomAnalysisResult).Select(g => new { g.Key, Count = g.Count() });
+            Console.WriteLine("");
+            foreach (var hLine in histo)
+            {
+                Console.WriteLine($"{hLine.Key} : {hLine.Count}");
+            }
+
+            Console.WriteLine($"Total Winnings: {bestData.Sum(d => d.NettoRandomResult)}");
+            Console.WriteLine($"Total Cost    : {bestData.Count * 5}");
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\Pick3GameData.csv")]
+        public void RunBasicPickThreeNetwork()
+        {
+            NetworkApiRandom demo = new NetworkApiRandom(NetworkApiRandom.Mode.BasicClaPick);
+            demo.RunNetwork();
+
+
+            double dRatio = 100.0 / 100;//demo.GetTotalNumberOfPickPredictions();
+
+            var data = demo._predictionsPick;
+
+            int skipCountCheck = data.Count - 100;
+            int skipCountLast = data.Count - 30;
+
+            Console.WriteLine("");
+            Console.WriteLine("Predicted bucket list (step 1)");
+            Console.WriteLine("");
+            var allGuessesHisto = data.Skip(skipCountCheck).GroupBy(d => d.AnalysisResult[1]).Select(g => new { g.Key, Count = g.Count() });
+            foreach (var guess in allGuessesHisto)
+            {
+                Console.WriteLine($"{guess.Count}\t= {guess.Key}\t({dRatio * guess.Count:0.00}%)");
+            }
+
+            Console.WriteLine("");
+            Console.WriteLine("Predicted bucket list (step 5)");
+            Console.WriteLine("");
+            var allGuessesHisto2 = data.Skip(skipCountCheck).GroupBy(d => d.AnalysisResult[5]).Select(g => new { g.Key, Count = g.Count() });
+            foreach (var guess in allGuessesHisto2)
+            {
+                Console.WriteLine($"{guess.Count}\t= {guess.Key}\t({dRatio * guess.Count:0.00}%)");
+            }
+
+            Console.WriteLine("");
+            Console.WriteLine("Predicted bucket list (random)");
+            Console.WriteLine("");
+            var allRandomHisto = data.Skip(skipCountCheck).GroupBy(d => d.RandomAnalysisResult).Select(g => new { g.Key, Count = g.Count() });
+            foreach (var guess in allRandomHisto)
+            {
+                Console.WriteLine($"{guess.Count}\t= {guess.Key}\t({dRatio * guess.Count:0.00}%)");
+            }
+
+            Console.WriteLine("");
+            Console.WriteLine("Last 30 guesses bucket list (grouped) (step 1)");
+            Console.WriteLine("");
+            var lastGuesses = data.Skip(skipCountLast).GroupBy(d => d.AnalysisResult[1]).Select(g => new { g.Key, Count = g.Count() });
+            foreach (var guess in lastGuesses)
+            {
+                Console.WriteLine($"{guess.Count}\t= {guess.Key}");
+            }
+
+            Console.WriteLine("");
+            Console.WriteLine($"All time Cost: {data.Skip(skipCountCheck).Count()}, Revenue: {data.Skip(skipCountCheck).Sum(d => d.NettoResults[1])}, Profit: {data.Skip(skipCountCheck).Sum(d => d.NettoResults[1]) - data.Skip(skipCountCheck).Count()}");
+            Console.WriteLine($"Last {data.Skip(skipCountLast).Count()} guesses Cost: {data.Skip(skipCountLast).Count()}, Revenue: {data.Skip(skipCountLast).Sum(d => d.NettoResults[1])}, Profit: {data.Skip(skipCountLast).Sum(d => d.NettoResults[1]) - data.Skip(skipCountLast).Count()}");
+            Console.WriteLine("");
         }
 
         #endregion
@@ -187,7 +337,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
             Console.WriteLine("Random Guesses bucket list (grouped)");
             var randomGuesses = RandomGameData.GetCountsOfCorrectRandomGuessesInStrings(demo.Data());
-            dRatio = 100.0 / (demo.GetNumberOfPredictions()-1);
+            dRatio = 100.0 / (demo.GetNumberOfPredictions() - 1);
             foreach (var guess in randomGuesses)
             {
                 Console.WriteLine($"{guess.Key}\t= {guess.Value}\t({dRatio * guess.Value:0.00}%)");

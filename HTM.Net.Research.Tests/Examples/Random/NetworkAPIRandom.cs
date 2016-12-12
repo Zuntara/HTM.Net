@@ -37,7 +37,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
     public class NetworkApiRandom
     {
         /** modes to choose from to demonstrate network usage */
-        public enum Mode { BasicCla, BasicSdr, MultiLayer, MultiRegion };
+        public enum Mode { BasicCla, BasicClaPick, BasicSdr, MultiLayer, MultiRegion };
 
         private readonly Network.Network _network;
 
@@ -46,18 +46,36 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
         private Map<int, double[]> _predictedValues; // step, values
         private List<RandomGameData> _predictions;
+        public List<PickThreeData> _predictionsPick;
 
         public NetworkApiRandom(Mode mode)
         {
             switch (mode)
             {
-                case Mode.BasicCla: _network = CreateBasicNetworkCla(); break;
-                case Mode.BasicSdr: _network = CreateBasicNetworkSdr(); break;
-                case Mode.MultiLayer: _network = CreateMultiLayerNetwork(); break;
-                case Mode.MultiRegion: _network = CreateMultiRegionNetwork(); break;
+                case Mode.BasicCla:
+                    _network = CreateBasicNetworkCla();
+                    _network.Observe().Subscribe(GetSubscriber());
+                    break;
+                case Mode.BasicClaPick:
+                    {
+                        _network = CreateBasicNetworkClaPickThree();
+                        _network.Observe().Subscribe(GetPickSubscriber());
+                        break;
+                    }
+                case Mode.BasicSdr:
+                    _network = CreateBasicNetworkSdr();
+                    _network.Observe().Subscribe(GetSubscriber());
+                    break;
+                case Mode.MultiLayer:
+                    _network = CreateMultiLayerNetwork();
+                    _network.Observe().Subscribe(GetSubscriber());
+                    break;
+                case Mode.MultiRegion:
+                    _network = CreateMultiRegionNetwork();
+                    _network.Observe().Subscribe(GetSubscriber());
+                    break;
             }
 
-            _network.Observe().Subscribe(GetSubscriber());
             try
             {
                 _outputFile = new FileInfo("c:\\temp\\RandomData_output_" + mode + ".txt");
@@ -96,6 +114,25 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     SensorParams.Create(SensorParams.Keys.Path, "", "RandomData_rev.csv")))));
         }
 
+        internal Network.Network CreateBasicNetworkClaPickThree()
+        {
+            // First reverse the darn file
+            ReversePickThreeData();
+
+            Parameters p = NetworkDemoHarness.GetPickParameters();
+            p = p.Union(NetworkDemoHarness.GetPickThreeFieldEncodingParams());
+
+            return Network.Network.Create("PickThree Demo", p)
+                .Add(Network.Network.CreateRegion("Region 1")
+                .Add(Network.Network.CreateLayer("Layer 2/3", p)
+                .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                .Add(Anomaly.Create())
+                .Add(new TemporalMemory())
+                .Add(new Algorithms.SpatialPooler())
+                .Add(Sensor<FileInfo>.Create(FileSensor.Create,
+                    SensorParams.Create(SensorParams.Keys.Path, "", "Pick3GameData_rev.csv")))));
+        }
+
         private void ReverseRandomData()
         {
             List<string> fileLines = YieldingFileReader.ReadAllLines("RandomData.csv", Encoding.UTF8).ToList();
@@ -107,7 +144,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 fileLinesReversed.Add(fileLines[i]);
             }
 
-            int takeCount = 100;
+            int takeCount = 101;
             int skipCount = fileLines.Count - 3 - takeCount - 10; // take last 110 records
             // Take the rest and reverse it
             for (int i = 0; i < 2; i++)
@@ -117,6 +154,35 @@ namespace HTM.Net.Research.Tests.Examples.Random
             fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount)); // last 10 record given, not trained
 
             StreamWriter sw = new StreamWriter("RandomData_rev.csv");
+            foreach (string line in fileLinesReversed)
+            {
+                sw.WriteLine(line);
+            }
+            sw.Flush();
+            sw.Close();
+        }
+
+        private void ReversePickThreeData()
+        {
+            List<string> fileLines = YieldingFileReader.ReadAllLines("Pick3GameData.csv", Encoding.UTF8).ToList();
+            List<string> fileLinesReversed = new List<string>();
+
+            // Copy header
+            for (int i = 0; i < 3; i++)
+            {
+                fileLinesReversed.Add(fileLines[i]);
+            }
+
+            int takeCount = 100;
+            int skipCount = fileLines.Count - 3 - takeCount - 30; // take last 110 records
+            // Take the rest and reverse it
+            for (int i = 0; i < 10; i++)
+            {
+                fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount).Take(takeCount));
+            }
+            fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount)); // last 10 record given, not trained
+
+            StreamWriter sw = new StreamWriter("Pick3GameData_rev.csv");
             foreach (string line in fileLinesReversed)
             {
                 sw.WriteLine(line);
@@ -242,13 +308,56 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
                 var gd = RandomGameData.From(_predictedValues, output, classifierFields);
                 gd.RecordNumber = output.GetRecordNum();
-                if(gd.RecordNumber>100)
-                _predictions.Add(gd);
+                if (gd.RecordNumber > 100)
+                    _predictions.Add(gd);
 
                 _predictedValues = newPredictions;
 
                 WriteToFile(gd);
                 //RecordStep(gd);
+            }, Console.WriteLine, () =>
+            {
+                Console.WriteLine("Stream completed. see output: " + _outputFile.FullName);
+                try
+                {
+                    _pw.Flush();
+                    _pw.Close();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            });
+        }
+
+        internal IObserver<IInference> GetPickSubscriber()
+        {
+            return Observer.Create<IInference>(output =>
+            {
+                string[] classifierFields = { "Number 1", "Number 2", "Number 3" };
+
+                Map<int, double[]> newPredictions = new Map<int, double[]>();
+                // Step 1 is certainly there
+                if (classifierFields.Any(cf => null != output.GetClassification(cf).GetMostProbableValue(1)))
+                {
+                    foreach (int step in output.GetClassification(classifierFields[0]).StepSet())
+                    {
+                        newPredictions.Add(step, classifierFields
+                            .Select(cf => ((double?)output.GetClassification(cf).GetMostProbableValue(step)).GetValueOrDefault(-1)).ToArray());
+                    }
+                }
+                else
+                {
+                    newPredictions = _predictedValues;
+                }
+
+                var gd = PickThreeData.From(_predictedValues, output, classifierFields);
+
+                _predictionsPick.Add(gd);
+
+                _predictedValues = newPredictions;
+
+                WriteToFile(gd);
             }, Console.WriteLine, () =>
             {
                 Console.WriteLine("Stream completed. see output: " + _outputFile.FullName);
@@ -288,6 +397,36 @@ namespace HTM.Net.Research.Tests.Examples.Random
                             .Append(string.Format("{0}", Arrays.ToString(data.PredictedNumbers))).Append(",")
                             //.Append("correctGuesses=")
                             .Append(string.Format("{0}", data.GetHighestCorrectPredictionScore())).Append(",")
+                            //.Append("anomaly score=")
+                            .Append(data.AnomalyFactor.ToString(NumberFormatInfo.InvariantInfo));
+                    _pw.WriteLine(sb.ToString());
+                    _pw.Flush();
+                }
+                //_predictedValues = newPredictions;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                _pw.Flush();
+            }
+
+        }
+
+        private void WriteToFile(PickThreeData data)
+        {
+            try
+            {
+                // Start logging from item 1
+                if (data.RecordNumber > 0)
+                {
+                    StringBuilder sb = new StringBuilder()
+                            .Append(data.RecordNumber).Append(", ")
+                            //.Append("classifier input=")
+                            .Append(string.Format("{0}", Arrays.ToString(data.ActualNumbers))).Append(",")
+                            //.Append("prediction= ")
+                            .Append(string.Format("{0}", Arrays.ToString(data.PredictedNumbers))).Append(",")
+                            //.Append("correctGuesses=")
+                            .Append(string.Format("{0}", data.AnalysisResult)).Append(",")
                             //.Append("anomaly score=")
                             .Append(data.AnomalyFactor.ToString(NumberFormatInfo.InvariantInfo));
                     _pw.WriteLine(sb.ToString());
@@ -346,6 +485,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public void RunNetwork()
         {
             _predictions = new List<RandomGameData>();
+            _predictionsPick = new List<PickThreeData>();
 
             _network.Start();
             _network.GetTail().GetTail().GetLayerThread().Wait();
@@ -359,6 +499,11 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public int GetTotalNumberOfPredictions()
         {
             return _predictions.Skip(1).Sum(p => p.CorrectDeviationPredictionsWithBonus.Count + 1);
+        }
+
+        public int GetTotalNumberOfPickPredictions()
+        {
+            return _predictionsPick.Count - 1;
         }
 
         public List<RandomGameData> Data()
@@ -464,7 +609,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             bool bonusHit = false;
             int correctNumbersAct = 0;
 
-            Stack<int> predStack = new Stack<int>(predicted.Take(6)); // limit to 6 numbers
+            Stack<int> predStack = new Stack<int>(predicted); // limit to 6 numbers
             List<int> actualList = new List<int>(actuals);
 
             while (predStack.Count > 0)
@@ -677,5 +822,155 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
             return gd;
         }
+    }
+
+    public class PickThreeData
+    {
+        public static IRandom Random = new XorshiftRandom(42);
+
+        public PickThreeData(int recordNumber, double[] actuals, Map<int, double[]> predicted)
+        {
+            RecordNumber = recordNumber;
+            RandomNumbers = GetRandomGuesses();
+            ActualNumbers = actuals.Select(a => (int)a).ToArray();
+            AnalysisResult = new Map<int, PickThreeHit>();
+            if (predicted != null)
+            {
+                PredictedNumbers = new Map<int, int[]>(predicted.ToDictionary(k => k.Key, v => v.Value.Select(x => (int)x).ToArray()));
+
+                AnalysisResult = CalculateHitResult(ActualNumbers, PredictedNumbers);
+                NettoResults = CalculateNettoResults(AnalysisResult);
+            }
+            RandomAnalysisResult = CalculateHitResult(ActualNumbers, RandomNumbers);
+            NettoRandomResult = CalculateNettoResult(RandomAnalysisResult);
+        }
+
+        private int[] GetRandomGuesses()
+        {
+            // 3 numbers between 0 and 9
+            return ArrayUtils.Range(0, 3).Select(i => Random.NextInt(9)).ToArray();
+        }
+
+        internal Map<int, PickThreeHit> CalculateHitResult(int[] actuals, Map<int, int[]> guesses)
+        {
+            Map<int, PickThreeHit> netResults = new Map<int, PickThreeHit>();
+            foreach (int key in guesses.Keys)
+            {
+                netResults[key] = CalculateHitResult(actuals, guesses[key]);
+            }
+            return netResults;
+        }
+
+        internal PickThreeHit CalculateHitResult(int[] actuals, int[] guess)
+        {
+            PickThreeHit hit = PickThreeHit.None;
+
+            // First two digits correct
+            hit |= Arrays.AreEqual(actuals.Take(2), guess.Take(2)) ? PickThreeHit.CorrectFirstTwo : PickThreeHit.None;
+            // Last two digits correct
+            hit |= Arrays.AreEqual(actuals.Skip(1).Take(2), guess.Skip(1).Take(2)) ? PickThreeHit.CorrectLastTwo : PickThreeHit.None;
+            // Digits correct but not in order
+            hit |= ArrayContained(actuals, guess) && guess.Distinct().Count() == 3 ? PickThreeHit.CorrectNumbers : PickThreeHit.None;
+
+            if (ArrayContained(actuals, guess) && guess.Distinct().Count() < 3)
+            {
+                // Digits correct but not in order with doubles
+                hit |= PickThreeHit.CorrectNumbersWithDoubles;
+            }
+            if (Arrays.AreEqual(actuals, guess))
+            {
+                // All digits correct and correct order
+                hit |= PickThreeHit.CorrectNumbers | PickThreeHit.CorrectOrder;
+            }
+            return hit;
+        }
+
+        private bool ArrayContained(int[] actuals, int[] guess)
+        {
+            Stack<int> actStack = new Stack<int>(actuals);
+            List<int> guessStack = new List<int>(guess);
+            bool contained = true;
+            while (actStack.Count > 0)
+            {
+                int check = actStack.Pop();
+                if (guessStack.Contains(check))
+                {
+                    int index = guessStack.IndexOf(check);
+                    guessStack.RemoveAt(index);
+                }
+                else
+                {
+                    contained = false;
+                }
+            }
+            return contained;
+        }
+
+        private int CalculateNettoResult(PickThreeHit hitResult)
+        {
+            int nettoResult = 0;
+            if (hitResult.HasFlag(PickThreeHit.CorrectNumbers) && hitResult.HasFlag(PickThreeHit.CorrectOrder))
+            {
+                nettoResult += 500;
+            }
+            if (hitResult.HasFlag(PickThreeHit.CorrectNumbersWithDoubles))
+            {
+                nettoResult += 160;
+            }
+            if (hitResult.HasFlag(PickThreeHit.CorrectNumbers))
+            {
+                nettoResult += 80;
+            }
+            if (hitResult.HasFlag(PickThreeHit.CorrectFirstTwo) || hitResult.HasFlag(PickThreeHit.CorrectLastTwo))
+            {
+                nettoResult += 50;
+            }
+            return nettoResult;
+        }
+
+        private Map<int, int> CalculateNettoResults(Map<int, PickThreeHit> hitResult)
+        {
+            Map<int, int> netResults = new Map<int, int>();
+            foreach (int key in hitResult.Keys)
+            {
+                netResults[key] = CalculateNettoResult(hitResult[key]);
+            }
+            return netResults;
+        }
+
+        public static PickThreeData From(Map<int, double[]> previousPredicted, IInference inference, string[] classifierFields)
+        {
+            double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)inference.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
+            PickThreeData data = new PickThreeData(inference.GetRecordNum(), actuals, previousPredicted);
+
+            data.AnomalyFactor = inference.GetAnomalyScore();
+
+            return data;
+        }
+
+        public Map<int, PickThreeHit> AnalysisResult { get; private set; }
+        public PickThreeHit RandomAnalysisResult { get; private set; }
+
+        public int RecordNumber { get; set; }
+        public int[] ActualNumbers { get; set; }
+        public Map<int, int[]> PredictedNumbers { get; set; }
+        public int[] RandomNumbers { get; set; }
+
+        public Map<int, int> NettoResults { get; private set; }
+        public int NettoRandomResult { get; private set; }
+
+        public double AnomalyFactor { get; set; }
+
+    }
+
+    [Flags]
+    public enum PickThreeHit
+    {
+        None = 0,
+        CorrectOrder = 1,
+        CorrectNumbers = 2,
+        CorrectNumbersWithDoubles = 4,
+        CorrectFirstTwo = 8,
+        CorrectLastTwo = 16
     }
 }

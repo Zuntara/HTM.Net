@@ -177,6 +177,9 @@
     <None Include="Resources\foxeat.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Resources\Pick3GameData.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Resources\Swarming\sawtooth.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
