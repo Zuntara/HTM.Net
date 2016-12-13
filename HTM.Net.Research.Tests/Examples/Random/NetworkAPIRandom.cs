@@ -79,6 +79,10 @@ namespace HTM.Net.Research.Tests.Examples.Random
             try
             {
                 _outputFile = new FileInfo("c:\\temp\\RandomData_output_" + mode + ".txt");
+                if (_outputFile.Exists)
+                {
+                    _outputFile.Delete();
+                }
                 Debug.WriteLine("Creating output file: " + _outputFile);
                 _pw = new StreamWriter(_outputFile.OpenWrite());
                 _pw.WriteLine("RecordNum,Actual,Predicted,CorrectGuesses,AnomalyScore");
@@ -144,10 +148,10 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 fileLinesReversed.Add(fileLines[i]);
             }
 
-            int takeCount = 101;
+            int takeCount = 150;
             int skipCount = fileLines.Count - 3 - takeCount - 10; // take last 110 records
             // Take the rest and reverse it
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 0; i++)
             {
                 fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount).Take(takeCount));
             }
@@ -293,11 +297,11 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 string[] classifierFields = { "Number 1", "Number 2", "Number 3", "Number 4", "Number 5", "Number 6", "Bonus" };
                 Map<int, double[]> newPredictions = new Map<int, double[]>();
                 // Step 1 is certainly there
-                if (classifierFields.Take(6).Any(cf => null != output.GetClassification(cf).GetMostProbableValue(1)))
+                if (classifierFields.Any(cf => null != output.GetClassification(cf).GetMostProbableValue(1)))
                 {
                     foreach (int step in output.GetClassification(classifierFields[0]).StepSet())
                     {
-                        newPredictions.Add(step, classifierFields.Take(6)
+                        newPredictions.Add(step, classifierFields.Take(7)
                             .Select(cf => ((double?)output.GetClassification(cf).GetMostProbableValue(step)).GetValueOrDefault(-1)).ToArray());
                     }
                 }
@@ -308,8 +312,12 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
                 var gd = RandomGameData.From(_predictedValues, output, classifierFields);
                 gd.RecordNumber = output.GetRecordNum();
-                if (gd.RecordNumber > 100)
-                    _predictions.Add(gd);
+                //if (gd.RecordNumber > 100)
+                _predictions.Add(gd);
+
+                gd.DeviatedNumbers?.Add(new[] { 3, 17, 21, 29, 31, 44, 12 });
+                gd.DeviatedNumbers?.Add(new[] { 1, 17, 21, 29, 36, 44, 27 });
+                if (gd.DeviatedNumbers != null) gd.CalculateDeviationGuessCounts();
 
                 _predictedValues = newPredictions;
 
@@ -387,7 +395,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             try
             {
                 // Start logging from item 1
-                if (data.RecordNumber > 100)
+                if (data.RecordNumber > 99)
                 {
                     StringBuilder sb = new StringBuilder()
                             .Append(data.RecordNumber).Append(", ")
@@ -592,7 +600,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             CorrectRandomPredictionsWithBonus = CalculateOneGuess(ActualNumbers, RandomNumbers);
         }
 
-        private void CalculateDeviationGuessCounts()
+        public void CalculateDeviationGuessCounts()
         {
             List<Tuple<int, bool>> allResults = new List<Tuple<int, bool>>();
             foreach (int[] numbers in DeviatedNumbers)
@@ -600,8 +608,6 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 allResults.Add(CalculateOneGuess(ActualNumbers, numbers));
             }
             CorrectDeviationPredictionsWithBonus = allResults;
-
-
         }
 
         public static Tuple<int, bool> CalculateOneGuess(int[] actuals, int[] predicted)
@@ -710,6 +716,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         {
             // skip first prediction, it's bogus
             var results = collection.Skip(1)
+                .Where(g => g.CorrectPredictionsWithBonus != null)
                 .GroupBy(g => g.CorrectPredictionsWithBonus)
                 .OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Item2)
                 .Select(g => new { Id = $"{g.Key.Item1}{(g.Key.Item2 ? "+" : "")}", Value = g.Count() });
@@ -721,6 +728,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
 
             results = collection.Skip(1)
+                .Where(d => d.CorrectDeviationPredictionsWithBonus != null)
                 .SelectMany(d => d.CorrectDeviationPredictionsWithBonus)
                 .GroupBy(g => g)
                 .OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Item2)
@@ -762,6 +770,11 @@ namespace HTM.Net.Research.Tests.Examples.Random
             var strings = GetCountsOfCorrectPredictedGuessesInStrings(new List<RandomGameData> { this, this }).Keys.OrderByDescending(k => k).Where(k => k != "--").ToList();
             return strings.FirstOrDefault() ?? "0";
         }
+        public Map<string, int> GetPredictionScores()
+        {
+            var strings = GetCountsOfCorrectPredictedGuessesInStrings(new List<RandomGameData> { this, this });
+            return strings;
+        }
 
         public static Map<string, int> GetLastGuesses(IList<RandomGameData> collection, int lastCount)
         {
@@ -773,26 +786,85 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return ArrayUtils.Range(0, 6).Select(i => Random.NextInt(45) + 1).ToArray();
         }
 
-        public static double GetCost(Map<string, int> results)
+        public static double GetCost(IList<RandomGameData> results)
         {
-            return results.Values.Sum(); // 1 eur per record
+            var prices = results.Where(gd => gd.PredictedNumbers != null).Select(gd => gd.PredictedNumbers.Length == 6 ? 1 : 7);
+            var pricesDev = results.Where(gd => gd.DeviatedNumbers != null).SelectMany(gd => gd.DeviatedNumbers.Select(d => d.Length == 6 ? 1 : 7));
+
+            return prices.Sum() + pricesDev.Sum(); // 1 eur per record
         }
 
-        public static double GetApproxRevenue(Map<string, int> results)
+        public static double GetApproxRevenue(IList<RandomGameData> results,  Map<string, int> rangCounts)
         {
             double rev = 0;
 
-            foreach (var result in results)
+            if (results.Last().PredictedNumbers.Length == 6)
             {
-                if (result.Key == "2+") rev += result.Value * 3.00;
-                if (result.Key == "3") rev += result.Value * 5.00;
-                if (result.Key == "3+") rev += result.Value * 11.50;
-                if (result.Key == "4") rev += result.Value * 26.50;
-                if (result.Key == "4+") rev += result.Value * 300.00;
-                if (result.Key == "5") rev += result.Value * 1200.00;
-                if (result.Key == "5+") rev += result.Value * 16500.00;
-                if (result.Key == "6" || result.Key == "6+") rev += result.Value * 1000000.0; // avg
+                foreach (var result in rangCounts)
+                {
+                    rev += GetApproxRevenue(result.Key, result.Value);
+                }
             }
+            if (results.Last().PredictedNumbers.Length == 7)
+            {
+                foreach (RandomGameData data in results)
+                {
+                    var scores = data.GetPredictionScores();
+                    foreach (var score in scores)
+                    {
+                        double subRev = 0;
+                        if (score.Key == "2+" || score.Key == "3")
+                        {
+                            subRev += GetApproxRevenue(score.Key, 4);
+                        }
+                        if (score.Key == "3+")
+                        {
+                            subRev += GetApproxRevenue("3+", 3) + GetApproxRevenue("3", 1) + GetApproxRevenue("2+", 3);
+                        }
+                        if (score.Key == "4")
+                        {
+                            subRev += GetApproxRevenue("4", 3) + GetApproxRevenue("3", 4);
+                        }
+                        if (score.Key == "4+")
+                        {
+                            subRev += GetApproxRevenue("4+", 2) + GetApproxRevenue("4", 1) + GetApproxRevenue("3+", 4);
+                        }
+                        if (score.Key == "5")
+                        {
+                            subRev += GetApproxRevenue("5", 2) + GetApproxRevenue("4", 5);
+                        }
+                        if (score.Key == "5+")
+                        {
+                            subRev += GetApproxRevenue("5+", 1) + GetApproxRevenue("5", 1) + GetApproxRevenue("4", 5);
+                        }
+                        if (score.Key == "6")
+                        {
+                            subRev += GetApproxRevenue("6", 1) + GetApproxRevenue("5", 6);
+                        }
+                        if (score.Key == "6+")
+                        {
+                            subRev += GetApproxRevenue("6", 1) + GetApproxRevenue("5+", 6);
+                        }
+                        rev += subRev*score.Value;
+                    }
+                }
+            }
+
+            return rev;
+        }
+
+        public static double GetApproxRevenue(string rangStr, double cnt)
+        {
+            double rev = 0;
+
+            if (rangStr == "2+") rev += cnt * 3.00;
+            if (rangStr == "3") rev +=  cnt * 5.00;
+            if (rangStr == "3+") rev += cnt * 11.50;
+            if (rangStr == "4") rev +=  cnt * 26.50;
+            if (rangStr == "4+") rev += cnt * 300.00;
+            if (rangStr == "5") rev +=  cnt * 1200.00;
+            if (rangStr == "5+") rev += cnt * 16500.00;
+            if (rangStr == "6" || rangStr == "6+") rev += cnt * 1000000.0; // avg
 
             return rev;
         }
@@ -802,6 +874,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)inference.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
 
             RandomGameData gd = new RandomGameData(actuals, previousPredicted?[1]);
+            gd.AnomalyFactor = inference.GetAnomalyScore();
 
             List<double[]> dNumbers = new List<double[]>();
             foreach (int step in inference.GetClassification(classifierFields[0]).StepSet())

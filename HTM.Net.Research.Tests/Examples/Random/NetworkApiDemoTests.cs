@@ -34,13 +34,6 @@ namespace HTM.Net.Research.Tests.Examples.Random
         }
 
         [TestMethod]
-        public void TestGetNetworkDemoTestEncoderParams()
-        {
-            Parameters p = NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
-            Assert.AreEqual(28, p.Size());
-        }
-
-        [TestMethod]
         public void TestSettingPermutableVariables()
         {
             Parameters p = Parameters.Empty();
@@ -68,6 +61,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         #region Pick Three
 
         private List<double[]> _pickActuals = new List<double[]>();
+        private List<double[]> _randomActuals = new List<double[]>();
 
         private List<PickThreeData> GetPickData(int take = 25)
         {
@@ -264,6 +258,203 @@ namespace HTM.Net.Research.Tests.Examples.Random
             Assert.AreEqual(true, correctBonus);
         }
 
+        private List<int[]> GetRandomData()
+        {
+            if (_randomActuals.Count == 0)
+            {
+                foreach (string line in YieldingFileReader.ReadAllLines("RandomData.csv", Encoding.UTF8).Skip(3))
+                {
+                    double[] actuals = line.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(v => double.Parse(v)).ToArray();
+                    _randomActuals.Add(actuals);
+                }
+            }
+
+            List<int[]> data = new List<int[]>();
+            int i = 0;
+            foreach (double[] actuals in _randomActuals)
+            {
+                data.Add(actuals.Select(d=>(int)d).ToArray());
+            }
+
+            Assert.IsTrue(data.Count > 0);
+            return data;
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\RandomData.csv")]
+        public void TestNumberDistributionMatrix()
+        {
+            var dataset = GetRandomData();
+
+            Map<int, double[]> histo = new Map<int, double[]>();
+            for (int i = 1; i <= 45; i++)
+            {
+                histo[i] = new double[7];
+            }
+            double ratio = 100.0/dataset.Count;
+            // no of digits
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (int[] numbers in dataset)
+                {
+                    histo[numbers[i]][i] += ratio;
+                }
+            }
+            
+            histo = new Map<int, double[]>(histo.OrderBy(p => p.Key).ToDictionary(k => k.Key, v => v.Value));
+            Console.WriteLine("");
+            Console.WriteLine("Chance histo matrix");
+            Console.WriteLine("");
+            Console.WriteLine(@"        1      2      3      4      5      6      7");
+            Console.WriteLine("");
+            foreach (var pair in histo)
+            {
+                Console.WriteLine($"{pair.Key:00} = {Arrays.ToString(pair.Value,"{0:00.00}")}");
+            }
+            Console.WriteLine("");
+
+            var results = new
+            {
+                Min1 = dataset.Select(n => n[0]).Min(),
+                Max1 = dataset.Select(n => n[0]).Max(),
+                Min2 = dataset.Select(n => n[1]).Min(),
+                Max2 = dataset.Select(n => n[1]).Max(),
+                Min3 = dataset.Select(n => n[2]).Min(),
+                Max3 = dataset.Select(n => n[2]).Max(),
+                Min4 = dataset.Select(n => n[3]).Min(),
+                Max4 = dataset.Select(n => n[3]).Max(),
+                Min5 = dataset.Select(n => n[4]).Min(),
+                Max5 = dataset.Select(n => n[4]).Max(),
+                Min6 = dataset.Select(n => n[5]).Min(),
+                Max6 = dataset.Select(n => n[5]).Max(),
+                Min7 = dataset.Select(n => n[6]).Min(),
+                Max7 = dataset.Select(n => n[6]).Max(),
+            };
+
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (int[] numbers in dataset)
+                {
+                    histo[numbers[i]][i] += ratio;
+                }
+            }
+
+            Console.WriteLine("Min Max of digits");
+            Console.WriteLine("");
+            Console.WriteLine($"  \t1\t2\t3\t4\t5\t6\t7");
+            Console.WriteLine($"Min\t{results.Min1}\t{results.Min2}\t{results.Min3}\t{results.Min4}\t{results.Min5}\t{results.Min6}\t{results.Min7}");
+            Console.WriteLine($"Max\t{results.Max1}\t{results.Max2}\t{results.Max3}\t{results.Max4}\t{results.Max5}\t{results.Max6}\t{results.Max7}");
+
+
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\RandomData.csv")]
+        public void TestNumberMatrixMostPopular()
+        {
+            var dataset = GetRandomData().Skip(10).Take(2*52).ToList();
+
+            Map<int, double[]> histo = new Map<int, double[]>();
+            for (int i = 1; i <= 45; i++)
+            {
+                histo[i] = new double[7];
+            }
+            double ratio = 100.0 / dataset.Count;
+            // no of digits
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (int[] numbers in dataset)
+                {
+                    histo[numbers[i]][i] += ratio;
+                }
+            }
+
+            histo = new Map<int, double[]>(histo.OrderBy(p => p.Key).ToDictionary(k => k.Key, v => v.Value));
+
+            int[] bestNumbersFirst = new int[7];
+            int[] bestNumbersLast = new int[7];
+            for (int i = 0; i < 7; i++)
+            {
+                bestNumbersFirst[i] = histo.First(h => h.Value[i] == histo.Select(p => p.Value[i]).Max()).Key;
+                bestNumbersLast[i] = histo.Last(h => h.Value[i] == histo.Select(p => p.Value[i]).Max()).Key;
+            }
+            
+            Console.WriteLine("");
+            Console.WriteLine("Most popular numbers");
+            Console.WriteLine("");
+            Console.WriteLine($"{Arrays.ToString(bestNumbersFirst)}");
+            Console.WriteLine($"{Arrays.ToString(bestNumbersLast)}");
+            Console.WriteLine("");
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\RandomData.csv")]
+        public void TestNumberDistributionMatrixLast110()
+        {
+            var dataset = GetRandomData().Skip(10).Take(150).ToList(); // last 100 pulls
+
+            Map<int, double[]> histo = new Map<int, double[]>();
+            for (int i = 1; i <= 45; i++)
+            {
+                histo[i] = new double[7];
+            }
+            double ratio = 100.0 / dataset.Count;
+            // no of digits
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (int[] numbers in dataset)
+                {
+                    histo[numbers[i]][i] += ratio;
+                }
+            }
+
+            histo = new Map<int, double[]>(histo.OrderBy(p => p.Key).ToDictionary(k => k.Key, v => v.Value));
+            Console.WriteLine("");
+            Console.WriteLine("Chance histo matrix");
+            Console.WriteLine("");
+            Console.WriteLine(@"        1      2      3      4      5      6      7");
+            Console.WriteLine("");
+            foreach (var pair in histo)
+            {
+                Console.WriteLine($"{pair.Key:00} = {Arrays.ToString(pair.Value, "{0:00.00}")}");
+            }
+            Console.WriteLine("");
+
+            var results = new
+            {
+                Min1 = dataset.Select(n => n[0]).Min(),
+                Max1 = dataset.Select(n => n[0]).Max(),
+                Min2 = dataset.Select(n => n[1]).Min(),
+                Max2 = dataset.Select(n => n[1]).Max(),
+                Min3 = dataset.Select(n => n[2]).Min(),
+                Max3 = dataset.Select(n => n[2]).Max(),
+                Min4 = dataset.Select(n => n[3]).Min(),
+                Max4 = dataset.Select(n => n[3]).Max(),
+                Min5 = dataset.Select(n => n[4]).Min(),
+                Max5 = dataset.Select(n => n[4]).Max(),
+                Min6 = dataset.Select(n => n[5]).Min(),
+                Max6 = dataset.Select(n => n[5]).Max(),
+                Min7 = dataset.Select(n => n[6]).Min(),
+                Max7 = dataset.Select(n => n[6]).Max(),
+            };
+
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (int[] numbers in dataset)
+                {
+                    histo[numbers[i]][i] += ratio;
+                }
+            }
+
+            Console.WriteLine("Min Max of digits");
+            Console.WriteLine("");
+            Console.WriteLine($"  \t1\t2\t3\t4\t5\t6\t7");
+            Console.WriteLine($"Min\t{results.Min1}\t{results.Min2}\t{results.Min3}\t{results.Min4}\t{results.Min5}\t{results.Min6}\t{results.Min7}");
+            Console.WriteLine($"Max\t{results.Max1}\t{results.Max2}\t{results.Max3}\t{results.Max4}\t{results.Max5}\t{results.Max6}\t{results.Max7}");
+
+
+        }
+
         [TestMethod]
         public void TestGuessesCounts()
         {
@@ -299,13 +490,13 @@ namespace HTM.Net.Research.Tests.Examples.Random
             NetworkApiRandom demo = new NetworkApiRandom(NetworkApiRandom.Mode.BasicCla);
             demo.RunNetwork();
 
-            Console.WriteLine("From last predictions to first predictions");
-            for (int i = 1; i <= 10; i++)
-            {
-                double pct = i / 10.0;
-                Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}",
-                    demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
-            }
+            //Console.WriteLine("From last predictions to first predictions");
+            //for (int i = 1; i <= 10; i++)
+            //{
+            //    double pct = i / 10.0;
+            //    Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}",
+            //        demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
+            //}
             //Console.WriteLine("From first predictions to last predictions");
             //for (int i = 1; i <= 10; i++)
             //{
@@ -317,6 +508,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             double dRatio = 100.0 / demo.GetTotalNumberOfPredictions();
 
             var allGuesses = RandomGameData.GetCountsOfCorrectPredictedGuessesInStrings(demo.Data());
+            var allGuessesObjs = demo.Data().ToList();
 
             foreach (var guess in allGuesses)
             {
@@ -325,14 +517,15 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
             Console.WriteLine("Last 10 guesses bucket list (grouped)");
             var lastGuesses = RandomGameData.GetLastGuesses(demo.Data(), 10);
+            var lastGuessesObjs = demo.Data().Skip(demo.Data().Count - 10).ToList();
             foreach (var guess in lastGuesses)
             {
                 Console.WriteLine($"> {guess.Key}\t= {guess.Value}");
             }
 
             Console.WriteLine("");
-            Console.WriteLine($"All time Cost: {RandomGameData.GetCost(allGuesses)}, Revenue: {RandomGameData.GetApproxRevenue(allGuesses)}, Profit: {RandomGameData.GetApproxRevenue(allGuesses) - RandomGameData.GetCost(allGuesses)}");
-            Console.WriteLine($"Last 10 guesses Cost: {RandomGameData.GetCost(lastGuesses)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuesses)}, Profit: {RandomGameData.GetApproxRevenue(lastGuesses) - RandomGameData.GetCost(lastGuesses)}");
+            Console.WriteLine($"All time Cost: {RandomGameData.GetCost(demo.Data())}, Revenue: {RandomGameData.GetApproxRevenue(allGuessesObjs, allGuesses)}, Profit: {RandomGameData.GetApproxRevenue(allGuessesObjs, allGuesses) - RandomGameData.GetCost(demo.Data())}");
+            Console.WriteLine($"Last 10 guesses Cost: {RandomGameData.GetCost(lastGuessesObjs)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuessesObjs, lastGuesses)}, Profit: {RandomGameData.GetApproxRevenue(lastGuessesObjs, lastGuesses) - RandomGameData.GetCost(lastGuessesObjs)}");
             Console.WriteLine("");
 
             Console.WriteLine("Random Guesses bucket list (grouped)");
@@ -343,9 +536,9 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 Console.WriteLine($"{guess.Key}\t= {guess.Value}\t({dRatio * guess.Value:0.00}%)");
             }
 
-            Console.WriteLine("");
-            Console.WriteLine($"Random Cost: {RandomGameData.GetCost(randomGuesses)}, Revenue: {RandomGameData.GetApproxRevenue(randomGuesses)}, Profit: {RandomGameData.GetApproxRevenue(randomGuesses) - RandomGameData.GetCost(randomGuesses)}");
-            Console.WriteLine("");
+            //Console.WriteLine("");
+            //Console.WriteLine($"Random Cost: {randomGuesses.Values.Sum()}, Revenue: {RandomGameData.GetApproxRevenue(randomGuesses)}, Profit: {RandomGameData.GetApproxRevenue(randomGuesses) - randomGuesses.Values.Sum()}");
+            //Console.WriteLine("");
         }
 
         //[TestMethod]
