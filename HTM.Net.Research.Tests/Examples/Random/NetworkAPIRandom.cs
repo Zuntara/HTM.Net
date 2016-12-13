@@ -783,7 +783,15 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
         private int[] GetRandomGuesses()
         {
-            return ArrayUtils.Range(0, 6).Select(i => Random.NextInt(45) + 1).ToArray();
+            int[] guesses = new int[7];
+            guesses[0] = Random.NextInt(22) + 1;
+            guesses[1] = Random.NextInt(35-1) + 2;
+            guesses[2] = Random.NextInt(36-3) + 4;
+            guesses[3] = Random.NextInt(42-7) + 8;
+            guesses[4] = Random.NextInt(44-12) + 13;
+            guesses[5] = Random.NextInt(45-15) + 16;
+            guesses[6] = Random.NextInt(45) + 1;
+            return guesses;//ArrayUtils.Range(0, 6).Select(i => Random.NextInt(45) + 1).ToArray();
         }
 
         public static double GetCost(IList<RandomGameData> results)
