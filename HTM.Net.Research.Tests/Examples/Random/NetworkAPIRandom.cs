@@ -316,7 +316,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 _predictions.Add(gd);
 
                 gd.DeviatedNumbers?.Add(new[] { 3, 17, 21, 29, 31, 44, 12 });
-                gd.DeviatedNumbers?.Add(new[] { 1, 17, 21, 29, 36, 44, 27 });
+                gd.DeviatedNumbers?.Add(new[] { 3, 17, 16, 29, 36, 44, 12 });
                 if (gd.DeviatedNumbers != null) gd.CalculateDeviationGuessCounts();
 
                 _predictedValues = newPredictions;

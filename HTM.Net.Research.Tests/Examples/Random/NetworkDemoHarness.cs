@@ -248,8 +248,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
             parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 3);
 
             // Classifier Specific
-            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0011);
-            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1,2,3,4,5,6,7,8,9,10 });
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0012);
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1,2,3,4,5,/*6,7,8,9,10*/ });
 
             // SpatialPooler specific
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 15);//3

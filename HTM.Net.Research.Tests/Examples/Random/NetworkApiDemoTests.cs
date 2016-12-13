@@ -352,7 +352,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         [DeploymentItem("Resources\\RandomData.csv")]
         public void TestNumberMatrixMostPopular()
         {
-            var dataset = GetRandomData().Skip(10).Take(2*52).ToList();
+            var dataset = GetRandomData().Skip(10).Take(150).ToList();
 
             Map<int, double[]> histo = new Map<int, double[]>();
             for (int i = 1; i <= 45; i++)
@@ -523,9 +523,18 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 Console.WriteLine($"> {guess.Key}\t= {guess.Value}");
             }
 
+            Console.WriteLine("Last guess bucket list");
+            var lastGuess = RandomGameData.GetLastGuesses(demo.Data(), 2);
+            var lastGuessObjs = demo.Data().Skip(demo.Data().Count - 2).ToList();
+            foreach (var guess in lastGuess)
+            {
+                Console.WriteLine($"> {guess.Key}\t= {guess.Value}");
+            }
+
             Console.WriteLine("");
             Console.WriteLine($"All time Cost: {RandomGameData.GetCost(demo.Data())}, Revenue: {RandomGameData.GetApproxRevenue(allGuessesObjs, allGuesses)}, Profit: {RandomGameData.GetApproxRevenue(allGuessesObjs, allGuesses) - RandomGameData.GetCost(demo.Data())}");
             Console.WriteLine($"Last 10 guesses Cost: {RandomGameData.GetCost(lastGuessesObjs)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuessesObjs, lastGuesses)}, Profit: {RandomGameData.GetApproxRevenue(lastGuessesObjs, lastGuesses) - RandomGameData.GetCost(lastGuessesObjs)}");
+            Console.WriteLine($"Last 1 guess Cost: {RandomGameData.GetCost(lastGuessObjs)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuessObjs, lastGuess)}, Profit: {RandomGameData.GetApproxRevenue(lastGuessObjs, lastGuess) - RandomGameData.GetCost(lastGuessObjs)}");
             Console.WriteLine("");
 
             Console.WriteLine("Random Guesses bucket list (grouped)");
