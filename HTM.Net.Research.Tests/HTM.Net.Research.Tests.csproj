@@ -106,6 +106,9 @@
     <Compile Include="Examples\Random\NetworkAPIRandom.cs" />
     <Compile Include="Examples\Random\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\Random\NetworkDemoHarness.cs" />
+    <Compile Include="Examples\Random\PickThreeData.cs" />
+    <Compile Include="Examples\Random\PickThreeHit.cs" />
+    <Compile Include="Examples\Random\RandomGameData.cs" />
     <Compile Include="Examples\Sine\NetworkAPIDemo.cs" />
     <Compile Include="Examples\Sine\NetworkApiDemoTests.cs" />
     <Compile Include="Examples\Sine\NetworkDemoHarness.cs" />

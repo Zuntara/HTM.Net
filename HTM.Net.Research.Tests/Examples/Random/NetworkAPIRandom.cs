@@ -8,14 +8,412 @@ using System.Reactive;
 using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Datagen;
+using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Tests.Properties;
-using HTM.Net.Research.Vision;
 using HTM.Net.Util;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Research.Tests.Examples.Random
 {
+    public class RandomGuessNetworkApi
+    {
+        private readonly Network.Network _network;
+        private readonly FileInfo _outputFile;
+        private readonly StreamWriter _pw;
+        private Map<int, double[]> _predictedValues; // step, values
+        private List<RandomGuess> _predictions;
+
+        private readonly int _nrOfRecordsToEvaluateAfterTraining;
+        private readonly int _numberOfRecordsToTrain;
+        private readonly int _iterationsToRepeat;
+        private readonly int _offsetFromEnd;
+        private readonly bool _writeToFile;
+
+        private List<int[]> _selectedData = new List<int[]>();
+
+        public RandomGuessNetworkApi(int nrOfRecordsToTrain, int nrOfRecordsToEvaluateAfterTraining, int iterationsToRepeat = 0,
+            bool writeToFile = true, int offsetFromEnd = 0)
+        {
+            _numberOfRecordsToTrain = nrOfRecordsToTrain;
+            _nrOfRecordsToEvaluateAfterTraining = nrOfRecordsToEvaluateAfterTraining;
+            _iterationsToRepeat = iterationsToRepeat;
+            _writeToFile = writeToFile;
+            _offsetFromEnd = offsetFromEnd;
+
+            _network = CreateBasicNetworkCla();
+            _network.Observe().Subscribe(GetSubscriber());
+
+            if (!_writeToFile) return;
+            try
+            {
+                _outputFile = new FileInfo("c:\\temp\\RandomData_output_Simulator.txt");
+                if (_outputFile.Exists)
+                {
+                    _outputFile.Delete();
+                }
+                Debug.WriteLine("Creating output file: " + _outputFile);
+                _pw = new StreamWriter(_outputFile.OpenWrite());
+                _pw.WriteLine("RecordNum,Actual,Predicted,CorrectGuesses,AnomalyScore");
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        /// <summary>
+        /// Creates a basic <see cref="Network"/> with 1 <see cref="Region"/> and 1 <see cref="ILayer"/>. 
+        /// However this basic network contains all algorithmic components.
+        /// </summary>
+        internal Network.Network CreateBasicNetworkCla()
+        {
+            var sensor = PrepareRandomDataAndGetSensor();
+
+            Parameters p = NetworkDemoHarness.GetParameters();
+            p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, GetEncoderSettings());
+            //p = p.Union(NetworkDemoHarness.GetRandomDataFieldEncodingParams());
+
+            return Network.Network.Create("RandomData Demo", p)
+                .Add(Network.Network.CreateRegion("Region 1")
+                .Add(Network.Network.CreateLayer("Layer 2/3", p)
+                .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                .Add(Anomaly.Create())
+                .Add(new TemporalMemory())
+                .Add(new Algorithms.SpatialPooler())
+                .Add(sensor)));
+        }
+
+        public void RunNetwork()
+        {
+            _predictions = new List<RandomGuess>();
+
+            _network.Start();
+            _network.GetTail().GetTail().GetLayerThread().Wait();
+        }
+
+        internal IObserver<IInference> GetSubscriber()
+        {
+            return Observer.Create<IInference>(output =>
+            {
+                string[] classifierFields = { "Number 1", "Number 2", "Number 3", "Number 4", "Number 5", "Number 6", "Bonus" };
+                Map<int, double[]> newPredictions = new Map<int, double[]>();
+                // Step 1 is certainly there
+                if (classifierFields.Any(cf => null != output.GetClassification(cf).GetMostProbableValue(1)))
+                {
+                    foreach (int step in output.GetClassification(classifierFields[0]).StepSet())
+                    {
+                        newPredictions.Add(step, classifierFields.Take(7)
+                            .Select(cf => ((double?)output.GetClassification(cf).GetMostProbableValue(step)).GetValueOrDefault(-1)).ToArray());
+                    }
+                }
+                else
+                {
+                    newPredictions = _predictedValues;
+                }
+
+                RandomGuess gd = RandomGuess.From(_predictedValues, newPredictions, output, classifierFields);
+
+                if (gd.RecordNumber > 0) // first prediction is bogus, ignore it
+                    _predictions.Add(gd);
+
+                // Statistical good numbers for chances
+                List<int[]> goodChances = GetBestChances(_offsetFromEnd+1);
+                foreach (int[] chance in goodChances)
+                {
+                    gd.AddPrediction(chance.Select(c => (double)c).ToArray(), false);
+                    gd.NextPredictions.Add(chance);
+                }
+                gd.NextPredictions = gd.NextPredictions.Take(10).ToList();
+
+                _predictedValues = newPredictions;
+
+                if (_writeToFile)
+                {
+                    WriteToFile(gd);
+                }
+
+            }, Console.WriteLine, () =>
+            {
+                if (_writeToFile)
+                {
+                    Console.WriteLine("Stream completed. see output: " + _outputFile.FullName);
+                    try
+                    {
+                        _pw.Flush();
+                        _pw.Close();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+            });
+        }
+
+        private void ReverseRandomData()
+        {
+            List<string> fileLines = YieldingFileReader.ReadAllLines("RandomData.csv", Encoding.UTF8).ToList();
+            List<string> fileLinesReversed = new List<string>();
+
+            // Copy header
+            for (int i = 0; i < 3; i++)
+            {
+                fileLinesReversed.Add(fileLines[i]);
+            }
+
+            int takeCount = _numberOfRecordsToTrain;
+            int skipCount = fileLines.Count - 3 - takeCount - _nrOfRecordsToEvaluateAfterTraining; // take last 110 records
+            // Take the rest and reverse it
+            for (int i = 0; i < _iterationsToRepeat; i++)
+            {
+                fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount).Take(takeCount));
+            }
+            fileLinesReversed.AddRange(fileLines.Skip(3).Reverse().Skip(skipCount)); // last 10 record given, not trained
+
+            StreamWriter sw = new StreamWriter("RandomData_rev.csv");
+            foreach (string line in fileLinesReversed)
+            {
+                sw.WriteLine(line);
+            }
+            sw.Flush();
+            sw.Close();
+        }
+
+        private Sensor<ObservableSensor<string[]>> PrepareRandomDataAndGetSensor()
+        {
+            Publisher manual = Publisher.GetBuilder()
+                .AddHeader("Date,Number 1,Number 2,Number 3,Number 4,Number 5,Number 6,Bonus")
+                .AddHeader("datetime,int,int,int,int,int,int,int")
+                .AddHeader("T,,,,,,,")
+                .Build();
+
+            List<string> fileLines = YieldingFileReader.ReadAllLines("RandomData.csv", Encoding.UTF8).ToList();
+
+            // Cleanup and reverse
+            List<string> fileLinesReversed = fileLines.Skip(3).Reverse().ToList();
+            List<string> fileLinesFinal = new List<string>();
+
+            // Define number of records to train on
+            int takeTrainCount = _numberOfRecordsToTrain;
+            int takeTotalCount = _numberOfRecordsToTrain + _nrOfRecordsToEvaluateAfterTraining;
+            // Define offset from start of file
+            int skipCount = fileLinesReversed.Count - takeTotalCount - _offsetFromEnd;
+
+            // Repeat the training set if needed
+            for (int i = 0; i < _iterationsToRepeat; i++)
+            {
+                fileLinesFinal.AddRange(fileLinesReversed.Skip(skipCount).Take(takeTrainCount));
+            }
+            fileLinesFinal.AddRange(fileLinesReversed.Skip(skipCount).Take(takeTotalCount)); // last x record given, not trained before
+
+            Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
+                ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, new Object[] { "name", manual }));
+
+            //StreamWriter sw = new StreamWriter("RandomData_rev.csv");
+            foreach (string line in fileLinesFinal)
+            {
+                //sw.WriteLine(line);
+                manual.OnNext(line);
+                _selectedData.Add(line.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(int.Parse).ToArray());
+            }
+            manual.OnComplete();
+
+            //sw.Flush();
+            //sw.Close();
+            return sensor;
+        }
+
+        private EncoderSettingsList GetEncoderSettings()
+        {
+            List<MinMax> minmaxMap = GetFieldStatistics();
+
+            EncoderSettingsList fieldEncodings = NetworkDemoHarness.SetupMap(
+                    null,
+                    0, // n
+                    0, // w
+                    0, 0, 0, 0, null, null, null,
+                    "Date", FieldMetaType.DateTime, "DateEncoder");
+
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    500,
+                    21,
+                    minmaxMap[0].Min(), minmaxMap[0].Max(), 0, 1, null, null, null,
+                    $"Number 1", FieldMetaType.Integer, "ScalarEncoder");
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    25,
+                    3,
+                    minmaxMap[1].Min(), minmaxMap[1].Max(), 0, 1, null, null, null,
+                    $"Number 2", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    25,
+                    3,
+                    minmaxMap[2].Min(), minmaxMap[2].Max(), 0, 1, null, null, null,
+                    $"Number 3", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    25,
+                    3,
+                    minmaxMap[3].Min(), minmaxMap[3].Max(), 0, 1, null, null, null,
+                    $"Number 4", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    25,
+                    3,
+                    minmaxMap[4].Min(), minmaxMap[4].Max(), 0, 1, null, null, null,
+                    $"Number 5", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    25,
+                    3,
+                    minmaxMap[5].Min(), minmaxMap[5].Max(), 0, 1, null, null, null,
+                    $"Number 6", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+
+
+            fieldEncodings = NetworkDemoHarness.SetupMap(
+                    fieldEncodings,
+                    25,
+                    3,
+                    minmaxMap[6].Min(), minmaxMap[6].Max(), 0, 1, null, null, null,
+                    "Bonus", FieldMetaType.Integer, "RandomDistributedScalarEncoder");
+
+            fieldEncodings["Date"].dayOfWeek = new Tuple(1, 1.0); // Day of week
+            //fieldEncodings["Date"].timeOfDay = new Tuple(5, 4.0); // Time of day
+            fieldEncodings["Date"].formatPattern = "dd/MM/YY";
+
+            return fieldEncodings;
+        }
+
+        private List<MinMax> GetFieldStatistics()
+        {
+            List<MinMax> result = new List<MinMax>();
+
+            for (int i = 0; i < 7; i++)
+            {
+                MinMax mm = new MinMax(_selectedData.Select(n => n[i]).Min(),
+                    _selectedData.Select(n => n[i]).Max());
+                result.Add(mm);
+            }
+            return result;
+        }
+
+        private static List<int[]> _randomActuals;
+        private static List<int[]> GetRandomData()
+        {
+            if (_randomActuals == null)
+            {
+                _randomActuals = new List<int[]>();
+                foreach (string line in YieldingFileReader.ReadAllLines("RandomData.csv", Encoding.UTF8).Skip(3))
+                {
+                    int[] actuals = line.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(v => int.Parse(v)).ToArray();
+                    _randomActuals.Add(actuals);
+                }
+            }
+            List<int[]> data = new List<int[]>();
+            int i = 0;
+            foreach (int[] actuals in _randomActuals)
+            {
+                data.Add(actuals);
+            }
+            return data;
+        }
+
+        private static int[] GetBestChance(int nrOfRecords, int nrToTrain, int offsetFromEnd)
+        {
+            var allData = GetRandomData();
+            int takeTrainCount = nrOfRecords;
+            int takeTotalCount = nrOfRecords + nrToTrain;
+            int skipCount = allData.Count - takeTotalCount - offsetFromEnd;
+
+            var dataset = GetRandomData().Skip(skipCount).Take(takeTrainCount).ToList();
+
+            Map<int, double[]> histo = new Map<int, double[]>();
+            for (int i = 1; i <= 45; i++)
+            {
+                histo[i] = new double[7];
+            }
+            double ratio = 100.0 / dataset.Count;
+            // no of digits
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (int[] numbers in dataset)
+                {
+                    histo[numbers[i]][i] += ratio;
+                }
+            }
+
+            histo = new Map<int, double[]>(histo.OrderBy(p => p.Key).ToDictionary(k => k.Key, v => v.Value));
+
+            int[] bestNumbersFirst = new int[7];
+            int[] bestNumbersLast = new int[7];
+            for (int i = 0; i < 7; i++)
+            {
+                bestNumbersFirst[i] = histo.First(h => h.Value[i] == histo.Select(p => p.Value[i]).Max()).Key;
+                bestNumbersLast[i] = histo.Last(h => h.Value[i] == histo.Select(p => p.Value[i]).Max()).Key;
+            }
+
+            if (bestNumbersFirst.Distinct().Count() == bestNumbersFirst.Length)
+                return bestNumbersFirst;
+            return bestNumbersLast;
+        }
+
+        public static List<int[]> GetBestChances(int offset)
+        {
+            List<int[]> randomActuals = new List<int[]>();
+            
+            randomActuals.Add(GetBestChance(50, 1, offset));
+            randomActuals.Add(GetBestChance(100, 1, offset));
+            randomActuals.Add(GetBestChance(150, 1, offset));
+            randomActuals.Add(GetBestChance(200, 1, offset));
+
+            return randomActuals;
+        }
+
+        private void WriteToFile(RandomGuess data)
+        {
+            try
+            {
+                // Start logging from item 1
+                if (data.RecordNumber > 99)
+                {
+                    StringBuilder sb = new StringBuilder()
+                            .Append(data.RecordNumber).Append(", ")
+                            //.Append("classifier input=")
+                            .Append(string.Format("{0}", Arrays.ToString(data.ActualNumbers))).Append(",")
+                            //.Append("prediction= ")
+                            .Append(string.Format("{0}", Arrays.ToString(data.GetPrimaryPrediction()))).Append(",")
+                            //.Append("correctGuesses=")
+                            .Append(string.Format("{0}", data.GetPredictionScores())).Append(",")
+                            //.Append("anomaly score=")
+                            .Append(data.AnomalyFactor.ToString(NumberFormatInfo.InvariantInfo));
+                    _pw.WriteLine(sb.ToString());
+                    _pw.Flush();
+                }
+                //_predictedValues = newPredictions;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                _pw.Flush();
+            }
+
+        }
+
+        public List<RandomGuess> GetGuesses()
+        {
+            return _predictions;
+        }
+
+        public RandomGuess GetLastGuess()
+        {
+            return _predictions.Last();
+        }
+    }
+
     /**
  * Demonstrates the Java version of the NuPIC Network API (NAPI) Demo.
  *
@@ -45,7 +443,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         private readonly StreamWriter _pw;
 
         private Map<int, double[]> _predictedValues; // step, values
-        private List<RandomGameData> _predictions;
+        private List<RandomGuess> _predictions;
         public List<PickThreeData> _predictionsPick;
 
         public NetworkApiRandom(Mode mode)
@@ -310,14 +708,10 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     newPredictions = _predictedValues;
                 }
 
-                var gd = RandomGameData.From(_predictedValues, output, classifierFields);
-                gd.RecordNumber = output.GetRecordNum();
-                //if (gd.RecordNumber > 100)
-                _predictions.Add(gd);
+                RandomGuess gd = RandomGuess.From(_predictedValues, newPredictions, output, classifierFields);
 
-                gd.DeviatedNumbers?.Add(new[] { 3, 17, 21, 29, 31, 44, 12 });
-                gd.DeviatedNumbers?.Add(new[] { 3, 17, 16, 29, 36, 44, 12 });
-                if (gd.DeviatedNumbers != null) gd.CalculateDeviationGuessCounts();
+                if (gd.RecordNumber > 0)
+                    _predictions.Add(gd);
 
                 _predictedValues = newPredictions;
 
@@ -390,7 +784,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         // * @param infer             The {@link Inference} object produced by the Network
         // * @param classifierField   The field we use in this demo for anomaly computing.
         // */
-        private void WriteToFile(RandomGameData data)
+        private void WriteToFile(RandomGuess data)
         {
             try
             {
@@ -402,9 +796,9 @@ namespace HTM.Net.Research.Tests.Examples.Random
                             //.Append("classifier input=")
                             .Append(string.Format("{0}", Arrays.ToString(data.ActualNumbers))).Append(",")
                             //.Append("prediction= ")
-                            .Append(string.Format("{0}", Arrays.ToString(data.PredictedNumbers))).Append(",")
+                            .Append(string.Format("{0}", Arrays.ToString(data.GetPrimaryPrediction()))).Append(",")
                             //.Append("correctGuesses=")
-                            .Append(string.Format("{0}", data.GetHighestCorrectPredictionScore())).Append(",")
+                            .Append(string.Format("{0}", data.GetPredictionScores())).Append(",")
                             //.Append("anomaly score=")
                             .Append(data.AnomalyFactor.ToString(NumberFormatInfo.InvariantInfo));
                     _pw.WriteLine(sb.ToString());
@@ -492,21 +886,21 @@ namespace HTM.Net.Research.Tests.Examples.Random
          */
         public void RunNetwork()
         {
-            _predictions = new List<RandomGameData>();
+            _predictions = new List<RandomGuess>();
             _predictionsPick = new List<PickThreeData>();
 
             _network.Start();
             _network.GetTail().GetTail().GetLayerThread().Wait();
         }
 
-        public int GetNumberOfPredictions()
+        public int GetNumberOfRounds()
         {
             return _predictions.Count;
         }
 
-        public int GetTotalNumberOfPredictions()
+        public int GetTotalNumberOfGuesses()
         {
-            return _predictions.Skip(1).Sum(p => p.CorrectDeviationPredictionsWithBonus.Count + 1);
+            return _predictions.Sum(p => p.Count);
         }
 
         public int GetTotalNumberOfPickPredictions()
@@ -514,544 +908,48 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return _predictionsPick.Count - 1;
         }
 
-        public List<RandomGameData> Data()
+        public List<RandomGuess> GetGuesses()
         {
             return _predictions;
         }
 
-        public int GetHighestCorrectGuesses(double rangePct, bool fromBehind)
-        {
-            int totalLength = _predictions.Count - 1;
-            int takeRange = (int)(totalLength * rangePct);
-            if (fromBehind)
-            {
-                int offset = totalLength - takeRange;
-                int totalActual = _predictions.Skip(1).Skip(offset).Max(p => p.CorrectPredictionsWithBonus.Item1);
+        //public int GetHighestCorrectGuesses(double rangePct, bool fromBehind)
+        //{
+        //    int totalLength = _predictions.Count - 1;
+        //    int takeRange = (int)(totalLength * rangePct);
+        //    if (fromBehind)
+        //    {
+        //        int offset = totalLength - takeRange;
+        //        int totalActual = _predictions.Skip(offset).Max(p => p.CorrectPredictionsWithBonus.Item1);
+
+        //        return totalActual;
+        //    }
+        //    else
+        //    {
+        //        int totalActual = _predictions.Take(takeRange).Max(p => p.CorrectPredictionsWithBonus.Item1);
+        //        return totalActual;
+        //    }
+        //}
+
+
+
+        //public double GetAverageCorrectGuesses(double rangePct, bool fromBehind)
+        //{
+        //    int totalLength = _predictions.Count - 1;
+        //    int takeRange = (int)(totalLength * rangePct);
+        //    if (fromBehind)
+        //    {
+        //        int offset = totalLength - takeRange;
+        //        double totalActual = _predictions.Skip(1).Skip(offset).Average(p => p.CorrectPredictionsWithBonus.Item1);
+
+        //        return totalActual;
+        //    }
+        //    else
+        //    {
+        //        double totalActual = _predictions.Skip(1).Take(takeRange).Average(p => p.CorrectPredictionsWithBonus.Item1);
+        //        return totalActual;
+        //    }
+        //}
 
-                return totalActual;
-            }
-            else
-            {
-                int totalActual = _predictions.Skip(1).Take(takeRange).Max(p => p.CorrectPredictionsWithBonus.Item1);
-                return totalActual;
-            }
-        }
-
-
-
-        public double GetAverageCorrectGuesses(double rangePct, bool fromBehind)
-        {
-            int totalLength = _predictions.Count - 1;
-            int takeRange = (int)(totalLength * rangePct);
-            if (fromBehind)
-            {
-                int offset = totalLength - takeRange;
-                double totalActual = _predictions.Skip(1).Skip(offset).Average(p => p.CorrectPredictionsWithBonus.Item1);
-
-                return totalActual;
-            }
-            else
-            {
-                double totalActual = _predictions.Skip(1).Take(takeRange).Average(p => p.CorrectPredictionsWithBonus.Item1);
-                return totalActual;
-            }
-        }
-
-    }
-
-    public class RandomGameData
-    {
-        private static readonly IRandom Random = new XorshiftRandom(1956);
-
-        public RandomGameData(double[] actuals, double[] predicted)
-        {
-            RandomNumbers = GetRandomGuesses();
-            ActualNumbers = actuals.Select(a => (int)a).ToArray();
-            if (predicted != null)
-            {
-                PredictedNumbers = predicted.Select(a => (int)a).ToArray();
-                DeviatedNumbers = GetDeviates(predicted, 20);
-                CalculateGuessCounts();
-                CalculateDeviationGuessCounts();
-            }
-        }
-
-        public int RecordNumber { get; set; }
-
-        public int[] ActualNumbers { get; set; }
-
-        public int[] PredictedNumbers { get; set; }
-
-        public int[] RandomNumbers { get; set; }
-
-        public List<int[]> DeviatedNumbers { get; set; }
-
-        public Tuple<int, bool> CorrectPredictionsWithBonus { get; set; }
-        public List<Tuple<int, bool>> CorrectDeviationPredictionsWithBonus { get; set; }
-        public Tuple<int, bool> CorrectRandomPredictionsWithBonus { get; set; }
-
-        public double AnomalyFactor { get; set; }
-
-        // Helper methods
-
-        private void CalculateGuessCounts()
-        {
-            CorrectPredictionsWithBonus = CalculateOneGuess(ActualNumbers, PredictedNumbers);
-            CorrectRandomPredictionsWithBonus = CalculateOneGuess(ActualNumbers, RandomNumbers);
-        }
-
-        public void CalculateDeviationGuessCounts()
-        {
-            List<Tuple<int, bool>> allResults = new List<Tuple<int, bool>>();
-            foreach (int[] numbers in DeviatedNumbers)
-            {
-                allResults.Add(CalculateOneGuess(ActualNumbers, numbers));
-            }
-            CorrectDeviationPredictionsWithBonus = allResults;
-        }
-
-        public static Tuple<int, bool> CalculateOneGuess(int[] actuals, int[] predicted)
-        {
-            bool bonusHit = false;
-            int correctNumbersAct = 0;
-
-            Stack<int> predStack = new Stack<int>(predicted); // limit to 6 numbers
-            List<int> actualList = new List<int>(actuals);
-
-            while (predStack.Count > 0)
-            {
-                var predValue = predStack.Pop();
-
-                if (actualList.Contains(predValue))
-                {
-                    int index = actualList.IndexOf(predValue);
-                    actualList.RemoveAt(index);
-                    correctNumbersAct++;
-                }
-            }
-            bool correctBonus = predicted.Contains(actuals.Last());
-            return new Tuple<int, bool>(correctNumbersAct, correctBonus);
-        }
-
-        /// <summary>
-        /// Sets numbers that are close to the predictions
-        /// </summary>
-        /// <param name="currentPredictions"></param>
-        /// <param name="count">number of deviations to set</param>
-        private List<int[]> GetDeviates(double[] currentPredictions, int count = 20)
-        {
-            CombinationParameters cp = new CombinationParameters();
-
-            for (int i = 0; i < currentPredictions.Length; i++)
-            {
-                if (currentPredictions[i] % 1.0 > double.Epsilon)
-                {
-                    int low = (int)Math.Floor(currentPredictions[i]);
-                    int high = (int)Math.Ceiling(currentPredictions[i]);
-                    cp.Define($"n{i + 1}", new List<object> { low, high }.Distinct().ToList());
-                }
-                else
-                {
-                    int pred = (int)currentPredictions[i];
-                    cp.Define($"n{i + 1}", new List<object> { pred });
-                }
-            }
-            return cp.GetAllCombinations().Select(c => c.Select(TypeConverter.Convert<int>).ToArray())
-                .Where(n => !Arrays.AreEqual(n, PredictedNumbers))
-                .Take(count)
-                .ToList();
-        }
-
-        public static int[] GetCountsOfCorrectRandomGuesses(IEnumerable<RandomGameData> collection)
-        {
-            return // skip first prediction, it's bogus
-                collection.Skip(1)
-                    .Select(gd => gd.CorrectRandomPredictionsWithBonus.Item1 + (gd.CorrectRandomPredictionsWithBonus.Item2 ? 1 : 0))
-                    .ToArray();
-        }
-
-        public static Map<string, int> GetCountsOfCorrectRandomGuessesInStrings(IEnumerable<RandomGameData> collection)
-        {
-            // skip first prediction, it's bogus
-            var results = collection.Skip(1)
-                .GroupBy(g => g.CorrectRandomPredictionsWithBonus)
-                .OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Item2)
-                .Select(g => new { Id = $"{g.Key.Item1}{(g.Key.Item2 ? "+" : "")}", Value = g.Count() });
-
-            Map<string, int> summary = new Map<string, int>();
-            foreach (var item in results)
-            {
-                summary.Add(item.Id, item.Value);
-            }
-
-            string[] relevantStrings = { "2+", "3", "3+", "4", "4+", "5", "5+", "6", "6+" };
-
-            Map<string, int> retVal = new Map<string, int>();
-            retVal["--"] = 0;
-            foreach (var pair in summary)
-            {
-                if (relevantStrings.Contains(pair.Key))
-                {
-                    retVal[pair.Key] = pair.Value;
-                }
-                else
-                {
-                    retVal["--"] += pair.Value;
-                }
-            }
-
-            return retVal;
-        }
-
-
-        public static int[] GetCountsOfCorrectPredictedGuesses(IEnumerable<RandomGameData> collection)
-        {
-            return // skip first prediction, it's bogus
-                collection.Skip(1)
-                    .Select(gd => gd.CorrectPredictionsWithBonus.Item1 + (gd.CorrectPredictionsWithBonus.Item2 ? 1 : 0))
-                    .ToArray();
-        }
-
-        public static Map<string, int> GetCountsOfCorrectPredictedGuessesInStrings(IEnumerable<RandomGameData> collection)
-        {
-            // skip first prediction, it's bogus
-            var results = collection.Skip(1)
-                .Where(g => g.CorrectPredictionsWithBonus != null)
-                .GroupBy(g => g.CorrectPredictionsWithBonus)
-                .OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Item2)
-                .Select(g => new { Id = $"{g.Key.Item1}{(g.Key.Item2 ? "+" : "")}", Value = g.Count() });
-
-            Map<string, int> summary = new Map<string, int>();
-            foreach (var item in results)
-            {
-                summary.Add(item.Id, item.Value);
-            }
-
-            results = collection.Skip(1)
-                .Where(d => d.CorrectDeviationPredictionsWithBonus != null)
-                .SelectMany(d => d.CorrectDeviationPredictionsWithBonus)
-                .GroupBy(g => g)
-                .OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Item2)
-                .Select(g => new { Id = $"{g.Key.Item1}{(g.Key.Item2 ? "+" : "")}", Value = g.Count() });
-
-            foreach (var item in results)
-            {
-                if (summary.ContainsKey(item.Id))
-                {
-                    summary[item.Id] += item.Value;
-                }
-                else
-                {
-                    summary.Add(item.Id, item.Value);
-                }
-            }
-
-            string[] relevantStrings = { "2+", "3", "3+", "4", "4+", "5", "5+", "6", "6+" };
-
-            Map<string, int> retVal = new Map<string, int>();
-            retVal["--"] = 0;
-            foreach (var pair in summary)
-            {
-                if (relevantStrings.Contains(pair.Key))
-                {
-                    retVal[pair.Key] = pair.Value;
-                }
-                else
-                {
-                    retVal["--"] += pair.Value;
-                }
-            }
-
-            return retVal;
-        }
-
-        public string GetHighestCorrectPredictionScore()
-        {
-            var strings = GetCountsOfCorrectPredictedGuessesInStrings(new List<RandomGameData> { this, this }).Keys.OrderByDescending(k => k).Where(k => k != "--").ToList();
-            return strings.FirstOrDefault() ?? "0";
-        }
-        public Map<string, int> GetPredictionScores()
-        {
-            var strings = GetCountsOfCorrectPredictedGuessesInStrings(new List<RandomGameData> { this, this });
-            return strings;
-        }
-
-        public static Map<string, int> GetLastGuesses(IList<RandomGameData> collection, int lastCount)
-        {
-            return GetCountsOfCorrectPredictedGuessesInStrings(collection.Skip(collection.Count - lastCount));
-        }
-
-        private int[] GetRandomGuesses()
-        {
-            int[] guesses = new int[7];
-            guesses[0] = Random.NextInt(22) + 1;
-            guesses[1] = Random.NextInt(35-1) + 2;
-            guesses[2] = Random.NextInt(36-3) + 4;
-            guesses[3] = Random.NextInt(42-7) + 8;
-            guesses[4] = Random.NextInt(44-12) + 13;
-            guesses[5] = Random.NextInt(45-15) + 16;
-            guesses[6] = Random.NextInt(45) + 1;
-            return guesses;//ArrayUtils.Range(0, 6).Select(i => Random.NextInt(45) + 1).ToArray();
-        }
-
-        public static double GetCost(IList<RandomGameData> results)
-        {
-            var prices = results.Where(gd => gd.PredictedNumbers != null).Select(gd => gd.PredictedNumbers.Length == 6 ? 1 : 7);
-            var pricesDev = results.Where(gd => gd.DeviatedNumbers != null).SelectMany(gd => gd.DeviatedNumbers.Select(d => d.Length == 6 ? 1 : 7));
-
-            return prices.Sum() + pricesDev.Sum(); // 1 eur per record
-        }
-
-        public static double GetApproxRevenue(IList<RandomGameData> results,  Map<string, int> rangCounts)
-        {
-            double rev = 0;
-
-            if (results.Last().PredictedNumbers.Length == 6)
-            {
-                foreach (var result in rangCounts)
-                {
-                    rev += GetApproxRevenue(result.Key, result.Value);
-                }
-            }
-            if (results.Last().PredictedNumbers.Length == 7)
-            {
-                foreach (RandomGameData data in results)
-                {
-                    var scores = data.GetPredictionScores();
-                    foreach (var score in scores)
-                    {
-                        double subRev = 0;
-                        if (score.Key == "2+" || score.Key == "3")
-                        {
-                            subRev += GetApproxRevenue(score.Key, 4);
-                        }
-                        if (score.Key == "3+")
-                        {
-                            subRev += GetApproxRevenue("3+", 3) + GetApproxRevenue("3", 1) + GetApproxRevenue("2+", 3);
-                        }
-                        if (score.Key == "4")
-                        {
-                            subRev += GetApproxRevenue("4", 3) + GetApproxRevenue("3", 4);
-                        }
-                        if (score.Key == "4+")
-                        {
-                            subRev += GetApproxRevenue("4+", 2) + GetApproxRevenue("4", 1) + GetApproxRevenue("3+", 4);
-                        }
-                        if (score.Key == "5")
-                        {
-                            subRev += GetApproxRevenue("5", 2) + GetApproxRevenue("4", 5);
-                        }
-                        if (score.Key == "5+")
-                        {
-                            subRev += GetApproxRevenue("5+", 1) + GetApproxRevenue("5", 1) + GetApproxRevenue("4", 5);
-                        }
-                        if (score.Key == "6")
-                        {
-                            subRev += GetApproxRevenue("6", 1) + GetApproxRevenue("5", 6);
-                        }
-                        if (score.Key == "6+")
-                        {
-                            subRev += GetApproxRevenue("6", 1) + GetApproxRevenue("5+", 6);
-                        }
-                        rev += subRev*score.Value;
-                    }
-                }
-            }
-
-            return rev;
-        }
-
-        public static double GetApproxRevenue(string rangStr, double cnt)
-        {
-            double rev = 0;
-
-            if (rangStr == "2+") rev += cnt * 3.00;
-            if (rangStr == "3") rev +=  cnt * 5.00;
-            if (rangStr == "3+") rev += cnt * 11.50;
-            if (rangStr == "4") rev +=  cnt * 26.50;
-            if (rangStr == "4+") rev += cnt * 300.00;
-            if (rangStr == "5") rev +=  cnt * 1200.00;
-            if (rangStr == "5+") rev += cnt * 16500.00;
-            if (rangStr == "6" || rangStr == "6+") rev += cnt * 1000000.0; // avg
-
-            return rev;
-        }
-
-        public static RandomGameData From(Map<int, double[]> previousPredicted, IInference inference, string[] classifierFields)
-        {
-            double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)inference.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
-
-            RandomGameData gd = new RandomGameData(actuals, previousPredicted?[1]);
-            gd.AnomalyFactor = inference.GetAnomalyScore();
-
-            List<double[]> dNumbers = new List<double[]>();
-            foreach (int step in inference.GetClassification(classifierFields[0]).StepSet())
-            {
-                dNumbers.Add(previousPredicted?[step]);
-            }
-
-            dNumbers = dNumbers.Where(n => n != null).ToList();
-            if (dNumbers.Any())
-            {
-                foreach (double[] numbers in dNumbers)
-                {
-                    var devs = gd.GetDeviates(numbers);
-                    gd.DeviatedNumbers.AddRange(devs);
-                }
-                gd.DeviatedNumbers = gd.DeviatedNumbers.Where(n => n != null && !Arrays.AreEqual(n, gd.PredictedNumbers)).Take(10).ToList();
-                gd.CalculateDeviationGuessCounts();
-            }
-            return gd;
-        }
-    }
-
-    public class PickThreeData
-    {
-        public static IRandom Random = new XorshiftRandom(42);
-
-        public PickThreeData(int recordNumber, double[] actuals, Map<int, double[]> predicted)
-        {
-            RecordNumber = recordNumber;
-            RandomNumbers = GetRandomGuesses();
-            ActualNumbers = actuals.Select(a => (int)a).ToArray();
-            AnalysisResult = new Map<int, PickThreeHit>();
-            if (predicted != null)
-            {
-                PredictedNumbers = new Map<int, int[]>(predicted.ToDictionary(k => k.Key, v => v.Value.Select(x => (int)x).ToArray()));
-
-                AnalysisResult = CalculateHitResult(ActualNumbers, PredictedNumbers);
-                NettoResults = CalculateNettoResults(AnalysisResult);
-            }
-            RandomAnalysisResult = CalculateHitResult(ActualNumbers, RandomNumbers);
-            NettoRandomResult = CalculateNettoResult(RandomAnalysisResult);
-        }
-
-        private int[] GetRandomGuesses()
-        {
-            // 3 numbers between 0 and 9
-            return ArrayUtils.Range(0, 3).Select(i => Random.NextInt(9)).ToArray();
-        }
-
-        internal Map<int, PickThreeHit> CalculateHitResult(int[] actuals, Map<int, int[]> guesses)
-        {
-            Map<int, PickThreeHit> netResults = new Map<int, PickThreeHit>();
-            foreach (int key in guesses.Keys)
-            {
-                netResults[key] = CalculateHitResult(actuals, guesses[key]);
-            }
-            return netResults;
-        }
-
-        internal PickThreeHit CalculateHitResult(int[] actuals, int[] guess)
-        {
-            PickThreeHit hit = PickThreeHit.None;
-
-            // First two digits correct
-            hit |= Arrays.AreEqual(actuals.Take(2), guess.Take(2)) ? PickThreeHit.CorrectFirstTwo : PickThreeHit.None;
-            // Last two digits correct
-            hit |= Arrays.AreEqual(actuals.Skip(1).Take(2), guess.Skip(1).Take(2)) ? PickThreeHit.CorrectLastTwo : PickThreeHit.None;
-            // Digits correct but not in order
-            hit |= ArrayContained(actuals, guess) && guess.Distinct().Count() == 3 ? PickThreeHit.CorrectNumbers : PickThreeHit.None;
-
-            if (ArrayContained(actuals, guess) && guess.Distinct().Count() < 3)
-            {
-                // Digits correct but not in order with doubles
-                hit |= PickThreeHit.CorrectNumbersWithDoubles;
-            }
-            if (Arrays.AreEqual(actuals, guess))
-            {
-                // All digits correct and correct order
-                hit |= PickThreeHit.CorrectNumbers | PickThreeHit.CorrectOrder;
-            }
-            return hit;
-        }
-
-        private bool ArrayContained(int[] actuals, int[] guess)
-        {
-            Stack<int> actStack = new Stack<int>(actuals);
-            List<int> guessStack = new List<int>(guess);
-            bool contained = true;
-            while (actStack.Count > 0)
-            {
-                int check = actStack.Pop();
-                if (guessStack.Contains(check))
-                {
-                    int index = guessStack.IndexOf(check);
-                    guessStack.RemoveAt(index);
-                }
-                else
-                {
-                    contained = false;
-                }
-            }
-            return contained;
-        }
-
-        private int CalculateNettoResult(PickThreeHit hitResult)
-        {
-            int nettoResult = 0;
-            if (hitResult.HasFlag(PickThreeHit.CorrectNumbers) && hitResult.HasFlag(PickThreeHit.CorrectOrder))
-            {
-                nettoResult += 500;
-            }
-            if (hitResult.HasFlag(PickThreeHit.CorrectNumbersWithDoubles))
-            {
-                nettoResult += 160;
-            }
-            if (hitResult.HasFlag(PickThreeHit.CorrectNumbers))
-            {
-                nettoResult += 80;
-            }
-            if (hitResult.HasFlag(PickThreeHit.CorrectFirstTwo) || hitResult.HasFlag(PickThreeHit.CorrectLastTwo))
-            {
-                nettoResult += 50;
-            }
-            return nettoResult;
-        }
-
-        private Map<int, int> CalculateNettoResults(Map<int, PickThreeHit> hitResult)
-        {
-            Map<int, int> netResults = new Map<int, int>();
-            foreach (int key in hitResult.Keys)
-            {
-                netResults[key] = CalculateNettoResult(hitResult[key]);
-            }
-            return netResults;
-        }
-
-        public static PickThreeData From(Map<int, double[]> previousPredicted, IInference inference, string[] classifierFields)
-        {
-            double[] actuals = classifierFields.Select(cf => (double)((NamedTuple)inference.GetClassifierInput()[cf]).Get("inputValue")).ToArray();
-            PickThreeData data = new PickThreeData(inference.GetRecordNum(), actuals, previousPredicted);
-
-            data.AnomalyFactor = inference.GetAnomalyScore();
-
-            return data;
-        }
-
-        public Map<int, PickThreeHit> AnalysisResult { get; private set; }
-        public PickThreeHit RandomAnalysisResult { get; private set; }
-
-        public int RecordNumber { get; set; }
-        public int[] ActualNumbers { get; set; }
-        public Map<int, int[]> PredictedNumbers { get; set; }
-        public int[] RandomNumbers { get; set; }
-
-        public Map<int, int> NettoResults { get; private set; }
-        public int NettoRandomResult { get; private set; }
-
-        public double AnomalyFactor { get; set; }
-
-    }
-
-    [Flags]
-    public enum PickThreeHit
-    {
-        None = 0,
-        CorrectOrder = 1,
-        CorrectNumbers = 2,
-        CorrectNumbersWithDoubles = 4,
-        CorrectFirstTwo = 8,
-        CorrectLastTwo = 16
     }
 }

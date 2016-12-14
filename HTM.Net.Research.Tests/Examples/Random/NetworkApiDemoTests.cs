@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using HTM.Net.Encoders;
@@ -273,7 +275,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             int i = 0;
             foreach (double[] actuals in _randomActuals)
             {
-                data.Add(actuals.Select(d=>(int)d).ToArray());
+                data.Add(actuals.Select(d => (int)d).ToArray());
             }
 
             Assert.IsTrue(data.Count > 0);
@@ -291,7 +293,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             {
                 histo[i] = new double[7];
             }
-            double ratio = 100.0/dataset.Count;
+            double ratio = 100.0 / dataset.Count;
             // no of digits
             for (int i = 0; i < 7; i++)
             {
@@ -300,7 +302,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     histo[numbers[i]][i] += ratio;
                 }
             }
-            
+
             histo = new Map<int, double[]>(histo.OrderBy(p => p.Key).ToDictionary(k => k.Key, v => v.Value));
             Console.WriteLine("");
             Console.WriteLine("Chance histo matrix");
@@ -309,7 +311,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             Console.WriteLine("");
             foreach (var pair in histo)
             {
-                Console.WriteLine($"{pair.Key:00} = {Arrays.ToString(pair.Value,"{0:00.00}")}");
+                Console.WriteLine($"{pair.Key:00} = {Arrays.ToString(pair.Value, "{0:00.00}")}");
             }
             Console.WriteLine("");
 
@@ -378,7 +380,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 bestNumbersFirst[i] = histo.First(h => h.Value[i] == histo.Select(p => p.Value[i]).Max()).Key;
                 bestNumbersLast[i] = histo.Last(h => h.Value[i] == histo.Select(p => p.Value[i]).Max()).Key;
             }
-            
+
             Console.WriteLine("");
             Console.WriteLine("Most popular numbers");
             Console.WriteLine("");
@@ -485,69 +487,142 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
         [TestMethod]
         [DeploymentItem("Resources\\RandomData.csv")]
+        public void SimulateBasicNetworks()
+        {
+            List<RandomGuessNetworkApi> apis = new List<RandomGuessNetworkApi>();
+
+            // Simulate 10 versions
+            for (int i = 19; i >= 0; i--)
+            {
+                RandomGuessNetworkApi network = new RandomGuessNetworkApi(100, 1,5, false, i);
+                apis.Add(network);
+            }
+
+            List<RandomGuess> guesses = new List<RandomGuess>();
+            // Run all versions and take last guess for evaluation
+            for (int index = 0; index < apis.Count; index++)
+            {
+                var api = apis[index];
+                api.RunNetwork();
+
+                guesses.Add(api.GetLastGuess());
+
+                apis[index] = null;
+                GC.Collect();
+            }
+
+            PrintHistogramAndProfits(guesses);
+
+            var outputFile = new FileInfo("c:\\temp\\RandomData_output_Simulator.txt");
+            if (outputFile.Exists)
+            {
+                outputFile.Delete();
+            }
+            Debug.WriteLine("Creating output file: " + outputFile);
+            var pw = new StreamWriter(outputFile.OpenWrite());
+            pw.WriteLine("RecordNum,Actual,Predicted,CorrectGuesses,AnomalyScore");
+            foreach (RandomGuess guess in guesses)
+            {
+                WriteToFile(pw, guess);
+            }
+            pw.Close();
+            pw.Dispose();
+
+            Console.WriteLine("");
+            Console.WriteLine("Next predictions:");
+            int p = 1;
+            foreach (var prediction in guesses.Last().NextPredictions)
+            {
+                Console.WriteLine($"{p++} - {Arrays.ToString(prediction)}");
+            }
+        }
+
+        private void WriteToFile(StreamWriter sw, RandomGuess data)
+        {
+            try
+            {
+                // Start logging from item 1
+                if (data.RecordNumber >= 0)
+                {
+                    StringBuilder sb = new StringBuilder()
+                            .Append(data.RecordNumber).Append(", ")
+                            //.Append("classifier input=")
+                            .Append(string.Format("{0}", Arrays.ToString(data.ActualNumbers))).Append(",")
+                            //.Append("prediction= ")
+                            .Append(string.Format("{0}", Arrays.ToString(data.GetPrimaryPrediction()))).Append(",")
+                            //.Append("correctGuesses=")
+                            .Append(string.Format("{0}", data.GetPredictionScores())).Append(",")
+                            //.Append("anomaly score=")
+                            .Append(data.AnomalyFactor.ToString(NumberFormatInfo.InvariantInfo));
+                    sw.WriteLine(sb.ToString());
+                    sw.Flush();
+                }
+                //_predictedValues = newPredictions;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                sw.Flush();
+            }
+
+        }
+
+        [TestMethod]
+        [DeploymentItem("Resources\\RandomData.csv")]
         public void RunBasicNetwork()
         {
-            NetworkApiRandom demo = new NetworkApiRandom(NetworkApiRandom.Mode.BasicCla);
+            RandomGuessNetworkApi demo = new RandomGuessNetworkApi(150, 10, 5, false);
             demo.RunNetwork();
 
-            //Console.WriteLine("From last predictions to first predictions");
-            //for (int i = 1; i <= 10; i++)
+            var allGuessesObjs = demo.GetGuesses().ToList();
+            var lastGuessesObjs = RandomGuess.GetLastGuesses(allGuessesObjs, 10);
+            var lastGuessObjs = RandomGuess.GetLastGuesses(allGuessesObjs, 1);
+
+            PrintHistogramAndProfits(allGuessesObjs);
+            PrintHistogramAndProfits(lastGuessesObjs);
+            PrintHistogramAndProfits(lastGuessObjs);
+
+            Console.WriteLine("Next predictions:");
+            int p = 1;
+            foreach (var prediction in lastGuessObjs.First().NextPredictions)
+            {
+                Console.WriteLine($"{p++} - {Arrays.ToString(prediction)}");
+            }
+
+            //Console.WriteLine("Random Guesses bucket list (grouped)");
+            //var randomGuesses = RandomGameData.GetCountsOfCorrectRandomGuessesInStrings(demo.Data());
+            //dRatio = 100.0 / (demo.GetNumberOfPredictions() - 1);
+            //foreach (var guess in randomGuesses)
             //{
-            //    double pct = i / 10.0;
-            //    Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}",
-            //        demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
+            //    Console.WriteLine($"{guess.Key}\t= {guess.Value}\t({dRatio * guess.Value:0.00}%)");
             //}
-            //Console.WriteLine("From first predictions to last predictions");
-            //for (int i = 1; i <= 10; i++)
-            //{
-            //    double pct = i / 10.0;
-            //    Console.WriteLine("Pct: {1}; CorrectGuesses: {0}/7", demo.GetHighestCorrectGuesses(pct, false), pct);
-            //}
-
-            Console.WriteLine("Predicted bucket list (grouped)");
-            double dRatio = 100.0 / demo.GetTotalNumberOfPredictions();
-
-            var allGuesses = RandomGameData.GetCountsOfCorrectPredictedGuessesInStrings(demo.Data());
-            var allGuessesObjs = demo.Data().ToList();
-
-            foreach (var guess in allGuesses)
-            {
-                Console.WriteLine($"{guess.Key}\t= {guess.Value}\t({dRatio * guess.Value:0.00}%)");
-            }
-
-            Console.WriteLine("Last 10 guesses bucket list (grouped)");
-            var lastGuesses = RandomGameData.GetLastGuesses(demo.Data(), 10);
-            var lastGuessesObjs = demo.Data().Skip(demo.Data().Count - 10).ToList();
-            foreach (var guess in lastGuesses)
-            {
-                Console.WriteLine($"> {guess.Key}\t= {guess.Value}");
-            }
-
-            Console.WriteLine("Last guess bucket list");
-            var lastGuess = RandomGameData.GetLastGuesses(demo.Data(), 2);
-            var lastGuessObjs = demo.Data().Skip(demo.Data().Count - 2).ToList();
-            foreach (var guess in lastGuess)
-            {
-                Console.WriteLine($"> {guess.Key}\t= {guess.Value}");
-            }
-
-            Console.WriteLine("");
-            Console.WriteLine($"All time Cost: {RandomGameData.GetCost(demo.Data())}, Revenue: {RandomGameData.GetApproxRevenue(allGuessesObjs, allGuesses)}, Profit: {RandomGameData.GetApproxRevenue(allGuessesObjs, allGuesses) - RandomGameData.GetCost(demo.Data())}");
-            Console.WriteLine($"Last 10 guesses Cost: {RandomGameData.GetCost(lastGuessesObjs)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuessesObjs, lastGuesses)}, Profit: {RandomGameData.GetApproxRevenue(lastGuessesObjs, lastGuesses) - RandomGameData.GetCost(lastGuessesObjs)}");
-            Console.WriteLine($"Last 1 guess Cost: {RandomGameData.GetCost(lastGuessObjs)}, Revenue: {RandomGameData.GetApproxRevenue(lastGuessObjs, lastGuess)}, Profit: {RandomGameData.GetApproxRevenue(lastGuessObjs, lastGuess) - RandomGameData.GetCost(lastGuessObjs)}");
-            Console.WriteLine("");
-
-            Console.WriteLine("Random Guesses bucket list (grouped)");
-            var randomGuesses = RandomGameData.GetCountsOfCorrectRandomGuessesInStrings(demo.Data());
-            dRatio = 100.0 / (demo.GetNumberOfPredictions() - 1);
-            foreach (var guess in randomGuesses)
-            {
-                Console.WriteLine($"{guess.Key}\t= {guess.Value}\t({dRatio * guess.Value:0.00}%)");
-            }
 
             //Console.WriteLine("");
             //Console.WriteLine($"Random Cost: {randomGuesses.Values.Sum()}, Revenue: {RandomGameData.GetApproxRevenue(randomGuesses)}, Profit: {RandomGameData.GetApproxRevenue(randomGuesses) - randomGuesses.Values.Sum()}");
             //Console.WriteLine("");
+        }
+
+        private void PrintHistogramAndProfits(List<RandomGuess> guessList)
+        {
+            double dRatio = 100.0 / guessList.Sum(g => g.Count);
+            var lastGuessHisto = RandomGuess.GetHistogramMap(guessList);
+            int winningRounds = guessList.Count(g => g.GetApproximateRevenue() > 0);
+            int winningGuesses = guessList.Sum(g => g.Count(x => x.Revenue > 0));
+            double dRationRounds = 100.0 / guessList.Count;
+            Console.WriteLine("");
+            Console.WriteLine("##################################################################");
+            Console.WriteLine($"Histogram for last {guessList.Count} predictions");
+            Console.WriteLine($"Winning rounds  pct = {dRationRounds * winningRounds:0.00}% ({winningRounds}/{guessList.Count})");
+            Console.WriteLine($"Winning guesses pct = {dRatio * winningGuesses:0.00}% ({winningGuesses}/{guessList.Sum(g => g.Count)})");
+            Console.WriteLine("##################################################################");
+            Console.WriteLine("");
+            foreach (var guess in lastGuessHisto)
+            {
+                Console.WriteLine($"> {guess.Key}\t= {guess.Value}\t({dRatio * guess.Value:0.00}%)");
+            }
+
+            Console.WriteLine("");
+            Console.WriteLine($"Last {guessList.Count} guesses  Cost: {guessList.Sum(g => g.GetCost())}, Revenue: {guessList.Sum(g => g.GetApproximateRevenue())}, Profit: {guessList.Sum(g => g.GetProfit())}");
         }
 
         //[TestMethod]
@@ -557,12 +632,12 @@ namespace HTM.Net.Research.Tests.Examples.Random
             NetworkApiRandom demo = new NetworkApiRandom(NetworkApiRandom.Mode.BasicSdr);
             demo.RunNetwork();
 
-            Console.WriteLine("From last predictions to first predictions");
-            for (int i = 10; i > 0; i--)
-            {
-                double pct = i / 10.0;
-                Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}", demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
-            }
+            //Console.WriteLine("From last predictions to first predictions");
+            //for (int i = 10; i > 0; i--)
+            //{
+            //    double pct = i / 10.0;
+            //    Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}", demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
+            //}
             //Console.WriteLine("From first predictions to last predictions");
             //for (int i = 1; i <= 10; i++)
             //{
@@ -585,12 +660,12 @@ namespace HTM.Net.Research.Tests.Examples.Random
             NetworkApiRandom demo = new NetworkApiRandom(NetworkApiRandom.Mode.MultiLayer);
             demo.RunNetwork();
 
-            Console.WriteLine("From last predictions to first predictions");
-            for (int i = 10; i > 0; i--)
-            {
-                double pct = i / 10.0;
-                Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}", demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
-            }
+            //Console.WriteLine("From last predictions to first predictions");
+            //for (int i = 10; i > 0; i--)
+            //{
+            //    double pct = i / 10.0;
+            //    Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}", demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
+            //}
             //Console.WriteLine("From first predictions to last predictions");
             //for (int i = 1; i <= 10; i++)
             //{
@@ -613,12 +688,12 @@ namespace HTM.Net.Research.Tests.Examples.Random
             NetworkApiRandom demo = new NetworkApiRandom(NetworkApiRandom.Mode.MultiRegion);
             demo.RunNetwork();
 
-            Console.WriteLine("From last predictions to first predictions");
-            for (int i = 10; i > 0; i--)
-            {
-                double pct = i / 10.0;
-                Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}", demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
-            }
+            //Console.WriteLine("From last predictions to first predictions");
+            //for (int i = 10; i > 0; i--)
+            //{
+            //    double pct = i / 10.0;
+            //    Console.WriteLine("Pct: {1}; CorrectGuesses: max = {0}/7 avg = {2}", demo.GetHighestCorrectGuesses(pct, true), pct, demo.GetAverageCorrectGuesses(pct, true));
+            //}
             //Console.WriteLine("From first predictions to last predictions");
             //for (int i = 1; i <= 10; i++)
             //{
