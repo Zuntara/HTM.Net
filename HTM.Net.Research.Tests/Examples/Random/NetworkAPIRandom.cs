@@ -119,7 +119,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     _predictions.Add(gd);
 
                 // Statistical good numbers for chances
-                List<int[]> goodChances = GetBestChances(_offsetFromEnd+1);
+                List<int[]> goodChances = GetBestChances(_offsetFromEnd + 1);
                 foreach (int[] chance in goodChances)
                 {
                     gd.AddPrediction(chance.Select(c => (double)c).ToArray(), false);
@@ -322,9 +322,9 @@ namespace HTM.Net.Research.Tests.Examples.Random
             return data;
         }
 
-        private static int[] GetBestChance(int nrOfRecords, int nrToTrain, int offsetFromEnd)
+        public static int[] GetBestChance(int nrOfRecords, int nrToTrain, int offsetFromEnd, List<int[]> data = null)
         {
-            var allData = GetRandomData();
+            var allData = data ?? GetRandomData();
             int takeTrainCount = nrOfRecords;
             int takeTotalCount = nrOfRecords + nrToTrain;
             int skipCount = allData.Count - takeTotalCount - offsetFromEnd;
@@ -367,8 +367,9 @@ namespace HTM.Net.Research.Tests.Examples.Random
             
             randomActuals.Add(GetBestChance(50, 1, offset));
             randomActuals.Add(GetBestChance(100, 1, offset));
-            randomActuals.Add(GetBestChance(150, 1, offset));
+            //randomActuals.Add(GetBestChance(150, 1, offset));
             randomActuals.Add(GetBestChance(200, 1, offset));
+            //randomActuals.Add(GetBestChance(250, 1, offset));
 
             return randomActuals;
         }

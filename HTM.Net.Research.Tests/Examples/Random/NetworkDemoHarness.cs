@@ -248,18 +248,18 @@ namespace HTM.Net.Research.Tests.Examples.Random
             parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 3);
 
             // Classifier Specific
-            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0012);
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0057);
             parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1,2,3,4,5,/*6,7,8,9,10*/ });
 
             // SpatialPooler specific
-            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 15);//3
+            parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 13);//3
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.81);//0.5
             parameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
             parameters.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0);
             parameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 13.0);
             parameters.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 1.0);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.0007);// 0.015
-            parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.0001);  // 0.155
+            parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.00015);  // 0.155
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
             parameters.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
@@ -274,13 +274,13 @@ namespace HTM.Net.Research.Tests.Examples.Random
             parameters.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);
             parameters.SetParameterByKey(Parameters.KEY.CONNECTED_PERMANENCE, 0.21);
             parameters.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 11);
-            parameters.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 8);
+            parameters.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 6);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.1);
             parameters.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.1);
-            parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 20);
+            parameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 19);
 
-            parameters.SetParameterByKey(Parameters.KEY.SEED_TM, 1960);
-            parameters.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(1960));
+            parameters.SetParameterByKey(Parameters.KEY.SEED_TM, 398731);
+            parameters.SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(398731));
 
             return parameters;
         }

@@ -10,7 +10,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
     public class RandomGuess : List<RandomGuessData>
     {
-        private RandomGuess(int recordNumber, double[] actualNumbers, double anomalyFactor)
+        internal RandomGuess(int recordNumber, double[] actualNumbers, double anomalyFactor)
         {
             RecordNumber = recordNumber;
             AnomalyFactor = anomalyFactor;

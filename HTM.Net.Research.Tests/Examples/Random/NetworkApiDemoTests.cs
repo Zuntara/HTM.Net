@@ -492,9 +492,10 @@ namespace HTM.Net.Research.Tests.Examples.Random
             List<RandomGuessNetworkApi> apis = new List<RandomGuessNetworkApi>();
 
             // Simulate 10 versions
-            for (int i = 19; i >= 0; i--)
+            int iterations = 20;
+            for (int i = (iterations - 1); i >= 0; i--)
             {
-                RandomGuessNetworkApi network = new RandomGuessNetworkApi(100, 1,5, false, i);
+                RandomGuessNetworkApi network = new RandomGuessNetworkApi(100, 1, 0, false, i);
                 apis.Add(network);
             }
 
@@ -537,6 +538,52 @@ namespace HTM.Net.Research.Tests.Examples.Random
             }
         }
 
+        [TestMethod]
+        [DeploymentItem("Resources\\RandomData.csv")]
+        public void SimulateBasedOnStatistics()
+        {
+            int testCount = 40;
+            var allData = GetRandomData();
+            var statsData = allData.Skip(testCount).Reverse().ToList();
+            var testData = allData.Take(testCount).Reverse().ToList();
+
+            List<double[]> stats = new List<double[]>();
+
+            stats.Add(RandomGuessNetworkApi.GetBestChance(50, 0, 0, statsData).Select(d => (double)d).ToArray());
+            stats.Add(RandomGuessNetworkApi.GetBestChance(100, 0, 0, statsData).Select(d => (double)d).ToArray());
+            //stats.Add(RandomGuessNetworkApi.GetBestChance(250, 0, 0, statsData).Select(d => (double)d).ToArray());
+            //stats.Add(RandomGuessNetworkApi.GetBestChance(500, 0, 0, statsData).Select(d => (double)d).ToArray());
+            //stats.Add(RandomGuessNetworkApi.GetBestChance(1000, 0, 0, statsData).Select(d => (double)d).ToArray());
+            //stats.Add(RandomGuessNetworkApi.GetBestChance(2000, 0, 0, statsData).Select(d => (double)d).ToArray());
+            stats.Add(RandomGuessNetworkApi.GetBestChance(statsData.Count, 0, 0, statsData).Select(d => (double)d).ToArray());
+
+            foreach (double[] stat in stats)
+            {
+                Debug.WriteLine(Arrays.ToString(stat));
+            }
+
+            // Create guess collection
+            List<RandomGuess> guesses = new List<RandomGuess>();
+            for (int i = 0; i < testData.Count; i++)
+            {
+                RandomGuess guess = new RandomGuess(i + 1, testData[i].Select(d => (double)d).ToArray(), 0);
+
+                foreach (double[] stat in stats)
+                {
+                    guess.AddPrediction(stat, false);
+                }
+                guesses.Add(guess);
+            }
+
+            double profit = 0;
+            foreach (RandomGuess randomGuess in guesses)
+            {
+                Debug.WriteLine($"{randomGuess.RecordNumber} {randomGuess.GetPredictionScores()} {randomGuess.GetProfit()}");
+                profit += randomGuess.GetProfit();
+            }
+            Debug.WriteLine($"Profit: {profit}");
+        }
+
         private void WriteToFile(StreamWriter sw, RandomGuess data)
         {
             try
@@ -571,7 +618,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         [DeploymentItem("Resources\\RandomData.csv")]
         public void RunBasicNetwork()
         {
-            RandomGuessNetworkApi demo = new RandomGuessNetworkApi(150, 10, 5, false);
+            RandomGuessNetworkApi demo = new RandomGuessNetworkApi(200, 20, 0, false);
             demo.RunNetwork();
 
             var allGuessesObjs = demo.GetGuesses().ToList();
