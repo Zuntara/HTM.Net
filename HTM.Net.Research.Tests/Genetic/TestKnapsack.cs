@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Research.Genetic;
+using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Research.Tests.Genetic
@@ -12,12 +13,12 @@ namespace HTM.Net.Research.Tests.Genetic
         /// <summary>
         /// This method verifies that the genetic algorithm is working on its own with a known problem.
         /// </summary>
-        //[TestMethod]
+        [TestMethod]
         public void TestKnapsackProblem()
         {
             KnapsackSolver solver = new KnapsackSolver(100);
-            solver.Initialize(100);// Generate 100 random knapsack items
-            double bestFitnessSoFar = 0;
+            solver.Initialize(25); // Generate 100 random knapsack items
+            double bestFitnessSoFar;
 
             int runs = 0;
             do
@@ -30,21 +31,31 @@ namespace HTM.Net.Research.Tests.Genetic
 
             Assert.IsTrue(runs < 1000);
             Assert.AreEqual(100, bestFitnessSoFar);
+            var genome = solver.GenomePopulation[solver.BestGenomeIndex];
+            var items = genome.Decode();
+            Assert.IsNotNull(items);
+
+            foreach (int itemIndex in items)
+            {
+                var item = solver.ExternalItems[itemIndex];
+
+                Debug.WriteLine($"V: {item.Volume} - W: {item.Weight}");
+            }
         }
     }
 
     #region Knapsack implementation
 
-    public class KnapsackSolver : GeneticAlgorithmSolver<KnapsackGenome, SackItem>
+    public class KnapsackSolver : GeneticAlgorithmSolver<KnapsackGenome, BitGene, SackItem>
     {
         public KnapsackSolver(double desiredFitness)
             : base(desiredFitness)
         {
         }
 
-        public override void Initialize(params int[] arguments)
+        public override void Initialize(params object[] arguments)
         {
-            Init(arguments[0]);
+            Init((int)arguments[0]);
         }
 
         private void Init(int numItems)
@@ -56,7 +67,7 @@ namespace HTM.Net.Research.Tests.Genetic
             ExternalItems = new List<SackItem>();
             do
             {
-                SackItem item = new SackItem(GAUtils.RandInt(0, 100), GAUtils.RandInt(0, 10));
+                SackItem item = new SackItem(GAUtils.RandInt(0, 100), GAUtils.RandInt(1, 10));
                 if (!ExternalItems.Any(i => i.Weight == item.Weight))
                 {
                     ExternalItems.Add(item);
@@ -67,10 +78,10 @@ namespace HTM.Net.Research.Tests.Genetic
             int chromosoneLength = geneCombinations * 1; // 1 genes per chromosone (item in or out)
 
             // initialize the GA
-            Algorithm = new GeneticAlgorithm<KnapsackGenome>(
-                GeneticAlgorithm<KnapsackGenome>.DefaultCrossoverRate,
-                GeneticAlgorithm<KnapsackGenome>.DefaultMutationRate,
-                GeneticAlgorithm<KnapsackGenome>.DefaultPopulationSize,
+            Algorithm = new GeneticAlgorithm<KnapsackGenome, BitGene>(
+                GeneticAlgorithm<KnapsackGenome, BitGene>.DefaultCrossoverRate,
+                GeneticAlgorithm<KnapsackGenome, BitGene>.DefaultMutationRate,
+                GeneticAlgorithm<KnapsackGenome, BitGene>.DefaultPopulationSize,
                 chromosoneLength,
                 geneCombinations);
 
@@ -95,7 +106,7 @@ namespace HTM.Net.Research.Tests.Genetic
                 genome.Fitness = fitness;
 
                 //keep a record of the best
-                if (fitness > bestFitnessSoFar)
+                if (fitness > bestFitnessSoFar && fitness <= 100)
                 {
                     bestFitnessSoFar = fitness;
 
@@ -130,30 +141,36 @@ namespace HTM.Net.Research.Tests.Genetic
             int maxVolume = 50;
 
             // decode this genome
-            List<int> includedItems;
+            List<SackItem> includedItems;
             Decode(genome, out includedItems);
 
-            int totalWeight = ExternalItems.Where((si, i) => includedItems.Contains(i)).Sum(i => i.Weight);
-            int totalVolume = ExternalItems.Where((si, i) => includedItems.Contains(i)).Sum(i => i.Volume);
+            int totalWeight = includedItems.Sum(i => i.Weight);
+            int totalVolume = includedItems.Sum(i => i.Volume);
 
             // Volume and weight are very important (50% each)
-            double fitnessWeight = (50.0 / maxWeight) * totalWeight;
-            double fitnessVolume = (50.0 / maxVolume) * totalVolume;
+            double dRatioWeight = 100.0 / maxWeight;
+            double dRatioVolume = 100.0 / maxVolume;
 
-            if (fitnessWeight > 50.0) fitnessWeight = 0;
-            if (fitnessVolume > 50.0) fitnessVolume = 0;
+            double fitnessWeight = (dRatioWeight * totalWeight) / 2.0;
+            double fitnessVolume = (dRatioVolume * totalVolume) / 2.0;
+
+            if (fitnessWeight > 200.0) fitnessWeight = 0;
+            if (fitnessWeight > 50.0) fitnessWeight = 40 + ((8.0 / 150.0) * (50 - fitnessWeight));
+
+            if (fitnessVolume > 200.0) fitnessVolume = 0;
+            if (fitnessVolume > 50.0) fitnessVolume = 40 + ((8.0 / 150.0) * (50 - fitnessVolume));
 
             return fitnessWeight + fitnessVolume;
         }
 
-        private void Decode(KnapsackGenome genome, out List<int> includedItems)
+        private void Decode(KnapsackGenome genome, out List<SackItem> includedItems)
         {
             List<int> decodedGenome = genome.Decode();
-            includedItems = decodedGenome;
+            includedItems = decodedGenome.Select(i => ExternalItems[i]).ToList();
         }
     }
 
-    public class KnapsackGenome : BaseGenome
+    public class KnapsackGenome : BitGenome
     {
         public override List<int> Decode()
         {
@@ -163,7 +180,7 @@ namespace HTM.Net.Research.Tests.Genetic
             for (int i = 0; i < Genes.Count; i++)
             {
                 // get the gene at this position
-                Gene gene = Genes[i];
+                BitGene gene = Genes[i];
                 //convert to decimal and add to list of decoded
                 decoded.AddRange(GetIncludedItems(gene));
             }
@@ -171,15 +188,9 @@ namespace HTM.Net.Research.Tests.Genetic
             return decoded;
         }
 
-        private IEnumerable<int> GetIncludedItems(Gene gene)
+        private IEnumerable<int> GetIncludedItems(BitGene gene)
         {
-            List<int> indices = new List<int>();
-            for (int i = 0; i < gene.Bits.Count; i++)
-            {
-                if (gene.Bits[i] == 1)
-                    indices.Add(i);
-            }
-            return indices;
+            return ArrayUtils.Where(gene.Bits, i => i == 1);
         }
     }
 

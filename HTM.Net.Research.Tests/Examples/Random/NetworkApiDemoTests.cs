@@ -492,7 +492,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
             List<RandomGuessNetworkApi> apis = new List<RandomGuessNetworkApi>();
 
             // Simulate 10 versions
-            int iterations = 20;
+            int iterations = 10;
             for (int i = (iterations - 1); i >= 0; i--)
             {
                 RandomGuessNetworkApi network = new RandomGuessNetworkApi(100, 1, 0, false, i);

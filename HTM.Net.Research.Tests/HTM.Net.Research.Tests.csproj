@@ -116,6 +116,7 @@
     <Compile Include="Generators\TestSineGenerator.cs" />
     <Compile Include="Genetic\Swarming\SwarmingBasicTest.cs" />
     <Compile Include="Genetic\TestKnapsack.cs" />
+    <Compile Include="Genetic\TestNetworkSolver.cs" />
     <Compile Include="Opf\ClaModelClassifierTest.cs" />
     <Compile Include="Opf\ClaModelTest.cs" />
     <Compile Include="Opf\MetricManagerTests.cs" />
