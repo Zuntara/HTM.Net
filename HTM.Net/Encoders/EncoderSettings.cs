@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Util;
 using Newtonsoft.Json;
@@ -25,6 +26,12 @@ namespace HTM.Net.Encoders
             {
                 Add(encoderSetting.Key, encoderSetting.Value.Clone());
             }
+        }
+
+        protected EncoderSettingsList(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+
         }
 
         public EncoderSetting For(string encoderName)

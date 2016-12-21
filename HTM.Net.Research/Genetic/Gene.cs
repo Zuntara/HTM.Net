@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Util;
+using Tweetinvi.Core.Extensions;
 
 namespace HTM.Net.Research.Genetic
 {
@@ -22,6 +25,7 @@ namespace HTM.Net.Research.Genetic
         }
     }
 
+    [Serializable]
     public class BitGene : GeneBase<BitGene>
     {
         public BitGene()
@@ -96,6 +100,7 @@ namespace HTM.Net.Research.Genetic
         }
     }
 
+    [Serializable]
     public abstract class GeneBase<TGene>
             where TGene : GeneBase<TGene>, new()
     {
@@ -111,8 +116,11 @@ namespace HTM.Net.Research.Genetic
         public bool IsFrozen { get; set; }
     }
 
+    [Serializable]
     public class BitGenome : BaseGenome<BitGene>
     {
+        #region Overrides of BaseGenome<BitGene>
+
         public override List<int> Decode()
         {
             List<int> decoded = new List<int>();
@@ -128,8 +136,26 @@ namespace HTM.Net.Research.Genetic
 
             return decoded;
         }
+
+        public override List<TGenome> Cross<TGenome>(TGenome dad, int crossOverPoint)
+        {
+            TGenome child1 = new TGenome();
+            TGenome child2 = new TGenome();
+
+            for (int i = 0; i < this.Genes.Count; i++)
+            {
+                List<BitGene> crossed = this.Genes[i].Cross(dad.Genes[i], i < crossOverPoint);
+                child1.Genes.Add(crossed[0]);
+                child2.Genes.Add(crossed[1]);
+            }
+
+            return new List<TGenome> { child1, child2 };
+        }
+
+        #endregion
     }
 
+    [Serializable]
     public abstract class BaseGenome<TGeneModel>
         where TGeneModel : GeneBase<TGeneModel>, new()
     {
@@ -183,6 +209,29 @@ namespace HTM.Net.Research.Genetic
             throw new NotImplementedException("to implement in derived class");
         }
 
+        public virtual List<TGenome> Cross<TGenome>(TGenome other, int crossOverPoint)
+            where TGenome: BaseGenome<TGeneModel>, new()
+        {
+            TGenome child1 = new TGenome();
+            TGenome child2 = new TGenome();
+
+            // Loop through all the genes
+            for (int i = 0; i < Genes.Count; i++)
+            {
+                if (i <= crossOverPoint)
+                {
+                    child1.Genes.Add(Genes[i]);
+                    child2.Genes.Add(other.Genes[i]);
+                }
+                else
+                {
+                    child1.Genes.Add(other.Genes[i]);
+                    child2.Genes.Add(Genes[i]);
+                }
+            }
+            return new List<TGenome> {child1, child2};
+        }
+
         public int BinaryToInteger(List<int> vec)
         {
             int val = 0;
@@ -196,6 +245,15 @@ namespace HTM.Net.Research.Genetic
             }
 
             return val;
+        }
+
+        internal BaseGenome<TGeneModel> Clone()
+        {
+            MemoryStream ms = new MemoryStream();
+            BinaryFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(ms, this);
+            ms.Position = 0;
+            return (BaseGenome<TGeneModel>)formatter.Deserialize(ms);
         }
     }
 
@@ -280,15 +338,12 @@ namespace HTM.Net.Research.Genetic
                 //operator - crossover
                 TGenome baby1 = new TGenome();
                 TGenome baby2 = new TGenome();
-                List<TGene> baby1Genes = baby1.Genes;
-                List<TGene> baby2Genes = baby2.Genes;
-                Crossover(mum.Genes, dad.Genes, ref baby1Genes, ref baby2Genes);
-                baby1.Genes = baby1Genes;
-                baby2.Genes = baby2Genes;
-
+                
+                Crossover(mum, dad, ref baby1, ref baby2);
+                
                 //operator - mutate
-                Mutate(baby1.Genes);
-                Mutate(baby2.Genes);
+                Mutate(baby1);
+                Mutate(baby2);
 
                 //add to new population
                 babyGenomes.Add(baby1);
@@ -311,18 +366,47 @@ namespace HTM.Net.Research.Genetic
         ///	iterates through each genome flipping the bits acording to the
         ///	mutation rate
         /// </summary>
-        /// <param name="genes"></param>
-        private void Mutate(List<TGene> genes)
+        /// <param name="genome"></param>
+        private void Mutate(TGenome genome)
         {
             // Go through each gene
-            for (int i = 0; i < genes.Count; i++)
+            genome.Genes
+                .Where(g => !g.IsFrozen)
+                .ForEach(g => g.Mutate(MutationRate));
+        }
+
+        /// <summary>
+        ///	Takes 2 parent gene vectors, selects a midpoint and then swaps the ends
+        ///	of each genome creating 2 new genomes which are stored in baby1 and
+        ///	baby2.
+        /// </summary>
+        /// <param name="mum"></param>
+        /// <param name="dad"></param>
+        /// <param name="baby1"></param>
+        /// <param name="baby2"></param>
+        private void Crossover(TGenome mum, TGenome dad, ref TGenome baby1, ref TGenome baby2)
+        {
+            //just return parents as offspring dependent on the rate
+            //or if parents are the same
+            if ((GAUtils.RandDouble() > CrossoverRate) || (mum == dad))
             {
-                GeneBase<TGene> gene = genes[i];
-                if (!gene.IsFrozen)
-                {
-                    gene.Mutate(MutationRate);
-                }
+                baby1 = (TGenome) mum.Clone();
+                baby2 = (TGenome) dad.Clone();
+                return;
             }
+
+            //determine a crossover point
+            int crossOverPoint = GAUtils.RandInt(0, mum.Genes.Count - 1); // = 29
+
+            List<TGenome> children = mum.Cross(dad, crossOverPoint);
+            baby1 = children[0];
+            baby2 = children[1];
+            //for (int i = 0; i < mum.Genes.Count; i++)
+            //{
+            //    var crossed = mum.Genes[i].Cross(dad.Genes[i], i < crossOverPoint);
+            //    baby1.Genes.Add(crossed[0]);
+            //    baby2.Genes.Add(crossed[1]);
+            //}
         }
 
         /// <summary>
@@ -497,6 +581,7 @@ namespace HTM.Net.Research.Genetic
 
         //index into the fittest genome in the population
         public int BestGenomeIndex { get; protected set; }
+        public TGenome BestGenome { get; protected set; }
         public int Generation { get; protected set; }
         protected bool Started { get; set; }
 

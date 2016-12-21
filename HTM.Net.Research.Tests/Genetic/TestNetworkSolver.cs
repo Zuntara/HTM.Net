@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Text;
+using Castle.Core.Internal;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Genetic;
@@ -26,18 +28,24 @@ namespace HTM.Net.Research.Tests.Genetic
         public void SolveSineNetwork()
         {
             NetworkSolver solver = new NetworkSolver(100, new RandomPermutationParameters(), new RandomDescriptionParameters());
-            solver.Initialize(5);
+            solver.Initialize(25, 150, 10, 0); // genomeCount, trainingCount, evaluationCount, offsetFromBehind
 
             double bestFitnessSoFar;
 
-            int runs = 0;
+            int runs = 1;
             do
             {
                 bestFitnessSoFar = solver.Epoch();
                 runs++;
-                Console.WriteLine(bestFitnessSoFar);
-                if (runs > 5) break;
-            } while (bestFitnessSoFar < 100);
+
+                var highestScoreInPop = solver.GenomePopulation.Max(g => g.Fitness);
+                var winner = solver.BestGenome;
+
+                Console.WriteLine($"Best score so far: {bestFitnessSoFar}/{highestScoreInPop} ({winner.WinningGuesses}/{winner.TotalGuesses})");
+                Console.WriteLine($"-> Best params so far for {highestScoreInPop}: {winner.GetEffectiveParameters(true)}");
+
+                if (runs > 50) break;
+            } while (bestFitnessSoFar < 60);
         }
     }
 
@@ -51,6 +59,7 @@ namespace HTM.Net.Research.Tests.Genetic
         private List<int[]> _selectedData = new List<int[]>();
         private Map<int, double[]> _predictedValues; // step, values
         private List<RandomGuess> _predictions;
+        private int _numberOfRecordsToTrain, _nrOfRecordsToEvaluateAfterTraining, _offsetFromBehind;
 
         public NetworkSolver(double desiredFitness, ExperimentPermutationParameters parameters, ExperimentParameters descriptionParameters)
             : base(desiredFitness)
@@ -64,18 +73,23 @@ namespace HTM.Net.Research.Tests.Genetic
 
         public override void Initialize(params object[] arguments)
         {
-            Initialize((int)arguments[0]);
+            if (arguments.Length != 4)
+            {
+                throw new ArgumentException("Expected arguments: genomeCount, trainingCount, evaluationCount, offsetFromBehind", nameof(arguments));
+            }
+            Initialize((int)arguments[0], (int)arguments[1], (int)arguments[2], (int)arguments[3]);
         }
 
         public override double Epoch()
         {
             double bestFitnessSoFar = 0;
 
-            // iterate through the population
+            // Iterate through the population
             for (int p = 0; p < GenomePopulation.Count; ++p)
             {
                 NetworkGenome genome = GenomePopulation[p];
 
+                // run the network(s)
                 double fitness = CalculateFitness(genome);
 
                 //assign radius to fitness
@@ -87,6 +101,7 @@ namespace HTM.Net.Research.Tests.Genetic
                     bestFitnessSoFar = fitness;
 
                     BestGenomeIndex = p;
+                    BestGenome = genome;
                 }
 
             } // next genome
@@ -97,13 +112,13 @@ namespace HTM.Net.Research.Tests.Genetic
                 return bestFitnessSoFar;
             }
 
-            //now perform an epoch of the GA. First replace the genomes
+            // Perform an epoch of the GA. First replace the genomes
             Algorithm.PutGenomes(GenomePopulation);
 
-            //let the GA do its stuff
+            // Let the GA do its stuff
             Algorithm.Epoch();
 
-            //grab the new genome
+            // Grab the new genomes
             GenomePopulation = Algorithm.GrabGenomes();
 
             Generation++;
@@ -113,31 +128,62 @@ namespace HTM.Net.Research.Tests.Genetic
 
         protected override double CalculateFitness(NetworkGenome genome)
         {
+            Parameters p = Parameters.Empty();
+            genome.Genes.Where(g => !g.IsFrozen).ForEach(g => p.SetParameterByKey(g.Key, TypeConverter.Convert(g.Value, g.Key.GetFieldType())));
+
+            // Console.WriteLine($"Parameters: {p}");
+
+            //return 10 + GAUtils.RandInt(0, 10);
             // decode this genome
             var network = Decode(genome);
 
             // run this network and check the fitness
             _predictions = new List<RandomGuess>();
             _predictedValues = null;
-            
-            network.Observe().Subscribe(GetNetworkSubscriber());
-            network.Start();
-            network.GetTail().GetTail().GetLayerThread().Wait();
+            try
+            {
+                network.Observe().Subscribe(GetNetworkSubscriber());
+                network.Start();
+                network.GetTail().GetTail().GetLayerThread().Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception in network: " + e);
+                genome.TotalGuesses = 0;
+                genome.WinningGuesses = 0;
+                return 0;
+            }
 
-            var lastGuesses = _predictions.AsQueryable().Reverse().Take(10).Reverse();
+
+            var lastGuesses = _predictions.AsQueryable().Reverse().Take(10).Reverse().ToList();
 
             //int winningRounds = lastGuesses.Count(g=> g.GetProfit()>0);
 
-            double dRatio = 100.0 / lastGuesses.Sum(g => g.Count);
-            int winningGuesses = lastGuesses.Sum(g => g.Count(x => x.Revenue - x.Cost > 0));
+            genome.TotalGuesses = lastGuesses.Sum(g => g.Count(x => x.IsValid));
 
-            return winningGuesses * dRatio;
+            double dRatio = 100.0 / genome.TotalGuesses;
+            int winningGuesses = lastGuesses.Sum(g => g.Count(x => x.Revenue - x.Cost > 0 && x.IsValid));
+
+            double score = winningGuesses * dRatio;
+            if (genome.TotalGuesses != 10)
+            {
+                score = 1;
+            }
+            genome.WinningGuesses = winningGuesses;
+
+            Console.WriteLine($"Intermediate eval: {score} ({genome.WinningGuesses}/{genome.TotalGuesses})");
+
+            return score;
         }
 
         #endregion
 
-        private void Initialize(int numberOfGenomes)
+        private void Initialize(int numberOfGenomes, int trainingCount, int evaluationCount, int offsetFromBehind)
         {
+            _numberOfRecordsToTrain = trainingCount;
+            _nrOfRecordsToEvaluateAfterTraining = evaluationCount;
+            _offsetFromBehind = offsetFromBehind;
+
             Started = false;
             Generation = 0;
 
@@ -174,35 +220,67 @@ namespace HTM.Net.Research.Tests.Genetic
         {
             Parameters baseParameters = DescriptionParameters.Copy();
 
-            var variables = PermutationParameters.GetPermutationVars();
+            var variables = PermutationParameters.GetPermutationVars()
+                .Select(t => new Tuple<Parameters.KEY, RangeVariable>(t.Item1, (RangeVariable)t.Item2))
+                .ToList();
             Parameters movedParameters = MoveParameters(variables);
 
             Parameters networkParameters = baseParameters.Union(movedParameters);
 
+            // Move the encoder variables
+            var encoderSettingsMap = PermutationParameters.Encoders;
+            if (encoderSettingsMap != null && encoderSettingsMap.Any(e => e.Value is PermuteEncoder))
+            {
+                EncoderSettingsList list = (EncoderSettingsList)networkParameters.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP);
+                // translate it to the real settings
+                foreach (var encoderPair in encoderSettingsMap)
+                {
+                    string encoderKey = encoderPair.Key;
+                    PermuteEncoder encoder = (PermuteEncoder)encoderPair.Value;
+
+                    EncoderSetting setting = list[encoderKey];
+                    // override if needed
+                    foreach (var args in encoder.kwArgs)
+                    {
+                        if (args.Value is PermuteVariable)
+                        {
+                            var position = ((PermuteVariable)args.Value).GetPosition();
+                            object globalPos = null;
+                            if (args.Value is PermuteFloat)
+                            {
+                                var pf = (PermuteFloat)args.Value;
+                                globalPos = pf.min;
+                            }
+                            ((PermuteVariable)args.Value).NewPosition(globalPos, Random);
+                            setting[args.Key] = position;
+                        }
+                        else
+                        {
+                            setting[args.Key] = args.Value;
+                        }
+                    }
+                    list[encoderKey] = setting;
+                }
+                networkParameters.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, list);
+            }
             // Assign the parameters to the genome
             genome.AssignGenes(networkParameters, variables.ToArray());
             // Add network to external items for reference in fitness function
 
         }
 
-        private Parameters MoveParameters(List<Tuple<Parameters.KEY, PermuteVariable>> variables)
+        private Parameters MoveParameters(List<Tuple<Parameters.KEY, RangeVariable>> variables)
         {
             Parameters p = Parameters.Empty();
 
-            foreach (Tuple<Parameters.KEY, PermuteVariable> variable in variables)
+            foreach (Tuple<Parameters.KEY, RangeVariable> variable in variables)
             {
-                object currentPos = variable.Item2.GetPosition();
+                // Get value and move to new position
+                object currentPos = variable.Item2.GetValue();
                 // Set our variable
                 p.SetParameterByKey(variable.Item1, TypeConverter.Convert(currentPos, variable.Item1.GetFieldType()));
-                // Move to new position
-                object globalPos = null;
-                if (variable.Item2 is PermuteFloat)
-                {
-                    globalPos = ((PermuteFloat)variable.Item2).max;
-                }
-                variable.Item2.NewPosition(globalPos, Random);
             }
-            //Debug.WriteLine("--> " + p.ToString());
+            Debug.WriteLine("--> " + p.ToString());
             return p;
         }
 
@@ -239,10 +317,10 @@ namespace HTM.Net.Research.Tests.Genetic
             List<string> fileLinesFinal = new List<string>();
 
             // Define number of records to train on
-            int takeTrainCount = 150;//_numberOfRecordsToTrain;
-            int takeTotalCount = takeTrainCount + 10;//_nrOfRecordsToEvaluateAfterTraining;
+            int takeTrainCount = _numberOfRecordsToTrain;
+            int takeTotalCount = takeTrainCount + _nrOfRecordsToEvaluateAfterTraining;
             // Define offset from start of file
-            int skipCount = fileLinesReversed.Count - takeTotalCount - 0;//_offsetFromEnd;
+            int skipCount = fileLinesReversed.Count - takeTotalCount - _offsetFromBehind;
 
             // Repeat the training set if needed
             for (int i = 0; i < 0/*_iterationsToRepeat*/; i++)
@@ -294,12 +372,12 @@ namespace HTM.Net.Research.Tests.Genetic
                     _predictions.Add(gd);
 
                 // Statistical good numbers for chances
-                List<int[]> goodChances = RandomGuessNetworkApi.GetBestChances(/*_offsetFromEnd*/0 + 1);
-                foreach (int[] chance in goodChances)
-                {
-                    gd.AddPrediction(chance.Select(c => (double)c).ToArray(), false);
-                    gd.NextPredictions.Add(chance);
-                }
+                //List<int[]> goodChances = RandomGuessNetworkApi.GetBestChances(_offsetFromBehind + 1);
+                //foreach (int[] chance in goodChances)
+                //{
+                //    gd.AddPrediction(chance.Select(c => (double)c).ToArray(), false);
+                //    gd.NextPredictions.Add(chance);
+                //}
                 gd.NextPredictions = gd.NextPredictions.Take(10).ToList();
 
                 _predictedValues = newPredictions;
@@ -335,9 +413,47 @@ namespace HTM.Net.Research.Tests.Genetic
     /// <summary>
     /// A genome has genes, a gene represents a permutable setting of the network
     /// </summary>
+    [Serializable]
     public class NetworkGenome : BaseGenome<NetworkGene>
     {
-        public void AssignGenes(Parameters parameters, Tuple<Parameters.KEY, PermuteVariable>[] permuteVars)
+        private static int Counter = 1;
+
+        public int Id { get; } = Counter++;
+
+        #region Overrides of BaseGenome<NetworkGene>
+
+        public override List<TGenome> Cross<TGenome>(TGenome other, int crossOverPoint)
+        {
+            TGenome child1 = new TGenome();
+            TGenome child2 = new TGenome();
+
+            // Loop through all the genes
+            for (int i = 0; i < Genes.Count; i++)
+            {
+                if (Genes[i].IsFrozen)
+                {
+                    // take over the frozen genes, no use in swapping them, they are static
+                    child1.Genes.Add(Genes[i]);
+                    child2.Genes.Add(Genes[i]);
+                    continue;
+                }
+                if (i <= crossOverPoint)
+                {
+                    child1.Genes.Add(Genes[i]);
+                    child2.Genes.Add(other.Genes[i]);
+                }
+                else
+                {
+                    child1.Genes.Add(other.Genes[i]);
+                    child2.Genes.Add(Genes[i]);
+                }
+            }
+            return new List<TGenome> { child1, child2 };
+        }
+
+        #endregion
+
+        public void AssignGenes(Parameters parameters, Tuple<Parameters.KEY, RangeVariable>[] permuteVars)
         {
             foreach (var key in parameters.Keys())
             {
@@ -356,12 +472,13 @@ namespace HTM.Net.Research.Tests.Genetic
             }
         }
 
-        public Parameters GetEffectiveParameters()
+        public Parameters GetEffectiveParameters(bool onlyModified = false)
         {
             Parameters p = Parameters.Empty();
             // loop through all the genes and fillup the parameter collection again
             foreach (NetworkGene networkGene in Genes)
             {
+                if (onlyModified && networkGene.IsFrozen) continue;
                 if (networkGene.Value is IConvertible)
                 {
                     p.SetParameterByKey(networkGene.Key,
@@ -374,8 +491,12 @@ namespace HTM.Net.Research.Tests.Genetic
             }
             return p;
         }
+
+        public int WinningGuesses { get; set; }
+        public int TotalGuesses { get; set; }
     }
 
+    [Serializable]
     public class NetworkGene : GeneBase<NetworkGene>
     {
         public NetworkGene()
@@ -406,12 +527,8 @@ namespace HTM.Net.Research.Tests.Genetic
         {
             if (GAUtils.RandDouble() < mutationRate)
             {
-                // Do a mutation
-                if (PermuteVar is PermuteFloat)
-                {
-                    ((PermuteFloat)PermuteVar).Agitate();
-                    Value = PermuteVar.NewPosition(((PermuteFloat) PermuteVar).max, GAUtils.Random);
-                }
+                // Do a mutation ( = get value and move to next one)
+                Value = PermuteVar.GetValue();
             }
         }
 
@@ -426,6 +543,55 @@ namespace HTM.Net.Research.Tests.Genetic
 
         public Parameters.KEY Key { get; set; }
 
-        public PermuteVariable PermuteVar { get; set; }
+        public RangeVariable PermuteVar { get; set; }
+    }
+
+    [Serializable]
+    public class RangeVariable : PermuteVariable
+    {
+        public double Min { get; set; }
+        public double Max { get; set; }
+        public double Step { get; set; }
+
+        public double Value { get; set; }
+        private bool MoveUp { get; set; }
+
+        public RangeVariable(double min, double max, double step)
+        {
+            Min = min;
+            Max = max;
+            Step = step;
+
+            Value = (max - min) / 2;
+            MoveUp = true;
+        }
+
+        public double GetValue()
+        {
+            double value = Value;
+
+            if (Value + Step >= Max)
+            {
+                // we would reach the end
+                MoveUp = false;
+            }
+            if (Value - Step <= Min)
+            {
+                // we would reach the end
+                MoveUp = true;
+            }
+            if (MoveUp) Value += Step;
+            else Value -= Step;
+
+            if (Value > Max) Value = Max;
+            if (Value < Min) Value = Min;
+
+            return value;
+        }
+
+        public bool AtEnd()
+        {
+            return Value == Max;
+        }
     }
 }

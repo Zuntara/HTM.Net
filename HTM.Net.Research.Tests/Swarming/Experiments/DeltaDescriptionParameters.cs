@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using HTM.Net.Algorithms;
 using HTM.Net.Data;
 using HTM.Net.Encoders;
@@ -9,6 +8,7 @@ using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Research.Swarming.Permutations;
 using HTM.Net.Research.Tests.Examples.Random;
+using HTM.Net.Research.Tests.Genetic;
 using HTM.Net.Swarming.HyperSearch;
 using HTM.Net.Util;
 
@@ -28,44 +28,44 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
             SetProperties();
 
             // Spatial defaults
-            SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 128 });
-            SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 1000/*, 20*/ }); // 300,20
-            SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 3);
+            SetParameterByKey(KEY.INPUT_DIMENSIONS, new int[] { 128 });
+            SetParameterByKey(KEY.COLUMN_DIMENSIONS, new int[] { 1000/*, 20*/ }); // 300,20
+            SetParameterByKey(KEY.CELLS_PER_COLUMN, 3);
 
             // Classifier Specific
-            SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0057);
-            SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1/*, 2, 3, 4, 5,6,7,8,9,10*/ });
+            SetParameterByKey(KEY.CLASSIFIER_ALPHA, 0.0057);
+            SetParameterByKey(KEY.CLASSIFIER_STEPS, new[] { 1/*, 2, 3, 4, 5,6,7,8,9,10*/ });
 
             // SpatialPooler specific
-           SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 13);//3
-           SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.81);//0.5
-           SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
-           SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0);
-           SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 13.0);
-           SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 1.0);
-           SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.0007);// 0.015
-           SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.00015);  // 0.155
-           SetParameterByKey(Parameters.KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
-           SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
-           SetParameterByKey(Parameters.KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
-           SetParameterByKey(Parameters.KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
-           SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 9);
-           SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
-           SetParameterByKey(Parameters.KEY.SEED_SP, 42);
-           SetParameterByKey(Parameters.KEY.RANDOM_SP, new XorshiftRandom(42));
-           SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
+            SetParameterByKey(KEY.POTENTIAL_RADIUS, 13);//3
+            SetParameterByKey(KEY.POTENTIAL_PCT, 0.81);//0.5
+            SetParameterByKey(KEY.GLOBAL_INHIBITION, true);
+            SetParameterByKey(KEY.LOCAL_AREA_DENSITY, -1.0);
+            SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 13.0);
+            SetParameterByKey(KEY.STIMULUS_THRESHOLD, 1.0);
+            SetParameterByKey(KEY.SYN_PERM_INACTIVE_DEC, 0.0007);// 0.015
+            SetParameterByKey(KEY.SYN_PERM_ACTIVE_INC, 0.00015);  // 0.155
+            SetParameterByKey(KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
+            SetParameterByKey(KEY.SYN_PERM_CONNECTED, 0.1);
+            SetParameterByKey(KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.1);
+            SetParameterByKey(KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.1);
+            SetParameterByKey(KEY.DUTY_CYCLE_PERIOD, 9);
+            SetParameterByKey(KEY.MAX_BOOST, 10.0);
+            SetParameterByKey(KEY.SEED_SP, 42);
+            SetParameterByKey(KEY.RANDOM_SP, new XorshiftRandom(42));
+            SetParameterByKey(KEY.SP_VERBOSITY, 0);
 
             //Temporal Memory specific
-            SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.2);
-            SetParameterByKey(Parameters.KEY.CONNECTED_PERMANENCE, 0.21);
-            SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 11);
-            SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 6);
-            SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.1);
-            SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.1);
-            SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 19);
+            SetParameterByKey(KEY.INITIAL_PERMANENCE, 0.2);
+            SetParameterByKey(KEY.CONNECTED_PERMANENCE, 0.21);
+            SetParameterByKey(KEY.MIN_THRESHOLD, 11);
+            SetParameterByKey(KEY.MAX_NEW_SYNAPSE_COUNT, 6);
+            SetParameterByKey(KEY.PERMANENCE_INCREMENT, 0.1);
+            SetParameterByKey(KEY.PERMANENCE_DECREMENT, 0.1);
+            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, 19);
 
-            SetParameterByKey(Parameters.KEY.SEED_TM, 398731);
-            SetParameterByKey(Parameters.KEY.RANDOM_TM, new XorshiftRandom(398731));
+            SetParameterByKey(KEY.SEED_TM, 398731);
+            SetParameterByKey(KEY.RANDOM_TM, new XorshiftRandom(398731));
         }
 
         private void SetProperties()
@@ -126,17 +126,23 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
         {
             //PredictedField = "value";
 
-            //Encoders = new Map<string, object>
-            //{
-            //    { "value", new PermuteEncoder("value", "ScalarSpaceEncoder", null, new KWArgsModel { {"space", new PermuteChoices(new [] {"delta", "absolute"})},{"clipInput", true},{"w", 21},{"n", new PermuteInt(28,521)} }) },
-            //    { "_classifierInput", new PermuteEncoder("value", "ScalarSpaceEncoder", null, new KWArgsModel { {"space", new PermuteChoices(new [] {"delta", "absolute"})},{"clipInput", true}, { "classifierOnly", true }, {"w", 21},{"n", new PermuteInt(28,521)} }) },
-            //};
+            Encoders = new Map<string, object>
+            {
+                {
+                    "Number 1", new PermuteEncoder("Number 1", "ScalarEncoder", null,
+                        new KWArgsModel
+                        {
+                            {"w", 21},
+                            {"n", new PermuteInt(28, 621)}
+                        })
+                }
+            };
 
-            SetParameterByKey(KEY.MIN_THRESHOLD, new PermuteInt(9, 19));
-            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, new PermuteInt(11, 30));
-            SetParameterByKey(KEY.CLASSIFIER_ALPHA, new PermuteFloat(0.000100, 0.500000));
-            SetParameterByKey(KEY.DUTY_CYCLE_PERIOD, new PermuteInt(5, 20));
-            SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, new PermuteFloat(3.0, 60.0, 1.0));
+            SetParameterByKey(KEY.MIN_THRESHOLD, new RangeVariable(9, 19, 1));
+            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, new RangeVariable(11, 30, 1));
+            SetParameterByKey(KEY.CLASSIFIER_ALPHA, new RangeVariable(0.000100, 0.500000, 0.001));
+            SetParameterByKey(KEY.DUTY_CYCLE_PERIOD, new RangeVariable(5, 20, 1));
+            SetParameterByKey(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, new RangeVariable(3.0, 60.0, 1.0));
 
             //Report = new[] { ".*value.*" };
             //Minimize = "multiStepBestPredictions:multiStep:errorMetric=\"aae\":steps=1:window=10:field=value";
@@ -297,17 +303,17 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
         {
             PredictedField = "value";
 
-            Encoders=new Map<string, object>
+            Encoders = new Map<string, object>
             {
                 { "value", new PermuteEncoder("value", "ScalarSpaceEncoder", null, new KWArgsModel { {"space", new PermuteChoices(new [] {"delta", "absolute"})},{"clipInput", true},{"w", 21},{"n", new PermuteInt(28,521)} }) },
                 { "_classifierInput", new PermuteEncoder("value", "ScalarSpaceEncoder", null, new KWArgsModel { {"space", new PermuteChoices(new [] {"delta", "absolute"})},{"clipInput", true}, { "classifierOnly", true }, {"w", 21},{"n", new PermuteInt(28,521)} }) },
             };
 
-            SetParameterByKey(KEY.MIN_THRESHOLD, new PermuteInt(9,12));
-            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, new PermuteInt(12,16));
-            SetParameterByKey(KEY.CLASSIFIER_ALPHA, new PermuteFloat(0.000100,0.100000));
+            SetParameterByKey(KEY.MIN_THRESHOLD, new PermuteInt(9, 12));
+            SetParameterByKey(KEY.ACTIVATION_THRESHOLD, new PermuteInt(12, 16));
+            SetParameterByKey(KEY.CLASSIFIER_ALPHA, new PermuteFloat(0.000100, 0.100000));
 
-            Report = new[] {".*value.*"};
+            Report = new[] { ".*value.*" };
             Minimize = "multiStepBestPredictions:multiStep:errorMetric=\"aae\":steps=1:window=10:field=value";
             MinParticlesPerSwarm = null;
 
