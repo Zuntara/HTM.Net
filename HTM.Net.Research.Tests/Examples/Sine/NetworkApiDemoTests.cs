@@ -14,14 +14,14 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(71, p.Size());
+            Assert.AreEqual(67, p.Size());
         }
 
         [TestMethod]
         public void TestGetDayDemoTestEncoderParams()
         {
             Parameters p = NetworkDemoHarness.GetDayDemoTestEncoderParams();
-            Assert.AreEqual(13, p.Size());
+            Assert.AreEqual(14, p.Size());
         }
 
         [TestMethod]
@@ -35,7 +35,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public void TestGetNetworkDemoTestEncoderParams()
         {
             Parameters p = NetworkDemoHarness.GetNetworkDemoTestEncoderParams();
-            Assert.AreEqual(28, p.Size());
+            Assert.AreEqual(29, p.Size());
         }
 
         [TestMethod]

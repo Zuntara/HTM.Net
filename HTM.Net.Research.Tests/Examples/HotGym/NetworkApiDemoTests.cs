@@ -101,8 +101,8 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             }
         }
 
-        [TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        //[TestMethod]
+        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void RunBasicNetworkSdr()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_SDR);

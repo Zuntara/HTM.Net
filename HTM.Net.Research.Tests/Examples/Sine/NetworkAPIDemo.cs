@@ -11,6 +11,7 @@ using HTM.Net.Algorithms;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Generators;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.Sine
 {
@@ -78,6 +79,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         {
             Parameters p = NetworkDemoHarness.GetParameters();
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("sinedata", typeof(CLAClassifier)));
 
             // This is how easy it is to create a full running Network!
             var sineData = SineGenerator.GenerateSineWave(100, 100*20, 10, 1)
@@ -115,6 +117,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         {
             Parameters p = NetworkDemoHarness.GetParameters();
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("sinedata", typeof(CLAClassifier)));
 
             // This is how easy it is to create a full running Network!
             var sineData = SineGenerator.GenerateSineWave(100, 100 * 20, 10, 1)
@@ -156,6 +159,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         {
             Parameters p = NetworkDemoHarness.GetParameters();
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("sinedata", typeof(CLAClassifier)));
 
             var sineData = SineGenerator.GenerateSineWave(100, 100 * 20, 10, 1)
                 .Select(s => s.ToString(NumberFormatInfo.InvariantInfo));
@@ -334,6 +338,19 @@ namespace HTM.Net.Research.Tests.Examples.Sine
 
                 return totalPredicted / totalActual;
             }
+        }
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+        */
+        public static Map<string, Type> GetInferredFieldsMap(
+            string field, Type classifier)
+        {
+            Map<string, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
         }
 
         public class PredictionValue
