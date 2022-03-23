@@ -42,6 +42,8 @@ namespace HTM.Net.Encoders
         /// <returns></returns>
         Type GetEncoderType();
 
+        HashSet<FieldMetaType> GetDecoderOutputFieldTypes();
+
         List<EncoderResult> TopDownCompute(int[] fieldOutput);
         Tuple Decode(int[] fieldOutput, string parentName);
 
@@ -273,7 +275,7 @@ namespace HTM.Net.Encoders
          */
         public void SetTopDownMapping(SparseObjectMatrix<int[]> sm)
         {
-            this.topDownMapping = sm;
+            topDownMapping = sm;
         }
 
         /**
@@ -282,7 +284,7 @@ namespace HTM.Net.Encoders
          */
         public void SetTopDownValues(double[] values)
         {
-            this.topDownValues = values;
+            topDownValues = values;
         }
 
         /**
@@ -488,7 +490,7 @@ namespace HTM.Net.Encoders
          * @param offset	the offset of the encoded output the specified encoder
          * 					was used to encode.
          */
-        public void AddEncoder(Encoder<T> parent, string fieldName, string name, IEncoder child, int offset)
+        public void AddEncoder(Encoder<T> parent, string name, IEncoder child, int offset)
         {
             if (encoders == null)
             {
@@ -499,7 +501,7 @@ namespace HTM.Net.Encoders
             // Insert a new Tuple for the parent if not yet added.
             if (key == null)
             {
-                encoders.Add(key = new EncoderTuple("", "", this, 0), new List<EncoderTuple>());
+                encoders.Add(key = new EncoderTuple("", this, 0), new List<EncoderTuple>());
             }
 
             List<EncoderTuple> childEncoders = null;
@@ -507,9 +509,7 @@ namespace HTM.Net.Encoders
             {
                 encoders.Add(key, childEncoders = new List<EncoderTuple>());
             }
-            childEncoders.Add(new EncoderTuple(fieldName, name, child, offset));
-            //if (scalarNames == null) scalarNames = new List<string>();
-            //scalarNames.Add(name);
+            childEncoders.Add(new EncoderTuple(name, child, offset));
         }
 
         /**
@@ -532,6 +532,7 @@ namespace HTM.Net.Encoders
                     return tuple;
                 }
             }
+
             return null;
         }
 
@@ -550,6 +551,7 @@ namespace HTM.Net.Encoders
             {
                 return encoders[tuple];
             }
+
             return new List<EncoderTuple>();
         }
 
@@ -563,6 +565,7 @@ namespace HTM.Net.Encoders
             {
                 encoders = new Map<EncoderTuple, List<EncoderTuple>>();
             }
+
             return encoders;
         }
 
@@ -735,16 +738,19 @@ namespace HTM.Net.Encoders
                             hierarchicalNames.Add($"{parentFieldName}.{name}");
                         }
                     }
+
                     names.AddRange(hierarchicalNames);
                 }
             }
-            else {
+            else
+            {
                 if (parentFieldName != null)
                 {
                     names.Add(GetName());
                 }
-                else {
-                    names.Add((string)GetEncoderTuple(this).Item1);
+                else
+                {
+                    names.Add((string)GetEncoderTuple(this).Get(0));
                 }
             }
 
@@ -1154,23 +1160,23 @@ namespace HTM.Net.Encoders
                 int nextOffset = 0;
                 if (i < len - 1)
                 {
-                    nextOffset = (int)encoders[i + 1].Item4;
+                    nextOffset = (int)encoders[i + 1].Get(2);
                 }
                 else {
                     nextOffset = GetW();
                 }
 
-                int[] fieldOutput = ArrayUtils.Sub(encoded, ArrayUtils.Range((int)threeFieldsTuple.Item4, nextOffset));
+                int[] fieldOutput = ArrayUtils.Sub(encoded, ArrayUtils.Range((int)threeFieldsTuple.Get(2), nextOffset));
 
-                Tuple result = ((IEncoder)threeFieldsTuple.Item3).Decode(fieldOutput, parentName);
+                Tuple result = ((IEncoder)threeFieldsTuple.Get(1)).Decode(fieldOutput, parentName);
 
-                foreach (var tuplePair in (Map<string, RangeList>)result.Item1)
+                foreach (var tuplePair in (Map<string, RangeList>)result.Get(0))
                 {
                     fieldsMap.Add(tuplePair.Key, tuplePair.Value);
                 }
 
                 //fieldsMap.AddRange((Dictionary<string, Tuple>)result.Item1);
-                fieldsOrder.AddRange((List<string>)result.Item2);
+                fieldsOrder.AddRange((List<string>)result.Get(1));
             }
 
             return new Tuple(fieldsMap, fieldsOrder);
@@ -1295,14 +1301,14 @@ namespace HTM.Net.Encoders
             int len = encoders.Count;
             for (int i = 0; i < len; i++)
             {
-                int offset = (int)encoders[i].Item4;
-                IEncoder encoder = (IEncoder)encoders[i].Item3;
+                int offset = (int)encoders[i].Get(2);
+                IEncoder encoder = (IEncoder)encoders[i].Get(1);
 
                 int nextOffset;
                 if (i < len - 1)
                 {
                     //Encoders = List<Encoder> : Encoder = EncoderTuple(name, encoder, offset)
-                    nextOffset = (int)encoders[i + 1].Item4;
+                    nextOffset = (int)encoders[i + 1].Get(2);
                 }
                 else {
                     nextOffset = GetW();

@@ -41,7 +41,8 @@ namespace HTM.Net.Algorithms
     {
         #region Fields
 
-        private readonly double _actValueAlpha;
+        private double _actValueAlpha = 0.3d;
+
         /// <summary>
         /// The bit's learning iteration. This is updated each time store() gets called on this bit.
         /// </summary>
@@ -73,12 +74,13 @@ namespace HTM.Net.Algorithms
         /// </summary>
         [JsonIgnore]
         private readonly Map<Tuple, BitHistory> _activeBitHistory = new Map<Tuple, BitHistory>();
+
         /// <summary>
         /// This keeps track of the actual value to use for each bucket index. We
         /// start with 1 bucket, no actual value so that the first infer has something
         /// to return
         /// </summary>
-        private readonly List<object> _actualValues;
+        private readonly List<object> _actualValues = new List<object>();
 
         private string g_debugPrefix = "CLAClassifier";
 
@@ -96,15 +98,6 @@ namespace HTM.Net.Algorithms
         }
 
         /// <summary>
-        /// CLAClassifier steps constructor with defaults
-        /// </summary>
-        public CLAClassifier(int[] steps)
-            : this(steps, 0.001, 0.3, 0)
-        {
-
-        }
-
-        /// <summary>
         /// Constructor for the CLA classifier
         /// </summary>
         /// <param name="steps">sequence of the different steps of multi-step predictions to learn</param>
@@ -115,12 +108,11 @@ namespace HTM.Net.Algorithms
         /// <param name="verbosity">verbosity level, can be 0, 1, or 2</param>
         public CLAClassifier(int[] steps, double alpha, double actValueAlpha, int verbosity)
         {
-            _actualValues = new List<object>();
+            Steps = steps;
+            Alpha = alpha;
+            _actValueAlpha = actValueAlpha;
+            Verbosity = verbosity;
             _actualValues.Add(null);
-            this.Steps = steps;
-            this.Alpha = alpha;
-            this._actValueAlpha = actValueAlpha;
-            this.Verbosity = verbosity;
             _patternNzHistory = new Deque<Tuple>(ArrayUtils.Max(steps.ToArray()) + 1);
         }
 
@@ -163,7 +155,7 @@ namespace HTM.Net.Algorithms
         public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
         {
             Classification<T> retVal = new Classification<T>();
-            //List<T> actualValues = this.actualValues.Select(av => av == null ? default(T) : (T)av).ToList();
+            List<object> actualValues = _actualValues.Select(av => av == null ? null : av).ToList();
 
             // Save the offset between recordNum and learnIteration if this is the first
             // compute
@@ -177,11 +169,11 @@ namespace HTM.Net.Algorithms
 
             if (Verbosity >= 1)
             {
-                Console.WriteLine(String.Format("\n{0}: compute ", g_debugPrefix));
-                Console.WriteLine(" recordNum: " + recordNum);
-                Console.WriteLine(" learnIteration: " + _learnIteration);
-                Console.WriteLine(String.Format(" patternNZ({0}): {1}", patternNZ.Length, Arrays.ToString(patternNZ)));
-                Console.WriteLine(" classificationIn: " + classification);
+                Console.WriteLine($"\n{g_debugPrefix}: compute ");
+                Console.WriteLine($" recordNum: {recordNum}");
+                Console.WriteLine($" learnIteration: {_learnIteration}");
+                Console.WriteLine($" patternNZ({patternNZ.Length}): {Arrays.ToString(patternNZ)}");
+                Console.WriteLine($" classificationIn: {classification}");
             }
 
             _patternNzHistory.Append(new Tuple(_learnIteration, patternNZ));
@@ -205,23 +197,13 @@ namespace HTM.Net.Algorithms
                 }
                 else
                 {
-                    defaultValue = classification.GetOrDefault("actValue", null);
+                    defaultValue = classification.Get("actValue");
                 }
 
                 T[] actValues = new T[this._actualValues.Count];
-                for (int i = 0; i < _actualValues.Count; i++)
+                for (int i = 0; i < actualValues.Count; i++)
                 {
-                    //if (EqualityComparer<T>.Default.Equals(actualValues[i], default(T)))  //actualValues[i] == default(T))
-                    if (_actualValues[i] == null)
-                    {
-                        actValues[i] = defaultValue != null ? TypeConverter.Convert<T>(defaultValue) : default(T);
-                        //(T) (defaultValue ?? default(T));
-                    }
-                    else
-                    {
-                        actValues[i] = (T)_actualValues[i];
-                    }
-                    //actValues[i] = actualValues[i].CompareTo(default(T)) == 0 ? defaultValue : actualValues[i];
+                    actValues[i] = (T)(actualValues[i] == null ? TypeConverter.Convert<T>(defaultValue) : actualValues[i]);
                 }
 
                 retVal.SetActualValues(actValues);
@@ -236,7 +218,7 @@ namespace HTM.Net.Algorithms
                     foreach (int bit in patternNZ)
                     {
                         Tuple key = new Tuple(bit, nSteps);
-                        BitHistory history = _activeBitHistory.GetOrDefault(key, null);
+                        BitHistory history = _activeBitHistory.Get(key);
                         if (history == null) continue;
 
                         history.Infer(_learnIteration, bitVotes);
@@ -270,10 +252,10 @@ namespace HTM.Net.Algorithms
             // For each active bit in the activationPattern, store the classification
             // info. If the bucketIdx is None, we can't learn. This can happen when the
             // field is missing in a specific record.
-            if (learn && classification.GetOrDefault("bucketIdx", null) != null)
+            if (learn && classification.Get("bucketIdx") != null)
             {
                 // Get classification info
-                int bucketIdx = (int)(classification["bucketIdx"]);
+                int bucketIdx = (int)classification["bucketIdx"];
                 object actValue = classification["actValue"];
 
                 // Update maxBucketIndex
@@ -286,6 +268,7 @@ namespace HTM.Net.Algorithms
                 {
                     _actualValues.Add(null);
                 }
+
                 if (_actualValues[bucketIdx] == null)
                 {
                     _actualValues[bucketIdx] = TypeConverter.Convert<T>(actValue);
@@ -318,7 +301,7 @@ namespace HTM.Net.Algorithms
                     foreach (Tuple t in _patternNzHistory)
                     {
                         iteration = TypeConverter.Convert<int>(t.Get(0));
-
+                        
                         var tuplePos1 = t.Get(1);
                         if (tuplePos1 is JArray)
                         {
@@ -358,39 +341,22 @@ namespace HTM.Net.Algorithms
             if (infer && Verbosity >= 1)
             {
                 Console.WriteLine(" inference: combined bucket likelihoods:");
-                Console.WriteLine("   actual bucket values: " + Arrays.ToString((T[])retVal.GetActualValues()));
+                Console.WriteLine($"   actual bucket values: {Arrays.ToString((T[])retVal.GetActualValues())}");
 
                 foreach (int key in retVal.StepSet())
                 {
                     if (retVal.GetActualValue(key) == null) continue;
 
                     Object[] actual = new Object[] { (T)retVal.GetActualValue(key) };
-                    Console.WriteLine(String.Format("  {0} steps: {1}", key, PFormatArray(actual)));
+                    Console.WriteLine($"  {key} steps: {PFormatArray(actual)}");
                     int bestBucketIdx = retVal.GetMostProbableBucketIndex(key);
-                    Console.WriteLine(String.Format("   most likely bucket idx: {0}, value: {1} ", bestBucketIdx,
-                        retVal.GetActualValue(bestBucketIdx)));
+                    Console.WriteLine(
+                        $"   most likely bucket idx: {bestBucketIdx}, value: {retVal.GetActualValue(bestBucketIdx)} ");
 
                 }
             }
 
             return retVal;
-        }
-
-        /// <summary>
-        /// Applies the network parameters on this classifier
-        /// </summary>
-        /// <param name="p"></param>
-        public void ApplyParameters(Parameters p)
-        {
-            double pAlpha = (double)p.GetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, Alpha);
-            int[] pSteps = (int[])p.GetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, Steps);
-
-            Alpha = pAlpha;
-            if (!Arrays.AreEqual(Steps, pSteps))
-            {
-                _patternNzHistory = new Deque<Tuple>(ArrayUtils.Max(pSteps) + 1);
-            }
-            Steps = pSteps;
         }
 
         /// <summary>

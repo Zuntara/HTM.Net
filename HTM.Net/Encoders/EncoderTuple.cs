@@ -9,7 +9,7 @@ namespace HTM.Net.Encoders
      * 
      * @see Tuple
      */
- [Serializable]
+    [Serializable]
     public class EncoderTuple : Util.Tuple
     {
         /**
@@ -21,29 +21,22 @@ namespace HTM.Net.Encoders
          * 					encoder encodes/decodes. (see  {@link ScalarEncoder#getFirstOnBit(
          * 						org.numenta.nupic.research.Connections, double)})
          */
-        public EncoderTuple(string fieldName, string encoderName, IEncoder e, int offset)
-            : base(fieldName, encoderName, e, offset)
+        public EncoderTuple(string encoderName, IEncoder e, int offset)
+            : base(encoderName, e, offset)
         {
             if (encoderName == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
                  " with a null encoderName");
-            if (fieldName == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
-                 " with a null fieldName");
             if (e == null) throw new ArgumentException("Can't instantiate an EncoderTuple " +
-                 " with a null Encoder");
+                                                       " with a null Encoder");
         }
-
-        public string GetFieldName()
-        {
-            return (string) Get(0);
-        }
-
+        
         /**
          * Returns the {@link Encoder}'s name
          * @return
          */
         public string GetName()
         {
-            return (string)Get(1);
+            return (string)Get(0);
         }
 
         /**
@@ -52,12 +45,12 @@ namespace HTM.Net.Encoders
          */
         public IEncoder GetEncoder()
         {
-            return (IEncoder)Get(2);
+            return (IEncoder)Get(1);
         }
 
         public T GetEncoder<T>()
         {
-            return (T)Get(2);
+            return (T)Get(1);
         }
 
         /**
@@ -67,7 +60,7 @@ namespace HTM.Net.Encoders
          */
         public int GetOffset()
         {
-            return (int)Get(3);
+            return (int)Get(2);
         }
     }
 }

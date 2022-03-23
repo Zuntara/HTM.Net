@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using HTM.Net.Model;
 using HTM.Net.Util;
+
+using MathNet.Numerics.LinearAlgebra.Double;
+
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
@@ -68,18 +71,21 @@ namespace HTM.Net.Algorithms
     public class SDRClassifier : Persistable, IClassifier
     {
         public int[] Steps { get; set; }
-        public double Alpha { get; set; }
-        private readonly double _actValueAlpha;
-        public int Verbosity { get; set; }
+        
+        public double Alpha { get; set; } = 0.001d;
+
+        private readonly double _actValueAlpha = 0.3d;
+
+        public int Verbosity { get; set; } = 0;
 
         private int _learnIteration;
-        private int? _recordNumMinusLearnIteration;
+        private int _recordNumMinusLearnIteration = -1;
         private static readonly int VERSION = 1;
         private Deque<Tuple> _patternNZHistory;
         //private Map<int, int> _activeBitHistory;
-        private int _maxInputIdx;
+        private int _maxInputIdx = 0;
         private int _maxBucketIdx;
-        private Map<int, double[][]> _weightMatrix;
+        private Map<int, SparseMatrix> _weightMatrix;
         private readonly List<object> _actualValues;
         private string g_debugPrefix = "SDRClassifier";
 
@@ -87,7 +93,7 @@ namespace HTM.Net.Algorithms
         /// SDRClassifier no-arg constructor with defaults
         /// </summary>
         public SDRClassifier()
-            : this(new []{1})
+            : this(new []{1}, 0.001d, 0.3d, 0)
         {
 
         }
@@ -99,7 +105,7 @@ namespace HTM.Net.Algorithms
         /// <param name="alpha">(float) The alpha used to adapt the weight matrix during learning. A larger alpha results in faster adaptation to the data.</param>
         /// <param name="actValueAlpha">(float) Used to track the actual value within each bucket. A lower actValueAlpha results in longer term memory</param>
         /// <param name="verbosity">verbosity (int) verbosity level, can be 0, 1, or 2</param>
-        public SDRClassifier(int[] steps = null, double alpha = 0.001, double actValueAlpha = 0.3, int verbosity = 0)
+        public SDRClassifier(int[] steps, double alpha = 0.001, double actValueAlpha = 0.3, int verbosity = 0)
         {
             if (steps == null || steps.Length == 0) throw new ArgumentException("Steps cannot be empty");
             if (steps.Any(s => s < 0)) throw new ArgumentException("steps must be a list of non-negative ints");
@@ -111,13 +117,6 @@ namespace HTM.Net.Algorithms
             Alpha = alpha;
             _actValueAlpha = actValueAlpha;
             Verbosity = verbosity;
-
-            // Init learn iteration index
-            _learnIteration = 0;
-
-            // This contains the offset between the recordNum (provided by caller) and
-            // learnIteration (internal only, always starts at 0).
-            _recordNumMinusLearnIteration = null;
 
             // Max // of steps of prediction we need to support
             int maxSteps = steps.Max() + 1;
@@ -133,22 +132,13 @@ namespace HTM.Net.Algorithms
             // prediction desired for that bit. 
             //_activeBitHistory = new Map<int, int>();
 
-            // This contains the value of the highest input number we've ever seen 
-            // It is used to pre-allocate fixed size arrays that hold the weights 
-            _maxInputIdx = 0;
-
-            // This contains the value of the highest bucket index we've ever seen 
-            // It is used to pre-allocate fixed size arrays that hold the weights of 
-            // each bucket index during inference 
-            _maxBucketIdx = 0;
-
             // The connection weight matrix 
-            _weightMatrix = new Map<int, double[][]>();
+            _weightMatrix = new Map<int, SparseMatrix>();
 
             foreach (int step in steps)
             {
-                //_weightMatrix[step] = DenseMatrix.Create(_maxInputIdx + 1, _maxBucketIdx + 1, 0);
-                _weightMatrix[step] = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, _maxBucketIdx + 1);
+                _weightMatrix.Add(step, new SparseMatrix(_maxBucketIdx + 1, _maxInputIdx + 1));
+                //_weightMatrix[step] = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, _maxBucketIdx + 1);
             }
             //for step in this.steps: 
             //    this._weightMatrix[step] = numpy.zeros(shape = (this._maxInputIdx + 1,
@@ -157,33 +147,103 @@ namespace HTM.Net.Algorithms
             // This keeps track of the actual value to use for each bucket index. We 
             // start with 1 bucket, no actual value so that the first infer has something 
             // to return 
-            _actualValues = new List<object> { null };
-
+            _actualValues = new List<object>();
+            _actualValues.Add(null);
             // Set the version to the latest version. 
             // This is used for serialization/deserialization 
         }
 
+        /// <summary>
+        /// Process one input sample.
+        /// This method is called by outer loop code outside the nupic-engine.
+        /// We use this instead of the nupic engine compute() because our inputs and
+        /// outputs aren't fixed size vectors of reals.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="recordNum">
+        /// Record number of this input pattern. Record numbers normally increase
+        /// sequentially by 1 each time unless there are missing records in the
+        /// dataset.Knowing this information ensures that we don't get confused by
+        /// missing records.</param>
+        /// <param name="classification">
+        /// <see cref="Map{TKey,TValue}"/> of the classification information:
+        /// <p>&emsp;"bucketIdx" - index of the encoder bucket
+        /// <p>&emsp;"actValue" -  actual value doing into the encoder</param>
+        /// <param name="patternNZ">List of the active indices from the output below. When the output is from the TemporalMemory, this array should be the indices of the active cells.</param>
+        /// <param name="learn">If true, learn this sample.</param>
+        /// <param name="infer">If true, perform inference. If false, null will be returned.</param>
+        /// <returns>
+        /// <see cref="Classification{T}"/> containing inference results if {@code learn} param is true,
+        /// otherwise, will return {@code null}. The Classification
+        /// contains the computed probability distribution(relative likelihood for each
+        /// bucketIdx starting from bucketIdx 0) for each step in {@code steps}. Each bucket's
+        /// likelihood can be accessed individually, or all the buckets' likelihoods can
+        /// be obtained in the form of a double array.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        /// <example>
+        /// <code>
+        /// // Get likelihood val for bucket 0, 5 steps in future
+        /// classification.getStat(5, 0);
+        /// 
+        /// //Get all buckets' likelihoods as double[] where each
+        /// //index is the likelihood for that bucket
+        /// //(e.g. [0] contains likelihood for bucketIdx 0)
+        /// classification.getStats(5);
+        /// }</pre>
+        ///
+        /// 
+        /// The Classification also contains the average actual value for each bucket.
+        /// The average values for the buckets can be accessed individually, or altogether
+        /// as a double[].
+        ///  
+        ///  <pre>{
+        ///        
+        ///  // Get average actual val for bucket 0
+        ///  classification.getActualValue(0);
+        ///  
+        ///  // Get average vals for all buckets as double[], where
+        ///  // each index is the average val for that bucket
+        ///  // (e.g. [0] contains average val for bucketIdx 0)
+        ///  classification.getActualValues();
+        ///   }</pre>
+        ///
+        ///        
+        /// The Classification can also be queried for the most probable bucket(the bucket
+        /// with the highest associated likelihood value), as well as the average input value
+        ///
+        ///  that corresponds to that bucket.
+        ///    
+        ///  <pre>{
+        ///        
+        ///  // Get index of most probable bucket
+        ///  classification.getMostProbableBucketIndex();
+        ///       
+        ///  // Get the average actual val for that bucket
+        ///  classification.getMostProbableValue();
+        ///  }</pre>
+        /// </code>
+        /// </example>
         public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
             bool learn, bool infer)
         {
             if (learn == false && infer == false) throw new InvalidOperationException("learn and infer cannot be both false");
 
-            // Save the offset between recordNum and learnIteration if this is the first 
-            //  compute 
-            if (_recordNumMinusLearnIteration == null)
+            // Save the offset between recordNum and learnIteration if this is the first compute
+            if (_recordNumMinusLearnIteration == -1)
             {
                 _recordNumMinusLearnIteration = recordNum - _learnIteration;
             }
+
             // Update the learn iteration
-            _learnIteration = recordNum - _recordNumMinusLearnIteration.GetValueOrDefault();
+            _learnIteration = recordNum - _recordNumMinusLearnIteration;
 
             if (Verbosity >= 1)
             {
-                Console.WriteLine(String.Format("\n{0}: compute ", g_debugPrefix));
-                Console.WriteLine(" recordNum: " + recordNum);
-                Console.WriteLine(" learnIteration: " + _learnIteration);
-                Console.WriteLine(String.Format(" patternNZ({0}): {1}", patternNZ.Length, Arrays.ToString(patternNZ)));
-                Console.WriteLine(" classificationIn: " + classification);
+                Console.WriteLine($"\n{g_debugPrefix}: compute ");
+                Console.WriteLine($" recordNum: {recordNum}");
+                Console.WriteLine($" learnIteration: {_learnIteration}");
+                Console.WriteLine($" patternNZ({patternNZ.Length}): {Arrays.ToString(patternNZ)}");
+                Console.WriteLine($" classificationIn: {classification}");
             }
 
             // Store pattern in our history
@@ -200,8 +260,16 @@ namespace HTM.Net.Algorithms
                 int newMaxInputIdx = patternNZ.Max();
                 foreach (int nSteps in Steps)
                 {
-                    var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
-                    _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
+                    for (int i = _maxInputIdx; i < newMaxInputIdx; i++)
+                    {
+                        var matrix = _weightMatrix.Get(nSteps);
+
+                        matrix = (SparseMatrix)matrix.InsertColumn(matrix.ColumnCount, new SparseVector(_maxBucketIdx + 1));
+                        _weightMatrix[nSteps] = matrix;
+                    }
+
+                    //var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
+                    //_weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
                 }
                 _maxInputIdx = newMaxInputIdx;
             }
@@ -225,8 +293,14 @@ namespace HTM.Net.Algorithms
                 {
                     foreach (int nSteps in Steps)
                     {
-                        var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
-                        _weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 1);
+                        for (int i = _maxBucketIdx; i < bucketIdx; i++)
+                        {
+                            var matrix = _weightMatrix.Get(nSteps);
+                            matrix = (SparseMatrix)matrix.InsertRow(matrix.RowCount, new DenseVector(_maxInputIdx + 1));
+                            _weightMatrix[nSteps] = matrix;
+                        }
+                        //var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
+                        //_weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 1);
                     }
                     _maxBucketIdx = bucketIdx;
                 }
@@ -267,21 +341,32 @@ namespace HTM.Net.Algorithms
                         _actualValues[bucketIdx] = actValue;
                     }
                 }
+
+                int iteration = 0;
+                int[] learnPatternNZ = null;
                 foreach (var tuple in _patternNZHistory)
                 {
-                    var iteration = (int)tuple.Get(0);
-                    var learnPatternNZ = (int[])tuple.Get(1);
+                    iteration = (int)tuple.Get(0);
+                    learnPatternNZ = (int[])tuple.Get(1);
 
                     var error = CalculateError(classification);
 
                     int nSteps = _learnIteration - iteration;
                     if (Steps.Contains(nSteps))
                     {
-                        foreach (int bit in learnPatternNZ)
+                        for (int row = 0; row <= _maxBucketIdx; row++)
                         {
-                            var multipliedRow = ArrayUtils.Multiply(error[nSteps], Alpha);
-                            _weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
+                            foreach (int bit in learnPatternNZ)
+                            {
+                                var matrix = _weightMatrix.Get(nSteps);
+                                var rowVec = matrix.Row(row);
+                                rowVec.At(bit, (Alpha * error[nSteps][row]) + rowVec.At(bit));
+                                matrix.SetRow(row, rowVec);
+                                //var multipliedRow = ArrayUtils.Multiply(error[nSteps], Alpha);
+                                //_weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
+                            }
                         }
+                        
                     }
                 }
             }
@@ -296,11 +381,10 @@ namespace HTM.Net.Algorithms
                 {
                     if (retVal.GetActualValue(key) == null) continue;
 
-                    Object[] actual = new Object[] { retVal.GetActualValue(key) };
-                    Console.WriteLine(String.Format("  {0} steps: {1}", key, PFormatArray(actual)));
+                    T[] actual = { retVal.GetActualValue(key) };
+                    Console.WriteLine($"  {key} steps: {PFormatArray(actual)}");
                     int bestBucketIdx = retVal.GetMostProbableBucketIndex(key);
-                    Console.WriteLine(String.Format("   most likely bucket idx: {0}, value: {1} ", bestBucketIdx,
-                        retVal.GetActualValue(bestBucketIdx)));
+                    Console.WriteLine($"   most likely bucket idx: {bestBucketIdx}, value: {retVal.GetActualValue(bestBucketIdx)} ");
 
                 }
                 /*
@@ -343,6 +427,7 @@ namespace HTM.Net.Algorithms
         /// </returns>
         public Classification<T> Infer<T>(int[] patternNz, IDictionary<string, object> classification)
         {
+            Classification<T> retVal = new Classification<T>();
             // Return value dict. For buckets which we don't have an actual value
             // for yet, just plug in any valid actual value. It doesn't matter what
             // we use because that bucket won't have non-zero likelihood anyways.
@@ -359,79 +444,58 @@ namespace HTM.Net.Algorithms
                 defaultValue = classification["actValue"];
             }
             var actValues = _actualValues.Select(x => (T)(x ?? TypeConverter.Convert<T>(defaultValue))).ToArray();
-            Classification<T> retVal = new Classification<T>();
-            retVal.SetActualValues(actValues);
-           //NamedTuple retVal = new NamedTuple(new[] { "actualValues" }, new object[] { actValues});
+            for (int i = 0; i < _actualValues.Count; i++)
+            {
+                actValues[i] = (T)(_actualValues[i] == null ? TypeConverter.Convert<T>(defaultValue) : _actualValues[i]);
+            }
 
+            retVal.SetActualValues(actValues);
+           
             foreach (var nSteps in Steps)
             {
                 var predictDist = InferSingleStep(patternNz, _weightMatrix[nSteps]);
                 retVal.SetStats(nSteps, predictDist);
-                //retVal[nSteps.ToString()] = predictDist;
             }
 
             return retVal;
         }
 
         /// <summary>
-        /// Applies the network parameters on this classifier
-        /// </summary>
-        /// <param name="p"></param>
-        public void ApplyParameters(Parameters p)
-        {
-            double pAlpha = (double)p.GetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, Alpha);
-            int[] pSteps = (int[])p.GetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, Steps);
-
-            Alpha = pAlpha;
-            if (!Arrays.AreEqual(Steps,pSteps))
-            {
-                // Max // of steps of prediction we need to support
-                int maxSteps = pSteps.Max() + 1;
-
-                // History of the last _maxSteps activation patterns. We need to keep 
-                // these so that we can associate the current iteration's classification 
-                // with the activationPattern from N steps ago 
-                _patternNZHistory = new Deque<Tuple>(maxSteps);
-
-                // Reset weight matrix following the parameters
-                _weightMatrix = new Map<int, double[][]>();
-                foreach (int step in pSteps)
-                {
-                    //_weightMatrix[step] = DenseMatrix.Create(_maxInputIdx + 1, _maxBucketIdx + 1, 0);
-                    _weightMatrix[step] = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, _maxBucketIdx + 1);
-                }
-            }
-            Steps = pSteps;
-        }
-
-        /// <summary>
         /// Perform inference for a single step. Given an SDR input and a weight
         /// matrix, return a predicted distribution.
         /// </summary>
-        /// <param name="patternNz">list of the active indices from the output below</param>
+        /// <param name="patternNZ">list of the active indices from the output below</param>
         /// <param name="weightMatrix">array of the weight matrix</param>
         /// <returns>array of the predicted class label distribution</returns>
-        private double[] InferSingleStep(int[] patternNz, double[][] weightMatrix)
+        private double[] InferSingleStep(int[] patternNZ, SparseMatrix weightMatrix)
         {
-            var filtered = weightMatrix.Where((row, index) => patternNz.Contains(index)).ToList();
-            int cols = filtered.Max(f => f.Length);
-
-            double[] summed = new double[cols];
-            for (int i = 0; i < cols; i++)
+            // Compute the output activation "level" for each bucket (matrix row)
+            // we've seen so far and store in double[]
+            double[] outputActivation = new double[_maxBucketIdx + 1];
+            for (int row = 0; row <= _maxBucketIdx; row++)
             {
-                for (int y = 0; y < filtered.Count; y++)
+                // Output activation for this bucket is computed as the sum of
+                // the weights for the the active bits in patternNZ, for current
+                // row of matrix.
+                foreach (int bit in patternNZ)
                 {
-                    summed[i] += filtered[y][i];
+                    outputActivation[row] += weightMatrix.At(row, bit);
                 }
             }
-            //List<double> summed = patternNz.Select(index => weightMatrix[index].Sum()).ToList();
-            var outputActivation = summed;
-            
-            //var outputActivation = weightMatrix[patternNZ].sum(axis: 0); // axis 0 = cols, axis 1 = rows
 
-            // softmax normalization
-            var expOutputActivation = ArrayUtils.Exp(outputActivation).ToArray();// numpy.exp(outputActivation);
-            var predictDist = ArrayUtils.Divide(expOutputActivation, expOutputActivation.Sum()); //expOutputActivation / expOutputActivation.Sum();
+            // Softmax normalization
+            double[] expOutputActivation = new double[outputActivation.Length];
+            for (int i = 0; i < expOutputActivation.Length; i++)
+            {
+                expOutputActivation[i] = Math.Exp(outputActivation[i]);
+            }
+
+            double[] predictDist = new double[outputActivation.Length];
+            for (int i = 0; i < predictDist.Length; i++)
+            {
+                predictDist[i] = expOutputActivation[i] / ArrayUtils.Sum(expOutputActivation);
+            }
+
             return predictDist;
         }
 
@@ -449,18 +513,26 @@ namespace HTM.Net.Algorithms
         {
             IDictionary<int, double[]> error = new Map<int, double[]>();
 
-            var targetDist = new double[_maxBucketIdx + 1]; //numpy.zeros(self._maxBucketIdx + 1);
-            targetDist[(int)classification["bucketIdx"]] = 1.0;
+            var targetDist = new int[_maxBucketIdx + 1];
+            targetDist[(int)classification["bucketIdx"]] = 1;
 
+            int iteration = 0;
+            int[] learnPatternNZ = null;
+            int nSteps = 0;
             foreach (Tuple tuple in _patternNZHistory)
             {
-                int iteration = (int)tuple.Get(0);
-                int[] learnPatternNZ = (int[])tuple.Get(1);
-                var nSteps = _learnIteration - iteration;
+                iteration = (int)tuple.Get(0);
+                learnPatternNZ = (int[])tuple.Get(1);
+                nSteps = _learnIteration - iteration;
                 if (Steps.Contains(nSteps))
                 {
-                    var predictDist = InferSingleStep(learnPatternNZ, _weightMatrix[nSteps]);
-                    error[nSteps] = ArrayUtils.Subtract(targetDist, predictDist);// targetDist - predictDist;
+                    double[] predictDist = InferSingleStep(learnPatternNZ, _weightMatrix[nSteps]);
+                    double[] targetDistMinusPredictDist = new double[_maxBucketIdx + 1];
+                    for (int i = 0; i <= _maxBucketIdx; i++)
+                    {
+                        targetDistMinusPredictDist[i] = targetDist[i] - predictDist[i];
+                    }
+                    error.Add(nSteps, targetDistMinusPredictDist);
                 }
             }
 
@@ -481,7 +553,7 @@ namespace HTM.Net.Algorithms
             StringBuilder sb = new StringBuilder("[ ");
             foreach (T t in arr)
             {
-                sb.Append(string.Format("{0:#.00}s", t));
+                sb.Append($"{t:#.00}s");
             }
             sb.Append(" ]");
             return sb.ToString();

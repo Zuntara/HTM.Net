@@ -105,9 +105,9 @@ namespace HTM.Net.Encoders
             return encodings;
         }
 
-        public void AddEncoder(string fieldName, string encoderName, IEncoder child)
+        public void AddEncoder(string fieldName, IEncoder child)
         {
-            base.AddEncoder(this, fieldName, encoderName, child, width);
+            base.AddEncoder(this, fieldName, child, width);
 
             foreach (Tuple d in child.GetDescription())
             {
@@ -122,9 +122,28 @@ namespace HTM.Net.Encoders
          * 
          * @param fieldEncodings
          */
-        public void AddMultipleEncoders(Map<string, Map<string, object>> fieldEncodings)
+        public MultiEncoder AddMultipleEncoders(Map<string, Map<string, object>> fieldEncodings)
         {
-            MultiEncoderAssembler.Assemble(this, fieldEncodings);
+            return MultiEncoderAssembler.Assemble(this, fieldEncodings);
+        }
+
+        public TEncoder GetEncoderOfType<TEncoder>(FieldMetaType fmt)
+            where TEncoder: IEncoder
+        {
+            IEncoder retVal = null;
+
+            foreach (Tuple t in GetEncoders(this))
+            {
+                var enc = (IEncoder)t.Get(1);
+                HashSet<FieldMetaType> subTypes = enc.GetDecoderOutputFieldTypes();
+                if (subTypes.Contains(fmt))
+                {
+                    retVal = enc;
+                    break;
+                }
+            }
+
+            return (TEncoder)retVal;
         }
 
         /**
@@ -199,7 +218,6 @@ namespace HTM.Net.Encoders
                 case "forced":
                     builder.Forced((bool)value);
                     break;
-                case "fieldname":
                 case "name":
                     builder.Name((string)value);
                     break;

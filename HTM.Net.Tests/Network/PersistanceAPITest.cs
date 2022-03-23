@@ -531,6 +531,8 @@ namespace HTM.Net.Tests.Network
         {
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
+
             Map<String, Map<String, Object>> settings = NetworkTestHarness.SetupMap(
                 null, // map
                 8,    // n
@@ -689,6 +691,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
                 ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, new object[] {"name",
@@ -714,6 +717,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1076,5 +1080,19 @@ namespace HTM.Net.Tests.Network
             new int[] {0, 0, 0, 0, 1, 1, 1, 0},
             new int[] {0, 0, 0, 0, 0, 1, 1, 1},
         };
+
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+         */
+        public static Map<String, Type> GetInferredFieldsMap(
+            String field, Type classifier)
+        {
+            Map<String, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
+        }
     }
 }

@@ -28,7 +28,6 @@ namespace HTM.Net
         private static readonly ParametersMap DEFAULTS_SPATIAL;
         private static readonly ParametersMap DEFAULTS_ENCODER;
         private static readonly ParametersMap DEFAULTS_KNN;
-        private static readonly ParametersMap DEFAULTS_CLASSIFIER;
 
         static Parameters()
         {
@@ -54,7 +53,6 @@ namespace HTM.Net
             defaultTemporalParams.Add(KEY.PERMANENCE_INCREMENT, 0.10);
             defaultTemporalParams.Add(KEY.PERMANENCE_DECREMENT, 0.10);
             defaultTemporalParams.Add(KEY.PREDICTED_SEGMENT_DECREMENT, 0.0);
-            defaultTemporalParams.Add(KEY.TM_VERBOSITY, 0);
             defaultTemporalParams.Add(KEY.LEARN, true);
             DEFAULTS_TEMPORAL = defaultTemporalParams;
             defaultParams.AddAll(DEFAULTS_TEMPORAL);
@@ -62,15 +60,15 @@ namespace HTM.Net
             //////////// Spatial Pooler Parameters ///////////
             ParametersMap defaultSpatialParams = new ParametersMap();
             defaultSpatialParams.Add(KEY.INPUT_DIMENSIONS, new int[] { 64 });
-            defaultSpatialParams.Add(KEY.POTENTIAL_RADIUS, 16);
+            defaultSpatialParams.Add(KEY.POTENTIAL_RADIUS, -1);
             defaultSpatialParams.Add(KEY.POTENTIAL_PCT, 0.5);
             defaultSpatialParams.Add(KEY.GLOBAL_INHIBITION, false);
             defaultSpatialParams.Add(KEY.INHIBITION_RADIUS, 0);
             defaultSpatialParams.Add(KEY.LOCAL_AREA_DENSITY, -1.0);
             defaultSpatialParams.Add(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 10.0);
             defaultSpatialParams.Add(KEY.STIMULUS_THRESHOLD, 0.0);
-            defaultSpatialParams.Add(KEY.SYN_PERM_INACTIVE_DEC, 0.01);
-            defaultSpatialParams.Add(KEY.SYN_PERM_ACTIVE_INC, 0.1);
+            defaultSpatialParams.Add(KEY.SYN_PERM_INACTIVE_DEC, 0.008);
+            defaultSpatialParams.Add(KEY.SYN_PERM_ACTIVE_INC, 0.05);
             defaultSpatialParams.Add(KEY.SYN_PERM_CONNECTED, 0.10);
             defaultSpatialParams.Add(KEY.SYN_PERM_BELOW_STIMULUS_INC, 0.01);
             defaultSpatialParams.Add(KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
@@ -79,7 +77,6 @@ namespace HTM.Net
             defaultSpatialParams.Add(KEY.DUTY_CYCLE_PERIOD, 1000);
             defaultSpatialParams.Add(KEY.MAX_BOOST, 10.0);
             defaultSpatialParams.Add(KEY.WRAP_AROUND, true);
-            defaultSpatialParams.Add(KEY.SP_VERBOSITY, 0);
             defaultSpatialParams.Add(KEY.LEARN, true);
             defaultSpatialParams.Add(KEY.SP_PARALLELMODE, false);   // default off
             DEFAULTS_SPATIAL = defaultSpatialParams;
@@ -100,18 +97,9 @@ namespace HTM.Net
             defaultEncoderParams.Add(KEY.FIELD_TYPE, "int");
             defaultEncoderParams.Add(KEY.ENCODER, "ScalarEncoder");
             defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
+            defaultEncoderParams.Add(KEY.AUTO_CLASSIFY, false);
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
-
-            ///////////  Classifier Parameters ///////////
-            ParametersMap defaultClassifierParams = new ParametersMap();
-            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY, false);
-            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
-            defaultClassifierParams.Add(KEY.CLASSIFIER_ALPHA, 0.001);
-            defaultClassifierParams.Add(KEY.CLASSIFIER_STEPS, new[] { 1 });
-
-            DEFAULTS_CLASSIFIER = defaultClassifierParams;
-            defaultParams.AddAll(DEFAULTS_CLASSIFIER);
 
             ////////////////// KNNClassifier Defaults ///////////////////
             ParametersMap defaultKNNParams = new ParametersMap();
@@ -221,7 +209,7 @@ namespace HTM.Net
              */
             public static readonly KEY PREDICTED_SEGMENT_DECREMENT = new KEY("predictedSegmentDecrement", typeof(double), 0.0, 9.0);
             /** Remove this and add Logging (slf4j) */
-            public static readonly KEY TM_VERBOSITY = new KEY("tmVerbosity", typeof(int), 0, 10);
+            // public static readonly KEY TM_VERBOSITY = new KEY("tmVerbosity", typeof(int), 0, 10);
 
 
             /////////// Spatial Pooler Parameters ///////////
@@ -317,10 +305,11 @@ namespace HTM.Net
             /// Network Layer indicator for auto classifier generation
             /// </summary>
             public static readonly KEY AUTO_CLASSIFY = new KEY("hasClassifiers", typeof(bool));
-            public static readonly KEY AUTO_CLASSIFY_TYPE = new KEY("defaultClassifierType", typeof(IClassifier));
-            public static readonly KEY CLASSIFIER_ALPHA = new KEY("classifierAlpha", typeof(double));
-            public static readonly KEY CLASSIFIER_STEPS = new KEY("classifierSteps", typeof(int[]));
 
+            /// <summary>
+            /// Maps encoder input field name to type of classifier to be used for them
+            /// </summary>
+            public static readonly KEY INFERRED_FIELDS = new KEY("inferredFields", typeof(IDictionary<string, Type>)); // Map<String, Classifier.class>
 
             // How many bits to use if encoding the respective date fields.
             // e.g. Tuple(bits to use:int, radius:double)
@@ -760,7 +749,7 @@ namespace HTM.Net
          * It is private. Only allow instantiation with Factory methods.
          * This way we will never have erroneous Parameters with missing attributes
          */
-        private Parameters()
+        internal Parameters()
         {
         }
 

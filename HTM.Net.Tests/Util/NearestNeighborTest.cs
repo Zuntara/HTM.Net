@@ -14,7 +14,7 @@ namespace HTM.Net.Tests.Util
 
             try
             {
-                new NearestNeighbor(0,0);
+                new NearestNeighbor(-1,-1);
                 Assert.Fail();
             }
             catch (Exception e)
@@ -23,7 +23,5 @@ namespace HTM.Net.Tests.Util
                 Assert.IsTrue(e.Message.StartsWith("The number of columns of a matrix must be positive."));
             }
         }
-
-
     }
 }

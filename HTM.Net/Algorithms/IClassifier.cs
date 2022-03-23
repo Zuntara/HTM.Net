@@ -39,25 +39,6 @@ namespace HTM.Net.Algorithms
         Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNonZero,
             bool learn, bool infer);
 
-        /// <summary>
-        /// Applies the network parameters on this classifier
-        /// </summary>
-        /// <param name="p"></param>
-        void ApplyParameters(Parameters p);
-
-        /// <summary>
-        /// Specifies the level of logging
-        /// </summary>
-        int Verbosity { get; }
-        /// <summary>
-        /// The alpha used to compute running averages of the bucket duty
-        /// cycles for each activation pattern bit.A lower alpha results
-        /// in longer term memory.
-        /// </summary>
-        double Alpha { get; }
-        /// <summary>
-        /// The sequence different steps of multi-step predictions
-        /// </summary>
         int[] Steps { get; }
     }
 }

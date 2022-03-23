@@ -11,6 +11,7 @@ using HTM.Net.Datagen;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Tests.Properties;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.HotGym
 {
@@ -79,6 +80,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         {
             Parameters p = NetworkDemoHarness.GetParameters();
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             // This is how easy it is to create a full running Network!
 
@@ -97,7 +99,8 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         {
             Parameters p = NetworkDemoHarness.GetParameters();
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(SDRClassifier));
+            //p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(SDRClassifier));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(SDRClassifier)));
 
             // This is how easy it is to create a full running Network!
 
@@ -322,6 +325,19 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             public double PredictedValue { get; set; }
             public double PredictionError { get; set; }
             public double AnomalyFactor { get; set; }
+        }
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+        */
+        public static Map<string, Type> GetInferredFieldsMap(
+            string field, Type classifier)
+        {
+            Map<string, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
         }
 
         /**

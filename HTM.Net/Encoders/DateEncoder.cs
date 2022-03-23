@@ -213,7 +213,7 @@ namespace HTM.Net.Encoders
                         .Forced(this.IsForced())
                         .Build();
                 //customDaysEncoder is special in naming
-                AddEncoder(GetName() ?? string.Empty, "customdays", customDaysEncoder);
+                AddEncoder("customdays", customDaysEncoder);
                 AddCustomDays(days);
             }
 
@@ -253,9 +253,9 @@ namespace HTM.Net.Encoders
         }
 
         // Adapted from MultiEncoder
-        public void AddEncoder(string fieldName, string name, IEncoder child)
+        public void AddEncoder(string name, IEncoder child)
         {
-            base.AddEncoder(this, fieldName, name, child, width);
+            base.AddEncoder(this, name, child, width);
 
             foreach (Tuple d in child.GetDescription())
             {
@@ -267,7 +267,7 @@ namespace HTM.Net.Encoders
 
         protected void AddChildEncoder(ScalarEncoder encoder)
         {
-            AddEncoder(GetName() ?? string.Empty, encoder.GetName(), encoder);
+            AddEncoder(encoder.GetName(), encoder);
         }
 
         protected void AddCustomDays(List<string> daysList)

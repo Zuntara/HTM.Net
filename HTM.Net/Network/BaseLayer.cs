@@ -1,14 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.Reactive;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
-using HTM.Net.Util;
+
 using log4net;
 
 namespace HTM.Net.Network
@@ -92,18 +89,6 @@ namespace HTM.Net.Network
             AnomalyComputer = a;
 
             Connections = new Connections();
-
-            InitializeMask();
-
-            if (LOGGER.IsDebugEnabled)
-            {
-                LOGGER.DebugFormat("Layer successfully created containing: {0}{1}{2}{3}{4}",
-                    (Encoder == null ? "" : "MultiEncoder,"),
-                    (SpatialPooler == null ? "" : "SpatialPooler,"),
-                    (TemporalMemory == null ? "" : "TemporalMemory,"),
-                    (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."),
-                    (AnomalyComputer == null ? "" : "Anomaly"));
-            }
         }
 
         public override object PreSerialize()
@@ -156,6 +141,7 @@ namespace HTM.Net.Network
             {
                 return ParentNetwork.GetCheckPointOperator();
             }
+
             return null;
         }
 
@@ -269,7 +255,7 @@ namespace HTM.Net.Network
         /// among <see cref="BaseLayer"/>s in a <see cref="Region"/>
         /// See <see cref="GetMask()"/> for more information.
         /// </summary>
-        private void InitializeMask()
+        protected void InitializeMask()
         {
             AlgoContentMask |= (SpatialPooler == null ? 0 : LayerMask.SpatialPooler);
             AlgoContentMask |= (TemporalMemory == null ? 0 : LayerMask.TemporalMemory);
@@ -476,12 +462,6 @@ namespace HTM.Net.Network
 
             return null;
         }
-
-        /// <summary>
-        /// Returns the classifier(s) for this layer
-        /// </summary>
-        /// <returns></returns>
-        public abstract IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName);
 
         /// <summary>
         /// Returns the count of records historically inputted into this

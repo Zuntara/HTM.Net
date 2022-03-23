@@ -160,7 +160,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
-
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
@@ -320,6 +320,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -399,6 +400,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
@@ -447,6 +449,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -609,6 +612,19 @@ namespace HTM.Net.Tests.Network
             Assert.AreEqual(r.Lookup("2/3").GetMask(), (LayerMask.TemporalMemory | LayerMask.ClaClassifier));
             Assert.AreEqual(r.Lookup("4").GetMask(), (LayerMask.SpatialPooler | LayerMask.TemporalMemory));
 
+        }
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+         */
+        public static Map<String, Type> GetInferredFieldsMap(
+            String field, Type classifier)
+        {
+            Map<String, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
         }
     }
 }

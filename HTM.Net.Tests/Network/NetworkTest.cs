@@ -199,6 +199,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -538,6 +539,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             // Create a Network
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
@@ -618,6 +620,7 @@ namespace HTM.Net.Tests.Network
             p.SetPotentialRadius(16);
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -767,6 +770,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -842,6 +846,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
@@ -894,15 +899,17 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 10.0);
             p.SetParameterByKey(Parameters.KEY.DUTY_CYCLE_PERIOD, 7);
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
-            p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
+            Parameters pars = new Parameters();
+            pars.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
                     .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true))
                     .Add(Net.Network.Network.CreateLayer<IInference>("2", p)
-                        .Add(Anomaly.Create(p)))
+                        .Add(Anomaly.Create(pars)))
                     .Add(Net.Network.Network.CreateLayer<IInference>("3", p)
                         .Add(new TemporalMemory()))
                     .Add(Net.Network.Network.CreateLayer<IInference>("4", p)
@@ -922,21 +929,22 @@ namespace HTM.Net.Tests.Network
             p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
             n = Net.Network.Network.Create("test network", p)
-                .Add(Net.Network.Network.CreateRegion("r1")
-                    .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
-                        .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true))
-                    .Add(Net.Network.Network.CreateLayer<IInference>("2", p)
-                        .Add(Anomaly.Create(p)))
-                    .Add(Net.Network.Network.CreateLayer<IInference>("3", p)
-                        .Add(new TemporalMemory()))
-                    .Add(Net.Network.Network.CreateLayer<IInference>("4", p)
-                        .Add(new SpatialPooler())
-                        .Add(Sensor<FileInfo>.Create(FileSensor.Create, SensorParams.Create(
-                            SensorParams.Keys.Path, "", ResourceLocator.Path(typeof(Resources), "rec-center-hourly.Csv")))))
-                    .Connect("1", "2")
-                    .Connect("2", "3")
-                    .Connect("3", "4"));
+                   .Add(Net.Network.Network.CreateRegion("r1")
+                           .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                                   .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true))
+                           .Add(Net.Network.Network.CreateLayer<IInference>("2", p)
+                                   .Add(Anomaly.Create(p)))
+                           .Add(Net.Network.Network.CreateLayer<IInference>("3", p)
+                                   .Add(new TemporalMemory()))
+                           .Add(Net.Network.Network.CreateLayer<IInference>("4", p)
+                                   .Add(new SpatialPooler())
+                                   .Add(Sensor<FileInfo>.Create(FileSensor.Create, SensorParams.Create(
+                                       SensorParams.Keys.Path, "", ResourceLocator.Path(typeof(Resources), "rec-center-hourly.Csv")))))
+                           .Connect("1", "2")
+                           .Connect("2", "3")
+                           .Connect("3", "4"));
             Assert.IsFalse(n.IsThreadedOperation());
             n.Start();
             Assert.IsTrue(n.IsThreadedOperation());
@@ -946,14 +954,15 @@ namespace HTM.Net.Tests.Network
                 p = NetworkTestHarness.GetParameters();
                 p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
                 p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
+                p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
                 n = Net.Network.Network.Create("test network", p)
-                    .Add(Net.Network.Network.CreateRegion("r1")
-                        .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
-                            .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
-                            .Add(new TemporalMemory())
-                            .Add(new SpatialPooler())
-                            .Add(Sensor<FileInfo>.Create(FileSensor.Create, SensorParams.Create(
-                                SensorParams.Keys.Path, "", ResourceLocator.Path(typeof(Resources), "rec-center-hourly.Csv"))))));
+                   .Add(Net.Network.Network.CreateRegion("r1")
+                           .Add(Net.Network.Network.CreateLayer<IInference>("1", p)
+                                   .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                                   .Add(new TemporalMemory())
+                                   .Add(new SpatialPooler())
+                                   .Add(Sensor<FileInfo>.Create(FileSensor.Create, SensorParams.Create(
+                                       SensorParams.Keys.Path, "", ResourceLocator.Path(typeof(Resources), "rec-center-hourly.Csv"))))));
 
                 n.Start();
 
@@ -1056,6 +1065,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetGeospatialTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             HTMSensor<ObservableSensor<string[]>> htmSensor = (HTMSensor<ObservableSensor<string[]>>)sensor;
 
@@ -1120,6 +1130,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1149,6 +1160,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters();
             p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             Net.Network.Network network = Net.Network.Network.Create("test network", p)
                 .Add(Net.Network.Network.CreateRegion("r1")
@@ -1398,6 +1410,19 @@ namespace HTM.Net.Tests.Network
                 }
             }
             return -1;
+        }
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+         */
+        public static Map<String, Type> GetInferredFieldsMap(
+            String field, Type classifier)
+        {
+            Map<String, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
         }
     }
 }
