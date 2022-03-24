@@ -1403,6 +1403,11 @@ namespace HTM.Net.Algorithms
 
         public NearestNeighbor(int rows, int cols)
         {
+            if (cols <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cols), "The number of columns of a matrix must be positive.");
+            }
+
             _backingMatrix = new SparseMatrix(rows == 0 ? 1 : rows, cols);
             _addedRows = rows;
         }

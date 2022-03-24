@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+
 using HTM.Net.Model;
 using HTM.Net.Util;
 
@@ -41,16 +43,16 @@ namespace HTM.Net.Algorithms
          */
         public AnomalyLikelihoodMetrics Copy()
         {
-            //List<object> vals = new List<object>();
-            //foreach (var key in @params.GetParameters().Keys())
-            //{
-            //    vals.Add(@params.GetParameters().GetParameterByKey(key));
-            //}
+            List<object> vals = new List<object>();
+            foreach (var key in @params.GetKeys())
+            {
+                vals.Add(@params.Get(key));
+            }
 
             return new AnomalyLikelihoodMetrics(
                 Arrays.CopyOf(likelihoods, likelihoods.Length),
                 aggRecordList,
-                new AnomalyLikelihood.AnomalyParams(@params.GetParameters()));
+                new AnomalyLikelihood.AnomalyParams(@params.GetKeys(), vals.ToArray()));
         }
 
         /**

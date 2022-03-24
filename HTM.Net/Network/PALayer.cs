@@ -50,7 +50,7 @@ namespace HTM.Net.Network
     //    public PALayer(Network n, Parameters p)
     //        : base(n, p)
     //    {
-            
+
     //    }
 
     //    /**
@@ -78,9 +78,9 @@ namespace HTM.Net.Network
     //     * @param a                         an (optional) {@link Anomaly} computer.
     //     */
     //    public PALayer(Parameters @params, MultiEncoder e, SpatialPooler sp, TemporalMemory tm, bool? autoCreateClassifiers, Anomaly a)
-    //        :base(@params, e, sp, tm, autoCreateClassifiers, a)
+    //        : base(@params, e, sp, tm, autoCreateClassifiers, a)
     //    {
-            
+
     //    }
 
     //    /**
@@ -142,11 +142,11 @@ namespace HTM.Net.Network
     //    {
     //        if (input == null)
     //        {
-    //            Logger.Info("Layer "+GetName()+" received null input");
+    //            Logger.Info("Layer " + GetName() + " received null input");
     //        }
     //        else if (input.Length < 1)
     //        {
-    //            Logger.Info("Layer "+GetName() + " received zero length bit vector");
+    //            Logger.Info("Layer " + GetName() + " received zero length bit vector");
     //            return input;
     //        }
     //        else if (input.Length > Connections.GetNumInputs())
@@ -175,7 +175,8 @@ namespace HTM.Net.Network
     //    {
     //        int[] sdr = base.TemporalInput(input, mi);
     //        ComputeCycle cc = mi.GetComputeCycle();
-    //        if (SpatialPooler != null && SpatialPooler is PASpatialPooler) {
+    //        if (SpatialPooler != null && SpatialPooler is PASpatialPooler)
+    //        {
     //            int boosted = 0;
     //            double[] polarization = new double[Connections.GetNumColumns()];
     //            foreach (Cell cell in cc.PredictiveCells())

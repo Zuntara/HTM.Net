@@ -29,6 +29,11 @@ namespace HTM.Net
         private static readonly ParametersMap DEFAULTS_ENCODER;
         private static readonly ParametersMap DEFAULTS_KNN;
 
+        /// <summary>
+        /// Map of parameters to their values
+        /// </summary>
+        private ParametersMap paramMap = new ParametersMap();
+
         static Parameters()
         {
             ParametersMap defaultParams = new ParametersMap();
@@ -130,7 +135,7 @@ namespace HTM.Net
         /// Constant values representing configuration parameters for the <see cref="TemporalMemory"/>
         /// </summary>
         [Serializable]
-        public sealed class KEY
+        public sealed class KEY : ISerializable
         {
             /////////// Universal Parameters ///////////
             /// <summary>
@@ -342,12 +347,7 @@ namespace HTM.Net
             public static readonly KEY ANOMALY_KEY_USE_MOVING_AVG = new KEY("useMovingAverage", typeof(bool));
             public static readonly KEY ANOMALY_KEY_WINDOW_SIZE = new KEY("slidingWindowSize", typeof(int));
             public static readonly KEY ANOMALY_KEY_IS_WEIGHTED = new KEY("isWeighted", typeof(bool));
-            // config
-            public static readonly KEY ANOMALY_KEY_DIST = new KEY("distribution", typeof(Statistic));
-            public static readonly KEY ANOMALY_KEY_MVG_AVG = new KEY("movingAverage", typeof(MovingAverage));
-            public static readonly KEY ANOMALY_KEY_HIST_LIKE = new KEY("historicalLikelihoods", typeof(double[]));
-            public static readonly KEY ANOMALY_KEY_HIST_VALUES = new KEY("historicalValues", typeof(double[]));
-            public static readonly KEY ANOMALY_KEY_TOTAL = new KEY("total", typeof(double));
+            
             // Computational argument keys
             public static readonly KEY ANOMALY_KEY_MEAN = new KEY("mean", typeof(double));
             public static readonly KEY ANOMALY_KEY_STDEV = new KEY("stdev", typeof(double));
@@ -461,7 +461,8 @@ namespace HTM.Net
                 return null;
             }
 
-            internal readonly string fieldName;
+            private readonly string fieldName;
+            [NonSerialized]
             private readonly Type fieldType;
             private readonly double? min;
             private readonly double? max;
@@ -494,8 +495,35 @@ namespace HTM.Net
                 this.max = max;
             }
 
+            public KEY(SerializationInfo info, StreamingContext context)
+            {
+                fieldName = info.GetString(nameof(fieldName));
+                var fieldTypeName = info.GetString(nameof(fieldType));
+                fieldType = Type.GetType(fieldTypeName, true);
+                min = info.GetValue(nameof(min), typeof(double?)) != null ? info.GetDouble(nameof(min)) : null;
+                max = info.GetValue(nameof(max), typeof(double?)) != null ? info.GetDouble(nameof(max)) : null;
+            }
+
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                info.AddValue(nameof(fieldName), fieldName);
+                info.AddValue(nameof(fieldType), fieldType.AssemblyQualifiedName);
+                info.AddValue(nameof(min), min);
+                info.AddValue(nameof(max), max);
+            }
+
             public Type GetFieldType()
             {
+                return fieldType;
+            }
+
+            public Type GetFieldTypeSerializable()
+            {
+                if (fieldType == typeof(IDictionary<string, Type>))
+                {
+                    return typeof(IDictionary<string, string>);
+                }
+
                 return fieldType;
             }
 
@@ -533,8 +561,6 @@ namespace HTM.Net
                 return GetFieldName();
             }
 
-
-
             public override bool Equals(object obj)
             {
                 if (this == obj)
@@ -552,7 +578,10 @@ namespace HTM.Net
 
             private bool Equals(KEY other)
             {
-                return string.Equals(fieldName, other.fieldName) && Equals(fieldType, other.fieldType) && min.Equals(other.min) && max.Equals(other.max);
+                return string.Equals(fieldName, other.fieldName) 
+                       && Equals(fieldType, other.fieldType) 
+                       && min.Equals(other.min) 
+                       && max.Equals(other.max);
             }
 
             public override int GetHashCode()
@@ -608,12 +637,12 @@ namespace HTM.Net
             {
                 if (value != null)
                 {
-                    if (!(value is Type) && !key.GetFieldType().IsInstanceOfType(value))
+                    if (!(value is Type) && !key.GetFieldTypeSerializable().IsInstanceOfType(value))
                     {
                         throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));
                     }
-                    if ((value is Type) && !key.GetFieldType().IsAssignableFrom((Type)value))
+                    if ((value is Type) && !key.GetFieldTypeSerializable().IsAssignableFrom((Type)value))
                     {
                         throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));
@@ -638,12 +667,7 @@ namespace HTM.Net
             }
         }
 
-        /// <summary>
-        /// Map of parameters to their values
-        /// </summary>
-        private ParametersMap paramMap = new ParametersMap();
-
-        //TODO apply from container to parameters
+        // TODO apply from container to parameters
 
         /// <summary>
         /// Returns the size of the internal parameter storage.
@@ -767,7 +791,18 @@ namespace HTM.Net
             {
                 foreach (KEY key in presentKeys)
                 {
-                    beanUtil.SetSimpleProperty(cn, key.fieldName, GetParameterByKey(key));
+                    if ((cn is Connections) &&
+                        (key == KEY.SYN_PERM_BELOW_STIMULUS_INC || key == KEY.SYN_PERM_TRIM_THRESHOLD))
+                    {
+                        continue;
+                    }
+
+                    if (key == KEY.RANDOM)
+                    {
+                        //((IRandom)GetParameterByKey(key)).SetSeed((long)GetParameterByKey(KEY.SEED));
+                    }
+
+                    beanUtil.SetSimpleProperty(cn, key.GetFieldName(), GetParameterByKey(key));
                 }
             }
         }
@@ -824,7 +859,17 @@ namespace HTM.Net
         /// <param name="value"></param>
         public void SetParameterByKey(KEY key, object value)
         {
-            paramMap.Add(key, value);
+            // avoid serialization issue
+            if (key == KEY.INFERRED_FIELDS)
+            {
+                var dict = (IDictionary<string, Type>)value;
+                var converted = dict.ToDictionary(k => k.Key, v => v.Value.AssemblyQualifiedName);
+                paramMap.Add(key, converted);
+            }
+            else
+            {
+                paramMap.Add(key, value);
+            }
         }
 
         /**
@@ -835,10 +880,18 @@ namespace HTM.Net
          */
         public object GetParameterByKey(KEY key, object defaultValue = null)
         {
+            if (paramMap.ContainsKey(key) && key == KEY.INFERRED_FIELDS)
+            {
+                var dict = (IDictionary<string, string>)paramMap[key];
+                var converted = dict.ToDictionary(k => k.Key, v => Type.GetType(v.Value, true));
+                return converted;
+            }
+            
             if (paramMap.ContainsKey(key))
             {
                 return paramMap[key];
             }
+
             return defaultValue;
         }
 

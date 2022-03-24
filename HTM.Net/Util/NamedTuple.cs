@@ -187,7 +187,7 @@ namespace HTM.Net.Util
         /**
          * {@inheritDoc}
          */
-        public override sealed int GetHashCode()
+        public override int GetHashCode()
         {
             if (_hash == 0)
             {

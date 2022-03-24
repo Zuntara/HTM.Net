@@ -142,11 +142,12 @@ namespace HTM.Net.Network
         private Region _sensorRegion;
         private volatile Publisher _publisher;
 
-        private bool _isLearn = true;
-        private bool _isThreadRunning;
+        private volatile bool _isLearn = true;
+        private volatile bool _isThreadRunning;
 
         private readonly List<Region> _regions = new List<Region>();
 
+        [NonSerialized]
         private Func<Network, byte[]> _checkPointFunction;
 
         private bool _shouldDoHalt = true;

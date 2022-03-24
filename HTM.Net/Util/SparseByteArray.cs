@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 
 namespace HTM.Net.Util
 {
@@ -9,9 +10,10 @@ namespace HTM.Net.Util
     /// Represents an array with dimensions (recursivly), only with concrete data, empty spaces are not recorded
     /// </summary>
     [Serializable]
-    public class SparseByteArray
+    public class SparseByteArray : ISerializable
     {
         private readonly int[] _dimensions;
+        [NonSerialized]
         private readonly ConcurrentDictionary<int, object> _concreteArray;
         private readonly int[] _dimensionSums;  // sums of the values in each dimension
 
@@ -31,6 +33,40 @@ namespace HTM.Net.Util
             _dimensionSums = dimensionSums;
             Rank = _dimensions.Length;
             Length = _dimensions.Aggregate(1, (i, i1) => i * i1);
+        }
+
+        public SparseByteArray(SerializationInfo info, StreamingContext context)
+        {
+            _dimensions = (int[])info.GetValue(nameof(_dimensions), typeof(int[]));
+            _dimensionSums = (int[])info.GetValue(nameof(_dimensionSums), typeof(int[]));
+            foreach (var entry in info)
+            {
+                if (entry.Name.StartsWith("dict_"))
+                {
+                    if (_concreteArray == null)
+                    {
+                        _concreteArray = new ConcurrentDictionary<int, object>();
+                    }
+
+                    var key = int.Parse(entry.Name.Replace("dict_", string.Empty));
+                    var val = entry.Value;
+                    _concreteArray.TryAdd(key, val);
+                }
+            }
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue(nameof(_dimensions), _dimensions);
+            info.AddValue(nameof(_dimensionSums), _dimensionSums);
+            
+            if (_concreteArray != null)
+            {
+                foreach (var pair in _concreteArray)
+                {
+                    info.AddValue($"dict_{pair.Key}", pair.Value);
+                }
+            }
         }
 
         public byte this[params int[] indexes]
@@ -531,8 +567,6 @@ namespace HTM.Net.Util
         {
             return _dimensions;
         }
-
-        
     }
 
     /// <summary>

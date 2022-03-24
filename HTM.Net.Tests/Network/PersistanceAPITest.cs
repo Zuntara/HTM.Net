@@ -106,6 +106,7 @@ namespace HTM.Net.Tests.Network
         public void TestSerializeParameters()
         {
             Parameters p = GetParameters();
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             SerialConfig config = new SerialConfig("testSerializeParameters", SerialConfig.SERIAL_TEST_DIR);
 

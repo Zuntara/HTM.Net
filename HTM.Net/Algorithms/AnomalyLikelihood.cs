@@ -218,25 +218,20 @@ namespace HTM.Net.Algorithms
 
             int len = likelihoods.Length;
 
-            Parameters anomalyParameters = Parameters.Empty();
-            anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_DIST, distribution);
-            anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MVG_AVG, new MovingAverage(records.HistoricalValues, records.Total, averagingWindow));
-            anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE, len > 0 ? Arrays.CopyOfRange(likelihoods, len - Math.Min(averagingWindow, len), len) : new double[0]);
-
-            AnomalyParams @params = new AnomalyParams(anomalyParameters);
-
-            //AnomalyParams @params = new AnomalyParams(
-            //    new string[] { "distribution", "movingAverage", "historicalLikelihoods" },
-            //        distribution,
-            //        new MovingAverage(records.historicalValues, records.total, averagingWindow),
-            //        len > 0 ?
-            //            Arrays.CopyOfRange(likelihoods, len - Math.Min(averagingWindow, len), len) :
-            //                new double[0]);
+            AnomalyParams @params = new AnomalyParams(
+                new[] { "distribution", "movingAverage", "historicalLikelihoods" },
+                distribution,
+                new MovingAverage(records.HistoricalValues, records.Total, averagingWindow),
+                len > 0
+                    ? Arrays.CopyOfRange(likelihoods, len - Math.Min(averagingWindow, len), len)
+                    : Array.Empty<double>());
 
             if (LOG.IsDebugEnabled)
             {
-                LOG.Debug(string.Format("Discovered params={0} Number of likelihoods:{1}  First 20 likelihoods:{2}",
-                        @params, len, Arrays.CopyOfRange(filteredLikelihoods, 0, 20)));
+                LOG.Debug(
+                    $"Discovered params={@params} " +
+                    $"Number of likelihoods:{len}  " +
+                    $"First 20 likelihoods:{Arrays.CopyOfRange(filteredLikelihoods, 0, 20)}");
             }
 
             return new AnomalyLikelihoodMetrics(filteredLikelihoods, records, @params);
@@ -258,9 +253,9 @@ namespace HTM.Net.Algorithms
             if (LOG.IsDebugEnabled)
             {
                 LOG.Debug("in updateAnomalyLikelihoods");
-                LOG.Debug(string.Format("Number of anomaly scores: {0}", anomalySize));
-                LOG.Debug(string.Format("First 20: {0}", anomalyScores.SubList(0, Math.Min(20, anomalySize))));
-                LOG.Debug(string.Format("Params: {0}", @params));
+                LOG.Debug($"Number of anomaly scores: {anomalySize}");
+                LOG.Debug($"First 20: {anomalyScores.SubList(0, Math.Min(20, anomalySize))}");
+                LOG.Debug($"Params: {@params}");
             }
 
             if (anomalyScores.Count == 0)
@@ -273,29 +268,19 @@ namespace HTM.Net.Algorithms
                 throw new ArgumentException("\"params\" is not a valid parameter structure");
             }
 
-
-
-
             double[] histLikelihoods;
             if ((histLikelihoods = @params.HistoricalLikelihoods()) == null || histLikelihoods.Length == 0)
             {
-                Parameters anomalyParameters = Parameters.Empty();
-                anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_DIST, @params.Distribution());
-                anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MVG_AVG, @params.MovingAverage());
-                anomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE, histLikelihoods = new double[] { 1 });
-
-                @params = new AnomalyParams(anomalyParameters);
-
-                //@params = new NamedTuple(
-                //    new string[] { "distribution", "movingAverage", "historicalLikelihoods" },
-                //        @params.Distribution(),
-                //        @params.MovingAverage(),
-                //        histLikelihoods = new double[] { 1 });
+                @params = new AnomalyParams(
+                    new[] { "distribution", "movingAverage", "historicalLikelihoods" },
+                        @params.Distribution(),
+                        @params.MovingAverage(),
+                        histLikelihoods = new double[] { 1 });
             }
 
             // Compute moving averages of these new scores using the previous values
             // as well as likelihood for these scores using the old estimator
-            MovingAverage mvgAvg = (MovingAverage)@params.MovingAverage();
+            MovingAverage mvgAvg = @params.MovingAverage();
             List<double> historicalValues = mvgAvg.GetSlidingWindow();
             double total = mvgAvg.GetTotal();
             int windowSize = mvgAvg.GetWindowSize();
@@ -324,18 +309,11 @@ namespace HTM.Net.Algorithms
             double[] historicalLikelihoods = Arrays.CopyOf(likelihoods2, likelihoods2.Length - Math.Min(windowSize, likelihoods2.Length));
 
             // Update the estimator
-            Parameters newAnomalyParameters = Parameters.Empty();
-            newAnomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_DIST, @params.Distribution());
-            newAnomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MVG_AVG, new MovingAverage(historicalValues, total, windowSize));
-            newAnomalyParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE, historicalLikelihoods);
-
-            AnomalyParams newParams = new AnomalyParams(newAnomalyParameters);
-
-            //AnomalyParams newParams = new AnomalyParams(
-            //    new string[] { "distribution", "movingAverage", "historicalLikelihoods" },
-            //        @params.Distribution(),
-            //        new MovingAverage(historicalValues, total, windowSize),
-            //        historicalLikelihoods);
+            AnomalyParams newParams = new AnomalyParams(
+                new string[] { "distribution", "movingAverage", "historicalLikelihoods" },
+                    @params.Distribution(),
+                    new MovingAverage(historicalValues, total, windowSize),
+                    historicalLikelihoods);
 
             return new AnomalyLikelihoodMetrics(
                 likelihoods,
@@ -438,7 +416,8 @@ namespace HTM.Net.Algorithms
 
                 if (LOG.IsDebugEnabled)
                 {
-                    LOG.Debug(string.Format("Aggregating input record: {0}, Result: {1}", record, averagedRecordList[averagedRecordList.Count - 1]));
+                    LOG.Debug(
+                        $"Aggregating input record: {record}, Result: {averagedRecordList[averagedRecordList.Count - 1]}");
                 }
             }
 
@@ -633,13 +612,8 @@ namespace HTM.Net.Algorithms
         ///
         /// </summary>
         [Serializable]
-        public class AnomalyParams
+        public class AnomalyParams : NamedTuple
         {
-            private readonly Parameters _parameters;
-            /** Cached Json formatting. Possible because Objects of this class is immutable */
-            [NonSerialized]
-            private JObject cachedNode;
-
             private readonly Statistic distribution;
             private readonly MovingAverage movingAverage;
             private readonly double[] historicalLikelihoods;
@@ -648,19 +622,21 @@ namespace HTM.Net.Algorithms
             /// <summary>
             /// Constructs a new <see cref="AnomalyParams"/>
             /// </summary>
-            /// <param name="parameters"></param>
-            public AnomalyParams(Parameters parameters)
+            /// <param name="keys"></param>
+            /// <param name="values"></param>
+            public AnomalyParams(string[] keys, params object[] values)
+                : base(keys, values)
             {
-                if (parameters.Size() != 3)
+                if (keys.Length != 3 || values.Length != 3)
                 {
-                    throw new ArgumentException("AnomalyParams must have \"distribution\", \"movingAverage\", and \"historicalLikelihoods\"" +
+                    throw new ArgumentException(
+                        "AnomalyParams must have \"distribution\", \"movingAverage\", and \"historicalLikelihoods\"" +
                         " parameters. keys.Length != 3 or values.Length != 3");
                 }
-                _parameters = parameters;
 
-                distribution = (Statistic)parameters.GetParameterByKey(Parameters.KEY.ANOMALY_KEY_DIST);
-                movingAverage = (MovingAverage)parameters.GetParameterByKey(Parameters.KEY.ANOMALY_KEY_MVG_AVG);
-                historicalLikelihoods = (double[])parameters.GetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE);
+                distribution = (Statistic)Get(KEY_DIST);
+                movingAverage = (MovingAverage)Get(KEY_MVG_AVG);
+                historicalLikelihoods = (double[])Get(KEY_HIST_LIKE);
                 windowSize = movingAverage.GetWindowSize();
             }
 
@@ -700,77 +676,70 @@ namespace HTM.Net.Algorithms
                 return windowSize;
             }
 
-            public Parameters GetParameters() { return _parameters; }
-
-            /**
-             * Lazily creates and returns a JSON ObjectNode containing this {@code AnomalyParams}' data.
-             * 
-             * @param factory
-             * @return
-             */
-            public JObject ToJsonNode()
+            public override int GetHashCode()
             {
-                if (cachedNode == null)
-                {
-                    JObject distribution = new JObject();
-                    distribution.Add(Parameters.KEY.ANOMALY_KEY_MEAN.GetFieldName(), this.distribution.mean);
-                    distribution.Add(Parameters.KEY.ANOMALY_KEY_VARIANCE.GetFieldName(), this.distribution.variance);
-                    distribution.Add(Parameters.KEY.ANOMALY_KEY_STDEV.GetFieldName(), this.distribution.stdev);
-
-                    double[] historicalLikelihoods = (double[])_parameters.GetParameterByKey(Parameters.KEY.ANOMALY_KEY_HIST_LIKE);
-                    JArray historics = new JArray(historicalLikelihoods);
-
-                    JObject mvgAvg = new JObject();
-                    mvgAvg.Add(Parameters.KEY.ANOMALY_KEY_WINDOW_SIZE.GetFieldName(), windowSize);
-
-                    List<double> hVals = this.movingAverage.GetSlidingWindow();
-                    JArray histVals = new JArray(hVals);
-
-                    mvgAvg.Add(Parameters.KEY.ANOMALY_KEY_HIST_VALUES.GetFieldName(), histVals);
-                    mvgAvg.Add(Parameters.KEY.ANOMALY_KEY_TOTAL.GetFieldName(), this.movingAverage.GetTotal());
-
-                    cachedNode = new JObject();
-                    cachedNode.Add(Parameters.KEY.ANOMALY_KEY_DIST.GetFieldName(), distribution);
-                    cachedNode.Add(Parameters.KEY.ANOMALY_KEY_HIST_LIKE.GetFieldName(), historics);
-                    cachedNode.Add(Parameters.KEY.ANOMALY_KEY_MVG_AVG.GetFieldName(), mvgAvg);
-                }
-
-                return cachedNode;
+                const int prime = 31;
+                int result = base.GetHashCode();
+                result = prime * result + ((distribution == null) ? 0 : distribution.GetHashCode());
+                result = prime * result + Arrays.GetHashCode(historicalLikelihoods);
+                result = prime * result + ((movingAverage == null) ? 0 : movingAverage.GetHashCode());
+                result = prime * result + windowSize;
+                return result;
             }
 
-            /**
-             * Returns the processed Json Node with possible pretty print indentation
-             * formatting if the flag specified is true.
-             * 
-             * @param doPrettyPrint
-             * @return
-             */
-            public string ToJson(bool doPrettyPrint)
+            public override bool Equals(object obj)
             {
-                try
+                if (this == obj)
                 {
-                    string result = JsonConvert.SerializeObject(ToJsonNode(), doPrettyPrint ? Formatting.Indented : Formatting.None);
-                    return result;
-                }
-                catch (JsonException e)
-                {
-                    LOG.Error("Error while writing json", e);
-                }
-                catch (IOException e)
-                {
-                    LOG.Error("Error while writing json", e);
+                    return true;
                 }
 
-                return "Fault in serializing";
-            }
+                if (!base.Equals(obj))
+                {
+                    return false;
+                }
 
-            /**
-             * Returns the processed Json Node as a String
-             * @return
-             */
-            public string ToJson()
-            {
-                return ToJson(false);
+                if (GetType() != obj.GetType())
+                {
+                    return false;
+                }
+
+                AnomalyParams other = (AnomalyParams)obj;
+                if (distribution == null)
+                {
+                    if (other.distribution != null)
+                    {
+                        return false;
+                    }
+                }
+                else if (!distribution.Equals(other.distribution))
+                {
+                    return false;
+                }
+
+                if (!Arrays.AreEqual(historicalLikelihoods, other.historicalLikelihoods))
+                {
+                    return false;
+                }
+
+                if (movingAverage == null)
+                {
+                    if (other.movingAverage != null)
+                    {
+                        return false;
+                    }
+                }
+                else if (!movingAverage.Equals(other.movingAverage))
+                {
+                    return false;
+                }
+
+                if (windowSize != other.windowSize)
+                {
+                    return false;
+                }
+
+                return true;
             }
         }
 

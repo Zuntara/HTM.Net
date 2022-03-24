@@ -30,9 +30,9 @@ namespace HTM.Net.Network
         /** Keeps track of number of records to skip on restart */
         protected int _skip = -1;
         protected string Name;
-        protected bool IsLearn = true;
-        protected bool _isClosed;
-        protected IInference CurrentInference;
+        protected volatile bool IsLearn = true;
+        protected volatile bool _isClosed;
+        protected volatile IInference CurrentInference;
         protected Network ParentNetwork;
         protected Region ParentRegion;
 
@@ -46,7 +46,7 @@ namespace HTM.Net.Network
         protected bool? AutoCreateClassifiers;
         protected Anomaly AnomalyComputer;
 
-        protected bool _isPostSerialized;
+        protected volatile bool _isPostSerialized;
 
         /**
         * Creates a new {@code Layer} using the specified {@link Parameters}

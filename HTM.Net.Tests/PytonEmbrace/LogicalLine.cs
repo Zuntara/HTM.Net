@@ -340,7 +340,7 @@ namespace HTM.Net.Tests.PytonEmbrace
 
     }
 
-    [TestClass]
+    // [TestClass]
     public class ConvertPytonTest
     {
         //[TestMethod]

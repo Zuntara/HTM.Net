@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.Serialization;
 using System.Text;
 using HTM.Net.Util;
 using log4net;
@@ -58,8 +59,8 @@ namespace HTM.Net.Encoders
  * @author Anubhav Chaturvedi
  */
 
- [Serializable]
-    public class RandomDistributedScalarEncoder : Encoder<double>
+    [Serializable]
+    public class RandomDistributedScalarEncoder : Encoder<double>, ISerializable
     {
 
 
@@ -79,11 +80,60 @@ namespace HTM.Net.Encoders
         int maxIndex;
         int numRetry;
 
+        [NonSerialized]
         ConcurrentDictionary<int, List<int>> bucketMap;
 
 
         private RandomDistributedScalarEncoder()
         {
+        }
+
+        public RandomDistributedScalarEncoder(SerializationInfo info, StreamingContext context)
+            : this()
+        {
+            rng = (MersenneTwister)info.GetValue(nameof(rng), typeof(MersenneTwister));
+            maxOverlap = info.GetInt32(nameof(maxOverlap));
+            maxBuckets = info.GetInt32(nameof(maxBuckets));
+            offset = info.GetValue(nameof(offset), typeof(double?)) != null ? info.GetDouble(nameof(offset)) : null;
+            seed = info.GetInt64(nameof(seed));
+            minIndex = info.GetInt32(nameof(minIndex));
+            maxIndex = info.GetInt32(nameof(maxIndex));
+            numRetry = info.GetInt32(nameof(numRetry));
+
+            foreach (var entry in info)
+            {
+                if (entry.Name.StartsWith("dict_"))
+                {
+                    if (bucketMap == null)
+                    {
+                        bucketMap = new ConcurrentDictionary<int, List<int>>();
+                    }
+
+                    var key = int.Parse(entry.Name.Replace("dict_", string.Empty));
+                    var val = entry.Value as List<int>;
+                    bucketMap.TryAdd(key, val);
+                }
+            }
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue(nameof(rng), rng, rng.GetType());
+            info.AddValue(nameof(maxOverlap), maxOverlap);
+            info.AddValue(nameof(maxBuckets), maxBuckets);
+            info.AddValue(nameof(offset), offset);
+            info.AddValue(nameof(seed), seed);
+            info.AddValue(nameof(minIndex), minIndex);
+            info.AddValue(nameof(maxIndex), maxIndex);
+            info.AddValue(nameof(numRetry), numRetry);
+
+            if (bucketMap != null)
+            {
+                foreach (var pair in bucketMap)
+                {
+                    info.AddValue($"dict_{pair.Key}", pair.Value);
+                }
+            }
         }
 
         public static IBuilder GetBuilder()
@@ -102,20 +152,26 @@ namespace HTM.Net.Encoders
         public void Init() ////throws InvalidOperationException
         {
             if (GetW() <= 0 || GetW() % 2 == 0)
+            {
                 throw new InvalidOperationException(
                     "W must be an odd positive int (to eliminate centering difficulty)");
+            }
 
 
             SetHalfWidth((GetW() - 1) / 2);
 
             if (GetResolution() <= 0)
+            {
                 throw new InvalidOperationException(
                     "Resolution must be a positive number");
+            }
 
             if (n <= 6 * GetW())
+            {
                 throw new InvalidOperationException(
                     "n must be strictly greater than 6*w. For good results we "
-                        + "recommend n be strictly greater than 11*w.");
+                    + "recommend n be strictly greater than 11*w.");
+            }
 
 
             InitEncoder(GetResolution(), GetW(), GetN(), GetOffset(), GetSeed());
@@ -133,7 +189,7 @@ namespace HTM.Net.Encoders
         // TODO why are none of these parameters used..?
         public void InitEncoder(double resolution, int w, int n, double? offset, long seed)
         {
-            rng = (seed == -1) ? new MersenneTwister() : new MersenneTwister((int)seed);
+            rng = (seed == -1) ? new MersenneTwister(DEFAULT_SEED) : new MersenneTwister(seed);
 
             InitializeBucketMap(GetMaxBuckets(), GetOffset());
 
@@ -675,6 +731,8 @@ namespace HTM.Net.Encoders
             }
             return dumpString.ToString();
         }
+
+
 
         /**
          * <p>

@@ -14,7 +14,7 @@ namespace HTM.Net.Tests.Util
 
             try
             {
-                new NearestNeighbor(-1,-1);
+                new NearestNeighbor(0,0);
                 Assert.Fail();
             }
             catch (Exception e)

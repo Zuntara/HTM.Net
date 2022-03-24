@@ -894,7 +894,7 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetHotGymTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new UniversalRandom(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
@@ -934,14 +934,15 @@ namespace HTM.Net.Tests.Network
                 output =>
                 {
                     //Debug.WriteLine("Called OnNext()");
-                    //Debug.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",  expected = " + Arrays.ToString(expected[seq]));
-                    //Debug.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",    output = " + Arrays.ToString(output.GetSdr()));
-                    Assert.IsTrue(Arrays.AreEqual(expected[seq], output.GetSdr()));
+                    //Console.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",  expected = " + Arrays.ToString(expected[seq]));
+                    //Console.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",    output = " + Arrays.ToString(output.GetSdr()));
+                    Assert.IsTrue(Arrays.AreEqual(expected[seq], output.GetSdr()), "Arrays are not the same");
                     seq++;
                 },
                 // OnError
                 e =>
                 {
+                    Console.WriteLine("ERROR -------------------------------------------");
                     Console.WriteLine(e);
                     errored = true;
                 },
@@ -976,6 +977,7 @@ namespace HTM.Net.Tests.Network
                 // OnError
                 e =>
                 {
+                    Console.WriteLine("ERROR 2 -------------------------------------------");
                     Console.WriteLine(e);
                     errored = true;
                 },
@@ -1009,7 +1011,8 @@ namespace HTM.Net.Tests.Network
                 Console.WriteLine(e);
                 Assert.Fail(e.ToString());
             }
-            Assert.IsFalse(errored);
+
+            Assert.IsFalse(errored, "we may not retrieve an error");
         }
 
         /**
