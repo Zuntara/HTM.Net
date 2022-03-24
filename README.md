@@ -8,6 +8,10 @@
 
 **Ported from the** [Numenta Platform for Intelligent Computing (NuPIC) ](https://github.com/numenta/nupic) python project.
 
+## Installation
+
+Install-Package HTM.Net
+
 <a name="needHelp"></a>
 ### Your help is needed! [HTM.Net needs you!](https://github.com/zuntara/htm.net/wiki/We-need-you!)
 
