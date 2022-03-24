@@ -154,16 +154,15 @@ namespace HTM.Net.Tests.Algorithms
         public void TestCompute1()
         {
             var classifier = new SDRClassifier(new[] { 1 }, 0.1, 0.1);
-            var retVal = classifier.Compute<double>(0, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
-                new[] { 1, 5, 9 }, true, true);
+            int recordNum = 0;
+            Map<String, Object> classification = new Map<String, Object>();
+            classification.Add("bucketIdx", 4);
+            classification.Add("actValue", 34.7);
+            Classification<double> result = classifier.Compute<double>(recordNum, classification, new int[] { 1, 5, 9 }, true, true);
 
-            Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, retVal.StepSet()));
-            Assert.AreEqual(1, retVal.GetActualValueCount());
-
-            double[] actValues = retVal.GetActualValues();
-            Assert.AreEqual(1, actValues.Length);
-            Assert.IsInstanceOfType(actValues[0], typeof(double));
-            Assert.AreEqual(actValues[0], 34.7, 0.0001);
+            Assert.IsTrue(Arrays.AreEqual(new int[] { 1 }, result.StepSet()));
+            Assert.AreEqual(1, result.GetActualValueCount());
+            Assert.AreEqual(34.7d, result.GetActualValue(0), 0.00001d);
         }
 
         [TestMethod]
@@ -205,7 +204,6 @@ namespace HTM.Net.Tests.Algorithms
 
             var result = classifier.Compute<double>(recordNum, new Map<string, object> { { "bucketIdx", 4 }, { "actValue", 34.7 } },
                 new[] { 1, 5, 9 }, true, true);
-            recordNum += 1;
 
             Assert.IsTrue(Arrays.AreEqual(new[] { 1 }, result.StepSet()));
             Assert.AreEqual(6, result.GetActualValueCount());
@@ -214,6 +212,7 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual((double)actValues[4], 35.520000457763672, 0.0001);
             Assert.AreEqual((double)actValues[5], 42.020000457763672, 0.0001);
             double[] resultDoubles = (double[])result.GetStats(1);
+            Assert.AreEqual(6, result.GetStatCount(1));
             Assert.AreEqual(6, resultDoubles.Length);
             Assert.AreEqual(resultDoubles[0], 0.034234, 0.0001);
             Assert.AreEqual(resultDoubles[1], 0.034234, 0.0001);

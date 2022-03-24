@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -125,26 +124,6 @@ namespace HTM.Net.Network
 
         private FunctionFactory _factory;
 
-        /// <summary>
-        /// Active columns in the <see cref="SpatialPooler"/> at time "t"
-        /// </summary>
-        protected int[] FeedForwardActiveColumns;
-        /// <summary>
-        /// Active column indexes from the <see cref="SpatialPooler"/> at time "t"
-        /// </summary>
-        protected int[] FeedForwardSparseActives;
-        /// <summary>
-        /// Predictive <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t - 1"
-        /// </summary>
-        protected HashSet<Cell> PreviousPredictiveCells;
-        /// <summary>
-        /// Predictive <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t"
-        /// </summary>
-        protected HashSet<Cell> PredictiveCells;
-        /// <summary>
-        /// Active <see cref="Cell"/>s in the <see cref="TemporalMemory"/> at time "t"
-        /// </summary>
-        protected HashSet<Cell> ActiveCells;
 
         private bool _isHalted;
 
@@ -167,7 +146,7 @@ namespace HTM.Net.Network
         /// </summary>
         private List<EncoderTuple> _encoderTuples;
 
-        private NamedTuple _classifiers;
+        private bool _autoCreateClassifiers;
 
         /// <summary>
         /// Creates a new <see cref="ILayer"/> using the <see cref="Network"/> level <see cref="Parameters"/>
@@ -185,7 +164,7 @@ namespace HTM.Net.Network
         /// <param name="n">the parent <see cref="Network"/></param>
         /// <param name="p">the <see cref="Parameters"/> to use with this <see cref="ILayer"/></param>
         public Layer(Network n, Parameters p)
-            : this("[Layer " + TimeUtils.CurrentTimeMillis() + "]", n, p)
+            : this($"[Layer {TimeUtils.CurrentTimeMillis()}]", n, p)
         {
 
         }
@@ -219,11 +198,13 @@ namespace HTM.Net.Network
             _factory = new FunctionFactory(this);
 
             ObservableDispatch = CreateDispatchMap();
+            
+            InitializeMask();
 
             if (Logger.IsDebugEnabled)
             {
-                Logger.Debug(string.Format("Layer successfully created containing: {0}{1}{2}{3}{4}", (Encoder == null ? "" : "MultiEncoder,"), (SpatialPooler == null ? "" : "SpatialPooler,"), (TemporalMemory == null ? ""
-                                : "TemporalMemory,"), (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."), (AnomalyComputer == null ? "" : "Anomaly")));
+                Logger.Debug(
+                    $"Layer successfully created containing: {(Encoder == null ? "" : "MultiEncoder,")}{(SpatialPooler == null ? "" : "SpatialPooler,")}{(TemporalMemory == null ? "" : "TemporalMemory,")}{(autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field.")}{(AnomalyComputer == null ? "" : "Anomaly")}");
             }
         }
 
@@ -268,7 +249,7 @@ namespace HTM.Net.Network
         {
             if (IsClosed())
             {
-                Logger.Warn("Close called on Layer " + GetName() + " which is already closed.");
+                Logger.Warn($"Close called on Layer {GetName()} which is already closed.");
                 return this;
             }
 
@@ -315,14 +296,14 @@ namespace HTM.Net.Network
                             || Encoder.GetWidth() != (product = ArrayUtils.Product((int[])Params.GetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS))))
                 {
 
-                    Logger.Warn("The number of Input Dimensions (" + inputLength + ") != number of Column Dimensions " + "(" + columnLength + ") --OR-- Encoder width (" + Encoder.GetWidth()
-                                    + ") != product of dimensions (" + product + ") -- now attempting to fix it.");
+                    Logger.Warn(
+                        $"The number of Input Dimensions ({inputLength}) != number of Column Dimensions ({columnLength}) --OR-- Encoder width ({Encoder.GetWidth()}) != product of dimensions ({product}) -- now attempting to fix it.");
 
                     int[] inferredDims = InferInputDimensions(Encoder.GetWidth(), columnLength);
                     if (inferredDims != null && inferredDims.Length > 0 && Encoder.GetWidth() == ArrayUtils.Product(inferredDims))
                     {
                         Logger.Info("Input dimension fix successful!");
-                        Logger.Info("Using calculated input dimensions: " + Arrays.ToString(inferredDims));
+                        Logger.Info($"Using calculated input dimensions: {Arrays.ToString(inferredDims)}");
                     }
 
                     Params.SetInputDimensions(inferredDims);
@@ -376,8 +357,8 @@ namespace HTM.Net.Network
                      (columnLength = ((int[])Params.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS)).Length))
                 {
 
-                    Logger.Error("The number of Input Dimensions (" + inputLength + ") is not same as the number of Column Dimensions " +
-                        "(" + columnLength + ") in Parameters! - SpatialPooler not initialized!");
+                    Logger.Error(
+                        $"The number of Input Dimensions ({inputLength}) is not same as the number of Column Dimensions ({columnLength}) in Parameters! - SpatialPooler not initialized!");
 
                     return this;
                 }
@@ -390,13 +371,11 @@ namespace HTM.Net.Network
                 TemporalMemory.Init(Connections);
             }
 
-            this.numColumns = Connections.GetNumColumns();
-
-            FeedForwardActiveColumns = new int[Connections.GetNumColumns()];
+            numColumns = Connections.GetNumColumns();
 
             _isClosed = true;
 
-            Logger.Debug("Layer " + Name + " content initialize mask = " + AlgoContentMask); // Integer.toBinaryString(algo_content_mask)
+            Logger.Debug($"Layer {Name} content initialize mask = {AlgoContentMask}"); // Integer.toBinaryString(algo_content_mask)
 
             return this;
         }
@@ -472,15 +451,19 @@ namespace HTM.Net.Network
             double dimensions = numColDims;
             double sliceArrangement = Math.Round(Math.Pow(10, (log / dimensions)), 8, MidpointRounding.AwayFromZero);//MathContext.DECIMAL32);.doubleValue();
             double remainder = sliceArrangement % (int)sliceArrangement;
-            if (remainder > double.Epsilon)
+            if (remainder > 0)
             {
                 for (int i = 0; i < numColDims - 1; i++)
+                {
                     retVal[i] = 1;
+                }
                 retVal[(int)numColDims - 1] = (int)flatSize;
             }
             else {
                 for (int i = 0; i < numColDims; i++)
+                {
                     retVal[i] = (int)sliceArrangement;
+                }
             }
 
             return retVal;
@@ -498,6 +481,7 @@ namespace HTM.Net.Network
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
+
             Connections = c;
             return this;
         }
@@ -522,6 +506,7 @@ namespace HTM.Net.Network
             {
                 throw new InvalidOperationException("Layer already \"closed\"");
             }
+
             Params = p;
             return this;
         }
@@ -549,7 +534,7 @@ namespace HTM.Net.Network
             }
 
             // Store the SensorParams for Sensor rebuild after deserialisation
-            this.SensorParams = this.Sensor.GetSensorParams();
+            SensorParams = Sensor.GetSensorParams();
 
             return this;
         }
@@ -770,6 +755,8 @@ namespace HTM.Net.Network
             }
 
             StartLayerThread();
+
+            Logger.Debug($"Start called on Layer thread {LayerThread}");
         }
 
         public override void Restart(bool startAtIndex)
@@ -863,7 +850,7 @@ namespace HTM.Net.Network
         /// <returns>the binary vector representing the current prediction.</returns>
         public HashSet<Cell> GetPredictiveCells()
         {
-            return PredictiveCells;
+            return CurrentInference.GetPredictiveCells();
         }
 
         /// <summary>
@@ -872,7 +859,7 @@ namespace HTM.Net.Network
         /// <returns>the binary vector representing the current prediction.</returns>
         public HashSet<Cell> GetPreviousPredictiveCells()
         {
-            return PreviousPredictiveCells;
+            return CurrentInference.GetPreviousPredictiveCells();
         }
 
         /// <summary>
@@ -883,7 +870,7 @@ namespace HTM.Net.Network
         /// <returns>the array of active column indexes</returns>
         public int[] GetFeedForwardActiveColumns()
         {
-            return FeedForwardActiveColumns;
+            return CurrentInference.GetFeedForwardActiveColumns();
         }
 
         /// <summary>
@@ -892,17 +879,7 @@ namespace HTM.Net.Network
         /// <returns></returns>
         public HashSet<Cell> GetActiveCells()
         {
-            return ActiveCells;
-        }
-
-        /// <summary>
-        /// Sets the sparse form of the <see cref="SpatialPooler"/> column activations and returns the specified array.
-        /// </summary>
-        /// <param name="activesInSparseForm">the sparse column activations</param>
-        private int[] SetFeedForwardSparseActives(int[] activesInSparseForm)
-        {
-            FeedForwardSparseActives = activesInSparseForm;
-            return FeedForwardSparseActives;
+            return CurrentInference.GetActiveCells();
         }
 
         /// <summary>
@@ -910,7 +887,7 @@ namespace HTM.Net.Network
         /// </summary>
         public int[] GetFeedForwardSparseActives()
         {
-            return FeedForwardSparseActives;
+            return CurrentInference.GetFeedForwardSparseActives();
         }
 
         /// <summary>
@@ -925,18 +902,16 @@ namespace HTM.Net.Network
         {
             if (CurrentInference == null || CurrentInference.GetClassifiers() == null)
             {
-                throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
+                throw new InvalidOperationException("Predictions not available. Either classifiers unspecified or inferencing has not yet begun.");
             }
 
             Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
+                Logger.Debug($"No Classification exists for the specified field: {field}");
             }
 
             return c?.GetActualValues().Select(av => av != null ? (TV)av : default(TV)).ToArray();
-
-            //return (V[])c.GetActualValues().Cast<V>().ToArray();
         }
 
         /// <summary>
@@ -959,7 +934,7 @@ namespace HTM.Net.Network
             Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
+                Logger.Debug($"No Classification exists for the specified field: {field}");
             }
 
             return c?.GetStats(step);
@@ -981,7 +956,7 @@ namespace HTM.Net.Network
             Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
+                Logger.Debug($"No Classification exists for the specified field: {field}");
             }
 
             return (TK)c?.GetMostProbableValue(step);
@@ -1002,7 +977,7 @@ namespace HTM.Net.Network
             Classification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
-                Logger.Debug(string.Format("No Classification exists for the specified field: {0}", field));
+                Logger.Debug($"No Classification exists for the specified field: {field}");
             }
 
             Debug.Assert(c != null, "c != null");
@@ -1016,7 +991,7 @@ namespace HTM.Net.Network
         {
             if (TemporalMemory == null)
             {
-                Logger.Debug("Attempt to reset Layer: " + GetName() + "without TemporalMemory");
+                Logger.Debug($"Attempt to reset Layer: {GetName()}without TemporalMemory");
             }
             else {
                 TemporalMemory.Reset(Connections);
@@ -1078,7 +1053,7 @@ namespace HTM.Net.Network
             // Handle global network sensor access.
             if (Sensor == null && ParentNetwork != null && ParentNetwork.IsTail(this))
             {
-                Sensor = (IHTMSensor)ParentNetwork?.GetSensor();
+                Sensor = ParentNetwork?.GetSensor() as IHTMSensor;
             }
             else if (ParentNetwork != null && Sensor != null)
             {
@@ -1109,19 +1084,6 @@ namespace HTM.Net.Network
                     DoEncoderBucketMapping(m, ((IHTMSensor)GetSensor()).GetInputMap());
                     return m;
                 });
-                //if (GetSensor().GetMetaInfo().GetFieldTypes().stream().anyMatch(ft-> {
-                //    return ft == FieldMetaType.SARR || ft == FieldMetaType.DARR || ft == FieldMetaType.COORD || ft == FieldMetaType.GEO;
-                //})) {
-                //    if (autoCreateClassifiers)
-                //    {
-                //        throw new InvalidOperationException("Cannot autoclassify with raw array input or " + " Coordinate based encoders... Remove auto classify setting.");
-                //    }
-                //    return sequence;
-                //}
-                //sequence = sequence.map(m-> {
-                //    doEncoderBucketMapping(m, getSensor().GetInputMap());
-                //    return m;
-                //});
             }
 
             return sequence;
@@ -1289,30 +1251,53 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="encoder"></param>
         /// <returns></returns>
-        private NamedTuple MakeClassifiers(MultiEncoder encoder)
+        public NamedTuple MakeClassifiers(MultiEncoder encoder)
         {
-            if(_classifiers!=null) return _classifiers;
-            Type classificationType = (Type) Params.GetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE);
+            IDictionary<string, Type> inferredFields = Params.GetParameterByKey(Parameters.KEY.INFERRED_FIELDS)
+                as IDictionary<string, Type>; // Type = IClassifier
+            if (inferredFields == null || inferredFields.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "KEY.AUTO_CLASSIFY has been set to \"true\", but KEY.INFERRED_FIELDS is null or\n\t" +
+                    "empty. Must specify desired Classifier for at least one input field in\n\t" +
+                    "KEY.INFERRED_FIELDS or set KEY.AUTO_CLASSIFY to \"false\" (which is its default\n\t" +
+                    "value in Parameters)."
+                );
+            }
 
             string[] names = new string[encoder.GetEncoders(encoder).Count];
             IClassifier[] ca = new IClassifier[names.Length];
             int i = 0;
             foreach (EncoderTuple et in encoder.GetEncoders(encoder))
             {
-                names[i] = et.GetFieldName();
-                ca[i] = (IClassifier) Activator.CreateInstance(classificationType); //new CLAClassifier();
-                ca[i].ApplyParameters(this.Params);
+                names[i] = et.GetName();
+                Type fieldClassifier = inferredFields.ContainsKey(et.GetName()) ? inferredFields[et.GetName()] : null;
+                if (fieldClassifier == null)
+                {
+                    Logger.Info($"Not classifying \"{et.GetName()}\" input field");
+                }
+                else if (typeof(CLAClassifier).IsAssignableFrom(fieldClassifier))
+                {
+                    Logger.Info($"Classifying \"{et.GetName()}\" input field with CLAClassifier");
+                    ca[i] = new CLAClassifier();
+                }
+                else if (typeof(SDRClassifier).IsAssignableFrom(fieldClassifier))
+                {
+                    Logger.Info($"Classifying \"{et.GetName()}\" input field with SDRClassifier");
+                    ca[i] = new SDRClassifier();
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Invalid Classifier class token, \"{fieldClassifier}\",\n\tspecified for, \"{et.GetName()}\", input field.\n\tValid class tokens are CLAClassifier.class and SDRClassifier.class"
+                    );
+                }
+
                 i++;
             }
-            var result = new NamedTuple(names, (object[])ca);
-            _classifiers = result;
-            return result;
-        }
 
-        public override IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName)
-        {
-            if (_classifiers == null) MakeClassifiers(encoder);
-            return _classifiers[predictedFieldName] as IClassifier;
+            var result = new NamedTuple(names, (object[])ca);
+            return result;
         }
 
         /// <summary>
@@ -1324,11 +1309,11 @@ namespace HTM.Net.Network
         {
             if (input == null)
             {
-                Logger.Info("Layer " + GetName() + " received null input");
+                Logger.Info($"Layer {GetName()} received null input");
             }
             else if (input.Length < 1)
             {
-                Logger.Info("Layer " + GetName() + " received zero length bit vector");
+                Logger.Info($"Layer {GetName()} received zero length bit vector");
                 return input;
             }
 
@@ -1360,22 +1345,21 @@ namespace HTM.Net.Network
                 cc = TemporalMemory.Compute(Connections, input, IsLearn);
             }
 
-            PreviousPredictiveCells = PredictiveCells;
-
             // Store the predictive columns
-            mi.SetPredictiveCells(PredictiveCells = cc.PredictiveCells());
+            mi.SetPredictiveCells(cc.PredictiveCells());
             // Store activeCells
-            mi.SetActiveCells(ActiveCells = cc.ActiveCells());
+            mi.SetActiveCells(cc.ActiveCells());
             // Store the Compute Cycle
             mi.SetComputeCycle(cc);
-            return SDR.AsCellIndices(ActiveCells = cc.ActiveCells());
+
+            return SDR.AsCellIndices(cc.ActiveCells());
         }
 
         protected void StartLayerThread()
         {
             LayerThread = new Task(() =>
             {
-                Logger.Debug("Layer [" + GetName() + "] started Sensor output stream processing.");
+                Logger.Debug($"Layer [{GetName()}] started Sensor output stream processing.");
 
                 //////////////////////////
 
@@ -1440,7 +1424,7 @@ namespace HTM.Net.Network
                     }
                 }
 
-                Debug.WriteLine("#> Layer [" + GetName() + "] thread has exited.");
+                Debug.WriteLine($"#> Layer [{GetName()}] thread has exited.");
                 //////////////////////////
 
                 // Applies "terminal" function, at this point the input stream
@@ -1841,28 +1825,17 @@ namespace HTM.Net.Network
             {
                 return t1 =>
                 {
-                    if (!ArrayUtils.IsSparse(t1.GetSdr()))
+                    int[] sdr = t1.GetSdr();
+                    if (!ArrayUtils.IsSparse(sdr))
                     {
                         // Set on Layer, then set sparse actives as the sdr,
                         // then set on Manual Input (t1)
-                        t1 = t1.SetSdr(Layer.SetFeedForwardSparseActives(ArrayUtils.Where(t1.GetSdr(), ArrayUtils.WHERE_1))).SetFeedForwardSparseActives(t1.GetSdr());
+                        sdr = ArrayUtils.Where(sdr, ArrayUtils.WHERE_1);
+                        t1.SetSdr(sdr).SetFeedForwardSparseActives(sdr);
                     }
-                    return t1.SetSdr(Layer.TemporalInput(t1.GetSdr(), t1));
-                };
-                //    return new Func<ManualInput, ManualInput>() {
 
-                //    @Override
-                //    public ManualInput call(ManualInput t1)
-                //{
-                //    if (!ArrayUtils.isSparse(t1.GetSDR()))
-                //    {
-                //        // Set on Layer, then set sparse actives as the sdr,
-                //        // then set on Manual Input (t1)
-                //        t1 = t1.sdr(feedForwardSparseActives(ArrayUtils.where(t1.GetSDR(), ArrayUtils.WHERE_1))).feedForwardSparseActives(t1.GetSDR());
-                //    }
-                //    return t1.sdr(temporalInput(t1.GetSDR(), t1));
-                //}
-                //    };
+                    return t1.SetSdr(Layer.TemporalInput(sdr, t1));
+                };
             }
 
             public Func<ManualInput, ManualInput> CreateClassifierFunc()
@@ -1879,76 +1852,40 @@ namespace HTM.Net.Network
                         bucketIdx = inputs.Get("bucketIdx");
                         actValue = inputs.Get("inputValue");
 
-                        IClassifier c = (IClassifier)t1.GetClassifiers().Get(key);
-                        Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
+                        IClassifier c = t1.GetClassifiers().Get(key) as IClassifier;
+                        if (c != null)
+                        {
+                            Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
 
-                        t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);
+                            t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);
+                        }
                     }
                     return t1;
                 };
-                //        return new Func<ManualInput, ManualInput>()
-                //        {
-
-                //        private Object bucketIdx;
-                //        private Object actValue;
-                //        Map<String, Object> inputMap = new HashMap<String, Object>()
-                //        {
-
-                //                private static final long serialVersionUID = 1L;
-
-                //               public Object get(Object o)
-                //                {
-                //                    return o.equals("bucketIdx") ? bucketIdx : actValue;
-                //                }
-                //         };
-
-                //         public ManualInput call(ManualInput t1)
-                //      {
-                //      Map<String, NamedTuple> ci = t1.GetClassifierInput();
-                //      int recordNum = getRecordNum();
-                //      for (String key : ci.keySet())
-                //      {
-                //          NamedTuple inputs = ci.Get(key);
-                //          bucketIdx = inputs.Get("bucketIdx");
-                //          actValue = inputs.Get("inputValue");
-
-                //         CLAClassifier c = (CLAClassifier)t1.GetClassifiers().Get(key);
-                //         Classification<Object> result = c.Compute(recordNum, inputMap, t1.GetSDR(), isLearn, true);
-
-                //         t1.recordNum(recordNum).storeClassification((String)inputs.Get("name"), result);
-                //       }
-
-                //          return t1;
-                //      }
-                //     };
             }
 
             public Func<ManualInput, ManualInput> CreateAnomalyFunc(Anomaly an)
             {
+                int isArrayInput = -1;
                 int cellsPerColumn = Layer.Connections.GetCellsPerColumn();
+
                 return t1 =>
                 {
-                    if (t1.GetFeedForwardSparseActives() == null || t1.GetPreviousPredictiveCells() == null)
+                    if ((Layer.HasSpatialPooler() && t1.GetFeedForwardSparseActives() == null) ||
+                        t1.GetPreviousPredictiveCells() == null)
                     {
                         return t1.SetAnomalyScore(1.0);
                     }
+                    else if (!Layer.HasSpatialPooler() 
+                             && (isArrayInput == 1 || t1.GetLayerInput().GetType().Equals(typeof(int[]))))
+                    {
+                        isArrayInput = 1;
+                        t1.SetFeedForwardSparseActives((int[])t1.GetLayerInput());
+                    }
+
                     return t1.SetAnomalyScore(Layer.AnomalyComputer.Compute(t1.GetFeedForwardSparseActives(),
                         SDR.CellsAsColumnIndices(t1.GetPreviousPredictiveCells(), cellsPerColumn), 0, 0));
                 };
-                //return new Func<ManualInput, ManualInput>() {
-
-                //    int cellsPerColumn = connections.GetCellsPerColumn();
-
-                //    public ManualInput call(ManualInput t1)
-                //{
-                //    if (t1.GetFeedForwardSparseActives() == null || t1.GetPreviousPredictiveCells() == null)
-                //    {
-                //        return t1.anomalyScore(1.0);
-                //    }
-                //    return t1.anomalyScore(anomalyComputer.compute(t1.GetFeedForwardSparseActives(),
-                //        SDR.cellsAsColumnIndices(t1.GetPreviousPredictiveCells(), cellsPerColumn), 0, 0));
-                //}
-                //    };
             }
 
         }
@@ -1975,10 +1912,11 @@ namespace HTM.Net.Network
                     Sensor = (IHTMSensor)Sensor<ObservableSensor<string[]>>.Create(
                          ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, "", supplierOfObservable));
                 }
+                // TODO
                 //else if (sensorKlass.FullName.IndexOf("URI") != -1)
                 //{
                 //    Object url = Sensor.GetSensorParams().Get("URI");
-                //    Sensor = (IHTMSensor)Sensor.Create(
+                //    Sensor = (IHTMSensor)Sensor<UriSensor>.Create(
                 //         UriSensor.Create, SensorParams.Create(SensorParams.Keys.Uri, "", url));
                 //}
             }

@@ -196,7 +196,7 @@ namespace HTM.Net.Research.Tests.Swarming
                         // TP diagnostic output verbosity control;
                         // 0: silent; [1..6]: increasing levels of verbosity
                         // (see verbosity in nupic/trunk/py/nupic/research/TP.py and TP10X*.py)
-                        verbosity = 0,
+                        //verbosity = 0,
 
                         // Number of cell columns in the cortical region (same number for
                         // SP and TP)

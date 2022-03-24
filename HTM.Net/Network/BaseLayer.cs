@@ -1,14 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.Reactive;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network.Sensor;
-using HTM.Net.Util;
+
 using log4net;
 
 namespace HTM.Net.Network
@@ -33,9 +30,9 @@ namespace HTM.Net.Network
         /** Keeps track of number of records to skip on restart */
         protected int _skip = -1;
         protected string Name;
-        protected bool IsLearn = true;
-        protected bool _isClosed;
-        protected IInference CurrentInference;
+        protected volatile bool IsLearn = true;
+        protected volatile bool _isClosed;
+        protected volatile IInference CurrentInference;
         protected Network ParentNetwork;
         protected Region ParentRegion;
 
@@ -49,7 +46,7 @@ namespace HTM.Net.Network
         protected bool? AutoCreateClassifiers;
         protected Anomaly AnomalyComputer;
 
-        protected bool _isPostSerialized;
+        protected volatile bool _isPostSerialized;
 
         /**
         * Creates a new {@code Layer} using the specified {@link Parameters}
@@ -92,18 +89,6 @@ namespace HTM.Net.Network
             AnomalyComputer = a;
 
             Connections = new Connections();
-
-            InitializeMask();
-
-            if (LOGGER.IsDebugEnabled)
-            {
-                LOGGER.DebugFormat("Layer successfully created containing: {0}{1}{2}{3}{4}",
-                    (Encoder == null ? "" : "MultiEncoder,"),
-                    (SpatialPooler == null ? "" : "SpatialPooler,"),
-                    (TemporalMemory == null ? "" : "TemporalMemory,"),
-                    (autoCreateClassifiers == null ? "" : "Auto creating CLAClassifiers for each input field."),
-                    (AnomalyComputer == null ? "" : "Anomaly"));
-            }
         }
 
         public override object PreSerialize()
@@ -156,6 +141,7 @@ namespace HTM.Net.Network
             {
                 return ParentNetwork.GetCheckPointOperator();
             }
+
             return null;
         }
 
@@ -269,7 +255,7 @@ namespace HTM.Net.Network
         /// among <see cref="BaseLayer"/>s in a <see cref="Region"/>
         /// See <see cref="GetMask()"/> for more information.
         /// </summary>
-        private void InitializeMask()
+        protected void InitializeMask()
         {
             AlgoContentMask |= (SpatialPooler == null ? 0 : LayerMask.SpatialPooler);
             AlgoContentMask |= (TemporalMemory == null ? 0 : LayerMask.TemporalMemory);
@@ -476,12 +462,6 @@ namespace HTM.Net.Network
 
             return null;
         }
-
-        /// <summary>
-        /// Returns the classifier(s) for this layer
-        /// </summary>
-        /// <returns></returns>
-        public abstract IClassifier GetClassifier(MultiEncoder encoder, string predictedFieldName);
 
         /// <summary>
         /// Returns the count of records historically inputted into this

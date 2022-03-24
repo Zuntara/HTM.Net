@@ -562,7 +562,7 @@ namespace HTM.Net.Algorithms
         {
             /** Default Serial */
             private const long serialVersionUID = 1L;
-            Tuple t;
+            private Tuple t;
 
             public ColumnData() { }
 
@@ -571,8 +571,10 @@ namespace HTM.Net.Algorithms
                 this.t = t;
             }
 
-            public Column Column() { return (Column)t.Get(0); }
-            public List<Column> ActiveColumns() { return (List<Column>)t.Get(1); }
+            public Column Column() 
+                => (Column)t.Get(0);
+
+            public List<Column> ActiveColumns() => (List<Column>)t.Get(1);
 
             public List<DistalDendrite> ActiveSegments()
             {
@@ -606,7 +608,7 @@ namespace HTM.Net.Algorithms
                 var list = (IList)t.Get(memberIndex);
                 var element = list[0];
 
-                return !((IList)t.Get(memberIndex))[0].Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.NONE);
+                return !element.Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.NONE);
             }
         }
     }

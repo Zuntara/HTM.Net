@@ -200,6 +200,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
@@ -335,6 +336,8 @@ namespace HTM.Net.Tests.Network
             p = p.Union(NetworkTestHarness.GetHotGymTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS,
+                GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
 
@@ -399,7 +402,7 @@ namespace HTM.Net.Tests.Network
             p = p.Union(NetworkTestHarness.GetHotGymTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
-
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p);
@@ -467,6 +470,7 @@ namespace HTM.Net.Tests.Network
             p = p.Union(NetworkTestHarness.GetHotGymTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
 
@@ -538,6 +542,7 @@ namespace HTM.Net.Tests.Network
             p = p.Union(NetworkTestHarness.GetHotGymTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             HTMSensor<ObservableSensor<string[]>> htmSensor = (HTMSensor<ObservableSensor<string[]>>)sensor;
 
@@ -889,8 +894,9 @@ namespace HTM.Net.Tests.Network
 
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetHotGymTestEncoderParams());
-            p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new UniversalRandom(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
 
@@ -928,14 +934,15 @@ namespace HTM.Net.Tests.Network
                 output =>
                 {
                     //Debug.WriteLine("Called OnNext()");
-                    //Debug.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",  expected = " + Arrays.ToString(expected[seq]));
-                    //Debug.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",    output = " + Arrays.ToString(output.GetSdr()));
-                    Assert.IsTrue(Arrays.AreEqual(expected[seq], output.GetSdr()));
+                    //Console.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",  expected = " + Arrays.ToString(expected[seq]));
+                    //Console.WriteLine("  seq = " + seq + ",    recNum = " + output.GetRecordNum() + ",    output = " + Arrays.ToString(output.GetSdr()));
+                    Assert.IsTrue(Arrays.AreEqual(expected[seq], output.GetSdr()), "Arrays are not the same");
                     seq++;
                 },
                 // OnError
                 e =>
                 {
+                    Console.WriteLine("ERROR -------------------------------------------");
                     Console.WriteLine(e);
                     errored = true;
                 },
@@ -970,6 +977,7 @@ namespace HTM.Net.Tests.Network
                 // OnError
                 e =>
                 {
+                    Console.WriteLine("ERROR 2 -------------------------------------------");
                     Console.WriteLine(e);
                     errored = true;
                 },
@@ -1003,7 +1011,8 @@ namespace HTM.Net.Tests.Network
                 Console.WriteLine(e);
                 Assert.Fail(e.ToString());
             }
-            Assert.IsFalse(errored);
+
+            Assert.IsFalse(errored, "we may not retrieve an error");
         }
 
         /**
@@ -1097,6 +1106,7 @@ namespace HTM.Net.Tests.Network
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
             p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY, true);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
 
@@ -1439,6 +1449,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             ILayer l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
@@ -1485,8 +1496,8 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
-
             p.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, PRIME_COUNT);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
@@ -1553,8 +1564,8 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
-
             p.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, PRIME_COUNT);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
@@ -1690,6 +1701,7 @@ namespace HTM.Net.Tests.Network
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(43));
             p.SetParameterByKey(Parameters.KEY.SP_PRIMER_DELAY, PRIME_COUNT);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             int cellsPerColumn = (int)p.GetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN);
             Assert.IsTrue(cellsPerColumn > 0);
@@ -1773,6 +1785,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
             Layer<IDictionary<string, object>> l = new Layer<IDictionary<string, object>>(p, me, new SpatialPooler(), new TemporalMemory(), true, null);
@@ -1868,6 +1881,50 @@ namespace HTM.Net.Tests.Network
         }
 
         [TestMethod]
+        public void TestMakeClassifiers()
+        {
+            // Setup Parameters
+            Parameters p = Parameters.GetAllDefaultParameters();
+            Map<string, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add("field1", typeof(CLAClassifier));
+            inferredFieldsMap.Add("field2", typeof(SDRClassifier));
+            inferredFieldsMap.Add("field3", null);
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, inferredFieldsMap);
+
+            // Create MultiEncoder and add the fields' encoders to it
+            MultiEncoder me = (MultiEncoder)MultiEncoder.GetBuilder().Name("").Build();
+            me.AddEncoder(
+                "field1",
+                RandomDistributedScalarEncoder.GetBuilder().Resolution(1).Build()
+            );
+            me.AddEncoder(
+                "field2",
+                RandomDistributedScalarEncoder.GetBuilder().Resolution(1).Build()
+            );
+            me.AddEncoder(
+                "field3",
+                RandomDistributedScalarEncoder.GetBuilder().Resolution(1).Build()
+            );
+
+            // Create a Layer with Parameters and MultiEncoder
+            Layer<Map<string, object>> l = new Layer<Map<string, object>>(
+                p,
+                me,
+                new SpatialPooler(),
+                new TemporalMemory(),
+                true,
+                null
+            );
+
+            // Make sure the makeClassifiers() method matches each
+            // field to the specified Classifier type
+            NamedTuple nt = l.MakeClassifiers(l.GetEncoder());
+            Assert.AreEqual(nt.Get("field1").GetType(), typeof(CLAClassifier));
+            Assert.AreEqual(nt.Get("field2").GetType(), typeof(SDRClassifier));
+            Assert.AreEqual(nt.Get("field3"), null);
+        }
+
+    [TestMethod]
         public void TestExplicitCloseFailure()
         {
             Parameters p = NetworkTestHarness.GetParameters();
@@ -1961,7 +2018,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 200);
             p.SetParameterByKey(Parameters.KEY.INHIBITION_RADIUS, 50);
             p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
-
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
             //        System.out.println(p);
 
             p.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
@@ -2193,6 +2250,20 @@ namespace HTM.Net.Tests.Network
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             return p;
+        }
+
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+         */
+        public static Map<String, Type> GetInferredFieldsMap(
+            String field, Type classifier)
+        {
+            Map<String, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
         }
 
         private Map<string, Map<string, object>> SetupMap(

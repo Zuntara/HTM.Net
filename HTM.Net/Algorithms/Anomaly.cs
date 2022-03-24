@@ -54,9 +54,8 @@ namespace HTM.Net.Algorithms
     /// For more information please see: <see cref="AnomalyTest"/> and <see cref="AnomalyLikelihoodTest"/>
     /// </summary>
     [Serializable]
-    public class Anomaly : Persistable
+    public abstract class Anomaly : Persistable
     {
-        private readonly Func<Anomaly, int[], int[], double, long, double> _computeFunc;
         /// <summary>
         /// Modes to use for factory creation method
         /// </summary>
@@ -64,6 +63,24 @@ namespace HTM.Net.Algorithms
 
         // Instantiation keys
         public const int VALUE_NONE = -1;
+
+        public static string KEY_MODE = string.Intern("mode");
+        public static string KEY_LEARNING_PERIOD = "claLearningPeriod";
+        public static string KEY_ESTIMATION_SAMPLES = "estimationSamples";
+        public static string KEY_USE_MOVING_AVG = "useMovingAverage";
+        public static string KEY_WINDOW_SIZE = string.Intern("windowSize");
+        public static string KEY_IS_WEIGHTED = "isWeighted";
+        // Configs
+        public static string KEY_DIST = string.Intern("distribution");
+        public static string KEY_MVG_AVG = string.Intern("movingAverage");
+        public static string KEY_HIST_LIKE = string.Intern("historicalLikelihoods");
+        public static string KEY_HIST_VALUES = string.Intern("historicalValues");
+        public static string KEY_TOTAL = string.Intern("total");
+
+        // Computational argument keys
+        public static string KEY_MEAN = string.Intern("mean");
+        public static string KEY_STDEV = string.Intern("stdev");
+        public static string KEY_VARIANCE = string.Intern("variance");
 
         protected MovingAverage movingAverage;
 
@@ -75,7 +92,6 @@ namespace HTM.Net.Algorithms
         protected Anomaly()
             : this(false, -1)
         {
-
         }
 
         /// <summary>
@@ -94,12 +110,6 @@ namespace HTM.Net.Algorithms
                 }
                 movingAverage = new MovingAverage(null, windowSize);
             }
-        }
-
-        private Anomaly(bool useMovingAverage, int windowSize, Func<Anomaly, int[], int[], double, long, double> computeFunc)
-            : this(useMovingAverage, windowSize)
-        {
-            _computeFunc = computeFunc;
         }
 
         /// <summary>
@@ -140,15 +150,7 @@ namespace HTM.Net.Algorithms
             {
                 case Mode.PURE:
                     {
-                        return new Anomaly(useMovingAvg, windowSize, (anomaly, activeColumns, predictedColumns, inputValue, timestamp) =>
-                        {
-                            double retVal = ComputeRawAnomalyScore(activeColumns, predictedColumns);
-                            if (anomaly.useMovingAverage)
-                            {
-                                retVal = anomaly.movingAverage.Next(retVal);
-                            }
-                            return retVal;
-                        });
+                        return new AnomalyPure(useMovingAvg, windowSize);
                     }
                 case Mode.LIKELIHOOD:
                 case Mode.WEIGHTED:
@@ -200,16 +202,29 @@ namespace HTM.Net.Algorithms
         /// <param name="inputValue">(optional) value of current input to encoders (eg "cat" for category encoder) (used in anomaly-likelihood)</param>
         /// <param name="timestamp">(optional) date timestamp when the sample occurred (used in anomaly-likelihood)</param>
         /// <returns></returns>
-        public virtual double Compute(int[] activeColumns, int[] predictedColumns, double inputValue, long timestamp)
-        {
-            if (_computeFunc != null)
-            {
-                return _computeFunc(this, activeColumns, predictedColumns, inputValue, timestamp);
-            }
-            throw new InvalidOperationException("Implement Compute in derived class.");
-        }
+        public abstract double Compute(int[] activeColumns, int[] predictedColumns, double inputValue, long timestamp);
 
-        #region Inner Class Definitions   
+        #region Inner Class Definitions
+
+        [Serializable]
+        public class AnomalyPure : Anomaly
+        {
+            public AnomalyPure(bool useMovingAverage, int windowSize)
+                : base(useMovingAverage, windowSize)
+            {
+            }
+
+            public override double Compute(int[] activeColumns, int[] predictedColumns, double inputValue, long timestamp)
+            {
+                double retVal = ComputeRawAnomalyScore(activeColumns, predictedColumns);
+                if (useMovingAverage)
+                {
+                    retVal = movingAverage.Next(retVal);
+                }
+
+                return retVal;
+            }
+        }
 
         /// <summary>
         /// Container to hold interim <see cref="AnomalyLikelihood"/> calculations.

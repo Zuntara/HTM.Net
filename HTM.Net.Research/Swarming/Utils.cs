@@ -865,8 +865,8 @@ namespace HTM.Net.Research.Swarming
         public int minThreshold { get; set; }
         [ParameterMapping]
         public int activationThreshold { get; set; }
-        [ParameterMapping("tmVerbosity")]
-        public int verbosity { get; set; }
+        //[ParameterMapping("tmVerbosity")]
+        //public int verbosity { get; set; }
         [ParameterMapping("columnDimensions")]
         public int[] columnCount { get; set; }
         [ParameterMapping]

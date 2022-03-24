@@ -23,7 +23,5 @@ namespace HTM.Net.Tests.Util
                 Assert.IsTrue(e.Message.StartsWith("The number of columns of a matrix must be positive."));
             }
         }
-
-
     }
 }

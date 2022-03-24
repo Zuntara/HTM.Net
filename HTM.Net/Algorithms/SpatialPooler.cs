@@ -5,7 +5,6 @@ using HTM.Net.Model;
 using HTM.Net.Util;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace HTM.Net.Algorithms
 {
@@ -71,7 +70,7 @@ namespace HTM.Net.Algorithms
             //Control.UseMultiThreading();
 
             SparseObjectMatrix<Column> mem = c.GetMemory();
-            c.SetMemory(mem == null ? mem = new SparseObjectMatrix<Column>(c.GetColumnDimensions()) : mem);
+            c.SetMemory(mem ?? (mem = new SparseObjectMatrix<Column>(c.GetColumnDimensions())));
 
             c.SetInputMatrix(new SparseBinaryMatrix(c.GetInputDimensions()));
 
@@ -108,63 +107,6 @@ namespace HTM.Net.Algorithms
             c.SetBoostFactors(new double[numColumns]);
             Arrays.Fill(c.GetBoostFactors(), 1);
         }
-
-        //public void InitMatrices_Old(Connections c)
-        //{
-        //    bool runInParallel = c.IsSpatialInParallelMode();
-        //    if (runInParallel)
-        //    {
-        //        Control.UseMultiThreading();
-        //    }
-        //    else
-        //    {
-        //        Control.TryUseNativeMKL();
-        //    }
-
-        //    if (c == null) throw new ArgumentNullException(nameof(c));
-        //    SparseObjectMatrix<Column> mem = c.GetMemory() ?? new SparseObjectMatrix<Column>(c.GetColumnDimensions());
-        //    c.SetMemory(mem);
-
-        //    c.SetInputMatrix(new SparseBinaryMatrix(c.GetInputDimensions()));
-
-        //    //Calculate numInputs and numColumns
-        //    int numInputs = c.GetInputMatrix().GetMaxIndex() + 1;
-        //    int numColumns = c.GetMemory().GetMaxIndex() + 1;
-        //    c.SetNumInputs(numInputs);
-        //    c.SetNumColumns(numColumns);
-
-        //    //Fill the sparse matrix with column objects
-        //    for (int i = 0; i < numColumns; i++)
-        //    {
-        //        mem.Set(i, new Column(c.GetCellsPerColumn(), i));
-        //    }
-
-        //    c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
-
-        //    if (runInParallel)
-        //    {
-        //        c.SetConnectedMatrix(new DenseMatrix(numColumns, numInputs));
-        //    }
-        //    else
-        //    {
-        //        c.SetConnectedMatrix(new SparseMatrix(numColumns, numInputs));
-        //    }
-
-        //    double[] tieBreaker = new double[numColumns];
-        //    for (int i = 0; i < numColumns; i++)
-        //    {
-        //        tieBreaker[i] = 0.01 * c.GetRandom().NextDouble();
-        //    }
-        //    c.SetTieBreaker(tieBreaker);
-
-        //    //Initialize state meta-management statistics
-        //    c.SetOverlapDutyCycles(new double[numColumns]);
-        //    c.SetActiveDutyCycles(new double[numColumns]);
-        //    c.SetMinOverlapDutyCycles(new double[numColumns]);
-        //    c.SetMinActiveDutyCycles(new double[numColumns]);
-        //    c.SetBoostFactors(new double[numColumns]);
-        //    Arrays.Fill(c.GetBoostFactors(), 1);
-        //}
 
         /**
          * Step two of pooler initialization kept separate from initialization

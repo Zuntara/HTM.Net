@@ -22,7 +22,7 @@ namespace HTM.Net.Model
     [Serializable]
     public class Synapse : Persistable, IComparable<Synapse>
     {
-        private readonly Cell _sourceCell;
+        private Cell _sourceCell;
         private readonly Segment _segment;
         private readonly Pool _pool;
         private readonly int _synapseIndex;
@@ -143,6 +143,12 @@ namespace HTM.Net.Model
             return _sourceCell;
         }
 
+        public void SetPresynapticCell(Cell cell)
+        {
+            _sourceCell = cell;
+        }
+
+
         /**
          * Returns the flag indicating whether this segment has been destroyed.
          * @return  the flag indicating whether this segment has been destroyed.
@@ -243,6 +249,8 @@ namespace HTM.Net.Model
             else if (!_sourceCell.Equals(other._sourceCell))
                 return false;
             if (_synapseIndex != other._synapseIndex)
+                return false;
+            if (Math.Abs(_permanence - other._permanence) > double.Epsilon)
                 return false;
             return true;
         }

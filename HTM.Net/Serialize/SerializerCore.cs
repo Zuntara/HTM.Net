@@ -12,6 +12,7 @@ namespace HTM.Net.Serialize
     {
         protected static readonly ILog LOGGER = LogManager.GetLogger(typeof(SerializerCore));
 
+        [NonSerialized]
         private Type[] _classes;
 
         public SerializerCore(params Type[] classes)

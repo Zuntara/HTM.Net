@@ -1,6 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Globalization;
+using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
+
 using MathNet.Numerics.Random;
 
 namespace HTM.Net.Util
@@ -613,6 +620,11 @@ namespace HTM.Net.Util
         public MersenneTwister()
             : base(42)
         {
+        }
+
+        public MersenneTwister(long seed)
+            : base((int)seed)
+        {
 
         }
 
@@ -819,6 +831,248 @@ namespace HTM.Net.Util
         }
 
         #endregion
+    }
+
+    public class UniversalRandom : System.Random, IRandom
+    {
+        private const string BadBound = "bound must be positive";
+
+        private ulong seed;
+
+        public UniversalRandom(long seed)
+            : base((int)seed)
+        {
+            this.seed = (ulong)seed;
+        }
+
+        /// <summary>
+        /// Fisher-Yates implementation which shuffles the array contents.
+        /// </summary>
+        /// <param name="array">the array of ints to shuffle.</param>
+        /// <returns>shuffled array</returns>
+        public int[] Shuffle(int[] array)
+        {
+            int index;
+            for (int i = array.Length - 1; i > 0; i--)
+            {
+                index = NextInt(i + 1);
+                if (index != i)
+                {
+                    array[index] ^= array[i];
+                    array[i] ^= array[index];
+                    array[index] ^= array[i];
+                }
+            }
+            //builder.AppendLine("shuffle: " + Arrays.toString(array));
+            return array;
+        }
+
+        /// <summary>
+        /// Fisher-Yates implementation which shuffles the array contents.
+        /// </summary>
+        /// <param name="array">the array of ints to shuffle.</param>
+        /// <returns>shuffled array</returns>
+        public List<int> Shuffle(IList<int> array)
+        {
+            int index;
+            for (int i = array.Count - 1; i > 0; i--)
+            {
+                index = NextInt(i + 1);
+                if (index != i)
+                {
+                    array[index] ^= array[i];
+                    array[i] ^= array[index];
+                    array[index] ^= array[i];
+                }
+            }
+            //builder.AppendLine("shuffle: " + Arrays.toString(array));
+            return array.ToList();
+        }
+
+        public int NextInt(int bound)
+        {
+            if (bound <= 0)
+                throw new ArgumentException(BadBound);
+
+            int r = Next(31);
+            int m = bound - 1;
+            if ((bound & m) == 0)  // i.e., bound is a power of 2
+                r = (int)((bound * (long)r) >> 31);
+            else
+            {
+                r = r % bound;
+                /*
+                THIS CODE IS COMMENTED TO WORK IDENTICALLY WITH THE PYTHON VERSION 
+
+                for (int u = r;
+                     u - (r = u % bound) + m < 0;
+                     u = next(31))
+                    ;
+                */
+            }
+            //builder.AppendLine("nextInt(" + bound + "): " + r);
+            return r;
+        }
+
+        public override int Next(int nbits)
+        {
+            ulong x = seed;
+            x ^= (x << 21) & 0xffffffffffffffffL;
+            x ^= (x >> 35);
+            x ^= (x << 4);
+            seed = x;
+            x &= (ulong)((1L << nbits) - 1);
+
+            return (int)x;
+        }
+
+        public override double NextDouble()
+        {
+            int nd = NextInt(10000);
+            double retVal = (double)new Decimal(nd * .0001d);
+            //builder.AppendLine("nextDouble: " + retVal);
+            return retVal;
+        }
+
+        public double NextGaussian()
+        {
+            return NextDouble();
+        }
+
+        private BigInteger? bigSeed;
+
+        ///**
+        // * PYTHON COMPATIBLE (Protected against overflows)
+        // * 
+        // * Implementation of George Marsaglia's elegant Xorshift random generator
+        // * 30% faster and better quality than the built-in java.util.random see also
+        // * see http://www.javamex.com/tutorials/random_numbers/xorshift.shtml
+        // */
+        //protected int nextX(int nbits)
+        //{
+        //    long x = seed;
+        //    BigInteger bigX = bigSeed == null ? new BigInteger(seed) : bigSeed.Value;
+        //    bigX = bigX.ShiftLeft(21).xor(bigX).and(new BigInteger("ffffffffffffffff", 16));
+        //    bigX = bigX.shiftRight(35).xor(bigX).and(new BigInteger("ffffffffffffffff", 16));
+        //    bigX = bigX.shiftLeft(4).xor(bigX).and(new BigInteger("ffffffffffffffff", 16));
+        //    bigSeed = bigX;
+        //    bigX = bigX.and(BigInteger.valueOf(1L).shiftLeft(nbits).subtract(BigInteger.valueOf(1)));
+        //    x = bigX.intValue();
+
+        //    //System.out.println("x = " + x + ",  seed = " + seed);
+        //    return (int)x;
+        //}
+
+        /*
+         * Internal method used for testing
+         */
+        private int[] SampleWithPrintout(List<int> choices, int[] selectedIndices, List<int> collectedRandoms)
+        {
+            List<int> choiceSupply = new List<int>(choices);
+            int upperBound = choices.Count;
+            for (int i = 0; i < selectedIndices.Length; i++)
+            {
+                int randomIdx = NextInt(upperBound);
+                //System.out.println("randomIdx: " + randomIdx);
+                collectedRandoms.Add(randomIdx);
+                selectedIndices[i] = (choiceSupply[randomIdx]);
+                choiceSupply.RemoveAt(randomIdx);
+                upperBound--;
+            }
+
+            Array.Sort(selectedIndices);
+            return selectedIndices;
+        }
+
+        public static void Main(StringBuilder builder)
+        {
+            UniversalRandom random = new UniversalRandom(42);
+
+            long s = 2858730232218250L;
+            long e = (s >> 35);
+            builder.AppendLine("e = " + e);
+
+            int x = random.NextInt(50);
+            builder.AppendLine("x = " + x);
+
+            x = random.NextInt(50);
+            builder.AppendLine("x = " + x);
+
+            x = random.NextInt(50);
+            builder.AppendLine("x = " + x);
+
+            x = random.NextInt(50);
+            builder.AppendLine("x = " + x);
+
+            x = random.NextInt(50);
+            builder.AppendLine("x = " + x);
+
+            for (int i = 0; i < 10; i++)
+            {
+                int o = random.NextInt(50);
+                builder.AppendLine("x = " + o);
+            }
+
+            random = new UniversalRandom(42);
+            for (int i = 0; i < 10; i++)
+            {
+                double o = random.NextDouble();
+                builder.AppendLine("d = " + o.ToString(NumberFormatInfo.InvariantInfo));
+            }
+
+            ///////////////////////////////////
+            //      Values Seen in Python    //
+            ///////////////////////////////////
+            /*
+             *  e = 83200
+                x = 0
+                x = 26
+                x = 14
+                x = 15
+                x = 38
+                x = 47
+                x = 13
+                x = 9
+                x = 15
+                x = 31
+                x = 6
+                x = 3
+                x = 0
+                x = 21
+                x = 45
+                d = 0.945
+                d = 0.2426
+                d = 0.5214
+                d = 0.0815
+                d = 0.0988
+                d = 0.5497
+                d = 0.4013
+                d = 0.4559
+                d = 0.5415
+                d = 0.2381
+             */
+
+            random = new UniversalRandom(42);
+            List<int> choices = new List<int>(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            int sampleSize = 6;
+            int[] selectedIndices = new int[sampleSize];
+            List<int> collectedRandoms = new List<int>();
+            int[] expectedSample = { 1, 2, 3, 7, 8, 9 };
+            List<int> expectedRandoms = new int[] { 0, 0, 0, 5, 3, 3 }.ToList();
+            random.SampleWithPrintout(choices, selectedIndices, collectedRandoms);
+            builder.AppendLine("samples are equal ? " + Arrays.AreEqual(expectedSample, selectedIndices));
+            builder.AppendLine("used randoms are equal ? " + collectedRandoms.SequenceEqual(expectedRandoms));
+
+            random = new UniversalRandom(42);
+            int[] coll = ArrayUtils.Range(0, 10);
+            int[] before = Arrays.CopyOf(coll, coll.Length);
+            random.Shuffle(coll);
+            builder.AppendLine("collection before: " + Arrays.ToString(before));
+            builder.AppendLine("collection shuffled: " + Arrays.ToString(coll));
+            int[] expected = { 5, 1, 8, 6, 2, 4, 7, 3, 9, 0 };
+            builder.AppendLine(Arrays.AreEqual(expected, coll).ToString());
+            builder.AppendLine((!Arrays.AreEqual(expected, before)).ToString()); // not equal
+        }
     }
 
     [Serializable]

@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
+
 using HTM.Net.Algorithms;
-using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Serialize;
 using HTM.Net.Util;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace HTM.Net.Model
 {
@@ -211,9 +208,11 @@ namespace HTM.Net.Model
         //private Type randomGeneratorType;
 
         /** Sorting Lambda used for sorting active and matching segments */
+        [NonSerialized]
         public Comparison<DistalDendrite> segmentPositionSortKey;
 
         /** Sorting Lambda used for SpatialPooler inhibition */
+        [NonSerialized]
         public Comparison<Tuple<int, Double>> inhibitionComparator;
 
         ////////////////////////////////////////

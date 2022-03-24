@@ -286,8 +286,10 @@ namespace HTM.Net.Tests.Algorithms
         [TestMethod]
         public void TestMultistepSingleValue()
         {
-            _classifier = new CLAClassifier(new[] { 1, 2 });
+            SetUp();
 
+            _classifier.Steps = new[] { 1, 2 };
+            
             // Only should return one actual value bucket.
             Classification<double> result = null;
             int recordNum = 0;
@@ -442,26 +444,6 @@ namespace HTM.Net.Tests.Algorithms
             Assert.IsTrue(Arrays.AreEqual(new[] { 2 }, result.StepSet()));
             Assert.AreEqual(1, result.GetActualValueCount());
             Assert.AreEqual(34.7, result.GetActualValue(0), 0.01);
-        }
-
-        [TestMethod]
-        public void TestParameterSettings()
-        {
-            // Normal
-            _classifier = new CLAClassifier(new[] { 2 }, 0.25, 0.1, 0);
-
-            Assert.AreEqual(2, _classifier.Steps[0]);
-            Assert.AreEqual(0.25, _classifier.Alpha);
-
-            // Params
-            Parameters p = Parameters.GetAllDefaultParameters();
-            p.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.51);
-            p.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new [] {3});
-
-            _classifier.ApplyParameters(p);
-
-            Assert.AreEqual(3, _classifier.Steps[0]);
-            Assert.AreEqual(0.51, _classifier.Alpha);
         }
 
         public void CheckValue<T>(Classification<T> retVal, int index, object value, double probability)

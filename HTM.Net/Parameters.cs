@@ -28,7 +28,11 @@ namespace HTM.Net
         private static readonly ParametersMap DEFAULTS_SPATIAL;
         private static readonly ParametersMap DEFAULTS_ENCODER;
         private static readonly ParametersMap DEFAULTS_KNN;
-        private static readonly ParametersMap DEFAULTS_CLASSIFIER;
+
+        /// <summary>
+        /// Map of parameters to their values
+        /// </summary>
+        private ParametersMap paramMap = new ParametersMap();
 
         static Parameters()
         {
@@ -54,7 +58,6 @@ namespace HTM.Net
             defaultTemporalParams.Add(KEY.PERMANENCE_INCREMENT, 0.10);
             defaultTemporalParams.Add(KEY.PERMANENCE_DECREMENT, 0.10);
             defaultTemporalParams.Add(KEY.PREDICTED_SEGMENT_DECREMENT, 0.0);
-            defaultTemporalParams.Add(KEY.TM_VERBOSITY, 0);
             defaultTemporalParams.Add(KEY.LEARN, true);
             DEFAULTS_TEMPORAL = defaultTemporalParams;
             defaultParams.AddAll(DEFAULTS_TEMPORAL);
@@ -62,15 +65,15 @@ namespace HTM.Net
             //////////// Spatial Pooler Parameters ///////////
             ParametersMap defaultSpatialParams = new ParametersMap();
             defaultSpatialParams.Add(KEY.INPUT_DIMENSIONS, new int[] { 64 });
-            defaultSpatialParams.Add(KEY.POTENTIAL_RADIUS, 16);
+            defaultSpatialParams.Add(KEY.POTENTIAL_RADIUS, -1);
             defaultSpatialParams.Add(KEY.POTENTIAL_PCT, 0.5);
             defaultSpatialParams.Add(KEY.GLOBAL_INHIBITION, false);
             defaultSpatialParams.Add(KEY.INHIBITION_RADIUS, 0);
             defaultSpatialParams.Add(KEY.LOCAL_AREA_DENSITY, -1.0);
             defaultSpatialParams.Add(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 10.0);
             defaultSpatialParams.Add(KEY.STIMULUS_THRESHOLD, 0.0);
-            defaultSpatialParams.Add(KEY.SYN_PERM_INACTIVE_DEC, 0.01);
-            defaultSpatialParams.Add(KEY.SYN_PERM_ACTIVE_INC, 0.1);
+            defaultSpatialParams.Add(KEY.SYN_PERM_INACTIVE_DEC, 0.008);
+            defaultSpatialParams.Add(KEY.SYN_PERM_ACTIVE_INC, 0.05);
             defaultSpatialParams.Add(KEY.SYN_PERM_CONNECTED, 0.10);
             defaultSpatialParams.Add(KEY.SYN_PERM_BELOW_STIMULUS_INC, 0.01);
             defaultSpatialParams.Add(KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
@@ -79,7 +82,6 @@ namespace HTM.Net
             defaultSpatialParams.Add(KEY.DUTY_CYCLE_PERIOD, 1000);
             defaultSpatialParams.Add(KEY.MAX_BOOST, 10.0);
             defaultSpatialParams.Add(KEY.WRAP_AROUND, true);
-            defaultSpatialParams.Add(KEY.SP_VERBOSITY, 0);
             defaultSpatialParams.Add(KEY.LEARN, true);
             defaultSpatialParams.Add(KEY.SP_PARALLELMODE, false);   // default off
             DEFAULTS_SPATIAL = defaultSpatialParams;
@@ -100,18 +102,9 @@ namespace HTM.Net
             defaultEncoderParams.Add(KEY.FIELD_TYPE, "int");
             defaultEncoderParams.Add(KEY.ENCODER, "ScalarEncoder");
             defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
+            defaultEncoderParams.Add(KEY.AUTO_CLASSIFY, false);
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
-
-            ///////////  Classifier Parameters ///////////
-            ParametersMap defaultClassifierParams = new ParametersMap();
-            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY, false);
-            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
-            defaultClassifierParams.Add(KEY.CLASSIFIER_ALPHA, 0.001);
-            defaultClassifierParams.Add(KEY.CLASSIFIER_STEPS, new[] { 1 });
-
-            DEFAULTS_CLASSIFIER = defaultClassifierParams;
-            defaultParams.AddAll(DEFAULTS_CLASSIFIER);
 
             ////////////////// KNNClassifier Defaults ///////////////////
             ParametersMap defaultKNNParams = new ParametersMap();
@@ -142,7 +135,7 @@ namespace HTM.Net
         /// Constant values representing configuration parameters for the <see cref="TemporalMemory"/>
         /// </summary>
         [Serializable]
-        public sealed class KEY
+        public sealed class KEY : ISerializable
         {
             /////////// Universal Parameters ///////////
             /// <summary>
@@ -221,7 +214,7 @@ namespace HTM.Net
              */
             public static readonly KEY PREDICTED_SEGMENT_DECREMENT = new KEY("predictedSegmentDecrement", typeof(double), 0.0, 9.0);
             /** Remove this and add Logging (slf4j) */
-            public static readonly KEY TM_VERBOSITY = new KEY("tmVerbosity", typeof(int), 0, 10);
+            // public static readonly KEY TM_VERBOSITY = new KEY("tmVerbosity", typeof(int), 0, 10);
 
 
             /////////// Spatial Pooler Parameters ///////////
@@ -317,10 +310,11 @@ namespace HTM.Net
             /// Network Layer indicator for auto classifier generation
             /// </summary>
             public static readonly KEY AUTO_CLASSIFY = new KEY("hasClassifiers", typeof(bool));
-            public static readonly KEY AUTO_CLASSIFY_TYPE = new KEY("defaultClassifierType", typeof(IClassifier));
-            public static readonly KEY CLASSIFIER_ALPHA = new KEY("classifierAlpha", typeof(double));
-            public static readonly KEY CLASSIFIER_STEPS = new KEY("classifierSteps", typeof(int[]));
 
+            /// <summary>
+            /// Maps encoder input field name to type of classifier to be used for them
+            /// </summary>
+            public static readonly KEY INFERRED_FIELDS = new KEY("inferredFields", typeof(IDictionary<string, Type>)); // Map<String, Classifier.class>
 
             // How many bits to use if encoding the respective date fields.
             // e.g. Tuple(bits to use:int, radius:double)
@@ -353,12 +347,7 @@ namespace HTM.Net
             public static readonly KEY ANOMALY_KEY_USE_MOVING_AVG = new KEY("useMovingAverage", typeof(bool));
             public static readonly KEY ANOMALY_KEY_WINDOW_SIZE = new KEY("slidingWindowSize", typeof(int));
             public static readonly KEY ANOMALY_KEY_IS_WEIGHTED = new KEY("isWeighted", typeof(bool));
-            // config
-            public static readonly KEY ANOMALY_KEY_DIST = new KEY("distribution", typeof(Statistic));
-            public static readonly KEY ANOMALY_KEY_MVG_AVG = new KEY("movingAverage", typeof(MovingAverage));
-            public static readonly KEY ANOMALY_KEY_HIST_LIKE = new KEY("historicalLikelihoods", typeof(double[]));
-            public static readonly KEY ANOMALY_KEY_HIST_VALUES = new KEY("historicalValues", typeof(double[]));
-            public static readonly KEY ANOMALY_KEY_TOTAL = new KEY("total", typeof(double));
+            
             // Computational argument keys
             public static readonly KEY ANOMALY_KEY_MEAN = new KEY("mean", typeof(double));
             public static readonly KEY ANOMALY_KEY_STDEV = new KEY("stdev", typeof(double));
@@ -472,7 +461,8 @@ namespace HTM.Net
                 return null;
             }
 
-            internal readonly string fieldName;
+            private readonly string fieldName;
+            [NonSerialized]
             private readonly Type fieldType;
             private readonly double? min;
             private readonly double? max;
@@ -505,8 +495,35 @@ namespace HTM.Net
                 this.max = max;
             }
 
+            public KEY(SerializationInfo info, StreamingContext context)
+            {
+                fieldName = info.GetString(nameof(fieldName));
+                var fieldTypeName = info.GetString(nameof(fieldType));
+                fieldType = Type.GetType(fieldTypeName, true);
+                min = info.GetValue(nameof(min), typeof(double?)) != null ? info.GetDouble(nameof(min)) : null;
+                max = info.GetValue(nameof(max), typeof(double?)) != null ? info.GetDouble(nameof(max)) : null;
+            }
+
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                info.AddValue(nameof(fieldName), fieldName);
+                info.AddValue(nameof(fieldType), fieldType.AssemblyQualifiedName);
+                info.AddValue(nameof(min), min);
+                info.AddValue(nameof(max), max);
+            }
+
             public Type GetFieldType()
             {
+                return fieldType;
+            }
+
+            public Type GetFieldTypeSerializable()
+            {
+                if (fieldType == typeof(IDictionary<string, Type>))
+                {
+                    return typeof(IDictionary<string, string>);
+                }
+
                 return fieldType;
             }
 
@@ -544,8 +561,6 @@ namespace HTM.Net
                 return GetFieldName();
             }
 
-
-
             public override bool Equals(object obj)
             {
                 if (this == obj)
@@ -563,7 +578,10 @@ namespace HTM.Net
 
             private bool Equals(KEY other)
             {
-                return string.Equals(fieldName, other.fieldName) && Equals(fieldType, other.fieldType) && min.Equals(other.min) && max.Equals(other.max);
+                return string.Equals(fieldName, other.fieldName) 
+                       && Equals(fieldType, other.fieldType) 
+                       && min.Equals(other.min) 
+                       && max.Equals(other.max);
             }
 
             public override int GetHashCode()
@@ -619,12 +637,12 @@ namespace HTM.Net
             {
                 if (value != null)
                 {
-                    if (!(value is Type) && !key.GetFieldType().IsInstanceOfType(value))
+                    if (!(value is Type) && !key.GetFieldTypeSerializable().IsInstanceOfType(value))
                     {
                         throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));
                     }
-                    if ((value is Type) && !key.GetFieldType().IsAssignableFrom((Type)value))
+                    if ((value is Type) && !key.GetFieldTypeSerializable().IsAssignableFrom((Type)value))
                     {
                         throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
                             , key.GetFieldName(), key.GetFieldType()));
@@ -649,12 +667,7 @@ namespace HTM.Net
             }
         }
 
-        /// <summary>
-        /// Map of parameters to their values
-        /// </summary>
-        private ParametersMap paramMap = new ParametersMap();
-
-        //TODO apply from container to parameters
+        // TODO apply from container to parameters
 
         /// <summary>
         /// Returns the size of the internal parameter storage.
@@ -760,7 +773,7 @@ namespace HTM.Net
          * It is private. Only allow instantiation with Factory methods.
          * This way we will never have erroneous Parameters with missing attributes
          */
-        private Parameters()
+        internal Parameters()
         {
         }
 
@@ -778,7 +791,18 @@ namespace HTM.Net
             {
                 foreach (KEY key in presentKeys)
                 {
-                    beanUtil.SetSimpleProperty(cn, key.fieldName, GetParameterByKey(key));
+                    if ((cn is Connections) &&
+                        (key == KEY.SYN_PERM_BELOW_STIMULUS_INC || key == KEY.SYN_PERM_TRIM_THRESHOLD))
+                    {
+                        continue;
+                    }
+
+                    if (key == KEY.RANDOM)
+                    {
+                        //((IRandom)GetParameterByKey(key)).SetSeed((long)GetParameterByKey(KEY.SEED));
+                    }
+
+                    beanUtil.SetSimpleProperty(cn, key.GetFieldName(), GetParameterByKey(key));
                 }
             }
         }
@@ -835,7 +859,17 @@ namespace HTM.Net
         /// <param name="value"></param>
         public void SetParameterByKey(KEY key, object value)
         {
-            paramMap.Add(key, value);
+            // avoid serialization issue
+            if (key == KEY.INFERRED_FIELDS)
+            {
+                var dict = (IDictionary<string, Type>)value;
+                var converted = dict.ToDictionary(k => k.Key, v => v.Value?.AssemblyQualifiedName);
+                paramMap.Add(key, converted);
+            }
+            else
+            {
+                paramMap.Add(key, value);
+            }
         }
 
         /**
@@ -846,10 +880,18 @@ namespace HTM.Net
          */
         public object GetParameterByKey(KEY key, object defaultValue = null)
         {
+            if (paramMap.ContainsKey(key) && key == KEY.INFERRED_FIELDS)
+            {
+                var dict = (IDictionary<string, string>)paramMap[key];
+                var converted = dict.ToDictionary(k => k.Key, v => !string.IsNullOrWhiteSpace(v.Value) ? Type.GetType(v.Value, true) : null);
+                return converted;
+            }
+            
             if (paramMap.ContainsKey(key))
             {
                 return paramMap[key];
             }
+
             return defaultValue;
         }
 
