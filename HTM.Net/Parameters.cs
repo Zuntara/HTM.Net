@@ -863,7 +863,7 @@ namespace HTM.Net
             if (key == KEY.INFERRED_FIELDS)
             {
                 var dict = (IDictionary<string, Type>)value;
-                var converted = dict.ToDictionary(k => k.Key, v => v.Value.AssemblyQualifiedName);
+                var converted = dict.ToDictionary(k => k.Key, v => v.Value?.AssemblyQualifiedName);
                 paramMap.Add(key, converted);
             }
             else
@@ -883,7 +883,7 @@ namespace HTM.Net
             if (paramMap.ContainsKey(key) && key == KEY.INFERRED_FIELDS)
             {
                 var dict = (IDictionary<string, string>)paramMap[key];
-                var converted = dict.ToDictionary(k => k.Key, v => Type.GetType(v.Value, true));
+                var converted = dict.ToDictionary(k => k.Key, v => !string.IsNullOrWhiteSpace(v.Value) ? Type.GetType(v.Value, true) : null);
                 return converted;
             }
             
