@@ -8,12 +8,47 @@
 		<RootNamespace>HTM.Net</RootNamespace>
 		<AssemblyName>HTM.Net</AssemblyName>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageProjectUrl>https://github.com/Zuntara/HTM.Net</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>numenta.png</PackageIcon>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>Numenta, HTM, NuPic</PackageTags>
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<AssemblyVersion>1.0.1.0</AssemblyVersion>
+		<FileVersion>1.0.1.0</FileVersion>
+		<Authors>Slaets Filip, Numenta</Authors>
+		<Version>1.0.1</Version>
+		<Description>Hierarchical Temporal Memory (HTM)</Description>
+		<RepositoryUrl>https://github.com/Zuntara/HTM.Net.git</RepositoryUrl>
+		<Copyright>Slaets Filip, Numenta</Copyright>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="LICENSE.txt" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
 			<_Parameter1>HTM.Net.Tests</_Parameter1>
 		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="..\numenta.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+		<EmbeddedResource Include="..\LICENSE.txt">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
 	</ItemGroup>
 
 	<ItemGroup>
