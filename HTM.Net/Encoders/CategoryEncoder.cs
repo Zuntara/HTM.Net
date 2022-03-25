@@ -129,7 +129,6 @@ namespace HTM.Net.Encoders
             scalarEncoder.SetN(n);
 
 
-
             if (GetWidth() != width)
             {
                 throw new InvalidOperationException(
@@ -178,6 +177,10 @@ namespace HTM.Net.Encoders
                         input, val, value, Arrays.ToString(output)));
         }
 
+        public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
+        {
+            EncodeIntoArray(o as string, tempArray);
+        }
 
         public TResult Decode<TResult>(int[] encoded, string parentFieldName)
             where TResult : Tuple

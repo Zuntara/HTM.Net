@@ -428,7 +428,15 @@ namespace HTM.Net.Encoders
             {
                 return date;
             }
-            return DateTime.Parse(dateTimeStr, customFormatter);
+            if (DateTime.TryParse(dateTimeStr, customFormatter, DateTimeStyles.None, out date))
+            {
+                return date;
+            }
+            if (DateTime.TryParse(dateTimeStr, out date))
+            {
+                return date;
+            }
+            return DateTime.Parse(dateTimeStr, DateTimeFormatInfo.InvariantInfo);
         }
 
         /**

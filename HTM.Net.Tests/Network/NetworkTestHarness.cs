@@ -166,10 +166,10 @@ namespace HTM.Net.Tests.Network
             return p;
         }
 
-        /**
-         * Parameters and meta information for the "dayOfWeek" encoder
-         * @return
-         */
+        /// <summary>
+        /// Parameters and meta information for the "dayOfWeek" encoder
+        /// </summary>
+        /// <returns></returns>
         public static Map<string, Map<string, object>> GetDayDemoFieldEncodingMap()
         {
             Map<string, Map<string, object>> fieldEncodings = SetupMap(

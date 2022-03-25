@@ -692,7 +692,7 @@ namespace HTM.Net.Tests.Network
             Parameters p = NetworkTestHarness.GetParameters().Copy();
             p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.RANDOM, new XorshiftRandom(42));
-            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
 
             Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(
                 ObservableSensor<string[]>.Create, SensorParams.Create(SensorParams.Keys.Obs, new object[] {"name",

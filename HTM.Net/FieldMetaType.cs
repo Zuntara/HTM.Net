@@ -94,7 +94,7 @@ namespace HTM.Net
                 case FieldMetaType.List:
                 case FieldMetaType.String: return ChangeType<T>(input);
                 case FieldMetaType.DateTime: return ChangeType<T>(((DateEncoder)enc).Parse(input));
-                case FieldMetaType.Boolean: return ChangeType<T>(bool.Parse(input) == true ? 1 : 0);
+                case FieldMetaType.Boolean: return ChangeType<T>(bool.Parse(input) == true ? 1.0d : 0.0d);
                 case FieldMetaType.Coord:
                 case FieldMetaType.Geo:
                     {
@@ -145,6 +145,7 @@ namespace HTM.Net
             {
                 case "char":
                 case "string":
+                case "nvarchar":
                 case "category":
                     {
                         return FieldMetaType.String;
@@ -152,6 +153,7 @@ namespace HTM.Net
                 case "date":
                 case "date time":
                 case "datetime":
+                case "datetime2":
                 case "time":
                     {
                         return FieldMetaType.DateTime;
@@ -166,6 +168,7 @@ namespace HTM.Net
                 case "float":
                 case "number":
                 case "numeral":
+                case "real":
                 case "num":
                 case "scalar":
                 case "floating point":

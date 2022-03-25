@@ -807,13 +807,12 @@ namespace HTM.Net
             }
         }
 
-        /**
-         * Copies the specified parameters into this {@code Parameters}
-         * object over writing the intersecting keys and values.
-         * @param p     the Parameters to perform a union with.
-         * @return      this Parameters object combined with the specified
-         *              Parameters object.
-         */
+        /// <summary>
+        /// Copies the specified parameters into this <see cref="Parameters"/>
+        /// object over writing the intersecting keys and values.
+        /// </summary>
+        /// <param name="p">the Parameters to perform a union with.</param>
+        /// <returns>this Parameters object combined with the specified <see cref="Parameters"/> object.</returns>
         public Parameters Union(Parameters p)
         {
             foreach (KEY k in p.paramMap.Keys)

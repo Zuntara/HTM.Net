@@ -14,8 +14,6 @@ namespace HTM.Net.Network.Sensor
 
         IDictionary<string, object> GetInputMap();
 
-        void SetEncoder(MultiEncoder encoder);
-
         /// <summary>
         /// DO NOT CALL THIS METHOD! 
         /// Used internally by deserialization routines.
@@ -66,6 +64,7 @@ namespace HTM.Net.Network.Sensor
         private Map<int, IEncoder> indexToEncoderMap;
         private Map<string, int> indexFieldMap = new Map<string, int>();
 
+        private bool encodersInitted;
 
         //private IEnumerator mainIterator;
         //private List<LinkedList<int[]>> fanOuts = new List<LinkedList<int[]>>();
@@ -211,6 +210,15 @@ namespace HTM.Net.Network.Sensor
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Returns the class of the underling <see cref="Sensor{T}"/>
+        /// </summary>
+        /// <returns></returns>
+        public Type GetSensorClass()
+        {
+            return @delegate.GetType();
         }
 
         /**
@@ -833,13 +841,23 @@ namespace HTM.Net.Network.Sensor
 
             Map<string, Map<string, object>> encoderSettings;
             if ((encoderSettings = (Map<string, Map<string, object>>)p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null &&
-                !encoder.GetEncoders().Any() &&
-                    indexToEncoderMap == null)
+                !encodersInitted)
             {
 
                 InitEncoders(encoderSettings);
                 MakeIndexEncoderMap();
+
+                encodersInitted = true;
             }
+        }
+
+        /// <summary>
+        /// Returns a flag indicating whether the internal encoders of this sensor have been initialized. 
+        /// </summary>
+        /// <returns></returns>
+        public bool EncodersInitialized()
+        {
+            return encodersInitted;
         }
 
         /**
@@ -885,11 +903,6 @@ namespace HTM.Net.Network.Sensor
         public override MultiEncoder GetEncoder()
         {
             return (MultiEncoder)encoder;
-        }
-
-        public void SetEncoder(MultiEncoder encoder)
-        {
-            this.encoder = encoder;
         }
 
         public override int GetHashCode()

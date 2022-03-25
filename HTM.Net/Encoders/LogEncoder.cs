@@ -239,6 +239,11 @@ namespace HTM.Net.Encoders
             }
         }
 
+        public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
+        {
+            EncodeIntoArray((double)o, tempArray);
+        }
+
         /**
          * {@inheritDoc}
          */

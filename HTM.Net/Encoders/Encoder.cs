@@ -672,10 +672,7 @@ namespace HTM.Net.Encoders
          */
         public abstract void EncodeIntoArray(T inputData, int[] output);
 
-        public virtual void EncodeIntoArrayUntyped(object o, int[] tempArray)
-        {
-            throw new NotImplementedException("Implement in child class");
-        }
+        public abstract void EncodeIntoArrayUntyped(object o, int[] tempArray);
 
         /**
          * Set whether learning is enabled.

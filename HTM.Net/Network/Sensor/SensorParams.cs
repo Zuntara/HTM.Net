@@ -62,7 +62,7 @@ namespace HTM.Net.Network.Sensor
             }
             public static Keys.Args Db()
             {
-                return Keys.Args.O;
+                return Keys.Args.D;
             }
         }
 

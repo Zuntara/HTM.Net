@@ -125,7 +125,7 @@ namespace HTM.Net.Encoders
     public class ScalarEncoder : Encoder<double>
     {
         [NonSerialized]
-        private static readonly ILog LOGGER = LogManager.GetLogger(typeof(ScalarEncoder));
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(ScalarEncoder));
 
         /**
 	     * Constructs a new {@code ScalarEncoder}
@@ -202,10 +202,10 @@ namespace HTM.Net.Encoders
                 if ((GetMinVal() % ((int)GetMinVal())) > 0 ||
                     (GetMaxVal() % ((int)GetMaxVal())) > 0)
                 {
-                    SetName("[" + GetMinVal() + ":" + GetMaxVal() + "]");
+                    SetName($"[{GetMinVal()}:{GetMaxVal()}]");
                 }
                 else {
-                    SetName("[" + (int)GetMinVal() + ":" + (int)GetMaxVal() + "]");
+                    SetName($"[{(int)GetMinVal()}:{(int)GetMaxVal()}]");
                 }
             }
 
@@ -214,7 +214,7 @@ namespace HTM.Net.Encoders
             {
                 CheckReasonableSettings();
             }
-            description.Add(new Tuple((name = GetName()).Equals("None") ? "[" + (int)GetMinVal() + ":" + (int)GetMaxVal() + "]" : name, 0));
+            description.Add(new Tuple((name = GetName()).Equals("None") ? $"[{(int)GetMinVal()}:{(int)GetMaxVal()}]" : name, 0));
         }
 
         /**
@@ -290,7 +290,7 @@ namespace HTM.Net.Encoders
 	 */
         public int? GetFirstOnBit(double input)
         {
-            if (input == SENTINEL_VALUE_FOR_MISSING_DATA)
+            if (double.IsNaN(input))
             {
                 return null;
             }
@@ -299,12 +299,12 @@ namespace HTM.Net.Encoders
                 {
                     if (ClipInput() && !IsPeriodic())
                     {
-                        LOGGER.Info("Clipped input " + GetName() + "=" + input + " to minval " + GetMinVal());
+                        Logger.Info($"Clipped input {GetName()}={input} to minval {GetMinVal()}");
                         input = GetMinVal();
                     }
                     else {
-                        throw new InvalidOperationException("input (" + input + ") less than range (" +
-                           GetMinVal() + " - " + GetMaxVal());
+                        throw new InvalidOperationException(
+                            $"input ({input}) less than range ({GetMinVal()} - {GetMaxVal()}");
                     }
                 }
             }
@@ -313,8 +313,8 @@ namespace HTM.Net.Encoders
             {
                 if (input >= GetMaxVal())
                 {
-                    throw new InvalidOperationException("input (" + input + ") greater than periodic range (" +
-                       GetMinVal() + " - " + GetMaxVal());
+                    throw new InvalidOperationException(
+                        $"input ({input}) greater than periodic range ({GetMinVal()} - {GetMaxVal()}");
                 }
             }
             else {
@@ -322,12 +322,12 @@ namespace HTM.Net.Encoders
                 {
                     if (ClipInput())
                     {
-                        LOGGER.Info("Clipped input " + GetName() + "=" + input + " to maxval " + GetMaxVal());
+                        Logger.Info($"Clipped input {GetName()}={input} to maxval {GetMaxVal()}");
                         input = GetMaxVal();
                     }
                     else {
-                        throw new InvalidOperationException("input (" + input + ") greater than periodic range (" +
-                           GetMinVal() + " - " + GetMaxVal());
+                        throw new InvalidOperationException(
+                            $"input ({input}) greater than periodic range ({GetMinVal()} - {GetMaxVal()}");
                     }
                 }
             }
@@ -449,15 +449,15 @@ namespace HTM.Net.Encoders
             }
 
             // Added guard against immense string concatenation
-            if (LOGGER.IsDebugEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                LOGGER.Debug("");
-                LOGGER.Debug("input: " + input);
-                LOGGER.Debug("range: " + GetMinVal() + " - " + GetMaxVal());
-                LOGGER.Debug("n:" + GetN() + "w:" + GetW() + "resolution:" + GetResolution() +
-                    "radius:" + GetRadius() + "periodic:" + IsPeriodic());
-                LOGGER.Debug("output: " + Arrays.ToString(output));
-                LOGGER.Debug("input desc: " + Decode(output, ""));
+                Logger.Debug("");
+                Logger.Debug($"input: {input}");
+                Logger.Debug($"range: {GetMinVal()} - {GetMaxVal()}");
+                Logger.Debug(
+                    $"n:{GetN()} w:{GetW()} resolution:{GetResolution()} radius:{GetRadius()} periodic:{IsPeriodic()}");
+                Logger.Debug($"output: {Arrays.ToString(output)}");
+                Logger.Debug($"input desc: {Decode(output, "")}");
             }
         }
 
@@ -532,9 +532,8 @@ namespace HTM.Net.Encoders
                 }
             }
 
-            LOGGER.Debug("raw output:" + Arrays.ToString(
-                    ArrayUtils.Sub(encoded, ArrayUtils.Range(0, GetN()))));
-            LOGGER.Debug("filtered output:" + Arrays.ToString(tmpOutput));
+            Logger.Debug($"raw output: {Arrays.ToString(ArrayUtils.Sub(encoded, ArrayUtils.Range(0, GetN())))}");
+            Logger.Debug($"filtered output: {Arrays.ToString(tmpOutput)}");
 
             // ------------------------------------------------------------------------
             // Find each run of 1's.

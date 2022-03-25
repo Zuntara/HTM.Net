@@ -74,6 +74,10 @@ namespace HTM.Net.Encoders
                 Array.Copy(tempArray, 0, output, offset, tempArray.Length);
             }
         }
+        public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
+        {
+            EncodeIntoArray(o, tempArray);
+        }
 
         public int[] EncodeField(string fieldName, object value)
         {

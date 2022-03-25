@@ -124,6 +124,11 @@ namespace HTM.Net.Encoders
             }
         }
 
+        public override void EncodeIntoArrayUntyped(object o, int[] tempArray)
+        {
+            EncodeIntoArray((T)o, tempArray);
+        }
+
         /**
          * Not much real work to do here as this concept doesn't really apply.
          */
