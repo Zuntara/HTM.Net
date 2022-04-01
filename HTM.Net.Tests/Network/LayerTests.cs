@@ -191,6 +191,7 @@ namespace HTM.Net.Tests.Network
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                Assert.Fail();
             }
         }
 

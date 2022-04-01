@@ -64,7 +64,7 @@ namespace HTM.Net.Algorithms
 
         public void InitMatrices(Connections c)
         {
-            Control.TryUseNativeMKL();
+            bool ok = Control.TryUseNativeMKL();
             Control.ConfigureAuto();
 
             //Control.UseMultiThreading();
@@ -845,6 +845,7 @@ namespace HTM.Net.Algorithms
             var winnersBeforeSort = ArrayUtils.Range(0, overlaps.Length)
                 .Select(i => new Tuple<int, double>(i, overlaps[i]))
                 .ToList();
+            c.InitializeLambdas();
             winnersBeforeSort.Sort(c.inhibitionComparator);
 
             int[] sortedWinnerIndices = winnersBeforeSort.Select(p => p.Item1).ToArray();

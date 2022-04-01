@@ -203,7 +203,7 @@ namespace HTM.Net.Model
         protected int seed = 42;
         /** The random number generator */
         //[NonSerialized]
-        public IRandom random = new MersenneTwister(42);
+        public IRandom random = new UniversalRandomSource(42);
 
         //private Type randomGeneratorType;
 
@@ -226,6 +226,16 @@ namespace HTM.Net.Model
 
         public Connections()
         {
+            InitializeLambdas();
+        }
+
+        internal void InitializeLambdas()
+        {
+            if (segmentPositionSortKey != null)
+            {
+                return;
+            }
+
             segmentPositionSortKey = (s1, s2) =>
             {
                 double c1 = s1.GetParentCell().GetIndex() + ((double)(s1.GetOrdinal() / (double)nextSegmentOrdinal));
@@ -257,12 +267,13 @@ namespace HTM.Net.Model
         //    return this;
         //}
 
-        //public override Connections PostDeSerialize()
-        //{
-        //    // Put random generator in again
-        //    random = (IRandom)Activator.CreateInstance(randomGeneratorType, seed);
-        //    return this;
-        //}
+        public override object PostDeSerialize()
+        {
+            //    // Put random generator in again
+            //    random = (IRandom)Activator.CreateInstance(randomGeneratorType, seed);
+            InitializeLambdas();
+            return this;
+        }
 
         /**
          * Returns a deep copy of this {@code Connections} object.

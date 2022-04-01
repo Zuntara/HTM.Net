@@ -146,8 +146,6 @@ namespace HTM.Net.Network
         /// </summary>
         private List<EncoderTuple> _encoderTuples;
 
-        private bool _autoCreateClassifiers;
-
         /// <summary>
         /// Creates a new <see cref="ILayer"/> using the <see cref="Network"/> level <see cref="Parameters"/>
         /// </summary>
@@ -280,7 +278,8 @@ namespace HTM.Net.Network
             {
                 if (Encoder.GetEncoders(Encoder) == null || Encoder.GetEncoders(Encoder).Count < 1)
                 {
-                    if (Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) == null || ((Map<string, Map<string, object>>)Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)).Count < 1)
+                    if (Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP) == null 
+                        || ((Map<string, Map<string, object>>)Params.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)).Count < 1)
                     {
                         Logger.Error("No field encoding map found for specified MultiEncoder");
                         throw new InvalidOperationException("No field encoding map found for specified MultiEncoder");

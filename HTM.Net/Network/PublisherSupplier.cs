@@ -52,13 +52,19 @@ namespace HTM.Net.Network
     {
         private static readonly long serialVersionUID = 1L;
 
-        /** The parent network this supplier services */
+        /// <summary>
+        /// The parent network this supplier services
+        /// </summary>
         private Network network;
 
-        /** 3 Header lines used during csv parsing of input and type determination */
-        private List<String> headers = new List<String>();
+        /// <summary>
+        /// 3 Header lines used during csv parsing of input and type determination
+        /// </summary>
+        private List<string> headers = new List<string>();
 
-        /** last created Publisher instance */
+        /// <summary>
+        /// last created Publisher instance
+        /// </summary>
         [NonSerialized]
         private volatile Publisher suppliedInstance;
 

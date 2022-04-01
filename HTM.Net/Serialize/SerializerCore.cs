@@ -3,21 +3,41 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using HTM.Net.Model;
-using log4net;
+
+using Newtonsoft.Json;
 
 namespace HTM.Net.Serialize
 {
     [Serializable]
     public class SerializerCore : Persistable
     {
-        protected static readonly ILog LOGGER = LogManager.GetLogger(typeof(SerializerCore));
-
         [NonSerialized]
         private Type[] _classes;
 
         public SerializerCore(params Type[] classes)
         {
-            this._classes = classes;
+            _classes = classes;
+        }
+
+        public string SerializeJson<T>(T instance)
+            where T : IPersistable
+        {
+            string serialized;
+            try
+            {
+                serialized = JsonConvert.SerializeObject(instance);
+            }
+            catch (Exception e)
+            {
+                throw new SerializationException("failure in serialization", e);
+            }
+            return serialized;
+        }
+
+        public T DeserializeJson<T>(string content)
+            where T : IPersistable
+        {
+            return JsonConvert.DeserializeObject<T>(content);
         }
 
         public byte[] Serialize<T>(T instance)

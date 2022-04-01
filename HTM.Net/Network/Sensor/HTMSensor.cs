@@ -840,10 +840,9 @@ namespace HTM.Net.Network.Sensor
             localParameters = p;
 
             Map<string, Map<string, object>> encoderSettings;
-            if ((encoderSettings = (Map<string, Map<string, object>>)p.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null &&
-                !encodersInitted)
+            if (!encodersInitted 
+                && (encoderSettings = (Map<string, Map<string, object>>)p?.GetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP)) != null)
             {
-
                 InitEncoders(encoderSettings);
                 MakeIndexEncoderMap();
 

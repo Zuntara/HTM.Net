@@ -449,26 +449,8 @@ namespace HTM.Net.Network
                 tail.NotifyComplete();
             });
 
-            //inputRegion.Observe().Subscribe(new Observer<IInference>() {
-            //ManualInput localInf = new ManualInput();
-
-            //@Override public void onCompleted()
-            //{
-            //tail.notifyComplete();
-            //}
-            //@Override public void onError(Throwable e) { e.printStackTrace(); }
-            //@SuppressWarnings("unchecked")
-            //    @Override public void onNext(IInference i)
-            //{
-            //localInf.sdr(i.getSDR()).recordNum(i.getRecordNum()).classifierInput(i.getClassifierInput()).layerInput(i.getSDR());
-            //if (i.getSDR().length > 0)
-            //{
-            //    ((Layer<IInference>)tail).compute(localInf);
-            //}
-            //}
-            //});
             // Set the upstream region
-            this.upstreamRegion = inputRegion;
+            upstreamRegion = inputRegion;
             inputRegion.downstreamRegion = this;
 
             return this;
@@ -504,7 +486,7 @@ namespace HTM.Net.Network
          */
         public ILayer GetHead()
         {
-            return this.head;
+            return head;
         }
 
         /**
@@ -515,7 +497,7 @@ namespace HTM.Net.Network
          */
         public ILayer GetTail()
         {
-            return this.tail;
+            return tail;
         }
 
         /**
@@ -616,9 +598,8 @@ namespace HTM.Net.Network
                     {
                         throw new InvalidOperationException("Detected misconfigured Region too many or too few sinks.");
                     }
-                    var enumerator = temp.GetEnumerator();
-                    enumerator.MoveNext();
-                    tail = enumerator.Current;
+                    
+                    tail = temp.Single();
                 }
 
                 if (head == null)
@@ -629,9 +610,8 @@ namespace HTM.Net.Network
                     {
                         throw new InvalidOperationException("Detected misconfigured Region too many or too few sources.");
                     }
-                    var enumerator = temp.GetEnumerator();
-                    enumerator.MoveNext();
-                    head = enumerator.Current;
+
+                    head = temp.Single();
                 }
 
                 regionObservable = head.Observe();
@@ -653,7 +633,26 @@ namespace HTM.Net.Network
             where I : Layer<IInference>
             where O : Layer<IInference>
         {
-            if (assemblyClosed)
+            ManualInput localInf = new ManualInput();
+            @out.Subscribe(new AnonymousObserver<IInference>(
+                i =>
+                {
+                    if (layersDistinct)
+                    {
+                        @in.Compute(i);
+                    }
+                    else
+                    {
+                        localInf.SetSdr(i.GetSdr()).SetRecordNum(i.GetRecordNum()).SetLayerInput(i.GetSdr());
+                        @in.Compute(localInf);
+                    }
+                },
+                e => Console.WriteLine(e),
+                () =>
+                {
+                    @in.NotifyComplete();
+                }));
+            /*if (assemblyClosed)
             {
                 throw new InvalidOperationException("Cannot add Layers when Region has already been closed.");
             }
@@ -696,7 +695,7 @@ namespace HTM.Net.Network
             }, Console.WriteLine, () =>
             {
                 @in.NotifyComplete();
-            }));
+            }));*/
 
             //    @out.subscribe(new Subscriber<IInference>() {
             //        ManualInput localInf = new ManualInput();

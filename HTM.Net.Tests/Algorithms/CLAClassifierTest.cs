@@ -224,7 +224,7 @@ namespace HTM.Net.Tests.Algorithms
             byte[] data = api.Write(_classifier, "testSerializeClassifier");
 
             // 2. Deserialize
-            CLAClassifier serialized = api.Read<CLAClassifier>(data);
+            CLAClassifier serialized = api.ReadContent<CLAClassifier>(data);
 
             // Using the deserialized classifier, continue test
             classification.Add("bucketIdx", 4);

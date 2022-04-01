@@ -188,7 +188,7 @@ namespace HTM.Net.Network
          *    
          * @return  the reified type &lt;R&gt;
          */
-        TRead Read<TRead>(byte[] serializedBytes) where TRead : IPersistable;
+        TRead ReadContent<TRead>(byte[] serializedBytes) where TRead : IPersistable;
         /**
          * Persists the {@link Persistable} subclass to the file system using the 
          * pre-configured {@link SerialConfig} specified at the time this object was
@@ -262,7 +262,6 @@ namespace HTM.Net.Network
          * @return
          */
         string GetCurrentPath();
-
     }
 
     /**
@@ -324,19 +323,24 @@ namespace HTM.Net.Network
 
             protected static readonly ILog LOGGER = LogManager.GetLogger(typeof(IPersistenceAPI));
 
-            /** Time stamped serialization file format */
+            // Time stamped serialization file format
             //public static DateTimeFormatInfo CHECKPOINT_TIMESTAMP_FORMAT = DateTimeFormat.forPattern(SerialConfig.CHECKPOINT_FORMAT_STRING);
             //private DateTimeFormatInfo checkPointFormatter = CHECKPOINT_TIMESTAMP_FORMAT;
 
-            /** Indicates the underlying file settings */
+            /// <summary>
+            /// Indicates the underlying file settings
+            /// </summary>
             private SerialConfig serialConfig;
 
-            /** Stores the bytes of the last serialized object or null if there was a problem */
+            /// <summary>
+            /// Stores the bytes of the last serialized object or null if there was a problem
+            /// </summary>
             private static byte[] lastBytes;
-            /** 
-             * All instances in this classloader will share the same atomic reference to the last 
-             * checkpoint file name holder which is perfectly fine.
-             */
+
+            /// <summary>
+            /// All instances in this classloader will share the same atomic reference
+            /// to the last checkpoint file name holder which is perfectly fine.
+            /// </summary>
             private static string lastCheckPointFileName;
 
             private SerializerCore defaultSerializer = new SerializerCore();
@@ -441,10 +445,10 @@ namespace HTM.Net.Network
                     LOGGER.Error($"Exception in reading: {e}");
                     throw;
                 }
-                return Read<TRead>(bytes);
+                return ReadContent<TRead>(bytes);
             }
 
-            public TRead Read<TRead>(byte[] serializedBytes) where TRead : IPersistable
+            public TRead ReadContent<TRead>(byte[] serializedBytes) where TRead : IPersistable
             {
                 LOGGER.Debug("PersistenceAccess reify(byte[]) called ...");
 

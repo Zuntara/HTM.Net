@@ -14,6 +14,9 @@ using HTM.Net.Serialize;
 using HTM.Net.Tests.Algorithms;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using Newtonsoft.Json;
+
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Tests.Network
@@ -116,7 +119,7 @@ namespace HTM.Net.Tests.Network
             byte[] data = api.Write(p, "testSerializeParameters");
 
             // 2. deserialize
-            Parameters serialized = api.Read<Parameters>(data);
+            Parameters serialized = api.ReadContent<Parameters>(data);
 
             Assert.IsTrue(p.Keys().Count == serialized.Keys().Count);
             Assert.IsTrue(p.IsDeepEqual(serialized));
@@ -157,7 +160,7 @@ namespace HTM.Net.Tests.Network
             byte[] data = api.Write(con);
 
             // 2. deserialize
-            Connections serialized = api.Read<Connections>(data);
+            Connections serialized = api.ReadContent<Connections>(data);
             Assert.IsTrue(con.IsDeepEqual(serialized));
 
             serialized.PrintParameters();
@@ -173,7 +176,7 @@ namespace HTM.Net.Tests.Network
             }
 
             // 3. reify from file
-            Connections fromFile = api.Read<Connections>(data);
+            Connections fromFile = api.ReadContent<Connections>(data);
             Assert.IsTrue(con.IsDeepEqual(fromFile));
             for (int i = 0; i < con.GetNumColumns(); i++)
             {
@@ -198,7 +201,7 @@ namespace HTM.Net.Tests.Network
             IPersistenceAPI api = Persistence.Get(config);
 
             byte[] bytes = api.Write(cn);
-            Connections serializedConnections = api.Read<Connections>(bytes);
+            Connections serializedConnections = api.ReadContent<Connections>(bytes);
 
             Net.Network.Network network2 = CreateAndRunTestTemporalMemoryNetwork();
             ILayer l2 = network2.Lookup("r1").Lookup("1");
@@ -224,7 +227,7 @@ namespace HTM.Net.Tests.Network
 
             byte[] bytes = api.Write(cn);
             //Serialize above Connections for comparison with same run but unserialized below...
-            Connections serializedConnections = api.Read<Connections>(bytes);
+            Connections serializedConnections = api.ReadContent<Connections>(bytes);
 
             Net.Network.Network network2 = CreateAndRunTestSpatialPoolerNetwork(0, 6);
             ILayer l2 = network2.Lookup("r1").Lookup("1");
@@ -256,7 +259,7 @@ namespace HTM.Net.Tests.Network
             IPersistenceAPI api = Persistence.Get(config);
 
             byte[] bytes = api.Write(sensor);
-            HTMSensor<FileInfo> serializedSensor = api.Read<HTMSensor<FileInfo>>(bytes);
+            HTMSensor<FileInfo> serializedSensor = api.ReadContent<HTMSensor<FileInfo>>(bytes);
 
             bool b = serializedSensor.IsDeepEqual(sensor);
             DeepCompare(serializedSensor, sensor);
@@ -278,7 +281,7 @@ namespace HTM.Net.Tests.Network
             byte[] bytes = api.Write(sensor);
             Assert.IsNotNull(bytes);
             Assert.IsTrue(bytes.Length > 0);
-            HTMSensor<FileInfo> serializedSensor = api.Read<HTMSensor<FileInfo>>(bytes);
+            HTMSensor<FileInfo> serializedSensor = api.ReadContent<HTMSensor<FileInfo>>(bytes);
 
             bool b = serializedSensor.IsDeepEqual(sensor);
             DeepCompare(serializedSensor, sensor);
@@ -300,12 +303,94 @@ namespace HTM.Net.Tests.Network
             IPersistenceAPI api = Persistence.Get(config);
 
             byte[] bytes = api.Write(oSensor);
-            ObservableSensor<string[]> serializedOSensor = api.Read<ObservableSensor<string[]>>(bytes);
+            ObservableSensor<string[]> serializedOSensor = api.ReadContent<ObservableSensor<string[]>>(bytes);
 
             bool b = serializedOSensor.IsDeepEqual(oSensor);
             DeepCompare(serializedOSensor, oSensor);
             Assert.IsTrue(b);
         }
+
+        [TestMethod]
+        public void TestSerializeObservableSensor_Other_Init()
+        {
+            PublisherSupplier supplier = PublisherSupplier.GetBuilder()
+                                                          .AddHeader("dayOfWeek")
+                                                          .AddHeader("float")
+                                                          .AddHeader("B").Build();
+
+            SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, "name", supplier);
+            Sensor<ObservableSensor<string[]>> oSensor = Sensor<ObservableSensor<string[]>>
+                .Create(ObservableSensor<string[]>.Create, parms);
+
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetDayDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new UniversalRandomSource(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("dayOfWeek", typeof(CLAClassifier)));
+
+            oSensor.InitEncoder(p);
+
+            SerialConfig config = new SerialConfig("testSerializeObservableSensor", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+
+            byte[] bytes = api.Write(oSensor);
+            Sensor<ObservableSensor<string[]>> serializedOSensor = api.ReadContent<Sensor<ObservableSensor<string[]>>>(bytes);
+
+            bool b = serializedOSensor.IsDeepEqual(oSensor);
+            DeepCompare(serializedOSensor, oSensor);
+            Assert.IsTrue(b);
+        }
+
+        [TestMethod]
+        public void TestSerializeObservableSensor2()
+        {
+            PublisherSupplier supplier = PublisherSupplier.GetBuilder()
+                                                          .AddHeader("consumption")
+                                                          .AddHeader("float")
+                                                          .AddHeader("B").Build();
+
+            SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, "", supplier);
+            Sensor<ObservableSensor<string[]>> oSensor = Sensor<ObservableSensor<string[]>>
+                .Create(ObservableSensor<string[]>.Create, parms);
+
+            SerialConfig config = new SerialConfig("testSerializeObservableSensor2", SerialConfig.SERIAL_TEST_DIR);
+            IPersistenceAPI api = Persistence.Get(config);
+
+            Parameters p = NetworkTestHarness.GetParameters();
+            p = p.Union(NetworkTestHarness.GetNetworkDemoTestEncoderParams());
+            p.SetParameterByKey(Parameters.KEY.RANDOM, new UniversalRandomSource(42));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
+
+            p.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new[] { 4 });
+            p.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new[] { 4 });
+            p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 2);
+
+            Net.Network.Network network = Net.Network.Network.Create("test network", p)
+                                             .Add(Net.Network.Network.CreateRegion("r1")
+                                                     .Add(Net.Network.Network.CreateLayer("2", p)
+                                                             .Add(Anomaly.Create())
+                                                             .Add(new TemporalMemory()))
+                                                     .Add(Net.Network.Network.CreateLayer("3", p)
+                                                             .Add(new SpatialPooler()))
+                                                     .Connect("2", "3"))
+                                             .Add(Net.Network.Network.CreateRegion("r2")
+                                                     .Add(Net.Network.Network.CreateLayer("1", p)
+                                                             .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                                                             .Add(new TemporalMemory())
+                                                             .Add(new SpatialPooler())
+                                                             .Add(oSensor)))
+                                             .Connect("r1", "r2");
+
+            api.Store(network);
+
+            var loaded = api.Load("testSerializeObservableSensor2");
+            
+            Sensor<ObservableSensor<string[]>> serializedOSensor = (Sensor<ObservableSensor<string[]>>)loaded.GetSensor();
+
+            bool b = serializedOSensor.IsDeepEqual(oSensor);
+            DeepCompare(serializedOSensor, oSensor);
+            Assert.IsTrue(b);
+        }
+
         //////////////////////////////////End HTMSensors ////////////////////////////////////
 
         /////////////////////
@@ -339,7 +424,7 @@ namespace HTM.Net.Tests.Network
             Assert.AreEqual(2.0 / 3.0, score, 0);
 
             // Deserialize the Anomaly Computer and make sure its usable (same tests as AnomalyTest.java)
-            Anomaly serializedAnomalyComputer = api.Read<Anomaly>(bytes);
+            Anomaly serializedAnomalyComputer = api.ReadContent<Anomaly>(bytes);
             score = serializedAnomalyComputer.Compute(new int[0], new int[0], 0, 0);
             Assert.AreEqual(0.0, score, 0);
 
@@ -370,7 +455,7 @@ namespace HTM.Net.Tests.Network
             byte[] bytes = api.Write(anomalyComputer);
 
             // Deserialize the Anomaly Computer and make sure its usable (same tests as AnomalyTest.java)
-            Anomaly serializedAnomalyComputer = api.Read<Anomaly>(bytes);
+            Anomaly serializedAnomalyComputer = api.ReadContent<Anomaly>(bytes);
             Assert.IsNotNull(serializedAnomalyComputer);
 
             Object[] predicted =
@@ -409,7 +494,7 @@ namespace HTM.Net.Tests.Network
             byte[] bytes = api.Write(an);
 
             // Deserialize the Anomaly Computer and make sure its usable (same tests as AnomalyTest.java)
-            Anomaly serializedAn = api.Read<Anomaly>(bytes);
+            Anomaly serializedAn = api.ReadContent<Anomaly>(bytes);
             Assert.IsNotNull(serializedAn);
         }
 
@@ -427,7 +512,7 @@ namespace HTM.Net.Tests.Network
             byte[] bytes = api.Write(an);
 
             // Deserialize the Anomaly Computer and make sure its usable (same tests as AnomalyTest.java)
-            AnomalyLikelihood serializedAn = api.Read<AnomalyLikelihood>(bytes);
+            AnomalyLikelihood serializedAn = api.ReadContent<AnomalyLikelihood>(bytes);
             Assert.IsNotNull(serializedAn);
 
             //----------------------------------------
@@ -612,7 +697,7 @@ namespace HTM.Net.Tests.Network
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                Assert.Fail();
+                Assert.Fail(e.ToString());
             }
         }
 

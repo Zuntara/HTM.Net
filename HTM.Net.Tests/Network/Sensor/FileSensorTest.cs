@@ -2,6 +2,8 @@
 using HTM.Net.Datagen;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Tests.Properties;
+using HTM.Net.Util;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Tests.Network.Sensor
