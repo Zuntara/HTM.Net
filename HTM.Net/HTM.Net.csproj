@@ -52,13 +52,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="DeepEqual" Version="2.0.0" />
-	  <PackageReference Include="log4net" Version="2.0.14" />
-	  <PackageReference Include="MathNet.Numerics" Version="4.15.0" />
-	  <PackageReference Include="MathNet.Numerics.MKL.Win" Version="2.5.0" />
-	  <PackageReference Include="MathNet.Numerics.MKL.Win-x64" Version="2.5.0" />
-	  <PackageReference Include="Microsoft.Data.SqlClient" Version="4.1.0" />
-	  <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+	  <PackageReference Include="DeepEqual" Version="4.2.1" />
+	  <PackageReference Include="log4net" Version="2.0.15" />
+	  <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+	  <PackageReference Include="MathNet.Numerics.MKL.Win" Version="3.0.0" />
+	  <PackageReference Include="MathNet.Numerics.MKL.Win-x64" Version="3.0.0" />
+	  <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.0" />
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 	  <PackageReference Include="System.Reactive" Version="5.0.0" />
 	</ItemGroup>
 </Project>
