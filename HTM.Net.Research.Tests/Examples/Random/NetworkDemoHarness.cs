@@ -1,4 +1,5 @@
-﻿using HTM.Net.Encoders;
+﻿using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.Random
@@ -243,13 +244,14 @@ namespace HTM.Net.Research.Tests.Examples.Random
         public static Parameters GetParameters()
         {
             Parameters parameters = Parameters.GetAllDefaultParameters();
-            parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 128 });
-            parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 300, 20 }); // 1000,20
+            parameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 256 });
+            parameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 200, 4 }); // 1000,20
             parameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 3);
 
             // Classifier Specific
-            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0057);
+            parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.0257);
             parameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1,2,3,4,5,/*6,7,8,9,10*/ });
+            parameters.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(SDRClassifier));
 
             // SpatialPooler specific
             parameters.SetParameterByKey(Parameters.KEY.POTENTIAL_RADIUS, 13);//3

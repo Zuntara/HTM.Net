@@ -426,7 +426,7 @@ namespace HTM.Net.Algorithms
         private Vector<double> InferSingleStep(HashSet<int> patternNz, SparseMatrix weightMatrix)
         {
             //var filtered = weightMatrix.Where((row, index) => patternNz.Contains(index)).ToList();
-            var filtered = weightMatrix.EnumerateRowsIndexed().AsParallel().Where(t => patternNz.Contains(t.Item1)).Select(t=>t.Item2).ToList();
+            var filtered = weightMatrix.EnumerateRowsIndexed().Where(t => patternNz.Contains(t.Item1)).Select(t=>t.Item2).ToList();
             Vector<double> outputActivation = SparseMatrix.Build.SparseOfRowVectors(filtered).ColumnSums();
 
             //var outputActivation = weightMatrix[patternNZ].sum(axis: 0); // axis 0 = cols, axis 1 = rows

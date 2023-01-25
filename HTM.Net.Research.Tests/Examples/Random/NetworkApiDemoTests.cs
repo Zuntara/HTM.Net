@@ -618,6 +618,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
         [DeploymentItem("Resources\\RandomData.csv")]
         public void RunBasicNetwork()
         {
+            // 3300
             RandomGuessNetworkApi demo = new RandomGuessNetworkApi(200, 20, 0, false);
             demo.RunNetwork();
 
