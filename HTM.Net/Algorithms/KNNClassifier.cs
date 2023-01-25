@@ -1453,7 +1453,7 @@ namespace HTM.Net.Algorithms
                 // Manhatten distance
                 //L1Dist(x, y);
                 double[] dist = new double[RowCount];
-                foreach (Tuple<int, Vector<double>> indexedVector in _backingMatrix.EnumerateRowsIndexed())
+                foreach ((int, Vector<double>) indexedVector in _backingMatrix.EnumerateRowsIndexed())
                 {
                     int index = indexedVector.Item1;
                     var vector = indexedVector.Item2;
@@ -1467,7 +1467,7 @@ namespace HTM.Net.Algorithms
                 // Euler distance
                 //L2Dist(x, y);
                 double[] dist = new double[RowCount];
-                foreach (Tuple<int, Vector<double>> indexedVector in _backingMatrix.EnumerateRowsIndexed())
+                foreach ((int, Vector<double>) indexedVector in _backingMatrix.EnumerateRowsIndexed())
                 {
                     int index = indexedVector.Item1;
                     var vector = indexedVector.Item2;
