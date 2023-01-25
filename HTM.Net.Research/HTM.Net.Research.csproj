@@ -4,7 +4,7 @@
 		<!-- compiler configuration -->
 		<LangVersion>latest</LangVersion>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<TargetFrameworks>net472;net5.0;net6.0</TargetFrameworks>
+		<TargetFramework>net6.0</TargetFramework>
 		<RootNamespace>HTM.Net.Research</RootNamespace>
 		<AssemblyName>HTM.Net.Research</AssemblyName>
 	</PropertyGroup>
