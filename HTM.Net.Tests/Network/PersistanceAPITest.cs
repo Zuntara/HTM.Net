@@ -14,9 +14,6 @@ using HTM.Net.Serialize;
 using HTM.Net.Tests.Algorithms;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-using Newtonsoft.Json;
-
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Tests.Network
@@ -562,7 +559,7 @@ namespace HTM.Net.Tests.Network
             Map<String, Object> classification = new Map<string, object>();
             classification.Add("bucketIdx", 4);
             classification.Add("actValue", 34.7);
-            Classification<double> result = classifier.Compute<double>(recordNum, classification, new int[] { 1, 5, 9 }, true, true);
+            IClassification<double> result = classifier.Compute<double>(recordNum, classification, new int[] { 1, 5, 9 }, true, true);
             recordNum += 1;
 
             classification.Add("bucketIdx", 5);
@@ -1110,7 +1107,7 @@ namespace HTM.Net.Tests.Network
             return (IInference inf, int cellsPerColumn) =>
                 {
 
-                    Classification<Object> result = inf.GetClassification("dayOfWeek");
+                    IClassification<Object> result = inf.GetClassification("dayOfWeek");
                     double day = MapToInputData((int[])inf.GetLayerInput());
                     if (day == 1.0)
                     {

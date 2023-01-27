@@ -904,7 +904,7 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            Classification<object> c = CurrentInference.GetClassification(field);
+            IClassification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
                 Logger.Debug($"No Classification exists for the specified field: {field}");
@@ -930,7 +930,7 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            Classification<object> c = CurrentInference.GetClassification(field);
+            IClassification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
                 Logger.Debug($"No Classification exists for the specified field: {field}");
@@ -952,7 +952,7 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            Classification<object> c = CurrentInference.GetClassification(field);
+            IClassification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
                 Logger.Debug($"No Classification exists for the specified field: {field}");
@@ -973,7 +973,7 @@ namespace HTM.Net.Network
                 throw new InvalidOperationException("Predictions not available. " + "Either classifiers unspecified or inferencing has not yet begun.");
             }
 
-            Classification<object> c = CurrentInference.GetClassification(field);
+            IClassification<object> c = CurrentInference.GetClassification(field);
             if (c == null)
             {
                 Logger.Debug($"No Classification exists for the specified field: {field}");
@@ -1284,6 +1284,11 @@ namespace HTM.Net.Network
                 {
                     Logger.Info($"Classifying \"{et.GetName()}\" input field with SDRClassifier");
                     ca[i] = new SDRClassifier();
+                }
+                else if (typeof(KNNClassifier).IsAssignableFrom(fieldClassifier))
+                {
+                    Logger.Info($"Classifying \"{et.GetName()}\" input field with KNNClassifier");
+                    ca[i] = KNNClassifier.GetBuilder().Build();
                 }
                 else
                 {
@@ -1839,8 +1844,25 @@ namespace HTM.Net.Network
 
             public Func<ManualInput, ManualInput> CreateClassifierFunc()
             {
-                object bucketIdx = null, actValue = null;
-                IDictionary<string, object> inputMap = new CustomGetDictionary<string, object>(k => k.Equals("bucketIdx") ? bucketIdx : actValue);
+                object bucketIdx = null, actValue = null, encoding = null;
+                IDictionary<string, object> inputMap = new CustomGetDictionary<string, object>(k =>
+                {
+                    // invoked lazy
+                    if (k.Equals("bucketIdx"))
+                    {
+                        return bucketIdx;
+                    }
+                    if (k.Equals("actValue"))
+                    {
+                        return actValue;
+                    }
+                    if (k.Equals("encoding"))
+                    {
+                        return encoding;
+                    }
+                    return null;
+                });
+
                 return t1 =>
                 {
                     var ci = t1.GetClassifierInput();
@@ -1850,11 +1872,12 @@ namespace HTM.Net.Network
                         NamedTuple inputs = ci[key];
                         bucketIdx = inputs.Get("bucketIdx");
                         actValue = inputs.Get("inputValue");
+                        encoding = inputs.Get("encoding");
 
                         IClassifier c = t1.GetClassifiers().Get(key) as IClassifier;
                         if (c != null)
                         {
-                            Classification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
+                            IClassification<object> result = c.Compute<object>(recordNum, inputMap, t1.GetSdr(), Layer.IsLearn, true);
 
                             t1.SetRecordNum(recordNum).StoreClassification((string)inputs.Get("name"), result);
                         }

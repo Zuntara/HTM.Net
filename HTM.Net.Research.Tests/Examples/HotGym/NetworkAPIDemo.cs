@@ -16,7 +16,7 @@ using HTM.Net.Util;
 namespace HTM.Net.Research.Tests.Examples.HotGym
 {
     /**
- * Demonstrates the Java version of the NuPIC Network API (NAPI) Demo.
+ * Demonstrates the .NET version of the NuPIC Network API (NAPI) Demo.
  *
  * This demo demonstrates many powerful features of the HTM.java
  * NAPI. Looking at the {@link NetworkAPIDemo#createBasicNetwork()} method demonstrates
@@ -36,7 +36,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
     public class NetworkAPIDemo
     {
         /** 3 modes to choose from to demonstrate network usage */
-        public enum Mode { BASIC_CLA, BASIC_SDR, MULTILAYER, MULTIREGION };
+        public enum Mode { BASIC_CLA, BASIC_SDR, BASIC_KNN, MULTILAYER, MULTIREGION };
 
         private readonly Network.Network _network;
 
@@ -52,6 +52,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             {
                 case Mode.BASIC_CLA: _network = CreateBasicNetworkCla(); break;
                 case Mode.BASIC_SDR: _network = CreateBasicNetworkSdr(); break;
+                case Mode.BASIC_KNN: _network = CreateBasicNetworkKnn(); break;
                 case Mode.MULTILAYER: _network = CreateMultiLayerNetwork(); break;
                 case Mode.MULTIREGION: _network = CreateMultiRegionNetwork(); break;
             }
@@ -113,6 +114,27 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
                 .Add(new Algorithms.SpatialPooler())
                 .Add(Sensor<FileInfo>.Create(FileSensor.Create,
                     SensorParams.Create(SensorParams.Keys.Path, "", "rec-center-hourly.csv")))));
+        }
+
+        internal Network.Network CreateBasicNetworkKnn()
+        {
+            Parameters p = NetworkDemoHarness.GetParameters();
+            p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            //p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(SDRClassifier));
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, 
+                GetInferredFieldsMap("consumption", typeof(KNNClassifier)));
+
+            // This is how easy it is to create a full running Network!
+
+            return Network.Network.Create("Network API Demo", p)
+                .Add(Network.Network.CreateRegion("Region 1")
+                    .Add(Network.Network.CreateLayer("Layer 2/3", p)
+                        .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
+                        .Add(Anomaly.Create())
+                        .Add(new TemporalMemory())
+                        .Add(new Algorithms.SpatialPooler())
+                        .Add(Sensor<FileInfo>.Create(FileSensor.Create,
+                            SensorParams.Create(SensorParams.Keys.Path, "", "rec-center-hourly.csv")))));
         }
 
         /**

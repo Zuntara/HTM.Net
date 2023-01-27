@@ -5,12 +5,44 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Algorithms
 {
+    public interface IClassification
+    {
+        int GetActualValueCount();
+
+        double[] GetStats(int step);
+
+        double GetStat(int step, int bucketIndex);
+
+        void SetStats(int step, double[] votes);
+
+        int GetMostProbableBucketIndex(int step);
+
+        int GetStepCount();
+
+        int GetStatCount(int step);
+
+        int[] StepSet();
+    }
+
+    public interface IClassification<T> : IClassification
+    {
+        Classification<T> Copy();
+
+        T[] GetActualValues();
+
+        T GetActualValue(int bucketIndex);
+
+        void SetActualValues(T[] values);
+
+        T GetMostProbableValue(int step);
+    }
+
     /// <summary>
     /// Container for the results of a classification computation by the <see cref="CLAClassifier"/> and <see cref="SDRClassifier"/>
     /// </summary>
     /// <typeparam name="T">Type of actual value output</typeparam>
     [Serializable]
-    public class Classification<T> : Persistable
+    public class Classification<T> : Persistable, IClassification<T>
     {
         /// <summary>
         /// Array of actual values

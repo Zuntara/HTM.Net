@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
+using Newtonsoft.Json.Linq;
+using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
@@ -92,9 +96,34 @@ namespace HTM.Net.Algorithms
     ///      implies all vectors will be stored. A value of 0.1 implies only vectors
     ///      with at least 10% sparsity will be stored
     /// </summary>
-    public class KNNClassifier
+    [Serializable]
+    public class KNNClassifier : Persistable, IClassifier
     {
         #region Fields
+
+        /// <summary>
+        /// The bit's learning iteration. This is updated each time store() gets called on this bit.
+        /// </summary>
+        private int _learnIteration;
+        /// <summary>
+        /// This contains the offset between the recordNum (provided by caller) and
+        /// learnIteration (internal only, always starts at 0).
+        /// </summary>
+        private int _recordNumMinusLearnIteration = -1;
+        /// <summary>
+        /// History of the last _maxSteps activation patterns. We need to keep
+        /// these so that we can associate the current iteration's classification
+        /// with the activationPattern from N steps ago
+        /// </summary>
+        private Deque<(int iteration, int[] patternNz)> _patternNzHistory;
+        /// <summary>
+        /// This keeps track of the actual value to use for each bucket index. We
+        /// start with 1 bucket, no actual value so that the first infer has something
+        /// to return
+        /// </summary>
+        private readonly List<object> _actualValues = new List<object>();
+
+        private string g_debugPrefix = "KNNClassifier";
 
         /// <summary>
         /// The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b>
@@ -232,7 +261,14 @@ namespace HTM.Net.Algorithms
          * Privately constructs a {@code KNNClassifier}. 
          * This method is called by the
          */
-        private KNNClassifier() { }
+        private KNNClassifier()
+        {
+            // History of the last _maxSteps activation patterns. We need to keep 
+            // these so that we can associate the current iteration's classification 
+            // with the activationPattern from N steps ago 
+            _patternNzHistory = new Deque<(int iteration, int[] patternNz)>(10);
+            Steps = new[] { -1 };
+        }
 
         /**
          * Returns a {@link Builder} used to fully construct a {@code KNNClassifier}
@@ -284,15 +320,115 @@ namespace HTM.Net.Algorithms
             _nextTrainingIndices = null;
         }
 
-        public KnnClassification Compute(Vector<double> inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1
-            , bool computeScores = true, bool overCategories = true, bool infer = true, bool learn = true)
+        /// <summary>
+        /// Process one input sample. This method is called by the runtime engine.
+        /// .. note::the number of input categories may vary, but the array size is
+        /// fixed to the max number of categories allowed(by a lower region), so
+        /// "unused" indices of the input category array are filled with - 1s.
+        /// TODO: confusion matrix does not support multi - label classification
+        /// :param inputs: (dict)mapping region input names to numpy.array values
+        /// :param outputs: (dict)mapping region output names to numpy.arrays that
+        /// should be populated with output values by this method
+        /// https://github.com/numenta/nupic/blob/b9ebedaf54f49a33de22d8d44dff7c765cdb5548/src/nupic/regions/knn_classifier_region.py#L41
+        /// </returns>
+        public IClassification<T> Compute<T>(
+            int recordNum,
+            IDictionary<string, object> classification,
+            int[] patternNZ,
+            bool learn,
+            bool infer)
+        {
+            if (learn == false && infer == false) 
+                throw new InvalidOperationException("learn and infer cannot be both false");
+
+            /*if (typeof(T) != typeof(double[]))
+            {
+                throw new InvalidOperationException($"T must be double[] and is {typeof(T).Name}");
+            }*/
+
+            // Save the offset between recordNum and learnIteration if this is the first compute
+            if (_recordNumMinusLearnIteration == -1)
+            {
+                _recordNumMinusLearnIteration = recordNum - _learnIteration;
+            }
+
+            // Update the learn iteration
+            _learnIteration = recordNum - _recordNumMinusLearnIteration;
+
+            if (Verbosity >= 1)
+            {
+                Console.WriteLine($"\n{g_debugPrefix}: compute ");
+                Console.WriteLine($" recordNum: {recordNum}");
+                Console.WriteLine($" learnIteration: {_learnIteration}");
+                Console.WriteLine($" patternNZ({patternNZ.Length}): {Arrays.ToString(patternNZ)}");
+                Console.WriteLine($" classificationIn: {classification}");
+            }
+
+            // Store pattern in our history
+            _patternNzHistory.Append((_learnIteration, patternNZ));
+
+            // To allow multi-class classification, we need to be able to run learning
+            // without inference being on. So initialize retval outside
+            // of the inference block.
+            KnnClassification retVal = null;
+
+            // --------------------------------------------------------------------
+            // Inference:
+            // For each active bit in the activationPattern, get the classification votes
+            int[] encoding = (int[])classification["encoding"];
+            Vector<double> inputPattern = Vector<double>.Build.DenseOfArray(encoding.Select(p=>(double)p).ToArray());
+            if (infer)
+            {
+                retVal = Infer(inputPattern);
+            }
+
+            if (learn && classification["bucketIdx"] != null)
+            {
+                // Get classification info
+                int bucketIdx = (int)classification["bucketIdx"];
+                //double[] value = (double[])classification["actValue"];
+                //int category = (int)classification["category"];
+
+                int patterns = Learn(inputPattern, bucketIdx);
+                retVal?.SetNumPatterns(patterns);
+            }
+
+            // ------------------------------------------------------------------------
+            // Verbose print
+            if (infer && Verbosity >= 1)
+            {
+                Console.WriteLine(" inference: combined bucket likelihoods:");
+                Console.WriteLine("   actual bucket values: " + Arrays.ToString(retVal.GetActualValues()));
+
+                foreach (int key in retVal.StepSet())
+                {
+                    if (retVal.GetActualValue(key) == null) continue;
+
+                    double[] actual = { (double)retVal.GetActualValue(key) };
+                    Console.WriteLine($"  {key} steps: {PFormatArray(actual)}");
+                    int bestBucketIdx = retVal.GetMostProbableBucketIndex(key);
+                    Console.WriteLine($"   most likely bucket idx: {bestBucketIdx}, value: {retVal.GetActualValue(bestBucketIdx)} ");
+                }
+            }
+
+            return (IClassification<T>)retVal;
+        }
+
+        private KnnClassification Compute(
+            Vector<double> inputPattern,
+            int inputCategory,
+            int? partitionId = null,
+            int isSparse = 0,
+            int rowId = -1,
+            bool infer = true,
+            bool learn = true)
         {
             KnnClassification retVal = new KnnClassification();
 
             if (infer)
             {
-                var inferResult = Infer(inputPattern, computeScores, overCategories, partitionId);
-                retVal.SetInferResult(inferResult);
+                retVal = Infer(inputPattern, partitionId);
+                retVal.SetActualValues(inputPattern.ToArray().Cast<object>().ToArray());
             }
 
             if (learn)
@@ -300,37 +436,36 @@ namespace HTM.Net.Algorithms
                 int numPatterns = Learn(inputPattern, inputCategory, partitionId, isSparse, rowId);
                 retVal.SetNumPatterns(numPatterns);
             }
+
             return retVal;
         }
 
-        /**
-         * Train the classifier to associate specified input pattern with a
-         * particular category.
-         * 
-         * @param inputPattern      The pattern to be assigned a category. If
-         *                          isSparse is 0, this should be a dense array (both ON and OFF bits
-         *                          present). Otherwise, if isSparse > 0, this should be a list of the
-         *                          indices of the non-zero bits in sorted order
-         *                          
-         * @param inputCategory     The category to be associated with the training pattern
-         * 
-         * @param partitionId       allows you to associate an id with each
-         *                          input vector. It can be used to associate input patterns stored in the
-         *                          classifier with an external id. This can be useful for debugging or
-         *                          visualizing. Another use case is to ignore vectors with a specific id
-         *                          during inference (see description of infer() for details). There can be
-         *                          at most one partitionId per stored pattern (i.e. if two patterns are
-         *                          within distThreshold, only the first partitionId will be stored). This
-         *                          is an optional parameter.
-         *                          
-         * @param sparseSpec        If 0, the input pattern is a dense representation. If
-         *                          isSparse > 0, the input pattern is a list of non-zero indices and
-         *                          isSparse is the length of the sparse representation
-         *                          
-         * @param rowID             Computed internally if not specified (i.e. for tests)
-         *                          
-         * @return                  The number of patterns currently stored in the classifier
-         */
+        /// <summary>
+        /// Train the classifier to associate specified input pattern with a particular category.
+        /// </summary>
+        /// <param name="inputPattern">The pattern to be assigned a category. If
+        /// isSparse is 0, this should be a dense array(both ON and OFF bits
+        /// present). Otherwise, if isSparse > 0, this should be a list of the
+        /// indices of the non-zero bits in sorted order</param>
+        /// <param name="inputCategory">The category to be associated to the training pattern</param>
+        /// <param name="partitionId">partitionID allows you to associate an id with each
+        /// input vector.It can be used to associate input patterns stored in the
+        /// classifier with an external id. This can be useful for debugging or
+        /// visualizing.Another use case is to ignore vectors with a specific id
+        /// during inference (see description of infer() for details). There can be
+        /// at most one partitionId per stored pattern(i.e. if two patterns are
+        /// within distThreshold, only the first partitionId will be stored). This
+        /// is an optional parameter.</param>
+        /// <param name="isSparse">
+        /// 0 if the input pattern is a dense representation.
+        /// When the input pattern is a list of non-zero indices, then isSparse
+        /// is the number of total bits(n). E.g. for the dense array
+        /// [0, 1, 1, 0, 0, 1], isSparse should be `0`. For the equivalent sparse
+        /// representation[1, 2, 5] (which specifies the indices of active bits),
+        /// isSparse should be `6`, which is the total number of bits in the input
+        /// space.</param>
+        /// <param name="rowId">Computed internally if not specified (i.e. for tests)</param>
+        /// <returns>The number of patterns currently stored in the classifier</returns>
         public int Learn(Vector<double> inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1)
         {
             int inputWidth = 0;
@@ -590,23 +725,57 @@ namespace HTM.Net.Algorithms
             return _numPatterns;
         }
 
+        /// <summary>
+        /// Train the classifier to associate specified input pattern with a particular category.
+        /// </summary>
+        /// <param name="inputPattern">The pattern to be assigned a category. If
+        /// isSparse is 0, this should be a dense array(both ON and OFF bits
+        /// present). Otherwise, if isSparse > 0, this should be a list of the
+        /// indices of the non-zero bits in sorted order</param>
+        /// <param name="inputCategory">The category to be associated to the training pattern</param>
+        /// <param name="partitionId">partitionID allows you to associate an id with each
+        /// input vector.It can be used to associate input patterns stored in the
+        /// classifier with an external id. This can be useful for debugging or
+        /// visualizing.Another use case is to ignore vectors with a specific id
+        /// during inference (see description of infer() for details). There can be
+        /// at most one partitionId per stored pattern(i.e. if two patterns are
+        /// within distThreshold, only the first partitionId will be stored). This
+        /// is an optional parameter.</param>
+        /// <param name="isSparse">
+        /// 0 if the input pattern is a dense representation.
+        /// When the input pattern is a list of non-zero indices, then isSparse
+        /// is the number of total bits(n). E.g. for the dense array
+        /// [0, 1, 1, 0, 0, 1], isSparse should be `0`. For the equivalent sparse
+        /// representation[1, 2, 5] (which specifies the indices of active bits),
+        /// isSparse should be `6`, which is the total number of bits in the input
+        /// space.</param>
+        /// <param name="rowId">Computed internally if not specified (i.e. for tests)</param>
+        /// <returns>The number of patterns currently stored in the classifier</returns>
         public int Learn(double[] inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0,
             int rowId = -1)
         {
-            return Learn(Vector.Build.SparseOfArray(inputPattern), inputCategory, partitionId, isSparse, rowId);
+            return Learn(Vector.Build.DenseOfArray(inputPattern), inputCategory, partitionId, isSparse, rowId);
         }
 
         /// <summary>
         /// Finds the category that best matches the input pattern. Returns the
         /// winning category index as well as a distribution over all categories.
         /// </summary>
-        /// <param name="inputPattern"> (list) A pattern to be classified</param>
-        /// <param name="computeScores">NO EFFECT</param>
-        /// <param name="overCategories">NO EFFECT</param>
-        /// <param name="partitionId"></param>
+        /// <param name="inputPattern">The pattern to be classified. This
+        /// must be a dense representation of the array(e.g. [0, 0, 1, 1, 0, 1])</param>
+        /// <param name="partitionId">
+        /// If provided, all training vectors with partitionId
+        /// equal to that of the input pattern are ignored.
+        /// For example, this may be used to perform k-fold cross validation
+        /// without repopulating the classifier.First partition all the data into
+        /// k equal partitions numbered 0, 1, 2, ... and then call learn() for each
+        /// vector passing in its partitionId.Then, during inference, by passing
+        /// in the partition ID in the call to infer(), all other vectors with the
+        /// same partitionId are ignored simulating the effect of repopulating the
+        /// classifier while ommitting the training vectors in the same partition.</param>
         /// <returns></returns>
-        public KnnInferResult Infer(
-            Vector<double> inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
+        public KnnClassification Infer(
+            Vector<double> inputPattern, int? partitionId = null)
         {
             int? winner;
             Vector<double> inferenceResult;
@@ -680,13 +849,16 @@ namespace HTM.Net.Algorithms
               print "  pct neighbors of each category:", inferenceResult
               print "  dist of each prototype:", dist
               print "  dist of each category:", categoryDist*/
-            return new KnnInferResult(new[] { "winner", "inference", "protoDistance", "categoryDistances" }, winner, inferenceResult, dist, categoryDist);
+            var classification = new KnnClassification();
+            classification.SetInferResult(
+                new KnnInferResult(new[] { "winner", "inference", "protoDistance", "categoryDistances" }, winner, inferenceResult, dist, categoryDist));
+            return classification;
         }
 
-        public KnnInferResult Infer(
-            double[] inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
+        public KnnClassification Infer(
+            double[] inputPattern, int? partitionId = null)
         {
-            return Infer(Vector.Build.DenseOfArray(inputPattern), computeScores, overCategories, partitionId);
+            return Infer(Vector.Build.DenseOfArray(inputPattern), partitionId);
         }
 
         /// <summary>
@@ -699,9 +871,10 @@ namespace HTM.Net.Algorithms
         {
             if (!relativeThreshold)
             {
+                var vec = inputPattern.PointwiseMultiply(Vector<double>.Abs(inputPattern));
                 inputPattern = Vector<double>.Build.SparseOfArray(
-                    inputPattern
-                    .Select(i => (i * Math.Abs(i)) > sparseThreshold ? i : 0.0)
+                    vec
+                    .Select((i, idx) => (i) > sparseThreshold ? inputPattern[idx] : 0.0)
                     .ToArray());
             }
             else if (sparseThreshold > 0)
@@ -717,7 +890,7 @@ namespace HTM.Net.Algorithms
             {
                 if ((numWinners > 0) && (numWinners < inputPattern.Where(i => i > 0).Sum()))
                 {
-                    Vector<double> sparseInput = Vector<double>.Build.Sparse(inputPattern.Count);
+                    Vector<double> sparseInput = Vector<double>.Build.Dense(inputPattern.Count);
                     int[] sorted = ArrayUtils.Argsort(inputPattern, 0, numWinners);
                     inputPattern = ArrayUtils.Subst(sparseInput, inputPattern, sorted);
                     // double[] sparseInput = (double[])Array.CreateInstance(typeof(double), ArrayUtils.Shape(inputPattern));
@@ -728,7 +901,7 @@ namespace HTM.Net.Algorithms
 
             if (doBinarization)
             {
-                inputPattern = Vector<double>.Build.SparseOfArray(
+                inputPattern = Vector<double>.Build.DenseOfArray(
                     inputPattern.Select(d => d > binarizationThreshold ? 1.0 : 0.0).ToArray());
             }
 
@@ -789,7 +962,7 @@ namespace HTM.Net.Algorithms
             _a = Matrix<double>.Build.DenseOfRowArrays(ArrayUtils.Sub(_a.ToRowArrays(), _mean.ToArray()));
 
             //var svd = _a.SubMatrix(0, numSvdSamples, 0, _a.ColumnCount).Svd(true);
-            var svd = DenseMatrix.OfRowArrays(_a.ToRowArrays().Take(numSvdSamples)).Svd(true);
+            var svd = Matrix<double>.Build.DenseOfRowArrays(_a.ToRowArrays().Take(numSvdSamples)).Svd(true);
             _vt = svd.VT;
             _s = svd.S;
             if (finalize)
@@ -1226,6 +1399,26 @@ namespace HTM.Net.Algorithms
             }
         }
 
+        /**
+         * Return a string with pretty-print of an array using the given format
+         * for each element
+         * 
+         * @param arr
+         * @return
+         */
+        private string PFormatArray<T>(T[] arr)
+        {
+            if (arr == null) return "";
+
+            StringBuilder sb = new StringBuilder("[ ");
+            foreach (T t in arr)
+            {
+                sb.Append($"{t:#.00}s");
+            }
+            sb.Append(" ]");
+            return sb.ToString();
+        }
+
         #endregion
 
         #region Accessor Methods
@@ -1527,6 +1720,11 @@ namespace HTM.Net.Algorithms
             /// <returns></returns>
             public Builder K(int k)
             {
+                if (k % 2 == 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(k), "Must be odd");
+                }
+
                 _fieldHolder._k = k;
                 return this;
             }
@@ -1743,8 +1941,13 @@ namespace HTM.Net.Algorithms
         }
 
         #endregion
+
+        public int Verbosity { get; set; }
+
+        public int[] Steps { get; set; }
     }
 
+    [Serializable]
     public class KnnInferResult : NamedTuple
     {
         public KnnInferResult(string[] keys, params object[] objects) : base(keys, objects)
@@ -1798,6 +2001,7 @@ namespace HTM.Net.Algorithms
     }
 
     //Utils
+    [Serializable]
     public class NearestNeighbor
     {
         private Matrix<double> _backingMatrix;
@@ -1872,7 +2076,7 @@ namespace HTM.Net.Algorithms
             Debug.Assert(RowCount > 0, "No vector stored yet");
             Debug.Assert(distanceNorm > 0.0, "Invalid value for parameter p: " + distanceNorm + " only positive values are supported");
 
-            DenseVector inputVector = DenseVector.OfArray(inputPattern);
+            Vector<double> inputVector = Vector<double>.Build.DenseOfArray(inputPattern);
 
             if (distanceNorm == 0.0)
             {
@@ -1925,7 +2129,7 @@ namespace HTM.Net.Algorithms
             {
                 // Manhatten distance
                 //L1Dist(x, y);
-                Vector<double> dist = Vector<double>.Build.Dense(RowCount);
+                Vector<double> dist = Vector<double>.Build.Sparse(RowCount);
                 foreach ((int, Vector<double>) indexedVector in _backingMatrix.EnumerateRowsIndexed())
                 {
                     int index = indexedVector.Item1;
@@ -1939,7 +2143,7 @@ namespace HTM.Net.Algorithms
             {
                 // Euler distance
                 //L2Dist(x, y);
-                Vector<double> dist = Vector<double>.Build.Dense(RowCount);// new double[RowCount];
+                Vector<double> dist = Vector<double>.Build.Sparse(RowCount);// new double[RowCount];
                 foreach ((int, Vector<double>) indexedVector in _backingMatrix.EnumerateRowsIndexed())
                 {
                     int index = indexedVector.Item1;
@@ -1976,7 +2180,7 @@ namespace HTM.Net.Algorithms
             }
             else
             {
-                _backingMatrix = _backingMatrix.InsertRow(row, new DenseVector(denseVector));
+                _backingMatrix = _backingMatrix.InsertRow(row, Vector<double>.Build.DenseOfArray(denseVector));
             }
 
             _addedRows++;
@@ -2015,7 +2219,7 @@ namespace HTM.Net.Algorithms
 
         public double[] RightVecSumAtNz(double[] values)
         {
-            return _backingMatrix.Multiply(new DenseVector(values)).ToArray();
+            return _backingMatrix.Multiply(Vector<double>.Build.DenseOfArray(values)).ToArray();
         }
 
         public Vector<double> RightVecSumAtNz(Vector<double> values)
@@ -2024,6 +2228,7 @@ namespace HTM.Net.Algorithms
         }
     }
 
+    [Serializable]
     public enum DistanceMethod
     {
         Norm,
@@ -2033,423 +2238,9 @@ namespace HTM.Net.Algorithms
         PctLargerOverlap
     }
 
+    [Serializable]
     public enum KnnMode
     {
         ADAPTIVE = -1
     }
-
-    #region Unused code at the moment
-
-    //public class NearestNeighbor2 : SparseBinaryMatrix
-    //{
-    //    public NearestNeighbor2()
-    //        : base(new[] { 0, 0 })
-    //    {
-
-    //    }
-
-    //    public NearestNeighbor2(int nrows, int ncols)
-    //        : base(new[] { nrows, ncols })
-    //    {
-    //        if (ncols == 0) throw new InvalidOperationException("Input width must be greater than 0.");
-    //    }
-
-    //    ///**
-    //    // * Constructs a new {@code NearestNeighbor} matrix
-    //    // * @param inputWidth
-    //    // * @param isSparse
-    //    // */
-    //    //public NearestNeighbor(int inputWidth, bool isSparse)
-    //    //{
-    //    //    if (inputWidth < 1)
-    //    //    {
-    //    //        throw new InvalidOperationException("Input width must be greater than 0.");
-    //    //    }
-
-    //    //    this._isSparse = isSparse;
-    //    //}
-
-    //    public double[] VecLpDist(double distanceNorm, double[] inputPattern, bool takeRoot = false)
-    //    {
-    //        /*
-    //        nupic::NumpyVectorT<nupic::Real ## N2> x(xIn);
-    //        nupic::NumpyVectorT<nupic::Real ## N2> output(self->nRows());
-    //        self->LpDist(p, x.addressOf(0), output.addressOf(0), take_root);
-    //        return output.forPython();
-    //        */
-    //        double[] output = new double[nRows()];
-    //        LpDist(distanceNorm, inputPattern, output, takeRoot);
-    //        return output;
-    //    }
-
-    //    private void LpDist(double p, double[] x, double[] y, bool takeRoot)
-    //    {
-    //        Debug.Assert(nRows() > 0, "No vector stored yet");
-    //        Debug.Assert(p > 0.0, "Invalid value for parameter p: " + p + " only positive values are supported");
-    //        if (p == 0.0)
-    //        {
-    //            L0Dist(x, y);
-    //            return;
-    //        }
-    //        if (p == 1.0)
-    //        {
-    //            L1Dist(x, y);
-    //            return;
-    //        }
-    //        if (p == 2.0)
-    //        {
-    //            L2Dist(x, y);
-    //            return;
-    //        }
-    //        //all_rows_dist_(x, y, )
-    //    }
-
-    //    private void L0Dist(double[] x, double[] y)
-    //    {
-    //        Debug.Assert(nRows() > 0, "No vector stored yet");
-    //        int nrows = nRows();
-    //        Lp0 f = new Lp0();
-    //        for (int i = 0, iy = 0; i != nrows; ++i, ++iy)
-    //        {
-    //            y[iy] = one_row_dist_1(i, x, f);
-    //        }
-    //    }
-
-    //    private double one_row_dist_1(int row, double[] x, Lp0 f)
-    //    {
-    //        int ncols = nCols();
-    //        var slice = (SparseByteArray)GetSlice(row);
-    //        var ind = slice.GetSparseIndices().ToArray();
-    //        var nz = slice.GetSparseValues().ToArray();
-    //        double d = 0.0;
-    //        int j = 0, nzIndex = 0;
-
-    //        for (int i = 0; i < ind.Length; i++)
-    //        {
-    //            while (j != i)
-    //            {
-    //                f.Invoke(ref d, x[j++]);
-    //            }
-    //            f.Invoke(ref d, x[j++] - nz[nzIndex++]);
-    //        }
-
-    //        if (j < ncols)
-    //        {
-    //            while (j != ncols)
-    //            {
-    //                f.Invoke(ref d, x[j++]);
-    //            }
-    //        }
-    //        return d;
-    //    }
-
-    //    private void all_rows_dist_(double[] x, double[] y, Lp2 f, bool takeRoot = false)
-    //    {
-    //        // TODO: take over from https://github.com/numenta/nupic.core/blob/99131e2962f09550852ff0b55704e3e855ea8729/src/nupic/math/NearestNeighbor.hpp
-    //        int nrows = nRows();
-    //        double Sp_x = 0.0;
-
-    //        double[] powerCols = new double[x.Length];
-    //        compute_powers_(ref Sp_x, powerCols, x, f);
-
-    //        int yIndex = 0;
-    //        for (int i = 0; i != nrows; ++i, ++yIndex)
-    //        {
-    //            y[yIndex] = sum_of_p_diff_(i, x, Sp_x, powerCols, f);
-    //        }
-    //        if (takeRoot)
-    //        {
-    //            for (int i = 0; i < y.Length; i++)
-    //            {
-    //                y[i] = f.Root(y[i]);
-    //            }
-    //        }
-    //    }
-
-    //    //https://github.com/numenta/nupic.core/blob/99131e2962f09550852ff0b55704e3e855ea8729/src/nupic/math/NearestNeighbor.hpp
-    //    private double sum_of_p_diff_(int row, double[] x, double spX, double[] p_x, Lp2 f)
-    //    {
-    //        var slice = (SparseByteArray)GetSlice(row);
-    //        var ind = slice.GetSparseIndices().ToArray();
-    //        var nz = slice.GetSparseValues().ToArray();
-
-    //        int j = 0;
-    //        int nnzr_ = nz.Length;
-    //        double val = spX, val1 = 0, val2 = 0;
-    //        int end1 = 4 * (nnzr_ / 4);
-    //        int end2 = nnzr_;
-
-    //        int i = 0, iNz = 0;
-    //        while (i != end1)
-    //        {
-    //            j = ind[i++];
-    //            val1 = nz[iNz++] - x[j];
-    //            f.Invoke(ref val, val1);
-    //            val -= p_x[j];
-
-    //            j = ind[i++];
-    //            val2 = nz[iNz++] - x[j];
-    //            f.Invoke(ref val, val2);
-    //            val -= p_x[j];
-
-    //            j = ind[i++];
-    //            val1 = nz[iNz++] - x[j];
-    //            f.Invoke(ref val, val1);
-    //            val -= p_x[j];
-
-    //            j = ind[i++];
-    //            val2 = nz[iNz++] - x[j];
-    //            f.Invoke(ref val, val2);
-    //            val -= p_x[j];
-    //        }
-    //        while (i != end2)
-    //        {
-    //            j = ind[i++];
-    //            val1 = nz[iNz++] - x[j];
-    //            f.Invoke(ref val, val1);
-    //            val -= p_x[j];
-    //        }
-
-    //        if (val <= 0)
-    //        {
-    //            val = 0;
-    //        }
-
-    //        return val;
-    //    }
-
-    //    private void compute_powers_(ref double spX, double[] p_x, double[] x, Lp2 f)
-    //    {
-    //        int ncols = nCols();
-    //        int inputEndIndex1 = 0 + 4 * (ncols / 4);
-    //        int inputEndIndex2 = 0 + (ncols);
-    //        spX = 0;
-    //        int i = 0;
-    //        for (i = 0; i < inputEndIndex1; i += 4)
-    //        {
-    //            p_x[i] = f.Invoke(ref spX, x[i]);
-    //            p_x[i + 1] = f.Invoke(ref spX, x[i + 1]);
-    //            p_x[i + 2] = f.Invoke(ref spX, x[i + 2]);
-    //            p_x[i + 3] = f.Invoke(ref spX, x[i + 3]);
-    //        }
-    //        for (; i < inputEndIndex2; i++)
-    //        {
-    //            p_x[i] = f.Invoke(ref spX, x[i]);
-    //        }
-    //    }
-
-    //    /// <summary>
-    //    /// Computes the distance between vector x and all the rows of this NearestNeighbor, using the L1 (Manhattan) distance:
-    //    /// dist(row, x) = sum(| row[i] - x[i] |)
-    //    /// </summary>
-    //    /// <param name="x">input</param>
-    //    /// <param name="y">output</param>
-    //    private void L1Dist(double[] x, double[] y)
-    //    {
-    //        Debug.Assert(nRows() > 0, "No vector stored yet! (call learn first?)");
-    //        int nrows = nRows(), ncols = nCols();
-    //        double s = 0.0;
-    //        Lp1 f = new Lp1(); // abs() and running sum of abs()
-
-    //        double[] nzb = new double[ncols];
-
-    //        for (int j = 0; j < ncols; j++)
-    //        {
-    //            nzb[j] = f.Invoke(ref s, x[j]);
-    //        }
-    //        for (int i = 0; i < nrows; i++)
-    //        {
-    //            var slice = (SparseByteArray)GetSlice(i);
-    //            var ind = slice.GetSparseIndices().ToArray();
-    //            var nz = slice.GetSparseValues().ToArray();
-    //            int ind_end = nz.Length;
-    //            int iInd = 0;
-    //            double d = s;
-    //            while (iInd != ind_end)
-    //            {
-    //                int j = ind[iInd];
-    //                f.Invoke(ref d, x[j] - nz[iInd]);
-    //                d -= nzb[j];
-    //                iInd++;
-    //            }
-    //            if (d <= 0)
-    //            {
-    //                d = 0;
-    //            }
-    //            y[i] = d;
-    //        }
-    //        /*
-    //        // https://github.com/numenta/nupic.core/blob/99131e2962f09550852ff0b55704e3e855ea8729/src/nupic/math/NearestNeighbor.hpp
-    //        const size_type nrows = this->nRows(), ncols = this->nCols();
-    //        value_type s = 0.0;
-    //        Lp1<value_type> f;
-
-    //        InputIterator x_ptr = x;
-    //        for (size_type j = 0; j != ncols; ++j, ++x_ptr) 
-    //         this->nzb_[j] = f(s, *x_ptr); 
-
-    //        for (size_type i = 0; i != nrows; ++i, ++y) {
-    //         size_type *ind = this->ind_[i], *ind_end = ind + this->nnzr_[i];
-    //         value_type *nz = this->nz_[i], d = s;
-    //         for (; ind != ind_end; ++ind, ++nz) {
-    //             size_type j = *ind;
-    //             f(d, x[j] - *nz);
-    //             d -= this->nzb_[j];
-    //         }
-    //            if (d <= (value_type) 0)
-    //              d = (value_type) 0;
-    //         *y = d;
-    //        }
-    //        */
-    //    }
-    //    private void L2Dist(double[] x, double[] y, bool take_root = false)
-    //    {
-    //        Debug.Assert(nRows() > 0, "No vector stored yet! (call learn first?)");
-    //        all_rows_dist_(x, y, new Lp2(), take_root);
-    //    }
-
-
-
-    //    public int nRows()
-    //    {
-    //        return GetDimensions().First();
-    //    }
-    //    public int nCols()
-    //    {
-    //        return GetDimensions().Last();
-    //    }
-
-    //    public double[] RightVecSumAtNz(double[] inputVector/*, int[][] @base*/)
-    //    {
-    //        /*
-    //        nupic::NumpyVectorT<nupic::Real ## N2> x(xIn);
-    //        nupic::NumpyVectorT<nupic::Real ## N2> y(self->nRows());
-    //        self->rightVecSumAtNZ(x.begin(), y.begin());
-    //        return y.forPython();
-    //        */
-    //        int[] outputVector = new int[nRows()];
-    //        RightVecSumAtNZ(inputVector.Select(d => (int)d).ToArray(), outputVector);
-    //        return outputVector.Select(d => (double)d).ToArray();
-    //        //int[] results = new int[@base.Length];
-    //        //for (int i = 0; i < @base.Length; i++)
-    //        //{
-    //        //    for (int j = 0; j < @base[i].Length; j++)
-    //        //    {
-    //        //        if (inputVector[j] != 0)
-    //        //            results[i] += (inputVector[j] * @base[i][j]);
-    //        //    }
-    //        //}
-    //        //return results;
-    //    }
-
-    //    public int[] RowSums()
-    //    {
-    //        return _backingArray.GetRowSums();
-    //    }
-
-    //    public void AddRow(double[] thresholdedInput)
-    //    {
-    //        SparseByteArray row = SparseByteArray.FromArray(thresholdedInput.Select(d => (byte)d).ToArray());
-    //        base.AddRow(row);
-    //    }
-
-    //    /// <summary>
-    //    /// Adds a row of non-zeros to this SparseMatrix, from two iterators, one on
-    //    /// a container of indices, the other on a container of values corresponding to those indices.
-    //    /// </summary>
-    //    /// <param name="inputPattern"></param>
-    //    /// <param name="nonZeros"></param>
-    //    public void AddRowNonZero(double[] inputPattern, int[] nonZeros)
-    //    {
-    //        byte[] nzrow = new byte[nCols()];
-    //        int i = 0;
-    //        foreach (var dIndex in inputPattern)
-    //        {
-    //            int index = (int)dIndex;
-    //            nzrow[index] = (byte)nonZeros[i++];
-    //        }
-
-    //        // Add a row to this matrix, set the non zero inputs to the value of the nonZero array
-
-    //        SparseByteArray row = SparseByteArray.FromArray(nzrow);
-    //        base.AddRow(row);
-    //    }
-
-    //    public void DeleteRow(int rowIndex)
-    //    {
-    //        _backingArray.RemoveRow(rowIndex);
-    //    }
-
-    //    public double[][] ToDense()
-    //    {
-    //        var m = new DenseMatrix(nRows(), nCols());
-    //        for (int row = 0; row < nRows(); row++)
-    //        {
-    //            m.SetRow(row, _backingArray.GetRow(row).AsDense().Select(d => (double)d).ToArray());
-    //        }
-    //        return m.ToRowArrays();
-    //        //byte[] denseArray = new byte[_backingArray.Length];
-
-    //        //for (int row = 0; row < _backingArray.GetLength(0); row++)
-    //        //{
-    //        //    for (int col = 0; col < _backingArray.GetLength(1); col++)
-    //        //    {
-    //        //        int index = ComputeIndex(new[] { row, col });
-    //        //        denseArray[index] = _backingArray[row, col];
-    //        //    }
-    //        //}
-    //        //return denseArray.Select(d => (double)d).ToArray(); // todo: optimize
-    //    }
-
-    //    public void SetRow(int row, double[] values)
-    //    {
-    //        SparseByteArray srow = SparseByteArray.FromArray(values.Select(d => (byte)d).ToArray());
-    //        _backingArray.SetRow(row, srow);
-    //    }
-    //}
-
-    //public struct Lp0
-    //{
-    //    public double Invoke(ref double a, double b)
-    //    {
-    //        double inc = (b < double.Epsilon || b < double.Epsilon) ? 1.0 : 0.0;
-    //        a += inc;
-    //        return inc;
-    //    }
-    //    public double Root(double x)
-    //    {
-    //        return x;
-    //    }
-    //}
-
-    //public struct Lp1
-    //{
-    //    public double Invoke(ref double a, double b)
-    //    {
-    //        double inc = Math.Abs(b);
-    //        a += inc;
-    //        return inc;
-    //    }
-    //    public double Root(double x)
-    //    {
-    //        return x;
-    //    }
-    //}
-
-    //public struct Lp2
-    //{
-    //    public double Invoke(ref double a, double b)
-    //    {
-    //        double inc = b * b;
-    //        a += inc;
-    //        return inc;
-    //    }
-
-    //    public double Root(double x)
-    //    {
-    //        return Math.Sqrt(x);
-    //    }
-    //}
-
-    #endregion
 }

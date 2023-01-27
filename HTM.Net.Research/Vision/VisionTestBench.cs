@@ -148,7 +148,7 @@ namespace HTM.Net.Research.Vision
                     activeArray = SDRs[SDRI].ToArray();
                     // if there are repeat tags give the index of the first occurrence
                     int category = tags.IndexOf(trainingTags[j]);
-                    int inferred_category = (int)classifier.Infer(activeArray.Select(i => (double)i).ToArray()).Get(0);
+                    int inferred_category = (int)classifier.Infer(activeArray.Select(i => (double)i).ToArray()).GetWinner();
                     if (inferred_category == category)
                     {
                         accuracy += 100.0 / trainingTags.Count;
@@ -204,7 +204,7 @@ namespace HTM.Net.Research.Vision
             {
                 activeArray = SDRs[SDRIs[j]].ToArray();
                 category = tags.IndexOf(testingTags[j]);
-                int inferred_category = (int)classifier.Infer(activeArray.Select(i => (double)i).ToArray()).Get(0);
+                int inferred_category = (int)classifier.Infer(activeArray.Select(i => (double)i).ToArray()).GetWinner();
                 if (inferred_category == category)
                 {
                     accuracy += 100.0 / testingTags.Count;

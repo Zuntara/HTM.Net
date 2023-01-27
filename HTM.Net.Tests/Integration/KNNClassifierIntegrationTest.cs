@@ -50,7 +50,7 @@ namespace HTM.Net.Tests.Integration
 
             int numDims = 10;
             int numClasses = 10;
-            int k = 10;
+            int k = 11;
             int numPatternsPerClass = 100;
             int numPatterns = (int)Math.Round(0.9 * numClasses * numPatternsPerClass);
             int numTests = numClasses * numPatternsPerClass - numPatterns;
@@ -263,7 +263,7 @@ namespace HTM.Net.Tests.Integration
             string failures = string.Empty;
             if (@short != 2)
             {
-                _random = new Random(412);
+                _random = new Random(42);
             }
             else
             {
@@ -299,12 +299,17 @@ namespace HTM.Net.Tests.Integration
                 testDict[i] = new Map<string, object>(patternDict[i]);
                 testDict[i]["pattern"] = patterns[i].Clone();
                 var testPat = (Vector<double>)testDict[i]["pattern"];
-                for (int r = 0; r < 0.02 * patternSize; r++)
+                for (int r = 0; r < 0.06 * patternSize; r++)
                 {
                     testPat[r] = _random.NextDouble();
                 }
                 testDict[i]["category"] = null;
             }
+
+            // Lets check that the first test dict sequence does not occur anywhere else
+            var firstTestSet = (Vector<double>)testDict[0]["pattern"];
+            bool ok = patternDict.All(d => !((Vector<double>)d.Value["pattern"]).Equals(firstTestSet));
+            Assert.IsTrue(ok, "first test dict entry is repeated somewhere else! Randomness issue");
 
             Console.WriteLine("\nTesting KNN Classifier with L2 norm");
 
@@ -322,7 +327,7 @@ namespace HTM.Net.Tests.Integration
                               "slightly alter the training data and expect None to be returned for the " +
                               "classifications.");
 
-            var knnExact = KNNClassifier.GetBuilder().K(1).Exact(true).Build();
+            var knnExact = KNNClassifier.GetBuilder().K(3).Exact(true).Build();
             failures += SimulateClassifier(knnExact,
                 patternDict,
                 "KNN Classifier with exact matching test",
@@ -352,7 +357,7 @@ namespace HTM.Net.Tests.Integration
             }
 
             Console.WriteLine("\nTesting KNN Classifier on sparse patterns");
-            var knnDense = KNNClassifier.GetBuilder().K(1).Exact(true).Build();
+            var knnDense = KNNClassifier.GetBuilder().K(1).Build();
             failures += SimulateClassifier(knnDense,
                 patternDict,
                 "KNN Classifier on sparse pattern test");
@@ -389,7 +394,7 @@ namespace HTM.Net.Tests.Integration
                     if (result.GetWinner() != (int?)testDict[i]["category"])
                     {
                         errorCount += 1;
-                        Console.WriteLine($"Missed category winner {result.GetWinner()} vs {(int?)testDict[i]["category"]}");
+                        Console.WriteLine($"{i} - Missed category winner {result.GetWinner()} vs {(int?)testDict[i]["category"]}");
                     }
                 }
             }
@@ -399,8 +404,8 @@ namespace HTM.Net.Tests.Integration
                 Console.WriteLine($"Number of patterns: {numPatterns}");
                 foreach (var key in patternDict.Keys)
                 {
-                    Console.WriteLine($"Testing idx: {key} - cat: {patternDict[key]["category"]} " +
-                                      $"patLen: {((Vector<double>)patternDict[key]["pattern"]).Count}");
+                    //Console.WriteLine($"Testing idx: {key} - cat: {patternDict[key]["category"]} " +
+                    //                  $"patLen: {((Vector<double>)patternDict[key]["pattern"]).Count}");
                     var result = knn.Infer((Vector<double>)patternDict[key]["pattern"]);
                     if (result.GetWinner() != (int?)patternDict[key]["category"])
                     {

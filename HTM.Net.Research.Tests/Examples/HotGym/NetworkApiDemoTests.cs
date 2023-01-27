@@ -120,6 +120,25 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
             }
         }
 
+        [TestMethod]
+        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        public void RunBasicNetworkKnn()
+        {
+            NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_KNN);
+            demo.RunNetwork();
+
+            for (int i = 10; i > 0; i--)
+            {
+                double pct = i / 10.0;
+                Console.WriteLine("Pct: {1}; Accurancy: {0}", demo.GetTotalAccurancy(pct, true), pct);
+            }
+            for (int i = 1; i <= 10; i++)
+            {
+                double pct = i / 10.0;
+                Console.WriteLine("Pct: {1}; Accurancy: {0}", demo.GetTotalAccurancy(pct, false), pct);
+            }
+        }
+
         //[TestMethod]
         //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
         //[DeploymentItem("Resources\\rec-center-15m.Csv")]

@@ -36,7 +36,7 @@ namespace HTM.Net.Algorithms
         /// 	'actualValues': [1.5, 3,5, 5,5, 7.6],
         /// }
         /// </returns>
-        Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNonZero,
+        IClassification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNonZero,
             bool learn, bool infer);
 
         int[] Steps { get; }

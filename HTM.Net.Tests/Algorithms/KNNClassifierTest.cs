@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
@@ -25,7 +24,7 @@ namespace HTM.Net.Tests.Algorithms
         {
             KNNClassifier.Builder builder = KNNClassifier.GetBuilder();
 
-            builder.K(42)
+            builder.K(43)
             .Exact(true)
             .DistanceNorm(12.5)
             .DistanceMethod(DistanceMethod.PctInputOverlap)
@@ -45,7 +44,7 @@ namespace HTM.Net.Tests.Algorithms
 
             KNNClassifier knn = builder.Build();
 
-            Assert.AreEqual(42, knn.GetK());
+            Assert.AreEqual(43, knn.GetK());
             Assert.IsTrue(knn.IsExact());
             Assert.AreEqual(12.5, knn.GetDistanceNorm(), 0.0);
             Assert.AreEqual(DistanceMethod.PctInputOverlap, knn.GetDistanceMethod());
@@ -301,6 +300,58 @@ namespace HTM.Net.Tests.Algorithms
         }
 
         [TestMethod]
+        public void TestMinSparsity()
+        {
+            // Test overlsp distance with min sparsity
+            var classifier = KNNClassifier.GetBuilder().DistanceMethod(DistanceMethod.RawOverlap)
+                .MinSparsity(0.2)
+                .Build();
+
+            int dimensionality = 30;
+            var a = Vector<double>.Build.DenseOfArray(new[] { 1.0, 3, 7, 11, 13, 17, 18, 23, 29 });
+            var b = Vector<double>.Build.DenseOfArray(new[] { 2.0, 4, 8, 12, 14, 18, 20, 21, 28 });
+
+            // this has 20% sparsity and should be inserted
+            var c = Vector<double>.Build.DenseOfArray(new[] { 2.0, 3, 8, 11, 14, 18 });
+
+            // This has 17% sparsity and should NOT be inserted
+            var d = Vector<double>.Build.DenseOfArray(new[] { 2.0, 3, 8, 11, 18 });
+
+            int numPatterns = classifier.Learn(a, 0, isSparse: dimensionality);
+            Assert.AreEqual(1, numPatterns);
+
+            numPatterns = classifier.Learn(b, 1, isSparse: dimensionality);
+            Assert.AreEqual(2, numPatterns);
+
+            numPatterns = classifier.Learn(c, 1, isSparse: dimensionality);
+            Assert.AreEqual(3, numPatterns);
+
+            numPatterns = classifier.Learn(d, 1, isSparse: dimensionality);
+            Assert.AreEqual(3, numPatterns);
+
+            // Test that inference ignores low sparsity vectors but not others
+            var e = Vector<double>.Build.DenseOfArray(new[] { 2.0, 4, 5, 6, 8, 12, 14, 18, 20 });
+            var dense = Vector<double>.Build.Dense(dimensionality, i => e.Any(x => (int)x == i) ? 1.0 : 0.0);
+            var result = classifier.Infer(dense);
+            Assert.IsNotNull(result.GetWinner());
+            Assert.IsTrue(result.GetInference().Sum() > 0);
+
+            // This has 20 % sparsity and should be used for inference
+            var f = Vector<double>.Build.DenseOfArray(new[] { 2.0, 5, 8, 11, 14, 18 });
+            dense = Vector<double>.Build.Dense(dimensionality, i => f.Any(x => (int)x == i) ? 1.0 : 0.0);
+            result = classifier.Infer(dense);
+            Assert.IsNotNull(result.GetWinner());
+            Assert.IsTrue(result.GetInference().Sum() > 0);
+
+            // This has 17% sparsity and should return null inference results
+            var g = Vector<double>.Build.DenseOfArray(new[] { 2.0, 3, 8, 11, 19 });
+            dense = Vector<double>.Build.Dense(dimensionality, i => g.Any(x => (int)x == i) ? 1.0 : 0.0);
+            result = classifier.Infer(dense);
+            Assert.IsNull(result.GetWinner());
+            Assert.IsTrue(result.GetInference().Sum() == 0);
+        }
+
+        [TestMethod]
         public void TestPartitionIdExcluded()
         {
             Parameters p = Parameters.GetKnnDefaultParameters();
@@ -543,7 +594,7 @@ namespace HTM.Net.Tests.Algorithms
             }
 
             var result = classifier.Infer(denseA);
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
         }
 
@@ -627,11 +678,11 @@ namespace HTM.Net.Tests.Algorithms
             // infer() has been extended to handle sparse and dense
 
             var result = classifier.Infer(a.Select(i => (double)i).ToArray());
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             result = classifier.Infer(b.Select(i => (double)i).ToArray());
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(1, category);
         }
     }

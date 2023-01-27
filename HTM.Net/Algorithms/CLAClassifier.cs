@@ -152,7 +152,7 @@ namespace HTM.Net.Algorithms
         /// 	'actualValues': [1.5, 3,5, 5,5, 7.6],
         /// }
         /// </returns>
-        public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
+        public IClassification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ, bool learn, bool infer)
         {
             Classification<T> retVal = new Classification<T>();
             List<object> actualValues = _actualValues.Select(av => av == null ? null : av).ToList();

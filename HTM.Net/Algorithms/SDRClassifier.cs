@@ -223,7 +223,7 @@ namespace HTM.Net.Algorithms
         ///  }</pre>
         /// </code>
         /// </example>
-        public Classification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
+        public IClassification<T> Compute<T>(int recordNum, IDictionary<string, object> classification, int[] patternNZ,
             bool learn, bool infer)
         {
             if (learn == false && infer == false) throw new InvalidOperationException("learn and infer cannot be both false");

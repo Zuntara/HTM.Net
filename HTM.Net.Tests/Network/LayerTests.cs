@@ -1889,7 +1889,8 @@ namespace HTM.Net.Tests.Network
             Map<string, Type> inferredFieldsMap = new Map<string, Type>();
             inferredFieldsMap.Add("field1", typeof(CLAClassifier));
             inferredFieldsMap.Add("field2", typeof(SDRClassifier));
-            inferredFieldsMap.Add("field3", null);
+            inferredFieldsMap.Add("field3", typeof(KNNClassifier));
+            inferredFieldsMap.Add("field4", null);
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, inferredFieldsMap);
 
             // Create MultiEncoder and add the fields' encoders to it
@@ -1904,6 +1905,10 @@ namespace HTM.Net.Tests.Network
             );
             me.AddEncoder(
                 "field3",
+                RandomDistributedScalarEncoder.GetBuilder().Resolution(1).Build()
+            );
+            me.AddEncoder(
+                "field4",
                 RandomDistributedScalarEncoder.GetBuilder().Resolution(1).Build()
             );
 
@@ -1922,7 +1927,8 @@ namespace HTM.Net.Tests.Network
             NamedTuple nt = l.MakeClassifiers(l.GetEncoder());
             Assert.AreEqual(nt.Get("field1").GetType(), typeof(CLAClassifier));
             Assert.AreEqual(nt.Get("field2").GetType(), typeof(SDRClassifier));
-            Assert.AreEqual(nt.Get("field3"), null);
+            Assert.AreEqual(nt.Get("field3").GetType(), typeof(KNNClassifier));
+            Assert.AreEqual(nt.Get("field4"), null);
         }
 
     [TestMethod]

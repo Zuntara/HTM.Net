@@ -78,7 +78,7 @@ namespace HTM.Net.Network
         /// </summary>
         /// <param name="fieldName"></param>
         /// <returns></returns>
-        Classification<object> GetClassification(string fieldName);
+        IClassification<object> GetClassification(string fieldName);
         /// <summary>
         /// Returns the most recent anomaly calculation.
         /// </summary>

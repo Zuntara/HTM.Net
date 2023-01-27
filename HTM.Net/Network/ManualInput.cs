@@ -63,7 +63,7 @@ namespace HTM.Net.Network
         /// </summary>
         private HashSet<Cell> _activeCells;
 
-        private Map<string, Classification<object>> _classification;
+        private Map<string, IClassification<object>> _classification;
         private double _anomalyScore;
         private object _customObject;
 
@@ -282,7 +282,7 @@ namespace HTM.Net.Network
             retVal._feedForwardSparseActives = Arrays.CopyOf(this._feedForwardSparseActives, this._feedForwardSparseActives.Length);
             retVal._previousPredictiveCells = new HashSet<Cell>(this._previousPredictiveCells);
             retVal._predictiveCells = new HashSet<Cell>(this._predictiveCells);
-            retVal._classification = new Map<string, Classification<object>>(this._classification);
+            retVal._classification = new Map<string, IClassification<object>>(this._classification);
             retVal._anomalyScore = this._anomalyScore;
             retVal._customObject = this._customObject;
             retVal._activeCells = new HashSet<Cell>(this._activeCells);
@@ -296,7 +296,7 @@ namespace HTM.Net.Network
          * @param fieldName
          * @return
          */
-        public Classification<object> GetClassification(string fieldName)
+        public IClassification<object> GetClassification(string fieldName)
         {
             return _classification[fieldName];
         }
@@ -309,11 +309,11 @@ namespace HTM.Net.Network
          * @param classification
          * @return
          */
-        public ManualInput StoreClassification(string fieldName, Classification<object> classification)
+        public ManualInput StoreClassification(string fieldName, IClassification<object> classification)
         {
             if (this._classification == null)
             {
-                this._classification = new Map<string, Classification<object>>();
+                this._classification = new Map<string, IClassification<object>>();
             }
             this._classification.Add(fieldName, classification);
             return this;
