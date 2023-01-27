@@ -17,8 +17,8 @@ namespace HTM.Net.Research.Vision
         private List<List<object>> _values;
         private List<List<int>> _valueIndexes;
         private List<List<object>> _results;
-        private int numCombinations;
-        private IRandom random = new XorshiftRandom(42);
+        private int _numCombinations;
+        private readonly IRandom _random = new XorshiftRandom(42);
 
         /// <summary>
         /// Have to keep track of the names and valid values of each parameter
@@ -35,7 +35,7 @@ namespace HTM.Net.Research.Vision
             // list of past and present results that correspond to each set of parameter values
             _results = new List<List<object>>();
             // the number of possible combinations of parameter values for all parameters
-            numCombinations = 1;
+            _numCombinations = 1;
 
             _values = new List<List<object>>();
         }
@@ -51,7 +51,7 @@ namespace HTM.Net.Research.Vision
             {
                 _names.Add(name);
                 _allowedValues.Add(allowedValues);
-                numCombinations = numCombinations + allowedValues.Count;
+                _numCombinations = _numCombinations + allowedValues.Count;
             }
             else
             {
@@ -94,7 +94,7 @@ namespace HTM.Net.Research.Vision
             Console.WriteLine("Just completed parameter Combination: {0}", Arrays.ToString(GetAllValues()));
             _results.Add(items);
             Console.WriteLine();
-            Console.WriteLine("Parameter combinations completed: {0}/{1}", _results.Count, numCombinations);
+            Console.WriteLine("Parameter combinations completed: {0}/{1}", _results.Count, _numCombinations);
             Console.WriteLine();
         }
         /// <summary>
@@ -110,7 +110,7 @@ namespace HTM.Net.Research.Vision
         /// </summary>
         /// <param name="resultNames"></param>
         /// <param name="formatStrings"></param>
-        public void PrintResults(IEnumerable<string> resultNames, IEnumerable<string> formatStrings)
+        public void PrintResults(ICollection<string> resultNames, ICollection<string> formatStrings)
         {
             Console.WriteLine();
             Console.WriteLine("Summary of results");
@@ -171,7 +171,7 @@ namespace HTM.Net.Research.Vision
             {
                 // list of value indexes is empty so this is the first combination, 
                 // each parameter gets the first value in its list of allowed values
-                _valueIndexes.Add(_names.Select(n => 0).ToList());
+                _valueIndexes.Add(_names.Select(_ => 0).ToList());
             }
             else
             {
@@ -201,13 +201,13 @@ namespace HTM.Net.Research.Vision
 
         private object GetRandomChoice(IList<object> list)
         {
-            int index = random.NextInt(list.Count);
+            int index = _random.NextInt(list.Count);
             return list[index];
         }
 
         public int GetNumCombinations()
         {
-            return numCombinations;
+            return _numCombinations;
         }
     }
 }

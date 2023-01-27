@@ -100,7 +100,7 @@ namespace HTM.Net.Util
          *              its value during this {@code NamedTuple}'s construction.
          * @return
          */
-        public object Get(string key)
+        public virtual object Get(string key)
         {
             if (key == null) return null;
             int hash = HashIndex(key);

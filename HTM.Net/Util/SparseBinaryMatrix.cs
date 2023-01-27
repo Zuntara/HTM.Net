@@ -278,6 +278,19 @@ namespace HTM.Net.Util
 
     public static class MatrixDoubleExtentions
     {
+        public static void RightVecSumAtNZ(this Matrix<double> matrix, Vector<double> inputVector, int[] results, double stimulusThreshold = 0)
+        {
+            Vector<double> inputVec = DenseVector.OfEnumerable(inputVector.Select(i => (double)i));
+
+            Vector<double> vecResult = matrix.Multiply(inputVec);
+            int[] tempResults = vecResult.Select(v => (int)v).ToArray();
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                results[i] = tempResults[i] < stimulusThreshold ? 0 : tempResults[i];
+            }
+        }
+
         public static void RightVecSumAtNZ(this Matrix<double> matrix, int[] inputVector, int[] results, double stimulusThreshold = 0)
         {
             Vector<double> inputVec = DenseVector.OfEnumerable(inputVector.Select(i => (double) i));

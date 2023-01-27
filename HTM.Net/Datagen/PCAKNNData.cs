@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using HTM.Net.Util;
+using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace HTM.Net.Datagen
 {
@@ -15,26 +19,25 @@ namespace HTM.Net.Datagen
  */
     public class PCAKNNData
     {
-
-        private static readonly List<object> PcaShortList;
+        private static List<object> PcaShortList;
+        private KNNDataArray _trainData;
+        private KNNDataArray _testData;
 
         static PCAKNNData()
+        {
+        }
+
+        public static void Generate()
         {
             PcaShortList = GenerateForPcaknnShort();
         }
 
-        private readonly KNNDataArray _trainData;
-        private readonly KNNDataArray _testData;
-
         public PCAKNNData()
         {
-            _trainData = new KNNDataArray(
-                (double[][])PcaShortList[0], (int[])PcaShortList[1]);
-            _testData = new KNNDataArray(
-                (double[][])PcaShortList[2], (int[])PcaShortList[3]);
+            
         }
 
-        public static List<object> GenerateForPcaknnShort()
+        private static List<object> GenerateForPcaknnShort()
         {
             string[] files =
             {
@@ -101,12 +104,68 @@ namespace HTM.Net.Datagen
          */
         public KNNDataArray[] GetPcaKNNShortData()
         {
+            _trainData = new KNNDataArray(
+                (double[][])PcaShortList[0], (int[])PcaShortList[1]);
+            _testData = new KNNDataArray(
+                (double[][])PcaShortList[2], (int[])PcaShortList[3]);
+
             return new KNNDataArray[] { _trainData, _testData };
         }
 
-        public static void main(string[] args)
+        public (double[][] trainData, int[] trainClass, double[][] testData, int[] testClass) Generate(
+            int numDims, int numClasses, int k, int numPatternsPerClass, int numPatterns,
+            int numTests, int numSvdSamples, int keep)
         {
-            new PCAKNNData();
+            Console.WriteLine($"N dims: {numDims}");
+            Console.WriteLine($"N classes: {numClasses}");
+            Console.WriteLine($"k: {k}");
+            Console.WriteLine($"N vectors per class: {numPatternsPerClass}");
+            Console.WriteLine($"N training vectors: {numPatterns}");
+            Console.WriteLine($"N test vectors: {numTests}");
+            Console.WriteLine($"N SVD samples: {numSvdSamples}");
+            Console.WriteLine($"N reduced dims: {keep * numDims}");
+
+            Console.WriteLine($"Generating data");
+
+            var data0 = Matrix.Build.Sparse(numPatterns + numTests, numDims);
+            var class0 = Vector.Build.Sparse(numPatterns + numTests);
+            int c = 0;
+
+            for (int i = 0; i < numClasses; i++)
+            {
+                var pt = 5 * i * Vector.Build.Sparse(numDims, i => 1.0);
+                for (int j = 0; j < numPatternsPerClass; j++)
+                {
+                    data0.SetRow(c, pt + (5 * Vector.Build.Random(numDims, 42)));
+                    class0[c] = i;
+                    c++;
+                }
+            }
+
+            var allIndices = Enumerable.Range(0, numPatterns + numTests).ToArray();
+            var ind = allIndices.SelectPermutation().ToArray();
+            var indTrain = ind[Range.EndAt(numPatterns)];
+            var indTest = ind[Range.StartAt(numPatterns)];
+
+            var trainData = data0.EnumerateRowsIndexed()
+                .Where((rowVec) => indTrain.Contains(rowVec.Item1))
+                .Select((rowVec) => rowVec.Item2.ToArray())
+                .ToArray();
+            var trainClass = class0
+                .Where((rowVec, idx) => indTrain.Contains(idx))
+                .Select((rowVec) => (int)rowVec)
+                .ToArray();
+
+            var testData = data0.EnumerateRowsIndexed()
+                .Where((rowVec) => indTest.Contains(rowVec.Item1))
+                .Select((rowVec) => rowVec.Item2.ToArray())
+                .ToArray();
+            var testClass = class0
+                .Where((rowVec, idx) => indTest.Contains(idx))
+                .Select((rowVec) => (int)rowVec)
+                .ToArray();
+
+            return (trainData, trainClass, testData, testClass);
         }
     }
 }

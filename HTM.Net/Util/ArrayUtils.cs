@@ -2,11 +2,15 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
+using MathNet.Numerics.Statistics;
 
 namespace HTM.Net.Util
 {
@@ -392,6 +396,16 @@ namespace HTM.Net.Util
             for (int i = 0; i < doubs.Length; i++)
             {
                 retVal[i] = Math.Max(doubs[i], maxValue);
+            }
+            return retVal;
+        }
+
+        public static Vector<double> Maximum(Vector<double> vector, double maxValue)
+        {
+            Vector<double> retVal = Vector<double>.Build.Dense(vector.Count);
+            for (int i = 0; i < vector.Count; i++)
+            {
+                retVal[i] = Math.Max(vector[i], maxValue);
             }
             return retVal;
         }
@@ -1119,6 +1133,43 @@ namespace HTM.Net.Util
             //return sum;
         }
 
+        public static double[] Sum(double[][] array, int axis)
+        {
+            /*
+            >>> np.sum([[0, 1], [0, 5]], axis=0)
+            array([0, 6])
+            >>> np.sum([[0, 1], [0, 5]], axis=1)
+            array([1, 5])
+            */
+            switch (axis)
+            {
+                case 0: // cols
+                {
+                    int cols = array[0].Length;
+                    double[] result = new double[cols];
+                    for (int c = 0; c < cols; c++)
+                    {
+                        for (int r = 0; r < array.Length; r++)
+                        {
+                            result[c] += array[r][c];
+                        }
+                    }
+                    return result;
+                }
+                case 1: // rows
+                {
+                    double[] result = new double[array.Length];
+                    for (int r = 0; r < array.Length; r++)
+                    {
+                        result[r] += array[r].Sum();
+                    }
+                    return result;
+                }
+                default:
+                    throw new ArgumentException("axis must be either '0' or '1'");
+            }
+        }
+
         /**
          * Sparse or due to the arrays containing the indexes of "on bits",
          * the <em>or</em> of which is equal to the mere combination of the two
@@ -1195,7 +1246,7 @@ namespace HTM.Net.Util
                 ints[j] = i;
             }
             //return Enumerable.Range(lowerBounds, upperBounds - lowerBounds).ToArray();
-            return ints.ToArray();
+            return ints;
         }
 
         /**
@@ -1416,6 +1467,15 @@ namespace HTM.Net.Util
         public static void SetRangeTo(double[] values, int start, int stop, double setTo)
         {
             stop = stop < 0 ? values.Length + stop : stop;
+            for (int i = start; i < stop; i++)
+            {
+                values[i] = setTo;
+            }
+        }
+
+        public static void SetRangeTo(Vector<double> values, int start, int stop, double setTo)
+        {
+            stop = stop < 0 ? values.Count + stop : stop;
             for (int i = start; i < stop; i++)
             {
                 values[i] = setTo;
@@ -2082,14 +2142,26 @@ namespace HTM.Net.Util
             //return max;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the subtraction of the specified double amount
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        internal static double[][] SubstractRows(double[][] matrix, double[] vector)
+        {
+            double[][] retVal = (double[][])matrix.Clone();
+            for (int row = 0; row < retVal.Length; row++)
+            {
+                for (int col = 0; col < retVal[row].Length; col++)
+                {
+                    retVal[row][col] = matrix[row][col] - vector[col];
+                }
+            }
+            return retVal;
+        }
+
+        /// <summary>
+        /// Returns the passed in array with every value being altered
+        /// by the subtraction of the specified double amount
+        /// </summary>
+        /// <param name="arr">Array to subtract from</param>
+        /// <param name="amount">Amount to subtract</param>
+        /// <returns>Double matrix</returns>
         public static double[] Sub(double[] arr, double amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -2099,6 +2171,37 @@ namespace HTM.Net.Util
             return arr;
         }
 
+        /// <summary>
+        /// Returns the passed in matrix with every value being altered
+        /// by the subtraction of the specified double amount
+        /// </summary>
+        /// <param name="matrix">Matrix to subtract from</param>
+        /// <param name="amount">Amount to subtract</param>
+        /// <returns>Double matrix</returns>
+        internal static Matrix<double> Sub(Matrix<double> matrix, Vector<double> amount)
+        {
+            Matrix<double> retVal = (Matrix<double>)matrix.Clone();
+            for (int row = 0; row < retVal.RowCount; row++)
+            {
+                for (int col = 0; col < retVal.Row(row).Count; col++)
+                {
+                    if (retVal.RowCount == amount.Count)
+                        retVal.Row(row)[col] = matrix.Row(row)[col] - amount[row];
+                    else
+                        retVal.Row(row)[col] = matrix.Row(row)[col] - amount[col];
+                }
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Returns the passed in matrix with every value being altered
+        /// by the subtraction of the specified double amount
+        /// </summary>
+        /// <param name="arr">Jagged array to subtract from</param>
+        /// <param name="amount">Amount to subtract</param>
+        /// <returns>Double matrix</returns>
         internal static double[][] Sub(double[][] arr, double[] amount)
         {
             double[][] retVal = (double[][])arr.Clone();
@@ -2181,6 +2284,7 @@ namespace HTM.Net.Util
             {
                 arr[i] -= amount[i];
             }
+
             return arr;
         }
 
@@ -2727,6 +2831,26 @@ namespace HTM.Net.Util
             return result.ToString();
         }
 
+        public static string DoubleArrayToString(ICollection<double> array, string format = "{0}, ")
+        {
+            StringBuilder result = new StringBuilder();
+            if (array.GetType().IsArray && ((Array)array).Rank > 1)
+            {
+                result.Append(Arrays.DeepToString((Array)array));
+                // result.Append(Arrays.deepToString((Object[])array));
+            }
+            else if (array is SparseVector sv)
+            {
+                result.Append(Arrays.ToArrayString(sv.ToArray()));
+            }
+            else
+            {
+                // One dimension
+                result.Append(Arrays.ToArrayString((Array)array, format));
+            }
+            return result.ToString();
+        }
+
         /**
          * Return True if all elements of the  <tt>values</tt> have evaluated to true with <tt>condition</tt>
          * @param values
@@ -3128,6 +3252,11 @@ namespace HTM.Net.Util
             return Argsort(@in, -1, -1);
         }
 
+        public static int[] Argsort(Vector<double> @in)
+        {
+            return Argsort(@in.ToArray(), -1, -1);
+        }
+
         /**
          * Sorts the array, then returns an array containing the indexes of
          * those sorted items in the original array which are between the
@@ -3176,6 +3305,30 @@ namespace HTM.Net.Util
             }
             return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).Skip(start).Take(end).ToArray();
             //return DoubleStream.of(in).sorted().mapToInt(i->Arrays.stream(in).boxed().collect(Collectors.toList()).indexOf(i)).skip(start).limit(end).toArray();
+        }
+
+        /**
+         * Sorts the array, then returns an array containing the indexes of
+         * those sorted items in the original array which are between the
+         * given bounds (start=inclusive, end=exclusive)
+         * <p>
+         * double[] args = argsort(new double[] { 11, 2, 3, 7, 0 }, 0, 3);
+         * contains:
+         * [4, 1, 2]
+         * 
+         * @param in
+         * @return  the indexes of input elements filtered in the way specified
+         * 
+         * @see #argsort(int[])
+         */
+        public static int[] Argsort(Vector<double> @in, int start, int end)
+        {
+            if (start == -1 || end == -1)
+            {
+                return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).ToArray();
+            }
+
+            return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).Skip(start).Take(end).ToArray();
         }
 
         public static T[][] CreateJaggedArray<T>(int rows, int cols)
@@ -3248,6 +3401,14 @@ namespace HTM.Net.Util
         {
             List<int> l = substInds.ToList();
             return Range(0, source.Length).ToList().Select(i => l.IndexOf(i) == -1 ? source[i] : substitutes[i]).ToArray();
+        }
+
+        public static Vector<double> Subst(Vector<double> source, Vector<double> substitutes, int[] substInds)
+        {
+            List<int> l = substInds.ToList();
+
+            return Vector<double>.Build
+                .Sparse(source.Count, i => l.IndexOf(i) == -1 ? source[i] : substitutes[i]);
         }
 
         public static IEnumerable<T[]> Combinations<T>(IList<T> argList, int argSetSize)
@@ -3336,18 +3497,56 @@ namespace HTM.Net.Util
 
         public static double Mean(double[] doubles)
         {
-            if (doubles.Length == 0) return double.NaN;
-            double mean = doubles.Sum() / doubles.Length;
-            return mean;
+            return MathNet.Numerics.Statistics.ArrayStatistics.Mean(doubles);
         }
 
-        public static double[] Mean(double[][] doubles)
+        public static Vector<double> Mean(Matrix<double> doubles, [Range(0, 1)] int axis = 0)
+        {
+            Vector<double> means = Vector<double>.Build.Dense(doubles.RowCount);
+            if (axis == 1)
+            {
+                // horizontal sum
+                for (int row = 0; row < means.Count; row++)
+                {
+                    means[row] = doubles.Row(row).Mean();
+                }
+
+                return means;
+            }
+
+            // Axis 0 (vertical sum) = transposed
+            var transposed = doubles.Transpose();
+            means = Vector<double>.Build.Dense(transposed.RowCount);
+            for (int row = 0; row < means.Count; row++)
+            {
+                means[row] = transposed.Row(row).Mean();
+            }
+
+            return means;
+        }
+
+        public static double[] Mean(double[][] doubles, [Range(0, 1)] int axis = 0)
         {
             double[] means = new double[doubles.GetLength(0)];
+            if (axis == 1)
+            {   
+                // horizontal sum
+                for (int row = 0; row < means.Length; row++)
+                {
+                    means[row] = Mean(doubles[row]);
+                }
+
+                return means;
+            }
+
+            // Axis 0 (vertical sum) = transposed
+            var transposed = Transpose(doubles);
+            means = new double[transposed.GetLength(0)];
             for (int row = 0; row < means.Length; row++)
             {
-                means[row] = Mean(doubles[row]);
+                means[row] = Mean(transposed[row]);
             }
+
             return means;
         }
 

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HTM.Net.Tests.Algorithms
@@ -117,16 +119,16 @@ namespace HTM.Net.Tests.Algorithms
 
             // tests: if not relativeThreshold:
             KNNClassifier classifier = InitClassifier(p);
-            double[] inputPattern = { 0, 1, 3, 7, 11 };
-            double[] outputPattern = classifier.SparsifyVector(inputPattern, true);
-            Assert.IsTrue(Arrays.AreEqual(inputPattern, outputPattern));
+            Vector<double> inputPattern = Vector<double>.Build.SparseOfArray(new [] { 0.0, 1, 3, 7, 11 });
+            Vector<double> outputPattern = classifier.SparsifyVector(inputPattern, true);
+            Assert.IsTrue(Arrays.AreEqual(inputPattern, outputPattern.ToArray()));
 
             // tests: elif self.sparseThreshold > 0:
             p.SetParameterByKey(Parameters.KEY.RELATIVE_THRESHOLD, true);
             p.SetParameterByKey(Parameters.KEY.SPARSE_THRESHOLD, 0.2);
             classifier = InitClassifier(p);
             outputPattern = classifier.SparsifyVector(inputPattern, true);
-            Assert.IsTrue(Arrays.AreEqual(new double[] { 0, 0, 3, 7, 11 }, outputPattern));
+            Assert.IsTrue(Arrays.AreEqual(new double[] { 0, 0, 3, 7, 11 }, outputPattern.ToArray()));
 
             // tests: if doWinners:
             p.SetParameterByKey(Parameters.KEY.RELATIVE_THRESHOLD, true);
@@ -134,7 +136,7 @@ namespace HTM.Net.Tests.Algorithms
             p.SetParameterByKey(Parameters.KEY.NUM_WINNERS, 2);
             classifier = InitClassifier(p);
             outputPattern = classifier.SparsifyVector(inputPattern, true);
-            Assert.IsTrue(Arrays.AreEqual(new double[] { 0, 0, 0, 0, 0 }, outputPattern));
+            Assert.IsTrue(Arrays.AreEqual(new double[] { 0, 0, 0, 0, 0 }, outputPattern.ToArray()), "doWinners failed");
 
             // tests: Do binarization
             p.SetParameterByKey(Parameters.KEY.RELATIVE_THRESHOLD, true);
@@ -143,7 +145,7 @@ namespace HTM.Net.Tests.Algorithms
             p.ClearParameter(Parameters.KEY.NUM_WINNERS);
             classifier = InitClassifier(p);
             outputPattern = classifier.SparsifyVector(inputPattern, true);
-            Assert.IsTrue(Arrays.AreEqual(new double[] { 0.0, 0.0, 1.0, 1.0, 1.0 }, outputPattern));
+            Assert.IsTrue(Arrays.AreEqual(new double[] { 0.0, 0.0, 1.0, 1.0, 1.0 }, outputPattern.ToArray()));
         }
 
         [TestMethod]
@@ -163,108 +165,101 @@ namespace HTM.Net.Tests.Algorithms
             classifier.Learn(protoB, 0, null, dimensionality);
 
             // input is an arbitrary point, close to protoA, orthogonal to protoB
-            int[] input = new int[dimensionality];
-            for (int i = 0; i < 4; i++)
-            {
-                input[i] = 1;
-            }
+            Vector<double> input = Vector<double>.Build.Dense(dimensionality, i => i < 4 ? 1.0 : 0.0);
+     
             // input0 is used to test that the distance from a point to itself is 0
-            int[] input0 = new int[dimensionality];
-            foreach (double index in protoA)
-            {
-                input0[(int)index] = 1;
-            }
+            Vector<double> input0 = Vector<double>.Build.Dense(dimensionality, i => protoA.Contains(i) ? 1.0 : 0.0);
 
-            // Test l2 norm metrix
-            var result = classifier.Infer(input.Select(i => (double)i).ToArray());
-            double[] dist = (double[])result.Get(2);
-            var l2Distances = new double[] { 0.65465367, 1.0 };
+            // Test l2 norm metric
+            var result = classifier.Infer(input);
+            Vector<double> dist = result.GetProtoDistance();
+            var l2Distances = new[] { 0.65465367, 1.0 };
             foreach (var tuple in ArrayUtils.Zip(l2Distances, dist))
             {
                 Assert.AreEqual((double)tuple.Item1, (double)tuple.Item2, 0.00001, "l2 distance norm is not calculated as expected.");
             }
 
-            result = classifier.Infer(input0.Select(i => (double)i).ToArray());
-            var dist0 = (double[])result.Get(2);
+            result = classifier.Infer(input0);
+            var dist0 = result.GetProtoDistance();
             Assert.AreEqual(0.0, dist0[0], "l2 norm did not calculate 0 distance as expected.");
 
             // Test l1 norm metric
             p.SetParameterByKey(Parameters.KEY.DISTANCE_NORM, 1.0);
             p.Apply(classifier);
-            result = classifier.Infer(input.Select(i => (double)i).ToArray());
-            dist = (double[])result.Get(2);
-            var l1Distances = new double[] { 0.42857143, 1.0 };
+            result = classifier.Infer(input.Select(i => i).ToArray());
+            dist = result.GetProtoDistance();
+            var l1Distances = new[] { 0.42857143, 1.0 };
             foreach (var tuple in ArrayUtils.Zip(l1Distances, dist))
             {
                 Assert.AreEqual((double)tuple.Item1, (double)tuple.Item2, 0.00001, "l1 distance norm is not calculated as expected.");
             }
 
-            result = classifier.Infer(input0.Select(i => (double)i).ToArray());
-            dist0 = (double[])result.Get(2);
+            result = classifier.Infer(input0.Select(i => i).ToArray());
+            dist0 = result.GetProtoDistance();
             Assert.AreEqual(0.0, dist0[0], "l1 norm did not calculate 0 distance as expected.");
 
             // Test raw overlap metric
             p.SetParameterByKey(Parameters.KEY.DISTANCE_METHOD, DistanceMethod.RawOverlap);
             p.Apply(classifier);
 
-            result = classifier.Infer(input.Select(i => (double)i).ToArray());
-            dist = (double[])result.Get(2);
+            result = classifier.Infer(input.Select(i => i).ToArray());
+            dist = result.GetProtoDistance();
             double[] rawOverlaps = new[] { 1.0, 4.0 };
             foreach (var tuple in ArrayUtils.Zip(rawOverlaps, dist))
             {
                 Assert.AreEqual(tuple.Item1, tuple.Item2, "Raw overlap is not calculated as expected.");
             }
 
-            result = classifier.Infer(input0.Select(i => (double)i).ToArray());
-            dist0 = (double[])result.Get(2);
+            result = classifier.Infer(input0.Select(i => i).ToArray());
+            dist0 = result.GetProtoDistance();
             Assert.AreEqual(0.0, dist0[0], "Raw overlap did not calculate 0 distance as expected.");
 
             // Test pctOverlapOfInput metric
             p.SetParameterByKey(Parameters.KEY.DISTANCE_METHOD, DistanceMethod.PctInputOverlap);
             p.Apply(classifier);
 
-            result = classifier.Infer(input.Select(i => (double)i).ToArray());
-            dist = (double[])result.Get(2);
+            result = classifier.Infer(input.Select(i => i).ToArray());
+            dist = result.GetProtoDistance();
             double[] pctOverlaps = new[] { 0.25, 1.0 };
             foreach (var tuple in ArrayUtils.Zip(pctOverlaps, dist))
             {
                 Assert.AreEqual(tuple.Item1, tuple.Item2, "pctOverlapOfInput is not calculated as expected.");
             }
 
-            result = classifier.Infer(input0.Select(i => (double)i).ToArray());
-            dist0 = (double[])result.Get(2);
+            result = classifier.Infer(input0.Select(i => i).ToArray());
+            dist0 = result.GetProtoDistance();
             Assert.AreEqual(0.0, dist0[0], "pctOverlapOfInput did not calculate 0 distance as expected.");
 
             // Test pctOverlapOfProto  metric
             p.SetParameterByKey(Parameters.KEY.DISTANCE_METHOD, DistanceMethod.PctProtoOverlap);
             p.Apply(classifier);
 
-            result = classifier.Infer(input.Select(i => (double)i).ToArray());
-            dist = (double[])result.Get(2);
+            result = classifier.Infer(input.Select(i => i).ToArray());
+            dist = result.GetProtoDistance();
             pctOverlaps = new[] { 0.40, 1.0 };
             foreach (var tuple in ArrayUtils.Zip(pctOverlaps, dist))
             {
                 Assert.AreEqual(tuple.Item1, tuple.Item2, "pctOverlapOfProto  is not calculated as expected.");
             }
 
-            result = classifier.Infer(input0.Select(i => (double)i).ToArray());
-            dist0 = (double[])result.Get(2);
+            result = classifier.Infer(input0.Select(i => i).ToArray());
+            dist0 = result.GetProtoDistance();
             Assert.AreEqual(0.0, dist0[0], "pctOverlapOfProto  did not calculate 0 distance as expected.");
 
             // Test pctOverlapOfLarger   metric
             p.SetParameterByKey(Parameters.KEY.DISTANCE_METHOD, DistanceMethod.PctLargerOverlap);
             p.Apply(classifier);
 
-            result = classifier.Infer(input.Select(i => (double)i).ToArray());
-            dist = (double[])result.Get(2);
+            result = classifier.Infer(input.Select(i => i).ToArray());
+            dist = result.GetProtoDistance();
             pctOverlaps = new[] { 0.40, 1.0 };
             foreach (var tuple in ArrayUtils.Zip(pctOverlaps, dist))
             {
                 Assert.AreEqual(tuple.Item1, tuple.Item2, "pctOverlapOfLarger   is not calculated as expected.");
             }
 
-            result = classifier.Infer(input0.Select(i => (double)i).ToArray());
-            dist0 = (double[])result.Get(2);
+            result = classifier.Infer(input0.Select(i => i).ToArray());
+            dist0 = result.GetProtoDistance();
             Assert.AreEqual(0.0, dist0[0], "pctOverlapOfLarger   did not calculate 0 distance as expected.");
         }
 
@@ -292,7 +287,7 @@ namespace HTM.Net.Tests.Algorithms
                 denseA[index] = 1;
             }
             var result = classifier.Infer(denseA);
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             var denseB = new double[dimensionality];
@@ -301,7 +296,7 @@ namespace HTM.Net.Tests.Algorithms
                 denseB[index] = 1;
             }
             result = classifier.Infer(denseB);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(1, category);
         }
 
@@ -336,19 +331,19 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(2, numPatterns);
 
             var result = classifier.Infer(denseA, partitionId: 1);
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             result = classifier.Infer(denseA, partitionId: 0);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(1, category);
 
             result = classifier.Infer(denseB, partitionId: 0);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(1, category);
 
             result = classifier.Infer(denseB, partitionId: 1);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             // Ensure it works even if you invoke learning again. To make it a bit more
@@ -357,7 +352,7 @@ namespace HTM.Net.Tests.Algorithms
             // Even though first A should be ignored, the second instance of A should
             // not be ignored.
             result = classifier.Infer(denseA, partitionId: 0);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(0, category);
         }
 
@@ -404,12 +399,12 @@ namespace HTM.Net.Tests.Algorithms
             Assert.AreEqual(433, classifier.GetPartitionId(3));
 
             var result = classifier.Infer(denseA, partitionId: 213);
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             // Test with patternId not in classifier
             result = classifier.Infer(denseA, partitionId: 666);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             // Partition Ids should be maintained after inference
@@ -495,15 +490,15 @@ namespace HTM.Net.Tests.Algorithms
             classifier.Learn(d, 1, isSparse: dimensionality, partitionId: 405);
 
             var result = classifier.Infer(denseA, partitionId: 405);
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
 
             result = classifier.Infer(denseD, partitionId: 405);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(2, category);
 
             result = classifier.Infer(denseD);
-            category = result.Get(0);
+            category = result.GetWinner();
             Assert.AreEqual(1, category);
         }
 
@@ -555,7 +550,7 @@ namespace HTM.Net.Tests.Algorithms
         /// <summary>
         /// If sparse representation indices are unsorted expect error.
         /// </summary>
-        //[TestMethod]
+        [TestMethod]
         public void TestOverlapDistanceMethodStandardUnsorted()
         {
             Parameters p = Parameters.GetKnnDefaultParameters();
@@ -572,7 +567,7 @@ namespace HTM.Net.Tests.Algorithms
                 classifier.Learn(a, 0, isSparse: dimensionality);
                 Assert.Fail("Should throw exception");
             }
-            catch (IndexOutOfRangeException) { }
+            catch (InvalidOperationException) { }
             catch (Exception e) { Assert.Fail(e.ToString()); }
 
             try
@@ -580,7 +575,7 @@ namespace HTM.Net.Tests.Algorithms
                 classifier.Learn(b, 1, isSparse: dimensionality);
                 Assert.Fail("Should throw exception");
             }
-            catch (IndexOutOfRangeException) { }
+            catch (InvalidOperationException) { }
             catch (Exception e) { Assert.Fail(e.ToString()); }
         }
 
@@ -608,7 +603,7 @@ namespace HTM.Net.Tests.Algorithms
             }
 
             var result = classifier.Infer(denseA);
-            var category = result.Get(0);
+            var category = result.GetWinner();
             Assert.AreEqual(0, category);
         }
 

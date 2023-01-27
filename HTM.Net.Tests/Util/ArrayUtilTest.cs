@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -591,6 +592,13 @@ namespace HTM.Net.Tests.Util
 
             d_args = ArrayUtils.Argsort(new double[] { 11, 2, 3, 7, 0 }, -1, 3);
             Assert.IsTrue(Arrays.AreEqual(new int[] { 4, 1, 2, 3, 0 }, d_args));
+
+            // Test Vector version
+            int[] v_args = ArrayUtils.Argsort(Vector<double>.Build.SparseOfArray(new double[] { 11, 2, 3, 7, 0 }), 0, 3);
+            Assert.IsTrue(Arrays.AreEqual(new int[] { 4, 1, 2 }, v_args));
+
+            v_args = ArrayUtils.Argsort(Vector<double>.Build.SparseOfArray(new double[] { 11, 2, 3, 7, 0 }), -1, 3);
+            Assert.IsTrue(Arrays.AreEqual(new int[] { 4, 1, 2, 3, 0 }, v_args));
         }
 
         [TestMethod]
@@ -961,6 +969,34 @@ namespace HTM.Net.Tests.Util
             double[] a = new[] {1,2,4.0};
             double mean = ArrayUtils.Mean(a);
             Assert.AreEqual(2.3333, mean, 0.0001);
+        }
+
+        [TestMethod]
+        public void TestMeanMatrixAxis0()
+        {
+            double[][] a = new[]
+            {
+                new[] { 1.0, 2.0 },
+                new[] { 3.0, 4.0 },
+            };
+            double[] mean = ArrayUtils.Mean(a, 0);
+
+            Assert.AreEqual(2.0, mean[0]);
+            Assert.AreEqual(3.0, mean[1]);
+        }
+
+        [TestMethod]
+        public void TestMeanMatrixAxis1()
+        {
+            double[][] a = new[]
+            {
+                new[] { 1.0, 2.0 },
+                new[] { 3.0, 4.0 },
+            };
+            double[] mean = ArrayUtils.Mean(a, 1);
+
+            Assert.AreEqual(1.5, mean[0]);
+            Assert.AreEqual(3.5, mean[1]);
         }
     }
 }

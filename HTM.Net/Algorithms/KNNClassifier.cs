@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using HTM.Net.Util;
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
-using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
@@ -14,67 +14,164 @@ namespace HTM.Net.Algorithms
 
     /// <summary>
     /// Nearest Neighbor Classifier
+    ///
+    ///  This class implements NuPIC's k Nearest Neighbor Classifier. KNN is very
+    ///  useful as a basic classifier for many situations.This implementation contains
+    ///  many enhancements that are useful for HTM experiments. These enhancements
+    ///  include an optimized C++ class for sparse vectors, support for continuous
+    ///  online learning, support for various distance methods(including Lp-norm and
+    ///  raw overlap), support for performing SVD on the input vectors(very useful for
+    ///  large vectors), support for a fixed-size KNN, and a mechanism to store custom
+    ///  ID's for each vector.
+    ///  :param k: (int)The number of nearest neighbors used in the classification
+    ///      of patterns.Must be odd.
+    ///  :param exact: (boolean)If true, patterns must match exactly when assigning
+    ///      class labels
+    ///  : param distanceNorm: (int) When distance method is "norm", this specifies
+    ///       the p value of the Lp-norm
+    ///   :param distanceMethod: (string) The method used to compute distance between
+    /// 
+    ///       input patterns and prototype patterns.The possible options are:
+    ///      - ``norm``: When distanceNorm is 2, this is the euclidean distance,
+    ///               When distanceNorm is 1, this is the manhattan distance
+    ///               In general: sum(abs(x-proto) ^ distanceNorm) ^ (1/distanceNorm)
+    ///              The distances are normalized such that farthest prototype from
+    ///               a given input is 1.0.
+    ///      - ``rawOverlap``: Only appropriate when inputs are binary. This computes:
+    ///              (width of the input) - (# bits of overlap between input
+    ///              and prototype).
+    ///      - ``pctOverlapOfInput``: Only appropriate for binary inputs. This computes
+    ///              1.0 - (# bits overlap between input and prototype) /
+    ///                      (# ON bits in input)
+    ///      - ``pctOverlapOfProto``: Only appropriate for binary inputs. This computes
+    ///              1.0 - (# bits overlap between input and prototype) /
+    ///                      (# ON bits in prototype)
+    ///      - ``pctOverlapOfLarger``: Only appropriate for binary inputs. This computes
+    ///              1.0 - (# bits overlap between input and prototype) /
+    ///                      max(# ON bits in input, # ON bits in prototype)
+    ///  :param distThreshold: (float) A threshold on the distance between learned
+    ///       patterns and a new pattern proposed to be learned.The distance must be
+    ///      greater than this threshold in order for the new pattern to be added to
+    ///      the classifier's memory.
+    ///  :param doBinarization: (boolean) If True, then scalar inputs will be
+    ///      binarized.
+    ///  :param binarizationThreshold: (float) If doBinarization is True, this
+    ///      specifies the threshold for the binarization of inputs
+    ///  :param useSparseMemory: (boolean) If True, classifier will use a sparse
+    ///      memory matrix
+    ///  :param sparseThreshold: (float) If useSparseMemory is True, input variables
+    ///      whose absolute values are less than this threshold will be stored as
+    ///      zero
+    ///  :param relativeThreshold: (boolean) Flag specifying whether to multiply
+    ///      sparseThreshold by max value in input
+    ///  :param numWinners: (int) Number of elements of the input that are stored. If
+    ///      0, all elements are stored
+    ///  :param numSVDSamples: (int) Number of samples the must occur before a SVD
+    ///      (Singular Value Decomposition) transformation will be performed.If 0,
+    ///      the transformation will never be performed
+    ///  :param numSVDDims: (string) Controls dimensions kept after SVD
+    ///      transformation.If "adaptive", the number is chosen automatically
+    ///  :param fractionOfMax: (float) If numSVDDims is "adaptive", this controls the
+    ///      smallest singular value that is retained as a fraction of the largest
+    ///      singular value
+    ///  :param verbosity: (int) Console verbosity level where 0 is no output and
+    ///      larger integers provide increasing levels of verbosity
+    ///  :param maxStoredPatterns: (int) Limits the maximum number of the training
+    ///      patterns stored. When KNN learns in a fixed capacity mode, the unused
+    ///      patterns are deleted once the number of stored patterns is greater than
+    ///      maxStoredPatterns.A value of -1 is no limit
+    ///  :param replaceDuplicates: (bool) A boolean flag that determines whether,
+    ///      during learning, the classifier replaces duplicates that match exactly,
+    ///      even if distThreshold is 0. Should be True for online learning
+    ///  :param cellsPerCol: (int) If >= 1, input is assumed to be organized into
+    ///      columns, in the same manner as the temporal memory AND whenever a new
+    ///      prototype is stored, only the start cell(first cell) is stored in any
+    ///     bursting column
+    ///  :param minSparsity: (float) If useSparseMemory is set, only vectors with
+    ///      sparsity >= minSparsity will be stored during learning.A value of 0.0
+    ///      implies all vectors will be stored. A value of 0.1 implies only vectors
+    ///      with at least 10% sparsity will be stored
     /// </summary>
     public class KNNClassifier
     {
-        /** The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b> */
+        #region Fields
+
+        /// <summary>
+        /// The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b>
+        /// </summary>
         private int _k = 1;
-        /** If true, patterns must match exactly when assigning class labels */
+        /// <summary>
+        /// If true, patterns must match exactly when assigning class labels
+        /// </summary>
         private bool _exact = false;
-        /** When distance method is "norm", this specifies the p value of the Lp-norm */
+        /// <summary>
+        /// When distance method is "norm", this specifies the p value of the Lp-norm
+        /// </summary>
         private double _distanceNorm = 2.0;
-        /** 
-         * The method used to compute distance between input patterns and prototype patterns.
-         * see({@link DistanceMethod}) 
-         */
+        /// <summary>
+        /// The method used to compute distance between input patterns and prototype patterns.
+        /// see <see cref="DistanceMethod"/>
+        /// </summary>
         private DistanceMethod distanceMethod = DistanceMethod.Norm;
 
-        /** 
-         * A threshold on the distance between learned
-         * patterns and a new pattern proposed to be learned. The distance must be
-         * greater than this threshold in order for the new pattern to be added to
-         * the classifier's memory
-         */
+        /// <summary>
+        /// A threshold on the distance between learned
+        /// patterns and a new pattern proposed to be learned.The distance must be
+        /// greater than this threshold in order for the new pattern to be added to
+        /// the classifier's memory
+        /// </summary>
         private double distanceThreshold = 0.0;
-        /** If True, then scalar inputs will be binarized. */
+        /// <summary>
+        /// If True, then scalar inputs will be binarized.
+        /// </summary>
         private bool doBinarization = false;
-        /** If doBinarization is True, this specifies the threshold for the binarization of inputs */
+        /// <summary>
+        /// If doBinarization is True, this specifies the threshold for the binarization of inputs
+        /// </summary>
         private double binarizationThreshold = 0.5;
-        /** If True, classifier will use a sparse memory matrix */
+        /// <summary>
+        /// If True, classifier will use a sparse memory matrix
+        /// </summary>
         private bool useSparseMemory = true;
-        /** 
-         * If useSparseMemory is True, input variables whose absolute values are 
-         * less than this threshold will be stored as zero
-         */
+        /// <summary>
+        /// If useSparseMemory is True, input variables whose absolute values are
+        /// less than this threshold will be stored as zero
+        /// </summary>
         private double sparseThreshold = 0.1;
-        /** Flag specifying whether to multiply sparseThreshold by max value in input */
+        /// <summary>
+        /// Flag specifying whether to multiply sparseThreshold by max value in input
+        /// </summary>
         private bool relativeThreshold = false;
-        /** Number of elements of the input that are stored. If 0, all elements are stored */
+        /// <summary>
+        /// Number of elements of the input that are stored. If 0, all elements are stored
+        /// </summary>
         private int numWinners = 0;
-        /** 
-         * Number of samples the must occur before a SVD
-         * (Singular Value Decomposition) transformation will be performed. If 0,
-         * the transformation will never be performed
-         */
-        private int? numSvdSamples = null;
-        /** 
-         * Controls dimensions kept after SVD transformation. If "adaptive", 
-         * the number is chosen automatically
-         */
-        private int? numSvdDims = (int)KnnMode.ADAPTIVE;
 
-        /**
-         * If numSVDDims is "adaptive", this controls the
-         * smallest singular value that is retained as a fraction of the largest
-         * singular value
-         */
+        /// <summary>
+        /// Number of samples the must occur before a SVD
+        /// (Singular Value Decomposition) transformation will be performed.If 0,
+        /// the transformation will never be performed
+        /// </summary>
+        private int? numSvdSamples = null;
+
+        /// <summary>
+        /// Controls dimensions kept after SVD transformation. If "adaptive", 
+        /// the number is chosen automatically
+        /// </summary>
+        private int? numSvdDims = null;
+
+        /// <summary>
+        /// If numSVDDims is "adaptive", this controls the
+        /// smallest singular value that is retained as a fraction of the largest
+        /// singular value
+        /// </summary>
         private double? fractionOfMax = null;
-        /**
-         * Limits the maximum number of the training
-         * patterns stored. When KNN learns in a fixed capacity mode, the unused
-         * patterns are deleted once the number of stored patterns is greater than
-         * maxStoredPatterns. A value of -1 is no limit
-         */
+        /// <summary>
+        /// Limits the maximum number of the training
+        /// patterns stored.When KNN learns in a fixed capacity mode, the unused
+        /// patterns are deleted once the number of stored patterns is greater than
+        /// maxStoredPatterns.A value of - 1 is no limit
+        /// </summary>
         private int maxStoredPatterns = -1;
         /**
          * A boolean flag that determines whether,
@@ -90,14 +187,22 @@ namespace HTM.Net.Algorithms
          */
         private int cellsPerCol = 0;
 
+        /// <summary>
+        /// If useSparseMemory is set, only vectors with
+        /// sparsity >= minSparsity will be stored during learning.A value of 0.0
+        /// implies all vectors will be stored. A value of 0.1 implies only vectors
+        /// with at least 10% sparsity will be stored
+        /// </summary>
+        private double minSparsity = 0.0;
+
         ///////////////////////////////////////////////////////
         //              Internal State Variables             //
         ///////////////////////////////////////////////////////
-        private NearestNeighbor memory;
+        private NearestNeighbor _memory;
 
-        private int iterationIdx = -1;
+        private int _iterationIdx = -1;
 
-        private double[] protoSizes;
+        private Vector<double> _protoSizes;
         private List<int> _categoryList = new List<int>();
         private List<int> _categoryRecencyList = new List<int>();
         private bool _finishedLearning, fixedCapacity;
@@ -108,11 +213,14 @@ namespace HTM.Net.Algorithms
         private List<int> _nextTrainingIndices = null;
 
         // Used by PCA
-        private double[][] _vt;
-        private double[] _mean;
-        private double[][] _a;
-        private double[] _s;
+        private Matrix<double> _vt;
+        private double[][] _nc;
+        private Vector<double> _mean;
+        private Matrix<double> _a;
+        private Vector<double> _s;
         private NearestNeighbor _M;
+
+        #endregion
 
         #region Construction
 
@@ -144,17 +252,18 @@ namespace HTM.Net.Algorithms
         /// </summary>
         public void Clear()
         {
-            memory = null;
+            _memory = null;
             _numPatterns = 0;
             _M = null;
             _categoryList = new List<int>();
             _partitionIdList = new List<int>();
             _partitionIdMap = new Map<int, int[]>();
             _finishedLearning = false;
-            iterationIdx = -1;
+            _iterationIdx = -1;
 
             if (maxStoredPatterns > 0)
             {
+                Debug.Assert(useSparseMemory, "Fixed capacity KNN is implemented only in this sparse memory mode");
                 fixedCapacity = true;
                 _categoryRecencyList = new List<int>();
             }
@@ -162,17 +271,36 @@ namespace HTM.Net.Algorithms
             {
                 fixedCapacity = false;
             }
-            protoSizes = null;
+            _protoSizes = null;
 
             // used by PCA
             _s = null;
             _vt = null;
-            //_nc = null;
+            _nc = null;
             _mean = null;
 
             // used by network builder
             _specificIndexTraining = false;
             _nextTrainingIndices = null;
+        }
+
+        public KnnClassification Compute(Vector<double> inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1
+            , bool computeScores = true, bool overCategories = true, bool infer = true, bool learn = true)
+        {
+            KnnClassification retVal = new KnnClassification();
+
+            if (infer)
+            {
+                var inferResult = Infer(inputPattern, computeScores, overCategories, partitionId);
+                retVal.SetInferResult(inferResult);
+            }
+
+            if (learn)
+            {
+                int numPatterns = Learn(inputPattern, inputCategory, partitionId, isSparse, rowId);
+                retVal.SetNumPatterns(numPatterns);
+            }
+            return retVal;
         }
 
         /**
@@ -203,13 +331,27 @@ namespace HTM.Net.Algorithms
          *                          
          * @return                  The number of patterns currently stored in the classifier
          */
-        public int Learn(double[] inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1)
+        public int Learn(Vector<double> inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0, int rowId = -1)
         {
             int inputWidth = 0;
             bool addRow = false;
-            double[] thresholdedInput = null;
+            Vector<double> thresholdedInput = null;
 
-            if (rowId == -1) rowId = iterationIdx;
+            if (isSparse > 0)
+            {
+                for (int i = 0; i < inputPattern.Count - 1; i++)
+                {
+                    if (inputPattern[i] > inputPattern[i + 1])
+                    {
+                        throw new InvalidOperationException("Sparse input pattern must be sorted");
+                    }
+                }
+            }
+            
+            if (rowId == -1)
+            {
+                rowId = _iterationIdx;
+            }
 
             if (!useSparseMemory)
             {
@@ -219,7 +361,7 @@ namespace HTM.Net.Algorithms
                 // If the input was given in sparse form, convert it to dense
                 if (isSparse > 0)
                 {
-                    var denseInput = new double[isSparse];
+                    var denseInput = Vector<double>.Build.Dense(isSparse);
                     foreach (int index in inputPattern)
                     {
                         denseInput[index] = 1.0;
@@ -233,11 +375,11 @@ namespace HTM.Net.Algorithms
                     return _numPatterns;
                 }
 
-                if (memory == null)
+                if (_memory == null)
                 {
                     // Initialize memory with 100 rows and numPatterns = 0
-                    inputWidth = inputPattern.Length;
-                    memory = new NearestNeighbor(100, inputWidth);
+                    inputWidth = inputPattern.Count;
+                    _memory = new NearestNeighbor(100, inputWidth);
                     _numPatterns = 0;
                     _M = new NearestNeighbor(0, inputWidth);
                 }
@@ -247,7 +389,7 @@ namespace HTM.Net.Algorithms
                 if (_vt != null)
                 {
                     // Compute projection
-                    inputPattern = ArrayUtils.Dot(_vt, ArrayUtils.Sub(inputPattern, _mean));
+                    inputPattern =  _vt * (inputPattern - _mean);
                 }
                 if (distanceThreshold > 0)
                 {
@@ -258,16 +400,16 @@ namespace HTM.Net.Algorithms
                 }
                 if (addRow)
                 {
-                    protoSizes = null;     // need to re-compute
-                    if (_numPatterns == memory.RowCount)
+                    _protoSizes = null;     // need to re-compute
+                    if (_numPatterns == _memory.RowCount)
                     {
                         // Double the size of the memory
-                        //_doubleMemoryNumRows();
+                        //DoubleMemoryRows();
                     }
                     if (!_specificIndexTraining)
                     {
                         // Normal learning - append the new input vector
-                        memory.InsertRow(_numPatterns, inputPattern);
+                        _memory.InsertRow(_numPatterns, inputPattern);
                         _numPatterns += 1;
                         _categoryList.Add(inputCategory);
                     }
@@ -277,15 +419,16 @@ namespace HTM.Net.Algorithms
                         throw new NotImplementedException();
                     }
                     // Set _M to the "active" part of _Memory
-                    _M = memory;
+                    _M = _memory;
                     AddPartitionId(_numPatterns - 1, partitionId);
                 }
             }
             // Sparse vectors
-            else {
+            else
+            {
                 // If the input was given in sparse form, convert it to dense if necessary
                 if (isSparse > 0 && (_vt != null || distanceThreshold > 0 || numSvdDims != null ||
-                    numSvdSamples != -1 || numWinners > 0))
+                    numSvdSamples > 0 || numWinners > 0))
                 {
                     throw new NotImplementedException();
                 }
@@ -295,20 +438,21 @@ namespace HTM.Net.Algorithms
                 {
                     inputWidth = isSparse;
                 }
-                else {
-                    inputWidth = inputPattern.Length;
+                else
+                {
+                    inputWidth = inputPattern.Count;
                 }
 
                 // Allocate storage if this is the first training vector
-                if (memory == null)
+                if (_memory == null)
                 {
-                    memory = new NearestNeighbor(0, inputWidth);
+                    _memory = new NearestNeighbor(0, inputWidth);
                 }
 
                 // Support SVD if it is on
                 if (_vt != null)
                 {
-                    inputPattern = ArrayUtils.Dot(_vt, ArrayUtils.Sub(inputPattern, _mean));
+                    inputPattern = (_vt * (inputPattern - _mean));
                 }
 
                 // Threshold the input, zeroing out entries that are too close to 0.
@@ -325,7 +469,7 @@ namespace HTM.Net.Algorithms
                 if (cellsPerCol >= 1)
                 {
                     double[] burstingCols = ArrayUtils.Min(
-                        ArrayUtils.Reshape(new double[][] { thresholdedInput }, cellsPerCol), 1);
+                        ArrayUtils.Reshape(new double[][] { thresholdedInput.ToArray() }, cellsPerCol), 1);
 
                     burstingCols = ArrayUtils.ToDoubleArray(
                         ArrayUtils.Where(burstingCols, ArrayUtils.GREATER_THAN_0));
@@ -342,9 +486,9 @@ namespace HTM.Net.Algorithms
                 }
 
                 // Don't learn entries that are too close to existing entries.
-                if (memory.RowCount > 0)
+                if (_memory.RowCount > 0)
                 {
-                    double[] dist = null;
+                    Vector<double> dist = null;
                     // if this vector is a perfect match for one we already learned, then
                     // replace the category - it may have changed with online learning on.
                     if (replaceDuplicates)
@@ -352,7 +496,7 @@ namespace HTM.Net.Algorithms
                         dist = CalcDistance(thresholdedInput, 1);
                         if (dist.Min() == 0)
                         {
-                            int rowIdx = ArrayUtils.Argmin(dist);
+                            int rowIdx = ArrayUtils.Argmin(dist.ToArray());
                             _categoryList[rowIdx] = inputCategory;
                             if (fixedCapacity)
                             {
@@ -374,26 +518,45 @@ namespace HTM.Net.Algorithms
                         {
                             if (fixedCapacity)
                             {
-                                int rowIdx = ArrayUtils.Argmin(dist);
+                                int rowIdx = ArrayUtils.Argmin(dist.ToArray());
                                 _categoryRecencyList[rowIdx] = rowId;
                             }
                         }
                     }
                 }
 
+                if (addRow && minSparsity > 0.0)
+                {
+                    double sparsity;
+                    if (isSparse == 0)
+                    {
+                        sparsity = ((double)thresholdedInput.Count(i => i != 0)) / thresholdedInput.Count;
+                    }
+                    else
+                    {
+                        sparsity = (double)inputPattern.Count / isSparse;
+                    }
+
+                    if (sparsity < minSparsity)
+                    {
+                        addRow = false;
+                    }
+                }
+
                 // Add the new sparse vector to our storage
                 if (addRow)
                 {
-                    protoSizes = null;  // Need to recompute
+                    _protoSizes = null;  // Need to recompute
                     if (isSparse == 0)
                     {
-                        memory.InsertRow(memory.RowCount, thresholdedInput);
+                        _memory.InsertRow(_memory.RowCount, thresholdedInput);
                         //memory.addRow(thresholdedInput);
                     }
-                    else {
-                        int[] nonZeros = new int[inputPattern.Length];
+                    else
+                    {
+                        int[] nonZeros = new int[inputPattern.Count];
                         Arrays.Fill(nonZeros, 1);
-                        memory.AddRowNonZero(inputPattern, nonZeros);
+                        _memory.AddRowNonZero(inputPattern, nonZeros);
                         //                memory.addRowNZ(
                         //                    inputPattern, DoubleStream.generate(() -> 1)
                         //                        .limit(inputPattern.length).toArray());
@@ -407,7 +570,7 @@ namespace HTM.Net.Algorithms
                         if (_numPatterns > maxStoredPatterns && maxStoredPatterns > 0)
                         {
                             int leastRecentlyUsedPattern = ArrayUtils.Argmin(_categoryRecencyList.ToArray());
-                            memory.RemoveRow(leastRecentlyUsedPattern);
+                            _memory.RemoveRow(leastRecentlyUsedPattern);
                             _categoryList.Remove(leastRecentlyUsedPattern);
                             _categoryRecencyList.Remove(leastRecentlyUsedPattern);
                             _numPatterns -= 1;
@@ -418,12 +581,19 @@ namespace HTM.Net.Algorithms
 
 
 
-            if (numSvdDims != null && numSvdSamples != null && _numPatterns == numSvdSamples)
+            if (numSvdDims != null && numSvdSamples > 0 
+                && _numPatterns == numSvdSamples)
             {
                 ComputeSvd();
             }
 
             return _numPatterns;
+        }
+
+        public int Learn(double[] inputPattern, int inputCategory, int? partitionId = null, int isSparse = 0,
+            int rowId = -1)
+        {
+            return Learn(Vector.Build.SparseOfArray(inputPattern), inputCategory, partitionId, isSparse, rowId);
         }
 
         /// <summary>
@@ -435,30 +605,37 @@ namespace HTM.Net.Algorithms
         /// <param name="overCategories">NO EFFECT</param>
         /// <param name="partitionId"></param>
         /// <returns></returns>
-        public Tuple Infer(double[] inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
+        public KnnInferResult Infer(
+            Vector<double> inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
         {
             int? winner;
-            double[] inferenceResult;
-            double[] dist;
+            Vector<double> inferenceResult;
+            Vector<double> dist;
             double[] categoryDist;
 
-            if (_categoryList.Count == 0)
+            double sparsity = 0.0;
+            if (minSparsity > 0.0)
+            {
+                sparsity = ((double)inputPattern.Count(i => i != 0)) / inputPattern.Count;
+            }
+
+            if (_categoryList.Count == 0 || sparsity < minSparsity)
             {
                 // No categories learned yet; i.e. first inference w/ online learning.
-                winner = 0;
-                inferenceResult = new double[1];
-                dist = new double[1];
-                Arrays.Fill(dist, 1);
+                winner = null;
+                inferenceResult = Vector.Build.Dense(1);
+                dist = Vector.Build.Dense(1);
+                dist.Add(1);
+                //Arrays.Fill(dist, 1);
                 categoryDist = new double[1];
                 Arrays.Fill(categoryDist, 1);
             }
             else
             {
                 int maxCategoryIdx = _categoryList.Max();
-                inferenceResult = new double[maxCategoryIdx + 1];
+                inferenceResult = Vector.Build.Dense(maxCategoryIdx + 1);// new double[maxCategoryIdx + 1];
                 dist = GetDistances(inputPattern, partitionId: partitionId);
                 int validVectorCount = _categoryList.Count - _categoryList.Count(c => c == -1);
-
                 // Loop through the indices of the nearest neighbors.
                 if (_exact)
                 {
@@ -480,19 +657,19 @@ namespace HTM.Net.Algorithms
                         inferenceResult[_categoryList[i]] += 1.0;
                     }
                 }
+
                 // Prepare inference results.
-                if (inferenceResult.Any())
+                if (inferenceResult.Storage.EnumerateNonZero().Any())
                 {
-                    winner = ArrayUtils.Argmax(inferenceResult);
-                    inferenceResult = ArrayUtils.Divide(inferenceResult, inferenceResult.Sum());
+                    winner = inferenceResult.MaximumIndex();
+                    inferenceResult /= inferenceResult.Sum();
                 }
                 else
                 {
                     winner = null;
                 }
                 categoryDist = MinScorePerCategory(maxCategoryIdx, _categoryList, dist);
-                categoryDist = ArrayUtils.Clip(categoryDist, 0, 1);
-
+                categoryDist = ArrayUtils.Clip(categoryDist, 0.0, 1.0);
             }
             /*
                 if self.verbosity >= 1:
@@ -503,7 +680,13 @@ namespace HTM.Net.Algorithms
               print "  pct neighbors of each category:", inferenceResult
               print "  dist of each prototype:", dist
               print "  dist of each category:", categoryDist*/
-            return new Tuple(winner, inferenceResult, dist, categoryDist);
+            return new KnnInferResult(new[] { "winner", "inference", "protoDistance", "categoryDistances" }, winner, inferenceResult, dist, categoryDist);
+        }
+
+        public KnnInferResult Infer(
+            double[] inputPattern, bool computeScores = true, bool overCategories = true, int? partitionId = null)
+        {
+            return Infer(Vector.Build.DenseOfArray(inputPattern), computeScores, overCategories, partitionId);
         }
 
         /// <summary>
@@ -512,70 +695,108 @@ namespace HTM.Net.Algorithms
         /// <param name="inputPattern"></param>
         /// <param name="doWinners"></param>
         /// <returns></returns>
-        public double[] SparsifyVector(double[] inputPattern, bool doWinners = false)
+        public Vector<double> SparsifyVector(Vector<double> inputPattern, bool doWinners = false)
         {
-            double[] retVal = inputPattern.ToArray();
-
             if (!relativeThreshold)
             {
-                retVal = inputPattern.Select(i => i > sparseThreshold ? i : 0).ToArray();
+                inputPattern = Vector<double>.Build.SparseOfArray(
+                    inputPattern
+                    .Select(i => (i * Math.Abs(i)) > sparseThreshold ? i : 0.0)
+                    .ToArray());
             }
             else if (sparseThreshold > 0)
             {
-                retVal = inputPattern.Select(i => i > sparseThreshold * ArrayUtils.Max(inputPattern) ? i : 0).ToArray();
+                inputPattern = Vector<double>.Build.SparseOfArray(
+                    inputPattern
+                    .Select(i => (i * Math.Abs(i)) > sparseThreshold * inputPattern.Max() ? i : 0.0)
+                    .ToArray());
             }
 
             // Do winner-take-all
             if (doWinners)
             {
-                if (numWinners > 0 && numWinners < inputPattern.Count(i => i > 0))
+                if ((numWinners > 0) && (numWinners < inputPattern.Where(i => i > 0).Sum()))
                 {
-                    double[] sparseInput = (double[])Array.CreateInstance(typeof(double), ArrayUtils.Shape(inputPattern));
-                    int[] sorted = ArrayUtils.Argsort(retVal, 0, numWinners);
-                    retVal = ArrayUtils.Subst(sparseInput, inputPattern, sorted);
+                    Vector<double> sparseInput = Vector<double>.Build.Sparse(inputPattern.Count);
+                    int[] sorted = ArrayUtils.Argsort(inputPattern, 0, numWinners);
+                    inputPattern = ArrayUtils.Subst(sparseInput, inputPattern, sorted);
+                    // double[] sparseInput = (double[])Array.CreateInstance(typeof(double), ArrayUtils.Shape(inputPattern));
+                    //int[] sorted = ArrayUtils.Argsort(inputPattern, 0, numWinners);
+                    //inputPattern = ArrayUtils.Subst(sparseInput, inputPattern, sorted);
                 }
             }
 
             if (doBinarization)
             {
-                retVal = retVal.Select(d => d > 0 ? 1.0 : 0.0).ToArray();
+                inputPattern = Vector<double>.Build.SparseOfArray(
+                    inputPattern.Select(d => d > binarizationThreshold ? 1.0 : 0.0).ToArray());
             }
-            return retVal;
+
+            return inputPattern;
+        }
+
+        public Vector<double> ClosestTrainingPattern(Vector<double> inputPattern, int cat)
+        {
+            var inputArr = inputPattern.ToArray();
+            var dist = GetDistances(inputPattern, null);
+            var sorted = ArrayUtils.Argsort(dist);
+            foreach (var patIdx in sorted)
+            {
+                var patternCat = _categoryList[patIdx];
+
+                // if closest pattern belongs to desired category, return it
+                if (patternCat == cat)
+                {
+                    Vector<double> closestPattern;
+                    if (useSparseMemory)
+                    {
+                        closestPattern = _memory.GetMatrix().Row(patIdx);
+                    }
+                    else
+                    { 
+                        closestPattern = _M.GetMatrix().Row(patIdx);
+                    }
+
+                    return closestPattern;
+                }
+            }
+
+            return null;
         }
 
         #endregion
 
         #region Helper Methods
 
-        private double[] ComputeSvd(int? numSvdSamples = null, bool finalize = true)
+        // orig version (2 = vector version)
+        private Vector<double> ComputeSvd(int numSvdSamples = 0, bool finalize = true)
         {
-            if (numSvdSamples == null)
+            if (numSvdSamples == 0)
             {
                 numSvdSamples = _numPatterns;
             }
 
-
             if (!useSparseMemory)
             {
-                _a = memory.ToDense().Take(_numPatterns).ToArray();
-                //throw new NotImplementedException("!useSparseMemory");
-                //_a = memory.TakeRows(_numPatterns);
+                _a = Matrix<double>.Build.DenseOfRowArrays(_memory.ToDense().Take(_numPatterns).ToArray());
             }
             else
             {
-                _a = memory.ToDense().Take(_numPatterns).ToArray();
+                _a = Matrix<double>.Build.DenseOfRowArrays(_memory.ToDense().Take(_numPatterns).ToArray());
             }
 
-            _mean = ArrayUtils.Mean(_a);
-            _a = ArrayUtils.Sub(_a, _mean);
+            _mean = Vector<double>.Build.DenseOfArray(ArrayUtils.Mean(_a.ToRowArrays(), 0));
+            _a = Matrix<double>.Build.DenseOfRowArrays(ArrayUtils.Sub(_a.ToRowArrays(), _mean.ToArray()));
 
-            var svd = DenseMatrix.OfRowArrays(_a.Take(numSvdSamples.Value)).Svd(true);
-            _vt = svd.VT.ToRowArrays();
-            _s = svd.S.ToArray();
+            //var svd = _a.SubMatrix(0, numSvdSamples, 0, _a.ColumnCount).Svd(true);
+            var svd = DenseMatrix.OfRowArrays(_a.ToRowArrays().Take(numSvdSamples)).Svd(true);
+            _vt = svd.VT;
+            _s = svd.S;
             if (finalize)
             {
                 FinalizeSvd();
             }
+
             return _s;
             /*
             if not self.useSparseMemory:
@@ -600,7 +821,7 @@ namespace HTM.Net.Algorithms
             if (numSVDDims.HasValue)
                 this.numSvdDims = numSVDDims;
 
-            if (numSvdDims.Value == (int)KnnMode.ADAPTIVE)
+            if (this.numSvdDims.Value == (int)KnnMode.ADAPTIVE)
             {
                 if (fractionOfMax.HasValue)
                 {
@@ -612,39 +833,139 @@ namespace HTM.Net.Algorithms
                 }
             }
 
-            if (_vt.GetLength(0) < (int)numSvdDims.GetValueOrDefault())
+            if (_vt.ToRowArrays().GetLength(0) < (int)numSvdDims.GetValueOrDefault())
             {
                 Console.WriteLine("******************************************************************");
                 Console.WriteLine("Warning: The requested number of PCA dimensions is more than the number of pattern dimensions.");
-                Console.WriteLine("Setting numSVDDims = {0}", _vt.GetLength(0));
+                Console.WriteLine("Setting numSVDDims = {0}", _vt.ToRowArrays().GetLength(0));
                 Console.WriteLine("******************************************************************");
-                numSvdDims = _vt.GetLength(0);
+                numSvdDims = _vt.ToRowArrays().GetLength(0);
             }
-            _vt = _vt.Take(numSvdDims.Value).ToArray();
-            // Added when svd is not able to decompose vectors - uses raw spare vectors
-            if (_vt.Length == 0) return;
 
-            memory = new NearestNeighbor(_numPatterns, numSvdDims.Value);
-            _M = memory;
+            //_vt = _vt.SubMatrix(0, numSvdDims.Value, 0, _vt.ColumnCount);
+            _vt = Matrix<double>.Build.DenseOfRowArrays(_vt.ToRowArrays().Take(numSvdDims.Value).ToArray());
+            // Added when svd is not able to decompose vectors - uses raw spare vectors
+            if (_vt.RowCount == 0) return;
+
+            _memory = new NearestNeighbor(_numPatterns, numSvdDims.Value);
+            _M = _memory;
             useSparseMemory = false;
             for (int i = 0; i < _numPatterns; i++)
             {
-                memory.SetRow(i, ArrayUtils.Dot(_vt, _a[i]));
+                _memory.GetMatrix().SetRow(i, _vt * _a.Row(i));
             }
             _a = null;
         }
 
-        private int? GetAdaptiveSvdDims(double[] singularValues, double fractionOfMax = 0.001)
+        private Vector<double> ComputeSvd2(int numSvdSamples = 0, bool finalize = true)
         {
-            double[] v = ArrayUtils.Divide(singularValues, singularValues[0]);
+            if (numSvdSamples == 0)
+            {
+                numSvdSamples = _numPatterns;
+            }
+
+            if (!useSparseMemory)
+            {
+                _a = _memory.GetMatrix().SubMatrix(0, _numPatterns, 0, _memory.GetMatrix().ColumnCount);
+                //_a = _memory.ToDense().Take(_numPatterns).ToArray();
+                //throw new NotImplementedException("!useSparseMemory");
+                //_a = memory.TakeRows(_numPatterns);
+            }
+            else
+            {
+                _a = _memory.GetMatrix().SubMatrix(0, _numPatterns, 0, _memory.GetMatrix().ColumnCount);
+            }
+
+            _mean = ArrayUtils.Mean(_a, 0);
+            _a = ArrayUtils.Sub(_a, _mean);
+
+            var svd = _a.SubMatrix(0, numSvdSamples, 0, _a.ColumnCount).Svd(true);
+            // var svd = DenseMatrix.OfRowArrays(_a.Take(numSvdSamples)).Svd(true);
+            _vt = svd.VT;
+            _s = svd.S;
+            if (finalize)
+            {
+                FinalizeSvd();
+            }
+
+            return _s;
+            /*
+            if not self.useSparseMemory:
+              self._a = self._Memory[:self._numPatterns]
+            else:
+              self._a = self._Memory.toDense()[:self._numPatterns]
+
+            self._mean = numpy.mean(self._a, axis=0)
+            self._a -= self._mean
+            u,self._s,self._vt = numpy.linalg.svd(self._a[:numSVDSamples])
+
+            if finalize:
+              self.finalizeSVD()
+
+            return self._s
+            */
+
+        }
+
+        private void FinalizeSvd2(int? numSVDDims = null)
+        {
+            if (numSVDDims.HasValue)
+                this.numSvdDims = numSVDDims;
+
+            if (this.numSvdDims.Value == (int)KnnMode.ADAPTIVE)
+            {
+                if (fractionOfMax.HasValue)
+                {
+                    numSvdDims = GetAdaptiveSvdDims(_s, fractionOfMax.Value);
+                }
+                else
+                {
+                    numSvdDims = GetAdaptiveSvdDims(_s);
+                }
+            }
+
+            if (_vt.RowCount < (int)numSvdDims.GetValueOrDefault())
+            {
+                Console.WriteLine("******************************************************************");
+                Console.WriteLine("Warning: The requested number of PCA dimensions is more than the number of pattern dimensions.");
+                Console.WriteLine("Setting numSVDDims = {0}", _vt.RowCount);
+                Console.WriteLine("******************************************************************");
+                numSvdDims = _vt.RowCount;
+            }
+
+            _vt = _vt.SubMatrix(0, numSvdDims.Value, 0, _vt.ColumnCount);
+            //_vt = _vt.Take(numSvdDims.Value).ToArray();
+            // Added when svd is not able to decompose vectors - uses raw spare vectors
+            if (_vt.RowCount == 0) return;
+
+            _memory = new NearestNeighbor(_numPatterns, numSvdDims.Value);
+            _M = _memory;
+            useSparseMemory = false;
+            for (int i = 0; i < _numPatterns; i++)
+            {
+                _memory.GetMatrix().SetRow(i, _vt * _a.Row(i));
+            }
+            _a = null;
+        }
+
+        private int? GetAdaptiveSvdDims(Vector<double> singularValues, double fractionOfMax = 0.001)
+        {
+            Vector<double> v = singularValues / singularValues[0];
             int[] idx = ArrayUtils.Where(v, d => d < fractionOfMax);
             if (idx.Length > 0)
             {
-                Console.WriteLine("Number of PCA dimensions chosen: " + idx[0] + "out of " + v.Length);
-                return idx[0];
+                Console.WriteLine("Number of PCA dimensions chosen: " + (idx[0] + 1) + " out of " + v.Count);
+                return idx[0] + 1;
             }
-            Console.WriteLine("Number of PCA dimensions chosen: " + (v.Length - 1) + "out of " + v.Length);
-            return v.Length - 1;
+            Console.WriteLine("Number of PCA dimensions chosen: " + (v.Count - 1) + " out of " + v.Count);
+            return v.Count - 1;
+        }
+
+        private void DoubleMemoryRows()
+        {
+            var m = 2 * _memory.GetMatrix().RowCount;
+            var n = _memory.GetMatrix().ColumnCount;
+            _memory.ResizeMatrix(m, n);
         }
 
         /// <summary>
@@ -660,27 +981,30 @@ namespace HTM.Net.Algorithms
             }
             else
             {
-                _partitionIdList.Add(partitionId.GetValueOrDefault(int.MaxValue));
-                var indices = _partitionIdMap.Get(partitionId.Value, new int[0]).ToList();
+                _partitionIdList.Add(partitionId.Value);
+                var indices = _partitionIdMap.Get(partitionId.Value, Array.Empty<int>()).ToList();
                 indices.Add(index);
                 _partitionIdMap[partitionId.Value] = indices.ToArray();
             }
         }
 
-        private double[] MinScorePerCategory(int maxCategoryIdx, List<int> categoryList, double[] dist)
+        private double[] MinScorePerCategory(int maxCategoryIdx, List<int> categoryList, Vector<double> dist)
         {
-            var c = categoryList.ToArray();
-            var d = dist.ToArray();
+            var categories = categoryList.ToArray();
+            var distance = dist.ToArray();
 
             int n = maxCategoryIdx + 1;
-            double[] s = new double[n];
+            double[] scores = new double[n];
+            Arrays.Fill(scores, double.MaxValue);
 
-            int nScores = c.Length;
+            int nScores = categories.Length;
             for (int i = 0; i < nScores; i++)
             {
-                s[c[i]] = Math.Min(s[c[i]], d[i]);
+                var cg = categories[i];
+                var dg = distance[i];
+                scores[cg] = Math.Min(scores[cg], dg);
             }
-            return s;
+            return scores;
         }
 
         /// <summary>
@@ -689,24 +1013,24 @@ namespace HTM.Net.Algorithms
         /// <param name="inputPattern">The pattern from which distances to all other patterns are returned</param>
         /// <param name="partitionId">If provided, ignore all training vectors with this partitionId.</param>
         /// <returns></returns>
-        private double[] GetDistances(double[] inputPattern, int? partitionId)
+        private Vector<double> GetDistances(Vector<double> inputPattern, int? partitionId)
         {
-            double[] retval = inputPattern.ToArray();
             if (!_finishedLearning)
             {
                 FinishLearning();
                 _finishedLearning = true;
             }
 
-            if (_vt != null && _vt.Length > 0)
+            if (_vt != null && _vt.RowCount > 0)
             {
-                retval = ArrayUtils.Dot(_vt, ArrayUtils.Sub(retval, _mean));
+                // inputPattern = ArrayUtils.Dot(_vt, ArrayUtils.Sub(inputPattern, _mean));
+                inputPattern = _vt * (inputPattern - _mean);
             }
 
-            var sparseInput = SparsifyVector(retval);
+            var sparseInput = SparsifyVector(inputPattern);
 
             // Compute distances
-            double[] dist = CalcDistance(sparseInput);
+            Vector<double> dist = CalcDistance(sparseInput);
             // Invalidate results where category is -1
             if (_specificIndexTraining)
             {
@@ -735,9 +1059,9 @@ namespace HTM.Net.Algorithms
         /// <param name="inputPattern">The pattern from which distances to all other patterns are calculated</param>
         /// <param name="distanceNorm">Degree of the distance norm</param>
         /// <returns></returns>
-        private double[] CalcDistance(double[] inputPattern, double? distanceNorm = null)
+        private Vector<double> CalcDistance(Vector<double> inputPattern, double? distanceNorm = null)
         {
-            double[] dist;
+            Vector<double> dist;
 
             if (!distanceNorm.HasValue || distanceNorm == -1)
             {
@@ -747,46 +1071,50 @@ namespace HTM.Net.Algorithms
             // Sparse memory
             if (useSparseMemory)
             {
-                if (protoSizes == null)
+                if (_protoSizes == null)
                 {
-                    protoSizes = memory.RowSums();
+                    _protoSizes = _memory.RowSums();
                 }
-                double[] overlapsWithProtos = memory.RightVecSumAtNz(inputPattern); // .RightVecSumAtNz(inputPattern);
+
+                // double[] overlapsWithProtos = _memory.RightVecSumAtNz(inputPattern); // .RightVecSumAtNz(inputPattern);
+                Vector<double> overlapsWithProtos = _memory.RightVecSumAtNz(inputPattern); // .RightVecSumAtNz(inputPattern);
                 double inputPatternSum = inputPattern.Sum();
 
                 if (distanceMethod == DistanceMethod.RawOverlap)
                 {
-                    dist = ArrayUtils.Sub(inputPatternSum, overlapsWithProtos); // 1,4 -> overlap should be 5,2
+                    dist = inputPatternSum - overlapsWithProtos;
+                    //dist = ArrayUtils.Sub(inputPatternSum, overlapsWithProtos); // 1,4 -> overlap should be 5,2
                 }
                 else if (distanceMethod == DistanceMethod.PctInputOverlap)
                 {
-                    dist = ArrayUtils.Sub(inputPatternSum, overlapsWithProtos);
+                    //dist = ArrayUtils.Sub(inputPatternSum, overlapsWithProtos);
+                    dist = inputPatternSum - overlapsWithProtos;
                     if (inputPatternSum > 0)
                     {
-                        dist = ArrayUtils.Divide(dist, inputPatternSum);
+                        dist /= inputPatternSum;
                     }
                 }
                 else if (distanceMethod == DistanceMethod.PctProtoOverlap)
                 {
-                    overlapsWithProtos = ArrayUtils.Divide(overlapsWithProtos, protoSizes);
-                    dist = ArrayUtils.Sub(1.0, overlapsWithProtos);
+                    overlapsWithProtos /= _protoSizes;
+                    dist = 1.0 - overlapsWithProtos;
                 }
                 else if (distanceMethod == DistanceMethod.PctLargerOverlap)
                 {
-                    double[] maxVal = ArrayUtils.Maximum(protoSizes, inputPatternSum);
+                    Vector<double> maxVal = ArrayUtils.Maximum(_protoSizes, inputPatternSum);
                     if (maxVal.All(i => i > 0))
                     {
-                        overlapsWithProtos = ArrayUtils.Divide(overlapsWithProtos, maxVal);
+                        overlapsWithProtos /= maxVal;
                     }
-                    dist = ArrayUtils.Sub(1.0, overlapsWithProtos);
+                    dist = 1.0 - overlapsWithProtos;
                 }
                 else if (distanceMethod == DistanceMethod.Norm)
                 {
-                    dist = memory.VecLpDist(distanceNorm.Value, inputPattern);
+                    dist = _memory.VecLpDist(distanceNorm.Value, inputPattern);
                     var distMax = dist.Max();
                     if (distMax > 0)
                     {
-                        dist = ArrayUtils.Divide(dist, distMax);
+                        dist /= distMax;
                     }
                 }
                 else
@@ -800,15 +1128,16 @@ namespace HTM.Net.Algorithms
                 if (distanceMethod == DistanceMethod.Norm)
                 {
                     double[][] mArr = _M.ToDense();
-                    double[][] subbed = ArrayUtils.Sub(mArr, inputPattern);
+                    double[][] subbed = ArrayUtils.SubstractRows(mArr, inputPattern.ToArray());
                     double[][] abs = ArrayUtils.Abs(subbed);
                     double[][] powDist = ArrayUtils.Power(abs, distanceNorm.Value);
 
                     // dist = dist.sum(1)
-                    dist = powDist.Select(a => a.Sum()).ToArray();
-
-                    dist = ArrayUtils.Power(dist, 1.0 / distanceNorm.Value);
-                    dist = ArrayUtils.Divide(dist, dist.Max());
+                    //dist = powDist.Select(a => a.Sum()).ToArray();
+                    var dist2 = ArrayUtils.Sum(powDist, 1);
+                    dist2 = ArrayUtils.Power(dist2, 1.0 / distanceNorm.Value);
+                    dist2 = ArrayUtils.Divide(dist2, dist2.Max());
+                    dist = Vector<double>.Build.DenseOfArray(dist2);
                 }
                 else
                 {
@@ -818,7 +1147,7 @@ namespace HTM.Net.Algorithms
             return dist;
         }
 
-        private void FinishLearning()
+        public void FinishLearning()
         {
             if (numSvdDims != null && _vt == null)
             {
@@ -853,7 +1182,7 @@ namespace HTM.Net.Algorithms
                 // Delete backwards
                 foreach (int rowIndex in rowsToRemove.Reverse())
                 {
-                    memory.RemoveRow(rowIndex);
+                    _memory.RemoveRow(rowIndex);
                 }
             }
             else
@@ -867,9 +1196,9 @@ namespace HTM.Net.Algorithms
             int numRowsExpected = _numPatterns - numRemoved;
             if (useSparseMemory)
             {
-                if (memory != null)
+                if (_memory != null)
                 {
-                    Debug.Assert(memory.RowCount == numRowsExpected);
+                    Debug.Assert(_memory.RowCount == numRowsExpected);
                 }
             }
             else
@@ -1092,6 +1421,16 @@ namespace HTM.Net.Algorithms
             return fractionOfMax;
         }
 
+        public int GetNumPatterns()
+        {
+            return _numPatterns;
+        }
+
+        public List<int> GetCategoryList()
+        {
+            return _categoryList;
+        }
+
         /**
          * Limits the maximum number of the training
          * patterns stored. When KNN learns in a fixed capacity mode, the unused
@@ -1164,6 +1503,7 @@ namespace HTM.Net.Algorithms
                         Console.WriteLine(e);
                     }
                 }
+                retVal.Clear();
                 return retVal;
             }
 
@@ -1180,45 +1520,45 @@ namespace HTM.Net.Algorithms
                 return retVal;
             }
 
-            /**
-             * The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b>
-             * @param k
-             * @return this Builder
-             */
+            /// <summary>
+            /// The number of nearest neighbors used in the classification of patterns. <b>Must be odd</b>
+            /// </summary>
+            /// <param name="k"></param>
+            /// <returns></returns>
             public Builder K(int k)
             {
                 _fieldHolder._k = k;
                 return this;
             }
 
-            /**
-             * If true, patterns must match exactly when assigning class labels
-             * @param b
-             * @return this Builder
-             */
+            /// <summary>
+            /// If true, patterns must match exactly when assigning class labels
+            /// </summary>
+            /// <param name="b"></param>
+            /// <returns></returns>
             public Builder Exact(bool b)
             {
                 _fieldHolder._exact = b;
                 return this;
             }
 
-            /**
-             * When distance method is "norm", this specifies the p value of the Lp-norm
-             * @param distanceNorm
-             * @return this Builder
-             */
+            /// <summary>
+            /// When distance method is "norm", this specifies the p value of the Lp-norm
+            /// </summary>
+            /// <param name="distanceNorm"></param>
+            /// <returns></returns>
             public Builder DistanceNorm(double distanceNorm)
             {
                 _fieldHolder._distanceNorm = distanceNorm;
                 return this;
             }
 
-            /**
-             * The method used to compute distance between input patterns and prototype patterns.
-             * see({@link DistanceMethod})
-             * @param method
-             * @return
-             */
+            /// <summary>
+            /// The method used to compute distance between input patterns and prototype patterns.
+            /// See <see cref="DistanceMethod"/>
+            /// </summary>
+            /// <param name="method"></param>
+            /// <returns></returns>
             public Builder DistanceMethod(DistanceMethod method)
             {
                 _fieldHolder.distanceMethod = method;
@@ -1388,28 +1728,93 @@ namespace HTM.Net.Algorithms
                 _fieldHolder.cellsPerCol = num;
                 return this;
             }
+
+            /// <summary>
+            /// If useSparseMemory is set, only vectors with
+            /// sparsity >= minSparsity will be stored during learning.A value of 0.0
+            /// implies all vectors will be stored. A value of 0.1 implies only vectors
+            /// with at least 10% sparsity will be stored
+            /// </summary>
+            public Builder MinSparsity(double minSparsity)
+            {
+                _fieldHolder.minSparsity = minSparsity;
+                return this;
+            }
         }
 
         #endregion
+    }
 
-        
+    public class KnnInferResult : NamedTuple
+    {
+        public KnnInferResult(string[] keys, params object[] objects) : base(keys, objects)
+        {
+        }
+
+        [Obsolete("Use specific methods", true)]
+        public override object Get(string key)
+        {
+            throw new NotSupportedException("Use specific methods");
+        }
+
+        [Obsolete("Use specific methods", true)]
+        public override object Get(int key)
+        {
+            throw new NotSupportedException("Use specific methods");
+        }
+
+        /// <summary>
+        /// Gets the winner category
+        /// </summary>
+        /// <returns></returns>
+        public int? GetWinner()
+        {
+            return (int?)base.Get("winner");
+        }
+        /// <summary>
+        /// pct neighbors of each category
+        /// </summary>
+        /// <returns></returns>
+        public Vector<double> GetInference()
+        {
+            return (Vector<double>)base.Get("inference");
+        }
+        /// <summary>
+        /// dist of each prototype
+        /// </summary>
+        /// <returns></returns>
+        public Vector<double> GetProtoDistance()
+        {
+            return (Vector<double>)base.Get("protoDistance");
+        }
+        /// <summary>
+        /// dist of each category
+        /// </summary>
+        /// <returns></returns>
+        public double[] GetCategoryDistances()
+        {
+            return (double[])base.Get("categoryDistances");
+        }
     }
 
     //Utils
     public class NearestNeighbor
     {
-        private SparseMatrix _backingMatrix;
+        private Matrix<double> _backingMatrix;
         private int _addedRows;
 
         public NearestNeighbor(int rows, int cols)
         {
-            if (cols <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cols), "The number of columns of a matrix must be positive.");
-            }
-
+            Control.UseMultiThreading();
             _backingMatrix = new SparseMatrix(rows == 0 ? 1 : rows, cols);
             _addedRows = rows;
+        }
+
+        public NearestNeighbor(double[,] array)
+        {
+            Control.UseMultiThreading();
+            _backingMatrix = SparseMatrix.OfArray(array);
+            _addedRows = _backingMatrix.RowCount;
         }
 
         public int RowCount { get { return _addedRows; } }
@@ -1422,7 +1827,33 @@ namespace HTM.Net.Algorithms
         /// <param name="nonZeros"></param>
         public void AddRowNonZero(double[] inputPattern, int[] nonZeros)
         {
-            if (inputPattern.Length > 0 && inputPattern.Max() > _backingMatrix.ColumnCount) throw new ArgumentException("inputPattern has indices outside of matrix!");
+            if (inputPattern.Length > 0 && inputPattern.Max() > _backingMatrix.ColumnCount) 
+                throw new ArgumentException("inputPattern has indices outside of matrix!");
+
+            SparseVector vector = SparseVector.OfIndexedEnumerable(_backingMatrix.ColumnCount,
+                inputPattern.Select((d, seq) => new Tuple<int, double>((int)d, nonZeros[seq])));
+            if (RowCount == 0)
+            {
+                _backingMatrix.SetRow(_addedRows, vector);
+            }
+            else
+            {
+                _backingMatrix = (SparseMatrix)_backingMatrix.InsertRow(_addedRows, vector);
+            }
+            _addedRows++;
+        }
+
+        /// <summary>
+        /// Adds a row of non-zeros to this SparseMatrix, from two iterators, one on
+        /// a container of indices, the other on a container of values corresponding to those indices.
+        /// </summary>
+        /// <param name="inputPattern"></param>
+        /// <param name="nonZeros"></param>
+        public void AddRowNonZero(Vector<double> inputPattern, int[] nonZeros)
+        {
+            if (inputPattern.Count > 0 && inputPattern.Max() > _backingMatrix.ColumnCount)
+                throw new ArgumentException("inputPattern has indices outside of matrix!");
+
             SparseVector vector = SparseVector.OfIndexedEnumerable(_backingMatrix.ColumnCount,
                 inputPattern.Select((d, seq) => new Tuple<int, double>((int)d, nonZeros[seq])));
             if (RowCount == 0)
@@ -1446,7 +1877,7 @@ namespace HTM.Net.Algorithms
             if (distanceNorm == 0.0)
             {
                 //L0Dist(x, y);
-
+                throw new NotImplementedException(distanceNorm.ToString());
             }
             else if (distanceNorm == 1.0)
             {
@@ -1480,6 +1911,63 @@ namespace HTM.Net.Algorithms
             throw new NotImplementedException(distanceNorm.ToString());
         }
 
+        public Vector<double> VecLpDist(double distanceNorm, Vector<double> inputPattern, bool takeRoot = false)
+        {
+            Debug.Assert(RowCount > 0, "No vector stored yet");
+            Debug.Assert(distanceNorm > 0.0, "Invalid value for parameter p: " + distanceNorm + " only positive values are supported");
+
+            if (distanceNorm == 0.0)
+            {
+                //L0Dist(x, y);
+                throw new NotImplementedException(distanceNorm.ToString());
+            }
+            else if (distanceNorm == 1.0)
+            {
+                // Manhatten distance
+                //L1Dist(x, y);
+                Vector<double> dist = Vector<double>.Build.Dense(RowCount);
+                foreach ((int, Vector<double>) indexedVector in _backingMatrix.EnumerateRowsIndexed())
+                {
+                    int index = indexedVector.Item1;
+                    var vector = indexedVector.Item2;
+                    dist[index] = MathNet.Numerics.Distance.Manhattan(inputPattern, vector);
+                }
+
+                return dist;
+            }
+            else if (distanceNorm == 2.0)
+            {
+                // Euler distance
+                //L2Dist(x, y);
+                Vector<double> dist = Vector<double>.Build.Dense(RowCount);// new double[RowCount];
+                foreach ((int, Vector<double>) indexedVector in _backingMatrix.EnumerateRowsIndexed())
+                {
+                    int index = indexedVector.Item1;
+                    var vector = indexedVector.Item2;
+                    dist[index] = MathNet.Numerics.Distance.Euclidean(inputPattern, vector);
+                }
+
+                return dist;
+            }
+            //all_rows_dist_(x, y, )
+            throw new NotImplementedException(distanceNorm.ToString());
+        }
+
+
+        public void InsertRow(int row, Vector<double> denseVector)
+        {
+            if (RowCount == 0)
+            {
+                _backingMatrix.SetRow(row, denseVector);
+            }
+            else
+            {
+                _backingMatrix = _backingMatrix.InsertRow(row, denseVector);
+            }
+
+            _addedRows++;
+        }
+
         public void InsertRow(int row, double[] denseVector)
         {
             if (RowCount == 0)
@@ -1488,8 +1976,9 @@ namespace HTM.Net.Algorithms
             }
             else
             {
-                _backingMatrix = (SparseMatrix)_backingMatrix.InsertRow(row, new DenseVector(denseVector));
+                _backingMatrix = _backingMatrix.InsertRow(row, new DenseVector(denseVector));
             }
+
             _addedRows++;
         }
 
@@ -1504,19 +1993,34 @@ namespace HTM.Net.Algorithms
             return _backingMatrix.ToRowArrays();
         }
 
+        public Matrix<double> GetMatrix()
+        {
+            return _backingMatrix;
+        }
+
+        public void ResizeMatrix(int rows, int cols)
+        {
+            _backingMatrix = _backingMatrix.Resize(rows, cols);
+        }
+
         public void SetRow(int row, double[] values)
         {
             _backingMatrix.SetRow(row, values);
         }
 
-        public double[] RowSums()
+        public Vector<double> RowSums()
         {
-            return _backingMatrix.RowSums().ToArray();
+            return _backingMatrix.RowSums();
         }
 
         public double[] RightVecSumAtNz(double[] values)
         {
             return _backingMatrix.Multiply(new DenseVector(values)).ToArray();
+        }
+
+        public Vector<double> RightVecSumAtNz(Vector<double> values)
+        {
+            return _backingMatrix.Multiply(values);
         }
     }
 

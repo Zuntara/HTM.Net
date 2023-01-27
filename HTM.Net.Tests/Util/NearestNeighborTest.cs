@@ -12,15 +12,36 @@ namespace HTM.Net.Tests.Util
         {
             new NearestNeighbor(0, 40);
 
-            try
+            double[,] connectedSynapses = new double[,]{
+                {1, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+                {0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
+                {0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+                {0, 0, 0, 0, 1, 0, 0, 0, 0, 1}};
+            var nn = new NearestNeighbor(connectedSynapses);
+            Assert.AreEqual(5, nn.RowCount);
+        }
+
+        [TestMethod]
+        public void TestRightVecSumAtNZ()
+        {
+            double[,] connectedSynapses = new double[,]{
+                {1, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+                {0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
+                {0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+                {0, 0, 0, 0, 1, 0, 0, 0, 0, 1}};
+
+            double[] inputVector = new double[] { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
+            double[] trueResults = new double[] { 1, 1, 1, 1, 1 };
+
+            NearestNeighbor nn = new NearestNeighbor(connectedSynapses);
+
+            double[] result = nn.RightVecSumAtNz(inputVector);
+
+            for (int i = 0; i < result.Length; i++)
             {
-                new NearestNeighbor(0,0);
-                Assert.Fail();
-            }
-            catch (Exception e)
-            {
-                Assert.IsInstanceOfType(e, typeof(ArgumentOutOfRangeException));
-                Assert.IsTrue(e.Message.StartsWith("The number of columns of a matrix must be positive."));
+                Assert.AreEqual(trueResults[i], result[i]);
             }
         }
     }

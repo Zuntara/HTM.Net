@@ -69,13 +69,13 @@ namespace HTM.Net.Util
             return array.Aggregate(1, (current, t) => current * t);
         }
 
-        public static string ToArrayString(Array v)
+        public static string ToArrayString(Array v, string format = "{0}, ")
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("[");
             foreach (var item in v)
             {
-                sb.AppendFormat("{0}, ", item);
+                sb.AppendFormat(format, item);
             }
             string result = sb.ToString().TrimEnd(',', ' ');
             result += "]";

@@ -70,7 +70,7 @@ namespace HTM.Net.Util
          * @param index    the index representing the insertion order.
          * @return
          */
-        public object Get(int index)
+        public virtual object Get(int index)
         {
             if (container.Length > index)
                 return container[index];

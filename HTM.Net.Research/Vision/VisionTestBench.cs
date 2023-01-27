@@ -13,7 +13,7 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Research.Vision
 {
-    // https://github.com/numenta/nupic.vision/blob/master/vision_testbench.py
+    // https://github.com/numenta/nupic.vision/blob/master/src/nupic/vision/ocr/vision_testbench.py
     /// <summary>
     /// This class provides methods for characterizing nupic's image recognition
     /// capabilities.The goal is to put most of the details in here so the top
