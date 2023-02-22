@@ -121,7 +121,7 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         }
 
         [TestMethod]
-        [DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        [DeploymentItem("Resources\\rec-center-hourly.csv")]
         public void RunBasicNetworkKnn()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC_KNN);

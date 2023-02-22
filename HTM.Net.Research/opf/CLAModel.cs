@@ -628,7 +628,7 @@
 //                this._numFields = encoderList.Count;
 
 //                // This is getting index of predicted field if being fed to CLA.
-//                var fieldNames = encoderList.Select(et=> et.GetName()).ToList();
+//                var fieldNames = encoderList.Select(et => et.GetName()).ToList();
 //                if (fieldNames != null && fieldNames.Contains(predictedFieldName))
 //                {
 //                    this._predictedFieldIdx = fieldNames.IndexOf(predictedFieldName);
@@ -890,7 +890,7 @@
 //                    // The multiStepPredictions element holds the probabilities for each
 //                    //  bucket
 //                    ((Map<int, Map<object, double>>)inferences[InferenceElement.MultiStepPredictions])[steps] = likelihoodsDict;
-//                    ((Map<int, double>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (double) (bestActValue ?? 0);
+//                    ((Map<int, double>)inferences[InferenceElement.MultiStepBestPredictions])[steps] = (double)(bestActValue ?? 0);
 //                    ((Map<int, Map<int, double>>)inferences[InferenceElement.MultiStepBucketLikelihoods])[steps] = bucketLikelihood;
 //                }
 //            }

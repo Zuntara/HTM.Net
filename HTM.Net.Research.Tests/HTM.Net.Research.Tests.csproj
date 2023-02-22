@@ -28,6 +28,7 @@
 	  <None Remove="Resources\rec-center-hourly-4period.csv" />
 	  <None Remove="Resources\rec-center-hourly-4reset.csv" />
 	  <None Remove="Resources\rec-center-hourly-4seqReset.csv" />
+	  <None Remove="Resources\rec-center-hourly-small-knn.csv" />
 	  <None Remove="Resources\rec-center-hourly-small-noheaderflags.csv" />
 	  <None Remove="Resources\rec-center-hourly-small.csv" />
 	  <None Remove="Resources\rec-center-hourly.csv" />
@@ -68,6 +69,9 @@
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="Resources\rec-center-hourly-4seqReset.csv">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\rec-center-hourly-small-knn.csv">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="Resources\rec-center-hourly-small-noheaderflags.csv">

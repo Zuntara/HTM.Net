@@ -1844,7 +1844,7 @@ namespace HTM.Net.Network
 
             public Func<ManualInput, ManualInput> CreateClassifierFunc()
             {
-                object bucketIdx = null, actValue = null, encoding = null;
+                object bucketIdx = null, actValue = null, encoding = null, categoryIn = null;
                 IDictionary<string, object> inputMap = new CustomGetDictionary<string, object>(k =>
                 {
                     // invoked lazy
@@ -1860,6 +1860,10 @@ namespace HTM.Net.Network
                     {
                         return encoding;
                     }
+                    if (k.Equals("categoryIn"))
+                    {
+                        return categoryIn;
+                    }
                     return null;
                 });
 
@@ -1873,6 +1877,7 @@ namespace HTM.Net.Network
                         bucketIdx = inputs.Get("bucketIdx");
                         actValue = inputs.Get("inputValue");
                         encoding = inputs.Get("encoding");
+                        categoryIn = inputs.Get("categoryIn");
 
                         IClassifier c = t1.GetClassifiers().Get(key) as IClassifier;
                         if (c != null)

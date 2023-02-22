@@ -119,7 +119,10 @@ namespace HTM.Net.Research.Tests.Examples.HotGym
         internal Network.Network CreateBasicNetworkKnn()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
+            
+            var knnInferredFields = NetworkDemoHarness.GetNetworkDemoFieldEncodingMapKnn();
+
+            p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams(knnInferredFields));
             //p.SetParameterByKey(Parameters.KEY.AUTO_CLASSIFY_TYPE, typeof(SDRClassifier));
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, 
                 GetInferredFieldsMap("consumption", typeof(KNNClassifier)));

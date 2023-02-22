@@ -267,7 +267,7 @@ namespace HTM.Net.Algorithms
             // these so that we can associate the current iteration's classification 
             // with the activationPattern from N steps ago 
             _patternNzHistory = new Deque<(int iteration, int[] patternNz)>(10);
-            Steps = new[] { -1 };
+            Steps = new[] { 1 };
         }
 
         /**
@@ -330,7 +330,6 @@ namespace HTM.Net.Algorithms
         /// :param outputs: (dict)mapping region output names to numpy.arrays that
         /// should be populated with output values by this method
         /// https://github.com/numenta/nupic/blob/b9ebedaf54f49a33de22d8d44dff7c765cdb5548/src/nupic/regions/knn_classifier_region.py#L41
-        /// </returns>
         public IClassification<T> Compute<T>(
             int recordNum,
             IDictionary<string, object> classification,
@@ -380,17 +379,34 @@ namespace HTM.Net.Algorithms
             if (infer)
             {
                 retVal = Infer(inputPattern);
+
+                var probabilities = retVal.GetInference() / retVal.GetInference().Sum();
+                retVal.SetStats(1, probabilities.ToArray());
+                retVal.SetActualValues(retVal.GetInference().Cast<object>().ToArray());
             }
 
-            if (learn && classification["bucketIdx"] != null)
+            // --------------------------------------------------------------------
+            // Learning:
+            if (learn)
             {
-                // Get classification info
-                int bucketIdx = (int)classification["bucketIdx"];
-                //double[] value = (double[])classification["actValue"];
-                //int category = (int)classification["category"];
-
-                int patterns = Learn(inputPattern, bucketIdx);
-                retVal?.SetNumPatterns(patterns);
+                // An input can potentially belong to multiple categories.
+                // If a category value is < 0, it means that the input does not belong to
+                // that category.
+                //var categories = [category for category in inputs["categoryIn"]
+                //                      if category >= 0]
+                var categories = ((int[])classification["categoryIn"] ?? new []{ 0 })
+                    .Where(c => c >= 0)
+                    .ToArray();
+                if (categories.Length > 0)
+                {
+                    // allow to train on multiple input categories
+                    foreach (var category in categories)
+                    {
+                        // todo : sphering
+                        Learn(inputPattern, category);
+                        _iterationIdx++;
+                    }
+                }
             }
 
             // ------------------------------------------------------------------------
