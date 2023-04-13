@@ -4,7 +4,7 @@
 		<!-- compiler configuration -->
 		<LangVersion>latest</LangVersion>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net7.0</TargetFramework>
 		<RootNamespace>HTM.Net.Tests</RootNamespace>
 		<AssemblyName>HTM.Net.Tests</AssemblyName>
 	</PropertyGroup>

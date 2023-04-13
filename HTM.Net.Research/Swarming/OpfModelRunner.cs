@@ -1408,16 +1408,6 @@ namespace HTM.Net.Research.Swarming
         /// which should cause the job to be marked as failed and immediately cancel all other workers.
         /// </summary>
         public bool jobFailErr { get; set; }
-
-        public DummyModelParameters Clone()
-        {
-            BinaryFormatter formatter = new BinaryFormatter();
-            MemoryStream ms = new MemoryStream();
-            formatter.Serialize(ms, this);
-            ms.Position = 0;
-            DummyModelParameters obj = (DummyModelParameters)formatter.Deserialize(ms);
-            return obj;
-        }
     }
 
     public class PeriodicActivityRequest

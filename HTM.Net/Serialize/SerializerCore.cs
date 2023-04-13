@@ -40,6 +40,7 @@ namespace HTM.Net.Serialize
             return JsonConvert.DeserializeObject<T>(content);
         }
 
+        [Obsolete("Use SerializeJson instead", false)]
         public byte[] Serialize<T>(T instance)
             where T : IPersistable
         {
@@ -58,6 +59,7 @@ namespace HTM.Net.Serialize
             return bytes;
         }
 
+        [Obsolete("Use DeserializeJson instead", false)]
         public T Deserialize<T>(byte[] bytes)
             where T : IPersistable
         {

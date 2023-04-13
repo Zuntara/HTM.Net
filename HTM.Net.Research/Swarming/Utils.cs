@@ -389,14 +389,17 @@ namespace HTM.Net.Research.Swarming
                 return d;
             }
             if (f == null) f = identityConversion;
+
             // Optionally deep copy the dict.
             if (deepCopy)
             {
                 MemoryStream ms = new MemoryStream();
                 BinaryFormatter bf = new BinaryFormatter();
+#pragma warning disable SYSLIB0011
                 bf.Serialize(ms, d);
                 ms.Position = 0;
                 d = bf.Deserialize(ms);
+#pragma warning restore SYSLIB0011
             }
 
             if (d is IDictionary)

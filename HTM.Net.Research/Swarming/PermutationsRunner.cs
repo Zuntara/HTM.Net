@@ -924,15 +924,5 @@ namespace HTM.Net.Research.Swarming
             /// </summary>
             public int?[] last_record { get; set; }
         }
-
-        public StreamDef Clone()
-        {
-            BinaryFormatter formatter = new BinaryFormatter();
-            MemoryStream ms = new MemoryStream();
-            formatter.Serialize(ms, this);
-            ms.Position = 0;
-            StreamDef obj = (StreamDef)formatter.Deserialize(ms);
-            return obj;
-        }
     }
 }

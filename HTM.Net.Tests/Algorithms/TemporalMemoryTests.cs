@@ -7,6 +7,7 @@ using HTM.Net.Algorithms;
 using HTM.Net.Model;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 
 namespace HTM.Net.Tests.Algorithms
 {
@@ -47,9 +48,11 @@ namespace HTM.Net.Tests.Algorithms
         {
             MemoryStream ms = new MemoryStream();
             BinaryFormatter formatter = new BinaryFormatter();
+#pragma warning disable SYSLIB0011
             formatter.Serialize(ms, t);
             ms.Position = 0;
             return (T)formatter.Deserialize(ms);
+#pragma warning restore SYSLIB0011
             //FSTConfiguration fastSerialConfig = FSTConfiguration.CreateDefaultConfiguration();
             //byte[] bytes = fastSerialConfig.asByteArray(t);
             //return (T)fastSerialConfig.asObject(bytes);

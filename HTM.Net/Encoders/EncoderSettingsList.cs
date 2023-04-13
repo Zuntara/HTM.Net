@@ -251,12 +251,7 @@ public class EncoderSetting
 
     public EncoderSetting Clone()
     {
-        BinaryFormatter formatter = new BinaryFormatter();
-        MemoryStream ms = new MemoryStream();
-        formatter.Serialize(ms, this);
-        ms.Position = 0;
-        EncoderSetting obj = (EncoderSetting)formatter.Deserialize(ms);
-        return obj;
+        return new EncoderSetting(ToMap());
     }
 
     public EncoderTypes GetEncoderType()
