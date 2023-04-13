@@ -1,4 +1,5 @@
-﻿using HTM.Net.Util;
+﻿using HTM.Net.Encoders;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.Sine
 {
@@ -33,7 +34,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public static Map<string, Map<string, object>> SetupMap(
                 Map<string, Map<string, object>> map,
                 int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-                bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+                bool? clip, bool? forced, string fieldName, string fieldType, EncoderTypes encoderType)
         {
 
             if (map == null)
@@ -84,7 +85,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                     50,
                     21,
                     -10.0, 10.0, 0, 0.1, null, true, null,
-                    "sinedata", "float", "ScalarEncoder");
+                    "sinedata", "float", EncoderTypes.ScalarEncoder);
 
             //fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(21, 9.5)); // Time of day
             //fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new BitsTuple(11, 1)); // day of week
@@ -141,7 +142,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                     8, // n
                     3, // w
                     0.0, 8.0, 0, 1, true, null, true,
-                    "dayOfWeek", "number", "ScalarEncoder");
+                    "dayOfWeek", "number", EncoderTypes.ScalarEncoder);
             return fieldEncodings;
         }
 

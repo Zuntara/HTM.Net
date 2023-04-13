@@ -15,8 +15,10 @@ namespace HTM.Net.Util;
 public interface IRandom
 {
     double NextDouble();
+    double NextDouble(double min, double max);
     int NextInt(int maxValue);
     double NextGaussian();
+    T Choice<T>(T[] array);
 }
 
 // https://github.com/numenta/htm.java/blob/master/src/main/java/org/numenta/nupic/util/MersenneTwister.java
@@ -765,6 +767,9 @@ public class MersenneTwister : MathNet.Numerics.Random.MersenneTwister, IRandom,
 [Serializable]
 public class XorshiftRandom : Xorshift, IRandom, ISerializable
 {
+    private bool _haveNextGaussian;
+    private double _nextGaussian;
+
     public XorshiftRandom(SerializationInfo info, StreamingContext context)
         :base((int)info.GetUInt64("_x"))
     {
@@ -786,8 +791,11 @@ public class XorshiftRandom : Xorshift, IRandom, ISerializable
         return Next(maxValue);
     }
 
-    private bool _haveNextGaussian;
-    private double _nextGaussian;
+    public double NextDouble(double min, double max)
+    {
+        return min + (base.NextDouble() * (max - min));
+    }
+
     public double NextGaussian()
     {
         if (_haveNextGaussian)
@@ -806,6 +814,11 @@ public class XorshiftRandom : Xorshift, IRandom, ISerializable
         _nextGaussian = v2 * multiplier;
         _haveNextGaussian = true;
         return v1 * multiplier;
+    }
+
+    public T Choice<T>(T[] array)
+    {
+        return array[Next(0, array.Length)];
     }
 
     #region Implementation of ISerializable
@@ -938,6 +951,16 @@ public class UniversalRandom : System.Random, IRandom, ISerializable
         double retVal = (double)new Decimal(nd * .0001d);
         //builder.AppendLine("nextDouble: " + retVal);
         return retVal;
+    }
+
+    public double NextDouble(double min, double max)
+    {
+        return min + (base.NextDouble() * (max - min));
+    }
+
+    public T Choice<T>(T[] array)
+    {
+        return array[Next(0, array.Length)];
     }
 
     public double NextGaussian()
@@ -1174,6 +1197,15 @@ public class UniversalRandomSource : MathNet.Numerics.Random.RandomSource, IRand
         return retVal;
     }
 
+    public double NextDouble(double min, double max)
+    {
+        return min + (base.NextDouble() * (max - min));
+    }
+
+    public T Choice<T>(T[] array)
+    {
+        return array[Next(0, array.Length)];
+    }
 
     /// <summary>
     /// Fisher-Yates implementation which shuffles the array contents.

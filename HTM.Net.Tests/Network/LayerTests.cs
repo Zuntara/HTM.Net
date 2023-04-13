@@ -2253,7 +2253,7 @@ namespace HTM.Net.Tests.Network
                 884, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "sdr_in", "darr", "SDRPassThroughEncoder");
+                "sdr_in", "darr", EncoderTypes.SDRPassThroughEncoder);
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             return p;
@@ -2276,7 +2276,7 @@ namespace HTM.Net.Tests.Network
         private Map<string, Map<string, object>> SetupMap(
             Map<string, Map<string, object>> map,
             int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-            bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+            bool? clip, bool? forced, string fieldName, string fieldType, EncoderTypes encoderType)
         {
 
             if (map == null)

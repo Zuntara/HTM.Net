@@ -25,7 +25,7 @@ namespace HTM.Net.Tests.Network.Sensor
         private Map<string, Map<string, object>> SetupMap(
             Map<string, Map<string, object>> map,
                 int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-                    bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+                    bool? clip, bool? forced, string fieldName, string fieldType, EncoderTypes encoderType)
         {
 
             if (map == null)
@@ -66,7 +66,7 @@ namespace HTM.Net.Tests.Network.Sensor
                             884, // n
                             0, // w
                             0, 0, 0, 0, null, null, null,
-                            "sdr_in", "darr", "SDRPassThroughEncoder");
+                            "sdr_in", "darr", EncoderTypes.SDRPassThroughEncoder);
             Parameters p = Parameters.Empty();
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             return p;
@@ -79,13 +79,13 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             fieldEncodings = SetupMap(
                 fieldEncodings,
                 25,
                 3,
                 0, 0, 0, 0.1, null, null, null,
-                "consumption", "float", "RandomDistributedScalarEncoder");
+                "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
@@ -107,19 +107,19 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             fieldEncodings = SetupMap(
                 fieldEncodings,
                 25,
                 3,
                 0, 0, 0, 0.1, null, null, null,
-                "consumption", "float", "RandomDistributedScalarEncoder");
+                "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
             fieldEncodings = SetupMap(
                 fieldEncodings,
                 25,
                 3,
                 0, 0, 0, 0.0, null, null, true,
-                "type", "list", "SDRCategoryEncoder");
+                "type", "list", EncoderTypes.SDRCategoryEncoder);
 
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
@@ -298,7 +298,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -322,7 +322,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -346,7 +346,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 25,
                 3,
                 0, 0, 0, 0.1, null, null, null,
-                "consumption", "float", "RandomDistributedScalarEncoder");
+                "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -370,7 +370,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -394,7 +394,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -418,7 +418,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -442,7 +442,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;
@@ -466,7 +466,7 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
             Parameters @params = Parameters.GetEncoderDefaultParameters();
             @params.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
             HTMSensor<FileInfo> htmSensor = (HTMSensor<FileInfo>)sensor;

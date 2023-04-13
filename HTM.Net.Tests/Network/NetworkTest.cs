@@ -901,7 +901,7 @@ namespace HTM.Net.Tests.Network
             p.SetParameterByKey(Parameters.KEY.RANDOM, new MersenneTwister(42));
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
 
-            Parameters pars = new Parameters();
+            Parameters pars = Parameters.Empty();
             pars.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
 
             Net.Network.Network n = Net.Network.Network.Create("test network", p)

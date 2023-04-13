@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using HTM.Net.Model;
 using HTM.Net.Util;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static HTM.Net.Algorithms.AnomalyLikelihood;
 
 namespace HTM.Net.Algorithms
 {
@@ -219,7 +221,6 @@ namespace HTM.Net.Algorithms
             int len = likelihoods.Length;
 
             AnomalyParams @params = new AnomalyParams(
-                new[] { "distribution", "movingAverage", "historicalLikelihoods" },
                 distribution,
                 new MovingAverage(records.HistoricalValues, records.Total, averagingWindow),
                 len > 0
@@ -269,18 +270,17 @@ namespace HTM.Net.Algorithms
             }
 
             double[] histLikelihoods;
-            if ((histLikelihoods = @params.HistoricalLikelihoods()) == null || histLikelihoods.Length == 0)
+            if ((histLikelihoods = @params.HistoricalLikelihoods) == null || histLikelihoods.Length == 0)
             {
                 @params = new AnomalyParams(
-                    new[] { "distribution", "movingAverage", "historicalLikelihoods" },
-                        @params.Distribution(),
-                        @params.MovingAverage(),
+                        @params.Distribution,
+                        @params.MovingAverage,
                         histLikelihoods = new double[] { 1 });
             }
 
             // Compute moving averages of these new scores using the previous values
             // as well as likelihood for these scores using the old estimator
-            MovingAverage mvgAvg = @params.MovingAverage();
+            MovingAverage mvgAvg = @params.MovingAverage;
             List<double> historicalValues = mvgAvg.GetSlidingWindow();
             double total = mvgAvg.GetTotal();
             int windowSize = mvgAvg.GetWindowSize();
@@ -297,7 +297,7 @@ namespace HTM.Net.Algorithms
                         sample.value,
                         calc.GetAverage()));
                 total = calc.GetTotal();
-                likelihoods[i++] = NormalProbability(calc.GetAverage(), (Statistic)@params.Distribution());
+                likelihoods[i++] = NormalProbability(calc.GetAverage(), (Statistic)@params.Distribution);
             }
 
             // Filter the likelihood values. First we prepend the historical likelihoods
@@ -310,8 +310,7 @@ namespace HTM.Net.Algorithms
 
             // Update the estimator
             AnomalyParams newParams = new AnomalyParams(
-                new string[] { "distribution", "movingAverage", "historicalLikelihoods" },
-                    @params.Distribution(),
+                    @params.Distribution,
                     new MovingAverage(historicalValues, total, windowSize),
                     historicalLikelihoods);
 
@@ -554,12 +553,12 @@ namespace HTM.Net.Algorithms
          */
         public bool IsValidEstimatorParams(AnomalyParams @params)
         {
-            if (@params.Distribution() == null || @params.MovingAverage() == null)
+            if (@params.Distribution == null || @params.MovingAverage == null)
             {
                 return false;
             }
 
-            Statistic stat = @params.Distribution();
+            Statistic stat = @params.Distribution;
             if (stat.mean == 0 || stat.variance == 0 || stat.stdev == 0)
             {
                 return false;
@@ -612,78 +611,70 @@ namespace HTM.Net.Algorithms
         ///
         /// </summary>
         [Serializable]
-        public class AnomalyParams : NamedTuple
+        public class AnomalyParams : Persistable
         {
-            private readonly Statistic distribution;
-            private readonly MovingAverage movingAverage;
-            private readonly double[] historicalLikelihoods;
-            private readonly int windowSize;
+            [JsonConstructor]
+            [Obsolete("This constructor is only for JSON deserialization. Use the default constructor instead.")]
+            public AnomalyParams()
+            {
+            }
 
             /// <summary>
             /// Constructs a new <see cref="AnomalyParams"/>
             /// </summary>
-            /// <param name="keys"></param>
-            /// <param name="values"></param>
-            public AnomalyParams(string[] keys, params object[] values)
-                : base(keys, values)
+            /// <param name="distribution"></param>
+            /// <param name="movingAverage"></param>
+            /// <param name="historicalLikelihoods"></param>
+            public AnomalyParams(
+                Statistic distribution,
+                MovingAverage movingAverage,
+                double[] historicalLikelihoods)
             {
-                if (keys.Length != 3 || values.Length != 3)
+                if (distribution == null || movingAverage == null || historicalLikelihoods == null)
                 {
                     throw new ArgumentException(
                         "AnomalyParams must have \"distribution\", \"movingAverage\", and \"historicalLikelihoods\"" +
                         " parameters. keys.Length != 3 or values.Length != 3");
                 }
 
-                distribution = (Statistic)Get(KEY_DIST);
-                movingAverage = (MovingAverage)Get(KEY_MVG_AVG);
-                historicalLikelihoods = (double[])Get(KEY_HIST_LIKE);
-                windowSize = movingAverage.GetWindowSize();
+                Distribution = distribution;
+                MovingAverage = movingAverage;
+                HistoricalLikelihoods = historicalLikelihoods;
+                WindowSize = MovingAverage.GetWindowSize();
             }
 
-            /**
-             * Returns the {@link Statistic} containing point calculations.
-             * @return
-             */
-            public Statistic Distribution()
-            {
-                return distribution;
-            }
+            /// <summary>
+            /// Returns the <see cref="Statistic"/> containing point calculations.
+            /// </summary>
+            [JsonProperty]
+            public Statistic Distribution { get; private set; }
 
-            /**
-             * Returns the {@link MovingAverage} object
-             * @return
-             */
-            public MovingAverage MovingAverage()
-            {
-                return movingAverage;
-            }
+            /// <summary>
+            /// Returns the <see cref="MovingAverage"/> object
+            /// </summary>
+            [JsonProperty]
+            public MovingAverage MovingAverage { get; private set; }
 
-            /**
-             * Returns the array of computed likelihoods
-             * @return
-             */
-            public double[] HistoricalLikelihoods()
-            {
-                return historicalLikelihoods;
-            }
+            /// <summary>
+            /// Returns the array of computed likelihoods
+            /// </summary>
+            [JsonProperty]
+            public double[] HistoricalLikelihoods { get; private set; }
 
-            /**
-             * Returns the window size of the moving average.
-             * @return
-             */
-            public int WindowSize()
-            {
-                return windowSize;
-            }
+            /// <summary>
+            /// Returns the window size of the moving average.
+            /// </summary>
+            [JsonProperty]
+            public int WindowSize { get; private set; }
 
             public override int GetHashCode()
             {
                 const int prime = 31;
                 int result = base.GetHashCode();
-                result = prime * result + ((distribution == null) ? 0 : distribution.GetHashCode());
-                result = prime * result + Arrays.GetHashCode(historicalLikelihoods);
-                result = prime * result + ((movingAverage == null) ? 0 : movingAverage.GetHashCode());
-                result = prime * result + windowSize;
+                result = prime * result + ((Distribution == null) ? 0 : Distribution.GetHashCode());
+                result = prime * result + Arrays.GetHashCode(HistoricalLikelihoods);
+                result = prime * result + ((MovingAverage == null) ? 0 : MovingAverage.GetHashCode());
+                result = prime * result + WindowSize;
                 return result;
             }
 
@@ -694,10 +685,10 @@ namespace HTM.Net.Algorithms
                     return true;
                 }
 
-                if (!base.Equals(obj))
+                /*if (!base.Equals(obj))
                 {
                     return false;
-                }
+                }*/
 
                 if (GetType() != obj.GetType())
                 {
@@ -705,36 +696,36 @@ namespace HTM.Net.Algorithms
                 }
 
                 AnomalyParams other = (AnomalyParams)obj;
-                if (distribution == null)
+                if (Distribution == null)
                 {
-                    if (other.distribution != null)
+                    if (other.Distribution != null)
                     {
                         return false;
                     }
                 }
-                else if (!distribution.Equals(other.distribution))
+                else if (!Distribution.Equals(other.Distribution))
                 {
                     return false;
                 }
 
-                if (!Arrays.AreEqual(historicalLikelihoods, other.historicalLikelihoods))
+                if (!Arrays.AreEqual(HistoricalLikelihoods, other.HistoricalLikelihoods))
                 {
                     return false;
                 }
 
-                if (movingAverage == null)
+                if (MovingAverage == null)
                 {
-                    if (other.movingAverage != null)
+                    if (other.MovingAverage != null)
                     {
                         return false;
                     }
                 }
-                else if (!movingAverage.Equals(other.movingAverage))
+                else if (!MovingAverage.Equals(other.MovingAverage))
                 {
                     return false;
                 }
 
-                if (windowSize != other.windowSize)
+                if (WindowSize != other.WindowSize)
                 {
                     return false;
                 }

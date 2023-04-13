@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
 using HTM.Net.Util;
@@ -47,14 +48,13 @@ namespace HTM.Net.Research.Vision
             parameters.Define("synPermIncFrac", new List<object> { 1.0,0.5,0.1 });
 
             // Run the model until all combinations have been tried
-            while (parameters.GetNumResults() < parameters.GetNumCombinations())
+            Parallel.For(0, parameters.GetNumCombinations(), i =>
             {
-                // Pick a combination of parameter values
-                parameters.NextCombination();
-
-                double synPermConnected = (double) parameters.GetValue("synPermConn");
-                var synPermDec = synPermConnected * (double)parameters.GetValue("synPermDecFrac");
-                var synPermInc = synPermConnected * (double)parameters.GetValue("synPermIncFrac");
+                var combinations = parameters.GetCombination(i);
+                double synPermConnected = (double)combinations.Get("synPermConn");
+                var synPermDec = synPermConnected * (double)combinations.Get("synPermDecFrac");
+                var synPermInc = synPermConnected * (double)combinations.Get("synPermIncFrac");
+                var numActiveColumnsPerInhArea = (double)combinations.Get("numActiveColumnsPerInhArea");
 
                 // Instantiate our spatial pooler
                 Parameters p = Parameters.GetAllDefaultParameters();
@@ -64,7 +64,7 @@ namespace HTM.Net.Research.Vision
                 p.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.8);
                 p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
                 p.SetParameterByKey(Parameters.KEY.LOCAL_AREA_DENSITY, -1.0); // Using numActiveColumnsPerInhArea
-                p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 64.0);
+                p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, numActiveColumnsPerInhArea);
                 // All input activity can contribute to feature output
                 p.SetParameterByKey(Parameters.KEY.STIMULUS_THRESHOLD, 0.0);
                 p.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, synPermDec);
@@ -92,9 +92,9 @@ namespace HTM.Net.Research.Vision
 
                 // Get testing images and convert them to vectors.
                 var tupleTesting = DatasetReader.GetImagesAndTags(dataSet);
-                var testingImages = (List<System.Drawing.Bitmap>)tupleTesting.Get(0);
+                var testingImages = (List<Bitmap>)tupleTesting.Get(0);
                 var testingTags = tupleTesting.Get(1) as List<string>;
-                var testingVectors = testingImages.Select((i, index) => new { index, vector = i.ToVector() })
+                var testingVectors = testingImages.Select((bitmap, index) => new { index, vector = bitmap.ToVector() })
                     .ToDictionary(k => k.index, v => v.vector);
 
                 // Reverse the order of the vectors and tags for testing
@@ -105,8 +105,9 @@ namespace HTM.Net.Research.Vision
                 var accurancy = tb.Test(testingVectors, testingTags, clf, learn: true);
 
                 // Add results to the list
-                parameters.AppendResults(new List<object> {accurancy, numCycles});
-            }
+                parameters.AppendResults(i, new List<object> { accurancy, numCycles });
+            });
+
             parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] {"\t{0}","\t{0}"});
             Console.WriteLine("The maximum number of training cycles is set to: {0}", maxTrainingCycles);
         }

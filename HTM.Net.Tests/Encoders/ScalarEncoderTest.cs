@@ -463,5 +463,27 @@ namespace HTM.Net.Tests.Encoders
                 .Build();
             encoder.TopDownCompute(new[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
         }
+
+        [TestMethod]
+        public void ScalarSpaceEncoderTest()
+        {
+            IEncoder encoder = ScalarSpaceEncoder.GetSpaceBuilder()
+                .Space(ScalarSpaceEncoder.SpaceEnum.Delta)
+                .W(1).MinVal(1).MaxVal(2).Periodic(false)
+                .N(2).Radius(1).Resolution(1)
+                .Name("Test").ClipInput(false)
+                .Forced(true)
+                .Build();
+            Assert.IsInstanceOfType<DeltaEncoder>(encoder);
+
+            encoder = ScalarSpaceEncoder.GetSpaceBuilder()
+                .Space(ScalarSpaceEncoder.SpaceEnum.Absolute)
+                .W(1).MinVal(1).MaxVal(2).Periodic(false)
+                .N(2).Radius(1).Resolution(1)
+                .Name("Test").ClipInput(false)
+                .Forced(true)
+                .Build();
+            Assert.IsInstanceOfType<AdaptiveScalarEncoder>(encoder);
+        }
     }
 }

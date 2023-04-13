@@ -11,10 +11,12 @@ namespace HTM.Net.Util
     public class Tuple : Persistable
     {
         /** The internal container array */
+        [JsonProperty]
         private object[] container;
 
         private int _hashcode;
 
+        [JsonConstructor]
         internal Tuple()
         {
 

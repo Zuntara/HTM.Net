@@ -8,20 +8,20 @@ using Newtonsoft.Json;
 namespace HTM.Net.Util
 {
     /**
- * Double ended queue implementation which has a restricted capacity.
- * Operations may be conducted on both ends and when capacity is reached,
- * the next addition to either end will result in a removal on the opposite
- * end, thus always maintaining a size &lt;= initial size.
- * 
- * This behavior differs from the {@link LinkedBlockingDeque} implementation
- * of the Java Collections Framework, and is the reason for the development of this
- * "alternative" - by allowing constant mutation of this list without an exception
- * being thrown and forcing the client to handle capacity management logic. 
- * 
- * @author David Ray
- *
- * @param <E>
- */
+     * Double ended queue implementation which has a restricted capacity.
+     * Operations may be conducted on both ends and when capacity is reached,
+     * the next addition to either end will result in a removal on the opposite
+     * end, thus always maintaining a size &lt;= initial size.
+     * 
+     * This behavior differs from the {@link LinkedBlockingDeque} implementation
+     * of the Java Collections Framework, and is the reason for the development of this
+     * "alternative" - by allowing constant mutation of this list without an exception
+     * being thrown and forcing the client to handle capacity management logic. 
+     * 
+     * @author David Ray
+     *
+     * @param <E>
+     */
     [Serializable]
     public class Deque<E> : IEnumerator<E>
     {
@@ -32,10 +32,10 @@ namespace HTM.Net.Util
         /** The internal size monitor */
         private int currentSize;
 
-        /**
-         * Constructs a new {@code Deque} with the specified capacity.
-         * @param capacity
-         */
+        /// <summary>
+        /// Constructs a new Deque with the specified capacity
+        /// </summary>
+        /// <param name="capacity">Capacity or -1 for no capacity</param>
         public Deque(int capacity)
         {
             this.capacity = capacity;
@@ -56,7 +56,8 @@ namespace HTM.Net.Util
                 backingList.RemoveAt(0);
                 backingList.Add(t);
             }
-            else {
+            else
+            {
                 backingList.Add(t);
                 currentSize++;
             }
@@ -76,9 +77,10 @@ namespace HTM.Net.Util
             if (ret)
             {
                 backingList.RemoveAt(backingList.Count - 1);
-                backingList.Insert(0,t);
+                backingList.Insert(0, t);
             }
-            else {
+            else
+            {
                 backingList.Insert(0, t);
                 currentSize++;
             }
@@ -106,7 +108,8 @@ namespace HTM.Net.Util
                 backingList.RemoveAt(0);
                 backingList.Add(t);
             }
-            else {
+            else
+            {
                 backingList.Add(t);
                 currentSize++;
             }
@@ -151,6 +154,8 @@ namespace HTM.Net.Util
             currentSize = 0;
         }
 
+        public int Length { get { return currentSize; } }
+
         /**
          * Returns the item at the head of this {@code Deque} or null
          * if it is empty. This call does not block if empty.
@@ -189,7 +194,7 @@ namespace HTM.Net.Util
             try
             {
                 val = backingList[backingList.Count - 1];
-                backingList.RemoveAt(backingList.Count-1);
+                backingList.RemoveAt(backingList.Count - 1);
                 currentSize--;
             }
             catch (Exception e) { Console.WriteLine(e); }
@@ -247,9 +252,9 @@ namespace HTM.Net.Util
          * @return		the contents of this {@code Deque} in an array of
          * 				type &lt;T&gt;
          */
-        public T[] ToArray<T>(T[] a)
+        public E[] ToArray()
         {
-            return backingList.Cast<T>().ToArray();
+            return backingList.ToArray();
         }
 
         /**
@@ -396,7 +401,7 @@ namespace HTM.Net.Util
             return backingList.ToString() + " capacity: " + capacity;
         }
 
-        public ReadOnlyCollection<E> GetBackingList() { return backingList.AsReadOnly();}
+        public ReadOnlyCollection<E> GetBackingList() { return backingList.AsReadOnly(); }
 
         #region Implementation of IEnumerator
 

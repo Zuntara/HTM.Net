@@ -14,6 +14,8 @@ namespace HTM.Net.Network.Sensor
 
         IDictionary<string, object> GetInputMap();
 
+        void SetEncoder(MultiEncoder encoder);
+
         /// <summary>
         /// DO NOT CALL THIS METHOD! 
         /// Used internally by deserialization routines.
@@ -902,6 +904,11 @@ namespace HTM.Net.Network.Sensor
         public override MultiEncoder GetEncoder()
         {
             return (MultiEncoder)encoder;
+        }
+
+        public void SetEncoder(MultiEncoder encoder)
+        {
+            this.encoder = encoder;
         }
 
         public override int GetHashCode()

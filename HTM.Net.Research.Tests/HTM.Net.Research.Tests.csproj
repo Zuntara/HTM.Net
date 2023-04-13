@@ -22,6 +22,8 @@
 	  <None Remove="Resources\BBCBreaking.txt" />
 	  <None Remove="Resources\days-of-week.csv" />
 	  <None Remove="Resources\foxeat.csv" />
+	  <None Remove="Resources\Pick3GameData.csv" />
+	  <None Remove="Resources\RandomData.csv" />
 	  <None Remove="Resources\rec-center-15m.csv" />
 	  <None Remove="Resources\rec-center-hourly-4learn.csv" />
 	  <None Remove="Resources\rec-center-hourly-4period-cat.csv" />
@@ -51,6 +53,12 @@
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="Resources\foxeat.csv">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Pick3GameData.csv">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\RandomData.csv">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="Resources\rec-center-15m.csv">

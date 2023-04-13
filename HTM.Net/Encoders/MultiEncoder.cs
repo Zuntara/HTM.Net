@@ -6,6 +6,28 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
 {
+    /// <summary>
+    /// A MultiEncoder is a collection of encoders which are applied to a single input value.
+    /// </summary>
+    public enum EncoderTypes
+    {
+        None,
+        ScalarEncoder,
+        ScalarSpaceEncoder,
+        RandomDistributedScalarEncoder,
+        CategoryEncoder,
+        CoordinateEncoder,
+        LogEncoder,
+        PassThroughEncoder,
+        GeospatialCoordinateEncoder,
+        AdaptiveScalarEncoder,
+        SparsePassThroughEncoder,
+        SDRCategoryEncoder,
+        DateEncoder,
+        DeltaEncoder,
+        SDRPassThroughEncoder
+    }
+
     [Serializable]
     public class MultiEncoder : Encoder<object>
     {
@@ -48,9 +70,7 @@ namespace HTM.Net.Encoders
             }
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /// <inheritdoc />
         public override void EncodeIntoArray(object input, int[] output)
         {
             foreach (var t in GetEncoders(this))
@@ -156,35 +176,37 @@ namespace HTM.Net.Encoders
          * @param encoderName
          * @return
          */
-        public IBuilder GetBuilder(string encoderName)
+        public IBuilder GetBuilder(EncoderTypes encoderName)
         {
             switch (encoderName)
             {
-                case "CategoryEncoder":
+                case EncoderTypes.CategoryEncoder:
                     return CategoryEncoder.GetBuilder();
-                case "CoordinateEncoder":
+                case EncoderTypes.CoordinateEncoder:
                     return CoordinateEncoder.GetBuilder();
-                case "GeospatialCoordinateEncoder":
+                case EncoderTypes.GeospatialCoordinateEncoder:
                     return GeospatialCoordinateEncoder.GetGeobuilder();
-                case "LogEncoder":
+                case EncoderTypes.LogEncoder:
                     return LogEncoder.GetBuilder();
-                case "PassThroughEncoder":
+                case EncoderTypes.PassThroughEncoder:
                     return PassThroughEncoder<int[]>.GetBuilder();
-                case "ScalarEncoder":
+                case EncoderTypes.ScalarEncoder:
                     return ScalarEncoder.GetBuilder();
-                case "AdaptiveScalarEncoder":
+                case EncoderTypes.ScalarSpaceEncoder:
+                    return ScalarSpaceEncoder.GetSpaceBuilder();
+                case EncoderTypes.AdaptiveScalarEncoder:
                     return AdaptiveScalarEncoder.GetAdaptiveBuilder();
-                case "SparsePassThroughEncoder":
+                case EncoderTypes.SparsePassThroughEncoder:
                     return SparsePassThroughEncoder.GetSparseBuilder();
-                case "SDRCategoryEncoder":
+                case EncoderTypes.SDRCategoryEncoder:
                     return SDRCategoryEncoder.GetBuilder();
-                case "RandomDistributedScalarEncoder":
+                case EncoderTypes.RandomDistributedScalarEncoder:
                     return RandomDistributedScalarEncoder.GetBuilder();
-                case "DateEncoder":
+                case EncoderTypes.DateEncoder:
                     return DateEncoder.GetBuilder();
-                case "DeltaEncoder":
+                case EncoderTypes.DeltaEncoder:
                     return DeltaEncoder.GetDeltaBuilder();
-                case "SDRPassThroughEncoder":
+                case EncoderTypes.SDRPassThroughEncoder:
                     return SDRPassThroughEncoder.GetSptBuilder();
                 default:
                     throw new ArgumentException("Invalid encoder: " + encoderName);

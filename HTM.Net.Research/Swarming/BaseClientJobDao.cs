@@ -284,17 +284,17 @@ namespace HTM.Net.Research.Swarming
             throw new NotImplementedException();
         }
 
-        public void modelSetCompleted(ulong? modelID, string completionReason, string completionMsg, long? cpuTime = null)
+        public virtual void modelSetCompleted(ulong? modelID, string completionReason, string completionMsg, long? cpuTime = null)
         {
             throw new NotImplementedException();
         }
 
-        public void modelSetFields(ulong? modelID, Dictionary<string, object> fields, bool? ignoreUnchanged = null)
+        public virtual void modelSetFields(ulong? modelID, Dictionary<string, object> fields, bool? ignoreUnchanged = null)
         {
             throw new NotImplementedException();
         }
 
-        public void jobSetFields(uint? jobID, Dictionary<string, object> fields, bool useConnectionID, bool ignoreUnchanged)
+        public virtual void jobSetFields(uint? jobID, Dictionary<string, object> fields, bool useConnectionID, bool ignoreUnchanged)
         {
             throw new NotImplementedException();
         }
@@ -309,7 +309,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="jobId"></param>
         /// <returns></returns>
-        public virtual List<Tuple> modelsGetUpdateCounters(uint? jobId)
+        public virtual List<Tuple<ulong, uint>> modelsGetUpdateCounters(uint? jobId)
         {
             throw new NotImplementedException();
         }
@@ -507,9 +507,9 @@ namespace HTM.Net.Research.Swarming
         /// <returns>list of result tuples. Each tuple contains: 
         ///  (modelID, results, status, updateCounter, numRecords, completionReason, completionMsg, engParamsHash)
         /// </returns>
-        public List<ResultAndStatusModel> modelsGetResultAndStatus(List<ulong> modelIDs)
+        public virtual List<ResultAndStatusModel> modelsGetResultAndStatus(IEnumerable<ulong> modelIDs)
         {
-            Debug.Assert(modelIDs.Count >= 1, "modelIDs is empty");
+            Debug.Assert(modelIDs.Count() >= 1, "modelIDs is empty");
 
             //var rows = this._getMatchingRowsWithRetries(_models, { 'model_id' : modelIDs},
             //     [self._models.pubToDBNameDict[f] for f in self._models.getResultAndStatusNamedTuple._fields])
@@ -522,6 +522,7 @@ namespace HTM.Net.Research.Swarming
             //return [self._models.getResultAndStatusNamedTuple._make(r) for r in rows]
             throw new NotImplementedException();
         }
+
         /// <summary>
         /// Get all info about a job
         /// </summary>
@@ -561,7 +562,7 @@ namespace HTM.Net.Research.Swarming
         /// list of result namedtuples defined in ClientJobsDAO._models.getParamsNamedTuple.
         /// Each tuple contains: (modelId, params, engParamsHash)
         /// </returns>
-        public List<NamedTuple> modelsGetParams(List<ulong> newModelIDs)
+        public virtual List<NamedTuple> modelsGetParams(List<ulong> newModelIDs)
         {
             throw new NotImplementedException();
         }
@@ -575,16 +576,16 @@ namespace HTM.Net.Research.Swarming
         /// If modelIDs is a sequence: a list of tuples->(modelID, [field1, field2,...])
         /// If modelIDs is a single modelID:  a list of field values->[field1, field2,...]
         /// </returns>
-        public List<Tuple<int, List<string>>> modelsGetFields(ulong[] modelIDs, string[] fields)
+        public virtual Map<ulong, ModelTable> modelsGetFields(ulong[] modelIDs, string[] fields)
         {
             throw new NotImplementedException();
         }
 
-        public List<string> modelsGetFields(ulong modelID, string[] fields)
+        public ModelTable modelsGetFields(ulong modelID, string[] fields)
         {
-            var list = modelsGetFields(new[] { modelID }, fields);
+            Map<ulong, ModelTable> list = modelsGetFields(new[] { modelID }, fields);
             var first = list.First();
-            return first.Item2;
+            return first.Value;
         }
 
         public void jobSetCompleted(uint? jobID, string completionReason, string completionMsg)
@@ -609,7 +610,7 @@ namespace HTM.Net.Research.Swarming
             return text;
         }
 
-        protected const int HASH_MAX_LEN = 16*2;
+        protected const int HASH_MAX_LEN = 16 * 2;
         protected const int CLIENT_MAX_LEN = 8;
         protected string _normalizeHash(string hashValue)
         {
@@ -625,6 +626,53 @@ namespace HTM.Net.Research.Swarming
             }
 
             return hashValue;
+        }
+
+        public virtual void modelUpdateResults(ulong? modelId, string results = null, double? metricValue = null, uint? numRecords = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual void modelUpdateTimestamp(ulong? modelId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual List<ModelTable> modelsInfo(List<ulong> modelIDs)
+        {
+            throw new NotImplementedException();
+        }
+        /// <summary>
+        /// Fetch all the modelIDs that correspond to a given jobID; empty sequence if none
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <returns></returns>
+        public virtual List<ulong> jobGetModelIDs(uint? jobId)
+        {
+            throw new NotImplementedException();
+        }
+        /// <summary>
+        /// Gets the specified fields for all the models for a single job. This is similar to modelsGetFields
+        /// </summary>
+        /// <param name="jobId">jobID for the models to be searched</param>
+        /// <param name="fields">A list  of fields to return</param>
+        /// <param name="ignoreKilled">(True/False). If True, this will ignore models that have been killed</param>
+        /// <returns>
+        /// a (possibly empty) list of tuples as follows
+        /// [
+        ///     (model_id1, [field1, ..., fieldn]),
+        ///     (model_id2, [field1, ..., fieldn]),
+        ///     (model_id3, [field1, ..., fieldn])
+        ///     ...
+        /// ]
+        /// 
+        /// NOTE: since there is a window of time between a job getting inserted into
+        /// jobs table and the job's worker(s) starting up and creating models, an
+        /// empty-list result is one of the normal outcomes.
+        /// </returns>
+        public virtual List<Tuple<ulong?, object[]>> modelsGetFieldsForJob(uint? jobId, string[] fields, bool ignoreKilled = false)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -644,8 +692,8 @@ namespace HTM.Net.Research.Swarming
         public override uint jobInsert(string client, string cmdLine, string clientInfo = "", string clientKey = "", string @params = "",
             bool alreadyRunning = false, int minimumWorkers = 0, int maximumWorkers = 0, string jobType = "")
         {
-            string jobHash = this._normalizeHash(Guid.NewGuid().ToString());
-            uint jobID = (uint) (Jobs.Count + 1);
+            string jobHash = this._normalizeHash(Guid.NewGuid().ToString().Replace("-", ""));
+            uint jobID = (uint)(Jobs.Count + 1);
 
             string initStatus;
             // Initial status
@@ -720,6 +768,10 @@ namespace HTM.Net.Research.Swarming
                 {
                     results.Add(job.cancel);
                 }
+                else if (field == "results")
+                {
+                    results.Add(job.results);
+                }
                 else if (field == "engWorkerState")
                 {
                     results.Add(job._eng_worker_state);
@@ -735,16 +787,121 @@ namespace HTM.Net.Research.Swarming
             return results;
         }
 
-        public override List<Tuple> modelsGetUpdateCounters(uint? jobId)
+        public override List<Tuple<ulong, uint>> modelsGetUpdateCounters(uint? jobId)
         {
             return Models
                 .Where(m => m.job_id == jobId)
-                .Select(m => new Tuple(m.model_id, m.update_counter)).ToList();
+                .Select(m => new Tuple<ulong, uint>(m.model_id, m.update_counter)).ToList();
+        }
+
+        public override List<ResultAndStatusModel> modelsGetResultAndStatus(IEnumerable<ulong> modelIDs)
+        {
+            Debug.Assert(modelIDs.Count() >= 1, "modelIDs is empty");
+
+            List<ResultAndStatusModel> rows = _getMatchingRowsWithRetries(Models, m => modelIDs.Contains(m.model_id),
+                m => new ResultAndStatusModel
+                {
+                    modelId = m.model_id,
+                    resultsSerialized = m.results,
+                    status = m.status,
+                    updateCounter = m.update_counter,
+                    numRecords = m.num_records,
+                    completionReason = m.completion_reason,
+                    completionMsg = m.completion_msg,
+                    engParamsHash = m._eng_params_hash,
+                    engMatured = m._eng_matured
+                });
+
+            //var rows = this._getMatchingRowsWithRetries(_models, { 'model_id' : modelIDs},
+            //     [self._models.pubToDBNameDict[f] for f in self._models.getResultAndStatusNamedTuple._fields])
+
+            // NOTE: assertion will also fail when modelIDs contains duplicates
+            Debug.Assert(rows.Count == modelIDs.Count(), "Didn't find modelIDs");
+            //Debug.Assert(rows.Count == modelIDs.Count, "Didn't find modelIDs", "Didn't find modelIDs: %r", 
+            //    (set(modelIDs) - set(r[0] for r in rows)),)
+
+            // Return the results as a list of namedtuples
+            //return [self._models.getResultAndStatusNamedTuple._make(r) for r in rows]
+            return rows;
+        }
+
+        public override List<NamedTuple> modelsGetParams(List<ulong> newModelIDs)
+        {
+            var rows = _getMatchingRowsWithRetries(Models, m => newModelIDs.Contains(m.model_id),
+                m => new NamedTuple(new[] {"modelId", "params", "engParamsHash"},
+                    new object[] { m.model_id, m.@params, m._eng_params_hash}));
+
+            return rows;
+        }
+
+        public override Map<ulong, ModelTable> modelsGetFields(ulong[] modelIDs, string[] fields)
+        {
+            return new Map<ulong, ModelTable>(
+                Models.Where(m => modelIDs.Contains(m.model_id)).ToDictionary(m => m.model_id, m => m));
+        }
+
+        public override void modelSetFields(ulong? modelID, Dictionary<string, object> fields, bool? ignoreUnchanged = null)
+        {
+            var model = Models.Single(m => m.model_id == modelID.Value);
+
+            foreach (var fieldPair in fields)
+            {
+                if (fieldPair.Key == "engParamsHash")
+                {
+                    model._eng_params_hash = (string) fieldPair.Value;
+                }
+                else if (fieldPair.Key == "engParticleHash")
+                {
+                    model._eng_particle_hash = (string) fieldPair.Value;
+                }
+                else if (fieldPair.Key == "engStop")
+                {
+                    model._eng_stop = (string) fieldPair.Value;
+                }
+                else if (fieldPair.Key == "engWorkerConnId")
+                {
+                    model._eng_worker_conn_id = (string) fieldPair.Value;
+                }
+                else if (fieldPair.Key == "modelCheckpointId")
+                {
+                    model.model_checkpoint_id = (string) fieldPair.Value;
+                }
+                else if (fieldPair.Key == "genDescription")
+                {
+                    model.gen_description = (string) fieldPair.Value;
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknown field: " + fieldPair.Key);
+                }
+            }
+            
+        }
+
+        public override void jobSetFields(uint? jobID, Dictionary<string, object> fields, bool useConnectionID, bool ignoreUnchanged)
+        {
+            var job = Jobs.Single(m => m.jobID == jobID.Value);
+
+            foreach (var fieldPair in fields)
+            {
+                if (fieldPair.Key == "engStatus")
+                {
+                    job._eng_status = (string)fieldPair.Value;
+                }
+                else if (fieldPair.Key == "workerCompletionMsg")
+                {
+                    job.worker_completion_msg = (string) fieldPair.Value;
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknown field: " + fieldPair.Key);
+                }
+            }
         }
 
         public override NamedTuple jobInfo(uint? jobId)
         {
-            var job = Jobs.FirstOrDefault(j => j.jobID == jobId);
+            JobTable job = Jobs.FirstOrDefault(j => j.jobID == jobId);
             if (job == null)
             {
                 throw new ArgumentOutOfRangeException("jobId", "no such job found");
@@ -752,9 +909,15 @@ namespace HTM.Net.Research.Swarming
             return job.ToNamedTuple();
         }
 
+        public override List<ModelTable> modelsInfo(List<ulong> modelIDs)
+        {
+            var rows = _getMatchingRowsWithRetries(Models, m => modelIDs.Contains(m.model_id), mt=>mt);
+            return rows;
+        }
+
         public override string getConnectionID()
         {
-            return Guid.NewGuid().ToString();
+            return Guid.NewGuid().ToString().Replace("-", "");
         }
 
         public override void modelsClearAll()
@@ -794,12 +957,17 @@ namespace HTM.Net.Research.Swarming
                 job.gen_base_description = newValue;
                 return true;
             }
+            if (fieldName == "results" && job.results == curValue)
+            {
+                job.results = newValue;
+                return true;
+            }
             if (fieldName == "engWorkerState" && job._eng_worker_state == curValue)
             {
                 job._eng_worker_state = newValue;
                 return true;
             }
-            return false;
+            throw new InvalidOperationException($"Field {fieldName} to be mapped in jobSetFieldIfEqual");
         }
         /// <summary>
         /// Look through the models table for an orphaned model, which is a model
@@ -910,10 +1078,10 @@ namespace HTM.Net.Research.Swarming
             //  model's absence before calling us, we could skip this check here
             var row = Models
                 .Where(m => m.job_id == jobId && m._eng_params_hash == paramsHash && m._eng_particle_hash == particleHash)
-                .Select(m => new {m.model_id, m._eng_worker_conn_id})
+                .Select(m => new { m.model_id, m._eng_worker_conn_id })
                 .FirstOrDefault();
             //row = findExactMatchWithRetries();
-            if( row != null)
+            if (row != null)
             {
                 return new Tuple<ulong, bool>(row.model_id, false);
             }
@@ -931,7 +1099,7 @@ namespace HTM.Net.Research.Swarming
             newModel._eng_last_update_time = DateTime.Now;
             newModel._eng_worker_conn_id = this.getConnectionID();
 
-            if (Models.Any(m=> m.job_id == jobId && m._eng_params_hash == paramsHash && m._eng_particle_hash == particleHash))
+            if (Models.Any(m => m.job_id == jobId && m._eng_params_hash == paramsHash && m._eng_particle_hash == particleHash))
             {
                 throw new InvalidOperationException("Duplicate entry in model table");
             }
@@ -1050,7 +1218,140 @@ namespace HTM.Net.Research.Swarming
             return new Tuple<ulong, bool>(newModel.model_id, true);
         }
 
+        /// <summary>
+        /// Update the results string, and/or num_records fields of
+        /// a model.This will fail if the model does not currently belong to this
+        /// client (connection_id doesn't match).
+        /// </summary>
+        /// <param name="modelId"></param>
+        /// <param name="results"></param>
+        /// <param name="metricValue"></param>
+        /// <param name="numRecords"></param>
+        public override void modelUpdateResults(ulong? modelId, string results = null, double? metricValue = null, uint? numRecords = null)
+        {
+            var model = Models.Single(m => m.model_id == modelId.GetValueOrDefault());
+            model._eng_last_update_time = DateTime.Now;
+            model.update_counter += 1;
+
+            if (results != null) model.results = results;
+            if (numRecords.HasValue) model.num_records = numRecords.Value;
+            if (metricValue.HasValue) model.optimized_metric = metricValue.Value;
+        }
+
+        public override void modelUpdateTimestamp(ulong? modelId)
+        {
+            modelUpdateResults(modelId);
+        }
+
+        /// <summary>
+        /// Mark a model as completed, with the given completionReason and
+        /// completionMsg.This will fail if the model does not currently belong to this
+        /// client (connection_id doesn't match).
+        /// </summary>
+        /// <param name="modelID"></param>
+        /// <param name="completionReason"></param>
+        /// <param name="completionMsg"></param>
+        /// <param name="cpuTime"></param>
+        public override void modelSetCompleted(ulong? modelID, string completionReason, string completionMsg, long? cpuTime = null)
+        {
+            if (string.IsNullOrWhiteSpace(completionMsg)) completionMsg = String.Empty;
+
+            var model = Models.Single(m => m.model_id == modelID.GetValueOrDefault());
+
+            model.status = STATUS_COMPLETED;
+            model.completion_reason = completionReason;
+            model.completion_msg = completionMsg;
+            model.end_time = DateTime.Now;
+            model.cpu_time = cpuTime.GetValueOrDefault(0);
+            model._eng_last_update_time = DateTime.Now;
+            model.update_counter += 1;
+        }
+
+        /// <summary>
+        /// Fetch all the modelIDs that correspond to a given jobID; empty sequence if none
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <returns></returns>
+        public override List<ulong> jobGetModelIDs(uint? jobId)
+        {
+            var rows = _getMatchingRowsWithRetries(Models, m => m.job_id == jobId.GetValueOrDefault(), m=>m.model_id);
+            return rows;
+        }
+
+        /// <summary>
+        /// Gets the specified fields for all the models for a single job. This is similar to modelsGetFields
+        /// </summary>
+        /// <param name="jobId">jobID for the models to be searched</param>
+        /// <param name="fields">A list  of fields to return</param>
+        /// <param name="ignoreKilled">(True/False). If True, this will ignore models that have been killed</param>
+        /// <returns>
+        /// a (possibly empty) list of tuples as follows
+        /// [
+        ///     (model_id1, [field1, ..., fieldn]),
+        ///     (model_id2, [field1, ..., fieldn]),
+        ///     (model_id3, [field1, ..., fieldn])
+        ///     ...
+        /// ]
+        /// 
+        /// NOTE: since there is a window of time between a job getting inserted into
+        /// jobs table and the job's worker(s) starting up and creating models, an
+        /// empty-list result is one of the normal outcomes.
+        /// </returns>
+        public override List<Tuple<ulong?, object[]>> modelsGetFieldsForJob(uint? jobId, string[] fields, bool ignoreKilled = false)
+        {
+            Debug.Assert(fields.Length >= 1, "fields empty");
+
+            var models = Models.Where(m => m.job_id == jobId.GetValueOrDefault()).ToList();
+
+            List<Tuple<ulong?, object[]>> retVal = new List<Tuple<ulong?, object[]>>();
+
+            foreach (var model in models)
+            {
+                int index = 0;
+                Tuple<ulong?, object[]> item = new Tuple<ulong?, object[]>(model.job_id, new object[fields.Length]);
+
+                foreach (var field in fields)
+                {
+                    if (field == "params")
+                    {
+                        item.Item2[index++] = model.@params;
+                    }
+                    else { throw new InvalidOperationException($"field {field} not known");}
+                }
+
+                retVal.Add(item);
+            }
+
+            return retVal;
+        }
+
         #endregion
+
+        private List<T> _getMatchingRowsWithRetries<T>(List<ModelTable> models, Func<ModelTable, bool> fieldsToMatch, Func<ModelTable, T> selectFieldNames, 
+            int? maxRows = null)
+        {
+            try
+            {
+                return _getMatchingRowsNoRetries(models, fieldsToMatch, selectFieldNames);
+            }
+            catch
+            {
+                return _getMatchingRowsNoRetries(models, fieldsToMatch, selectFieldNames);
+            }
+        }
+
+        private List<T> _getMatchingRowsNoRetries<T>(List<ModelTable> models, Func<ModelTable, bool> fieldsToMatch, Func<ModelTable, T> selectFieldNames,
+            int? maxRows = null)
+        {
+            Debug.Assert(fieldsToMatch != null);
+
+            var query = models.Where(fieldsToMatch).Select(selectFieldNames);
+            if (maxRows.HasValue && maxRows.Value > 0)
+            {
+                query = query.Take(maxRows.Value);
+            }
+            return query.ToList();
+        }
     }
 
     public class JobTable
@@ -1178,7 +1479,7 @@ namespace HTM.Net.Research.Swarming
         public bool cancel { get; set; }
         public DateTime start_time { get; set; }
         public DateTime end_time { get; set; }
-        public string results { get; set; }
+        public string results { get; set; } // Dictionary<string,object> json
         [MaxLength(32)]
         public string _eng_job_type { get; set; }
         public int minimum_workers { get; set; }
@@ -1238,11 +1539,11 @@ namespace HTM.Net.Research.Swarming
         }
         public ulong model_id { get; set; }
         public uint job_id { get; set; }
-        public string @params { get; set; }
+        public string @params { get; set; } // ModelParams serialized
         public string status { get; set; }
         public string completion_reason { get; set; }
         public string completion_msg { get; set; }
-        public string results { get; set; }
+        public string results { get; set; } // Tuple serialized - Map<string,double?> /  Map<string,double?>
         public double? optimized_metric { get; set; }
         public uint update_counter { get; set; }
         public uint num_records { get; set; }
@@ -1328,11 +1629,12 @@ namespace HTM.Net.Research.Swarming
 
     public class ResultAndStatusModel
     {
-        public ulong modelID;
-        public Tuple<Dictionary<string, object>, Dictionary<string, double?>> results;
+        public ulong modelId;
+        public Tuple results; // (Map<string, double?>, (Map<string, double?>
+        public string resultsSerialized;
         public string status;
-        public int updateCounter;
-        public int numRecords;
+        public uint updateCounter;
+        public uint numRecords;
         public string completionReason;
         public string completionMsg;
         public bool engMatured;

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using HTM.Net.Research.Swarming;
 using HTM.Net.Research.Swarming.Descriptions;
+using HTM.Net.Swarming.HyperSearch;
+using HTM.Net.Util;
 using log4net;
 using MetricsManager = HTM.Net.Research.opf.PredictionMetricsManager;
 
@@ -26,8 +29,8 @@ namespace HTM.Net.Research.opf
         private ulong _modelID;
         private uint _jobID;
         private string _predictedField;
-        private IDescription _experimentDir;
-        private string _reportKeyPatterns;
+        private ExperimentParameters _experimentDir;
+        private string[] _reportKeyPatterns;
         private string _optimizeKeyPattern;
         private BaseClientJobDao _jobsDAO;
         private string _modelCheckpointGUID;
@@ -35,199 +38,219 @@ namespace HTM.Net.Research.opf
         private bool _isMaturityEnabled;
         private string _optimizedMetricLabel;
         private string _cmpReason;
-        private DescriptionControlModel _modelControl;
+        private ExperimentControl _modelControl;
         private Model _model;
         private MetricsManager __metricMgr;
+        private readonly string[] _reportMetricLabels;
+        private StreamReader _inputSource;
 
-        ///// <summary>
-        ///// 
-        ///// </summary>
-        ///// <param name="modelID">ID for this model in the models table</param>
-        ///// <param name="jobID">ID for this hypersearch job in the jobs table</param>
-        ///// <param name="predictedField">Name of the input field for which this model is being optimized</param>
-        ///// <param name="experimentDir"> Directory path containing the experiment's description.py script</param>
-        ///// <param name="reportKeyPatterns">list of items from the results dict to include in the report. These can be regular expressions.</param>
-        ///// <param name="optimizeKeyPattern">Which report item, if any, we will be optimizing for. 
-        ///// This can also be a regular expression, but is an error if it matches more than one key from the experiment's results.
-        ///// </param>
-        ///// <param name="jobsDAO">Jobs data access object - the interface to the jobs database which has the model's table.</param>
-        ///// <param name="modelCheckpointGUID">A persistent, globally-unique identifier for constructing the model checkpoint key. If None, then don't bother creating a model checkpoint.</param>
-        ///// <param name="predictionCacheMaxRecords">Maximum number of records for the prediction output cache.
-        ///// Pass None for default value.</param>
-        //public OpfModelRunner(ulong modelID, uint jobID, string predictedField, IDescription experimentDir,
-        //       string reportKeyPatterns, string optimizeKeyPattern, BaseClientJobDao jobsDAO,
-        //       string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
-        //{
-        //    // -----------------------------------------------------------------------
-        //    // Initialize class constants
-        //    // -----------------------------------------------------------------------
-        //    this._MIN_RECORDS_TO_BE_BEST = SwarmConfiguration.bestModelMinRecords;
-        //    this._MATURITY_MAX_CHANGE = SwarmConfiguration.maturityPctChange;
-        //    this._MATURITY_NUM_POINTS = SwarmConfiguration.maturityNumPoints;
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="modelID">ID for this model in the models table</param>
+        /// <param name="jobID">ID for this hypersearch job in the jobs table</param>
+        /// <param name="predictedField">Name of the input field for which this model is being optimized</param>
+        /// <param name="experimentDir"> Directory path containing the experiment's description.py script</param>
+        /// <param name="reportKeyPatterns">list of items from the results dict to include in the report. These can be regular expressions.</param>
+        /// <param name="optimizeKeyPattern">Which report item, if any, we will be optimizing for. 
+        /// This can also be a regular expression, but is an error if it matches more than one key from the experiment's results.
+        /// </param>
+        /// <param name="jobsDAO">Jobs data access object - the interface to the jobs database which has the model's table.</param>
+        /// <param name="modelCheckpointGUID">A persistent, globally-unique identifier for constructing the model checkpoint key. If None, then don't bother creating a model checkpoint.</param>
+        /// <param name="predictionCacheMaxRecords">Maximum number of records for the prediction output cache.
+        /// Pass None for default value.</param>
+        public OpfModelRunner(ulong modelID, uint jobID, string predictedField, ExperimentParameters experimentDir,
+               string[] reportKeyPatterns, string optimizeKeyPattern, BaseClientJobDao jobsDAO,
+               string modelCheckpointGUID, int? predictionCacheMaxRecords = null)
+        {
+            // -----------------------------------------------------------------------
+            // Initialize class constants
+            // -----------------------------------------------------------------------
+            this._MIN_RECORDS_TO_BE_BEST = SwarmConfiguration.bestModelMinRecords;
+            this._MATURITY_MAX_CHANGE = SwarmConfiguration.maturityPctChange;
+            this._MATURITY_NUM_POINTS = SwarmConfiguration.maturityNumPoints;
 
-        //    // -----------------------------------------------------------------------
-        //    // Initialize instance variables
-        //    // -----------------------------------------------------------------------
-        //    this._modelID = modelID;
-        //    this._jobID = jobID;
-        //    this._predictedField = predictedField;
-        //    this._experimentDir = experimentDir;
-        //    this._reportKeyPatterns = reportKeyPatterns;
-        //    this._optimizeKeyPattern = optimizeKeyPattern;
-        //    this._jobsDAO = jobsDAO;
-        //    this._modelCheckpointGUID = modelCheckpointGUID;
-        //    this._predictionCacheMaxRecords = predictionCacheMaxRecords;
+            // -----------------------------------------------------------------------
+            // Initialize instance variables
+            // -----------------------------------------------------------------------
+            this._modelID = modelID;
+            this._jobID = jobID;
+            this._predictedField = predictedField;
+            this._experimentDir = experimentDir;
+            this._reportKeyPatterns = reportKeyPatterns;
+            this._optimizeKeyPattern = optimizeKeyPattern;
+            this._jobsDAO = jobsDAO;
+            this._modelCheckpointGUID = modelCheckpointGUID;
+            this._predictionCacheMaxRecords = predictionCacheMaxRecords;
 
-        //    this._isMaturityEnabled = SwarmConfiguration.enableModelMaturity;
+            this._isMaturityEnabled = SwarmConfiguration.enableModelMaturity;
 
-        //    //this._logger = logging.getLogger(".".join( ['com.numenta',this.__class__.__module__, this.__class__.__name__]));
+            //this._logger = logging.getLogger(".".join( ['com.numenta',this.__class__.__module__, this.__class__.__name__]));
 
-        //    this._optimizedMetricLabel = null;
-        //    this._reportMetricLabels = [];
-
-
-        //    // Our default completion reason
-        //    this._cmpReason = BaseClientJobDao.CMPL_REASON_EOF;
-
-        //    // The manager object to compute the metrics for this model
-        //    this.__metricMgr = null;
-
-        //    // Will be set to a new instance of OPFTaskDriver by __runTask()
-        //    // this.__taskDriver = None
-
-        //    // Current task control parameters. Will be set by __runTask()
-        //    this.__task = null;
-
-        //    // Will be set to a new instance of PeriodicActivityManager by __runTask()
-        //    this._periodic = null;
-
-        //    // Will be set to streamDef string by _runTask()
-        //    this._streamDef = null;
-
-        //    // Will be set to new OpfExperiment instance by run()
-        //    this._model = null;
-
-        //    // Will be set to new InputSource by __runTask()
-        //    this._inputSource = null;
-
-        //    // 0-based index of the record being processed;
-        //    // Initialized and updated by __runTask()
-        //    this._currentRecordIndex = null;
-
-        //    // Interface to write predictions to a persistent storage
-        //    this._predictionLogger = null;
-
-        //    // In-memory cache for predictions. Predictions are written here for speed
-        //    // when they don't need to be written to a persistent store
-        //    this.__predictionCache = deque();
-
-        //    // Flag to see if this is the best model in the job (as determined by the
-        //    // model chooser logic). This is essentially a cache of the value in the
-        //    // ClientJobsDB
-        //    this._isBestModel = false;
-
-        //    // Flag to see if there is a best model (not necessarily this one)
-        //    // stored in the DB
-        //    this._isBestModelStored = false;
+            this._optimizedMetricLabel = null;
+            this._reportMetricLabels = Array.Empty<string>();
 
 
-        //    // -----------------------------------------------------------------------
-        //    // Flags for model cancelation/checkpointing
-        //    // -----------------------------------------------------------------------
+            // Our default completion reason
+            this._cmpReason = BaseClientJobDao.CMPL_REASON_EOF;
 
-        //    // Flag to see if the job that this model is part of
-        //    this._isCanceled = false;
+            // The manager object to compute the metrics for this model
+            this.__metricMgr = null;
 
-        //    // Flag to see if model was killed, either by the model terminator or by the
-        //    // hypsersearch implementation (ex. the a swarm is killed/matured)
-        //    this._isKilled = false;
+            // Will be set to a new instance of OPFTaskDriver by __runTask()
+            // this.__taskDriver = None
 
-        //    // Flag to see if the model is matured. In most cases, this means that we
-        //    // should stop running the model. The only execption is if this model is the
-        //    // best model for the job, in which case it should continue running.
-        //    this._isMature = false;
+            //// Current task control parameters. Will be set by __runTask()
+            //this.__task = null;
 
-        //    // Event to see if interrupt signal has been sent
-        //    this._isInterrupted = threading.Event();
+            //// Will be set to a new instance of PeriodicActivityManager by __runTask()
+            //this._periodic = null;
 
-        //    // -----------------------------------------------------------------------
-        //    // Facilities for measuring model maturity
-        //    // -----------------------------------------------------------------------
-        //    // List of tuples, (iteration, metric), used to see if the model has 'matured'
-        //    this._metricRegression = regression.AveragePctChange(windowSize: this._MATURITY_NUM_POINTS);
+            //// Will be set to streamDef string by _runTask()
+            //this._streamDef = null;
 
-        //    this.__loggedMetricPatterns = [];
-        //}
+            //// Will be set to new OpfExperiment instance by run()
+            //this._model = null;
 
-        ///// <summary>
-        ///// Runs the OPF Model
-        ///// </summary>
-        ///// <returns>(completionReason, completionMsg) where completionReason is one of the ClientJobsDAO.CMPL_REASON_XXX equates.</returns>
-        //public Tuple<string, string> run()
-        //{
-        //    var modelDescription = _experimentDir.modelConfig;
-        //    this._modelControl = _experimentDir.control;
+            //// Will be set to new InputSource by __runTask()
+            //this._inputSource = null;
 
-        //    // -----------------------------------------------------------------------
-        //    // Create the input data stream for this task
-        //    var streamDef = this._modelControl.dataset;
+            //// 0-based index of the record being processed;
+            //// Initialized and updated by __runTask()
+            //this._currentRecordIndex = null;
 
-        //    // -----------------------------------------------------------------------
-        //    // Get field statistics from the input source
-        //    var fieldStats = this._getFieldStats();
-        //    // -----------------------------------------------------------------------
-        //    // Construct the model instance
-        //    this._model = ModelFactory.create(modelDescription);
-        //    this._model.setFieldStatistics(fieldStats);
-        //    this._model.enableLearning();
-        //    this._model.enableInference(this._modelControl.inferenceArgs);
+            //// Interface to write predictions to a persistent storage
+            //this._predictionLogger = null;
 
-        //    // -----------------------------------------------------------------------
-        //    // Instantiate the metrics
-        //    this.__metricMgr = new MetricsManager(this._modelControl.metrics,
-        //                                      this._model.getFieldInfo(),
-        //                                      this._model.getInferenceType());
+            //// In-memory cache for predictions. Predictions are written here for speed
+            //// when they don't need to be written to a persistent store
+            //this.__predictionCache = deque();
 
-        //    this.__loggedMetricPatterns = this._modelControl.loggedMetrics ?? new string[0];
+            //// Flag to see if this is the best model in the job (as determined by the
+            //// model chooser logic). This is essentially a cache of the value in the
+            //// ClientJobsDB
+            //this._isBestModel = false;
 
-        //    this._optimizedMetricLabel = this.__getOptimizedMetricLabel();
-        //    this._reportMetricLabels = matchPatterns(this._reportKeyPatterns,
-        //                                              this._getMetricLabels());
+            //// Flag to see if there is a best model (not necessarily this one)
+            //// stored in the DB
+            //this._isBestModelStored = false;
 
 
-        //    // -----------------------------------------------------------------------
-        //    // Initialize periodic activities (e.g., for model result updates)
-        //    this._periodic = this._initPeriodicActivities();
+            //// -----------------------------------------------------------------------
+            //// Flags for model cancelation/checkpointing
+            //// -----------------------------------------------------------------------
 
-        //    // -----------------------------------------------------------------------
-        //    // Create our top-level loop-control iterator
-        //    int numIters = this._modelControl.iterationCount.GetValueOrDefault(-1);
+            //// Flag to see if the job that this model is part of
+            //this._isCanceled = false;
 
-        //    // Are we asked to turn off learning for a certain // of iterations near the
-        //    //  end?
-        //    int? learningOffAt = null;
-        //    int iterationCountInferOnly = this._modelControl.iterationCountInferOnly.GetValueOrDefault();
-        //    if (iterationCountInferOnly == -1)
-        //    {
-        //        this._model.disableLearning();
-        //    }
-        //    else if (iterationCountInferOnly > 0)
-        //    {
-        //        Debug.Assert(numIters > iterationCountInferOnly,
-        //            "when iterationCountInferOnly is specified, iterationCount must be greater than iterationCountInferOnly.");
-        //        learningOffAt = numIters - iterationCountInferOnly;
-        //    }
+            //// Flag to see if model was killed, either by the model terminator or by the
+            //// hypsersearch implementation (ex. the a swarm is killed/matured)
+            //this._isKilled = false;
 
-        //    this.__runTaskMainLoop(numIters, learningOffAt: learningOffAt);
+            //// Flag to see if the model is matured. In most cases, this means that we
+            //// should stop running the model. The only execption is if this model is the
+            //// best model for the job, in which case it should continue running.
+            //this._isMature = false;
 
-        //    // -----------------------------------------------------------------------
-        //    // Perform final operations for model
-        //    this._finalize();
+            //// Event to see if interrupt signal has been sent
+            //this._isInterrupted = threading.Event();
 
-        //    return new Tuple<string, string>(this._cmpReason, null);
-        //}
+            //// -----------------------------------------------------------------------
+            //// Facilities for measuring model maturity
+            //// -----------------------------------------------------------------------
+            //// List of tuples, (iteration, metric), used to see if the model has 'matured'
+            //this._metricRegression = regression.AveragePctChange(windowSize: this._MATURITY_NUM_POINTS);
+
+            //this.__loggedMetricPatterns = [];
+        }
+
+        /// <summary>
+        /// Runs the OPF Model
+        /// </summary>
+        /// <returns>(completionReason, completionMsg) where completionReason is one of the ClientJobsDAO.CMPL_REASON_XXX equates.</returns>
+        public ModelCompletionStatus run()
+        {
+            /*var modelDescription = _experimentDir.modelConfig;
+            this._modelControl = _experimentDir.Control;
+
+            // -----------------------------------------------------------------------
+            // Create the input data stream for this task
+            var streamDef = this._modelControl.dataset;
+
+            // -----------------------------------------------------------------------
+            // Get field statistics from the input source
+            var fieldStats = this._getFieldStats();
+            // -----------------------------------------------------------------------
+            // Construct the model instance
+            this._model = ModelFactory.create(modelDescription);
+            this._model.setFieldStatistics(fieldStats);
+            this._model.enableLearning();
+            this._model.enableInference(this._modelControl.inferenceArgs);
+
+            // -----------------------------------------------------------------------
+            // Instantiate the metrics
+            this.__metricMgr = new MetricsManager(this._modelControl.metrics,
+                                              this._model.getFieldInfo(),
+                                              this._model.getInferenceType());
+
+            this.__loggedMetricPatterns = this._modelControl.loggedMetrics ?? new string[0];
+
+            this._optimizedMetricLabel = this.__getOptimizedMetricLabel();
+            this._reportMetricLabels = matchPatterns(this._reportKeyPatterns,
+                                                      this._getMetricLabels());
 
 
+            // -----------------------------------------------------------------------
+            // Initialize periodic activities (e.g., for model result updates)
+            this._periodic = this._initPeriodicActivities();
+
+            // -----------------------------------------------------------------------
+            // Create our top-level loop-control iterator
+            int numIters = this._modelControl.iterationCount.GetValueOrDefault(-1);
+
+            // Are we asked to turn off learning for a certain // of iterations near the
+            //  end?
+            int? learningOffAt = null;
+            int iterationCountInferOnly = this._modelControl.iterationCountInferOnly.GetValueOrDefault();
+            if (iterationCountInferOnly == -1)
+            {
+                this._model.disableLearning();
+            }
+            else if (iterationCountInferOnly > 0)
+            {
+                Debug.Assert(numIters > iterationCountInferOnly,
+                    "when iterationCountInferOnly is specified, iterationCount must be greater than iterationCountInferOnly.");
+                learningOffAt = numIters - iterationCountInferOnly;
+            }
+
+            this.__runTaskMainLoop(numIters, learningOffAt: learningOffAt);
+
+            // -----------------------------------------------------------------------
+            // Perform final operations for model
+            this._finalize();*/
+
+            return new ModelCompletionStatus(this._cmpReason, null);
+        }
+
+        /// <summary>
+        /// Method which returns a dictionary of field statistics received from the input source.
+        /// </summary>
+        /// <returns>
+        /// fieldStats: dict of dicts where the first level is the field name and the second level is the statistic.
+        /// ie. fieldStats['pounds']['min']</returns>
+        private Map<string, Map<string, double>> _getFieldStats()
+        {
+            var fieldStats = new Map<string, Map<string, double>>();
+            /*var fieldNames = this._inputSource.getFieldNames();
+            foreach (string fieldName in fieldNames)
+            {
+                var curStats = new Map<string, double>();
+                curStats["min"] = this._inputSource.getFieldMin(fieldName);
+                curStats["max"] = this._inputSource.getFieldMax(fieldName);
+                fieldStats[fieldName] = curStats;
+            }*/
+            return fieldStats;
+        }
     }
 
     /*

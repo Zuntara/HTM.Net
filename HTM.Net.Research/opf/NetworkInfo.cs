@@ -1,3 +1,5 @@
+using HTM.Net.Network;
+
 namespace HTM.Net.Research.opf
 {
     /// <summary>
@@ -12,6 +14,11 @@ namespace HTM.Net.Research.opf
         {
             this.net = net;
             this.statCollectors = statsCollectors;
+        }
+
+        public Layer<IInference> GetLayer()
+        {
+            return (Layer<IInference>)net.GetHead().GetHead();
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using HTM.Net.Encoders;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -17,7 +18,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
         public void TestGetParameters()
         {
             Parameters p = NetworkDemoHarness.GetParameters();
-            Assert.AreEqual(67, p.Size());
+            Assert.AreEqual(69, p.Size());
         }
 
         [TestMethod]
@@ -51,7 +52,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
         [TestMethod]
         public void TestSetupMap()
         {
-            Map<String, Map<String, Object>> m = NetworkDemoHarness.SetupMap(null, 23, 2, 0.0, 0.9, 22.0, 3.0, false, false, null, "cogmission", "ai", "works");
+            Map<String, Map<String, Object>> m = NetworkDemoHarness.SetupMap(null, 23, 2, 0.0, 0.9, 22.0, 3.0, false, false, null, "cogmission", "ai", EncoderTypes.None);
             Assert.IsNotNull(m);
 
             // Make sure omission of key doesn't insert null or a default value

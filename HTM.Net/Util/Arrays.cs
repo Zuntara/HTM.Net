@@ -109,6 +109,60 @@ namespace HTM.Net.Util
             return result;
         }
 
+        public static string ToString<T>(IEnumerable<T> v, string format)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            foreach (var item in v)
+            {
+                if (item is IEnumerable && !(item is string))
+                {
+                    sb.AppendFormat(format + ", ", ToString(item as IEnumerable, format));
+                }
+                else
+                {
+                    if (item is double)
+                    {
+                        sb.AppendFormat(NumberFormatInfo.InvariantInfo, format + ", ", item);
+                    }
+                    else
+                    {
+                        sb.AppendFormat(format + ", ", item);
+                    }
+                }
+            }
+            string result = sb.ToString().TrimEnd(',', ' ');
+            result += "]";
+            return result;
+        }
+
+        public static string ToString(IEnumerable v, string format)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            foreach (var item in v)
+            {
+                if (item is IEnumerable && !(item is string))
+                {
+                    sb.AppendFormat(format + ", ", ToString(item as IEnumerable));
+                }
+                else
+                {
+                    if (item is double)
+                    {
+                        sb.AppendFormat(format + ", ", ((double)Convert.ToDouble(item)).ToString(NumberFormatInfo.InvariantInfo));
+                    }
+                    else
+                    {
+                        sb.AppendFormat(format + ", ", item);
+                    }
+                }
+            }
+            string result = sb.ToString().TrimEnd(',', ' ');
+            result += "]";
+            return result;
+        }
+
         public static string ToString(IEnumerable v)
         {
             StringBuilder sb = new StringBuilder();

@@ -204,7 +204,7 @@ namespace HTM.Net.Tests.Algorithms
             }
 
             // Check that the estimated mean is correct
-            Statistic statistic = (Statistic)metrics.GetParams().Distribution();
+            Statistic statistic = (Statistic)metrics.GetParams().Distribution;
             Assert.IsTrue(
                 AssertWithinEpsilon(
                     statistic.mean, (total / (double)metrics.GetAvgRecordList().AveragedRecords.Count)

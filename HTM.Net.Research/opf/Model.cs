@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
+using HTM.Net.Data;
 using HTM.Net.Research.Swarming;
+using HTM.Net.Research.Swarming.Descriptions;
 using HTM.Net.Util;
 using log4net;
 
@@ -15,9 +18,9 @@ namespace HTM.Net.Research.opf
     {
         protected int? _numPredictions;
         protected InferenceType __inferenceType;
-        private bool __learningEnabled;
-        private bool __inferenceEnabled;
-        private Map<string, object> __inferenceArgs;
+        private bool _learningEnabled;
+        private bool _inferenceEnabled;
+        private InferenceArgsDescription _inferenceArgs;
 
         /// <summary>
         /// Model constructor
@@ -27,12 +30,12 @@ namespace HTM.Net.Research.opf
         {
             this._numPredictions = 0;
             this.__inferenceType = inferenceType;
-            this.__learningEnabled = true;
-            this.__inferenceEnabled = true;
-            this.__inferenceArgs = new Map<string, object>();
+            this._learningEnabled = true;
+            this._inferenceEnabled = true;
+            this._inferenceArgs = new InferenceArgsDescription();
         }
 
-        public virtual ModelResult run(Map<string, object> inputRecord)
+        public virtual ModelResult run(Tuple<Map<string, object>, string[]> inputRecord)
         {
             int? predictionNumber;
             if (_numPredictions.HasValue)
@@ -44,14 +47,14 @@ namespace HTM.Net.Research.opf
             {
                 predictionNumber = null;
             }
-            var result = new ModelResult(predictionNumber: predictionNumber, rawInput: inputRecord);
+            var result = new ModelResult(predictionNumber: predictionNumber, rawInput: inputRecord.Item1);
             return result;
         }
 
         public abstract void finishLearning();
         public abstract void resetSequenceStates();
-        public abstract void getFieldInfo(bool includeClassifierOnlyField = false);
-        public abstract void setFieldStatistics(Map<string, Map<string, object>> fieldStats);
+        public abstract List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false);
+        public abstract void setFieldStatistics(Map<string, double> fieldStats);
         public abstract void getRuntimeStats();
         protected abstract ILog _getLogger();
 
@@ -64,33 +67,33 @@ namespace HTM.Net.Research.opf
 
         public void enableLearning()
         {
-            __learningEnabled = true;
+            _learningEnabled = true;
         }
         public void disableLearning()
         {
-            __learningEnabled = false;
+            _learningEnabled = false;
         }
         public bool isLearningEnabled()
         {
-            return __learningEnabled;
+            return _learningEnabled;
         }
 
-        public void enableInference(Map<string, object> inferenceArgs = null)
+        public void enableInference(InferenceArgsDescription inferenceArgs = null)
         {
-            __inferenceEnabled = true;
-            __inferenceArgs = inferenceArgs;
+            _inferenceEnabled = true;
+            _inferenceArgs = inferenceArgs;
         }
-        public Map<string, object> getInferenceArgs()
+        public InferenceArgsDescription getInferenceArgs()
         {
-            return __inferenceArgs;
+            return _inferenceArgs;
         }
         public void disableInference()
         {
-            __inferenceEnabled = false;
+            _inferenceEnabled = false;
         }
         public bool isInferenceEnabled()
         {
-            return __inferenceEnabled;
+            return _inferenceEnabled;
         }
 
 

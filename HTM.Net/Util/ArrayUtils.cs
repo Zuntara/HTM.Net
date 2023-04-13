@@ -1,11 +1,11 @@
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
@@ -1277,14 +1277,38 @@ namespace HTM.Net.Util
          * @param interval    the amount by which to increment the values
          * @return
          */
-        public static int[] XRange(int lowerBounds, int upperBounds, int interval)
+        public static IEnumerable<int> XRange(int start, int stop, int step)
         {
-            List<int> ints = new List<int>();
-            for (int i = lowerBounds; i < upperBounds; i += interval)
+            // go up
+            if (start < stop && stop != -1)
             {
-                ints.Add(i);
+                for (int i = start; i < stop; i += step)
+                {
+                    yield return i;
+                }
             }
-            return ints.ToArray();
+            else if (start < stop && stop == -1)
+            {
+                for (int i = start; ; i += step)
+                {
+                    yield return i;
+                }
+            }
+            // go down
+            else if (start > stop && stop != -1)
+            {
+                for (int i = start; i > stop; i += step)
+                {
+                    yield return i;
+                }
+            }
+            else if (start > stop && stop == -1)
+            {
+                for (int i = start; ; i += step)
+                {
+                    yield return i;
+                }
+            }
         }
 
         /**
@@ -3639,6 +3663,59 @@ namespace HTM.Net.Util
                 pVal += step;
                 yield return pVal;
             }
+        }
+
+        // merges the second collection with the first collection after x positions
+        public static byte[] MergeGrouped(byte[] first, byte[] second, int firstRepeated, int positionOffset)
+        {
+            byte[] result = new byte[(first.Length * firstRepeated) + second.Length];
+
+            int s = 0;
+            int f = 0;
+            int i = 0;
+            int counter = 0;
+            // alpha on 3, 7, 11, 15
+            // img on 0 1 2  4 5 6    8 9 10   12 13 14 
+
+            while (i < result.Length)
+            {
+                bool adapt = ++counter % 2 == 0;
+                if (adapt && i > 0)
+                {
+                    result[i++] = second[s++];
+                }
+                else
+                {
+                    for (int j = 0; j < firstRepeated; j++)
+                    {
+                        result[i++] = first[f];
+                    }
+                    f++;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Returns a subset of the keys that match any of the given patterns
+        /// </summary>
+        /// <param name="patterns">A list of regular expressions to match</param>
+        /// <param name="keys">A list of keys to search for matches</param>
+        /// <returns></returns>
+        public static List<string> MatchPatterns(string[] patterns, string[] keys)
+        {
+            List<string> results = new List<string>();
+
+            if (patterns == null || !patterns.Any()) return null;
+
+            foreach (var pattern in patterns)
+            {
+                var prog = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                results.AddRange(keys.Where(k => prog.IsMatch(k)).ToList());
+            }
+
+            return results;
         }
     }
 }

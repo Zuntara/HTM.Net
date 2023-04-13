@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using HTM.Net.Model;
 using HTM.Net.Util;
-
+using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
-
-using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
@@ -81,11 +80,11 @@ namespace HTM.Net.Algorithms
         private int _learnIteration;
         private int _recordNumMinusLearnIteration = -1;
         private static readonly int VERSION = 1;
-        private Deque<Tuple> _patternNZHistory;
+        private Deque<(int learnIteration, int[] patternNZ)> _patternNZHistory; // (learnIteration, patternNZ)
         //private Map<int, int> _activeBitHistory;
         private int _maxInputIdx = 0;
         private int _maxBucketIdx;
-        private Map<int, SparseMatrix> _weightMatrix;
+        private Map<int, Matrix<double>> _weightMatrix;
         private readonly List<object> _actualValues;
         private string g_debugPrefix = "SDRClassifier";
 
@@ -124,7 +123,7 @@ namespace HTM.Net.Algorithms
             // History of the last _maxSteps activation patterns. We need to keep 
             // these so that we can associate the current iteration's classification 
             // with the activationPattern from N steps ago 
-            _patternNZHistory = new Deque<Tuple>(maxSteps);
+            _patternNZHistory = new Deque<(int learnIteration, int[] patternNZ)>(maxSteps);
 
             // These are the bit histories. Each one is a BitHistory instance, stored in 
             // this dict, where the key is (bit, nSteps). The 'bit' is the index of the 
@@ -133,7 +132,7 @@ namespace HTM.Net.Algorithms
             //_activeBitHistory = new Map<int, int>();
 
             // The connection weight matrix 
-            _weightMatrix = new Map<int, SparseMatrix>();
+            _weightMatrix = new Map<int, Matrix<double>>();
 
             foreach (int step in steps)
             {
@@ -247,7 +246,7 @@ namespace HTM.Net.Algorithms
             }
 
             // Store pattern in our history
-            _patternNZHistory.Append(new Tuple(_learnIteration, patternNZ));
+            _patternNZHistory.Append((_learnIteration, patternNZ));
 
             // To allow multi-class classification, we need to be able to run learning
             // without inference being on. So initialize retval outside
@@ -255,18 +254,19 @@ namespace HTM.Net.Algorithms
             Classification<T> retVal = null;
 
             // Update maxInputIdx and augment weight matrix with zero padding
-            if (patternNZ.Max() > _maxInputIdx)
+            int maxPatternNZ = patternNZ.Any() ? patternNZ.Max() : 0;
+            if (maxPatternNZ > _maxInputIdx)
             {
-                int newMaxInputIdx = patternNZ.Max();
+                int newMaxInputIdx = maxPatternNZ;
                 foreach (int nSteps in Steps)
                 {
+                    var matrix = _weightMatrix.Get(nSteps);
                     for (int i = _maxInputIdx; i < newMaxInputIdx; i++)
                     {
-                        var matrix = _weightMatrix.Get(nSteps);
-
-                        matrix = (SparseMatrix)matrix.InsertColumn(matrix.ColumnCount, new SparseVector(_maxBucketIdx + 1));
-                        _weightMatrix[nSteps] = matrix;
+                        matrix = matrix.InsertColumn(matrix.ColumnCount, new SparseVector(_maxBucketIdx + 1));
                     }
+
+                    _weightMatrix[nSteps] = matrix;
 
                     //var subMatrix = ArrayUtils.CreateJaggedArray<double>(newMaxInputIdx - _maxInputIdx, _maxBucketIdx + 1);
                     //_weightMatrix[nSteps] = ArrayUtils.Concatinate(_weightMatrix[nSteps], subMatrix, 0);
@@ -293,10 +293,10 @@ namespace HTM.Net.Algorithms
                 {
                     foreach (int nSteps in Steps)
                     {
+                        var matrix = _weightMatrix.Get(nSteps);
                         for (int i = _maxBucketIdx; i < bucketIdx; i++)
                         {
-                            var matrix = _weightMatrix.Get(nSteps);
-                            matrix = (SparseMatrix)matrix.InsertRow(matrix.RowCount, new DenseVector(_maxInputIdx + 1));
+                            matrix = matrix.InsertRow(matrix.RowCount, new SparseVector(_maxInputIdx + 1));
                             _weightMatrix[nSteps] = matrix;
                         }
                         //var subMatrix = ArrayUtils.CreateJaggedArray<double>(_maxInputIdx + 1, bucketIdx - _maxBucketIdx);
@@ -342,31 +342,36 @@ namespace HTM.Net.Algorithms
                     }
                 }
 
-                int iteration = 0;
-                int[] learnPatternNZ = null;
+                int iteration;
+                int[] learnPatternNZ;
                 foreach (var tuple in _patternNZHistory)
                 {
-                    iteration = (int)tuple.Get(0);
-                    learnPatternNZ = (int[])tuple.Get(1);
+                    iteration = tuple.learnIteration;
+                    learnPatternNZ = tuple.patternNZ;
 
                     var error = CalculateError(classification);
 
                     int nSteps = _learnIteration - iteration;
-                    if (Steps.Contains(nSteps))
+                    if (Steps.Contains(nSteps) && learnPatternNZ.Length > 0)
                     {
+                        var matrix = _weightMatrix.Get(nSteps);
                         for (int row = 0; row <= _maxBucketIdx; row++)
+                        //Parallel.For(0, _maxBucketIdx, row =>
                         {
-                            foreach (int bit in learnPatternNZ)
+                            var errorVal = error[nSteps][row];
+                            var errorAlpha = (Alpha * errorVal);
+                            var rowVec = matrix.Row(row).ToArray();
+                            //foreach (int bit in learnPatternNZ)
+                            Parallel.ForEach(learnPatternNZ, (bit) =>
                             {
-                                var matrix = _weightMatrix.Get(nSteps);
-                                var rowVec = matrix.Row(row);
-                                rowVec.At(bit, (Alpha * error[nSteps][row]) + rowVec.At(bit));
-                                matrix.SetRow(row, rowVec);
+                                var rowValToSet = errorAlpha + rowVec[bit];
+                                rowVec[bit] = rowValToSet;
                                 //var multipliedRow = ArrayUtils.Multiply(error[nSteps], Alpha);
                                 //_weightMatrix[nSteps][bit] = ArrayUtils.Add(multipliedRow, _weightMatrix[nSteps][bit]);
-                            }
+                            });
+
+                            matrix.SetRow(row, rowVec);
                         }
-                        
                     }
                 }
             }
@@ -467,7 +472,7 @@ namespace HTM.Net.Algorithms
         /// <param name="patternNZ">list of the active indices from the output below</param>
         /// <param name="weightMatrix">array of the weight matrix</param>
         /// <returns>array of the predicted class label distribution</returns>
-        private double[] InferSingleStep(int[] patternNZ, SparseMatrix weightMatrix)
+        private double[] InferSingleStep(int[] patternNZ, Matrix<double> weightMatrix)
         {
             // Compute the output activation "level" for each bucket (matrix row)
             // we've seen so far and store in double[]
@@ -516,14 +521,9 @@ namespace HTM.Net.Algorithms
             var targetDist = new int[_maxBucketIdx + 1];
             targetDist[(int)classification["bucketIdx"]] = 1;
 
-            int iteration = 0;
-            int[] learnPatternNZ = null;
-            int nSteps = 0;
-            foreach (Tuple tuple in _patternNZHistory)
+            foreach ((int iteration, int[] learnPatternNZ) in _patternNZHistory)
             {
-                iteration = (int)tuple.Get(0);
-                learnPatternNZ = (int[])tuple.Get(1);
-                nSteps = _learnIteration - iteration;
+                int nSteps = _learnIteration - iteration;
                 if (Steps.Contains(nSteps))
                 {
                     double[] predictDist = InferSingleStep(learnPatternNZ, _weightMatrix[nSteps]);

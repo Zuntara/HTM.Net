@@ -1,0 +1,6677 @@
+﻿{
+    "3M": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MMM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "3M"
+              ]
+      },
+      "XIGNITE.MMM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MMM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MMM"
+    },
+  "ACE Ltd": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ACE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.ACE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ACE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ACE"
+  },
+  "AT&T": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.T.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ATT"
+              ]
+      },
+      "XIGNITE.T.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.T.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "T"
+  },
+  "AbbVie": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ABBV.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AbbVie"
+              ]
+      },
+      "XIGNITE.ABBV.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ABBV.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ABBV"
+  },
+  "Abbott Laboratories": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ABT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AbbottNews"
+              ]
+      },
+      "XIGNITE.ABT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ABT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ABT"
+  },
+  "Accenture": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ACN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Accenture"
+              ]
+      },
+      "XIGNITE.ACN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ACN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ACN"
+  },
+  "Adobe Systems": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ADBE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Adobe"
+              ]
+      },
+      "XIGNITE.ADBE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ADBE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "ADBE"
+  },
+  "Aetna": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AET.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Aetna"
+              ]
+      },
+      "XIGNITE.AET.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AET.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AET"
+  },
+  "Aflac": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AFL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Aflac"
+              ]
+      },
+      "XIGNITE.AFL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AFL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AFL"
+  },
+  "Air Products & Chemicals": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.APD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "airproducts"
+              ]
+      },
+      "XIGNITE.APD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.APD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "APD"
+  },
+  "Alexion Pharmaceuticals": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ALXN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AlexionPharma"
+              ]
+      },
+      "XIGNITE.ALXN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ALXN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "ALXN"
+  },
+  "Allergan": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AGN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Actavis",
+          "Allergan"
+              ]
+      },
+      "XIGNITE.AGN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AGN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AGN"
+  },
+  "Allstate": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ALL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Allstate"
+              ]
+      },
+      "XIGNITE.ALL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ALL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ALL"
+  },
+  "Altria Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AltriaNews"
+              ]
+      },
+      "XIGNITE.MO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MO"
+  },
+  "Amazon.com": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AMZN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Amazon"
+              ]
+      },
+      "XIGNITE.AMZN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AMZN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "AMZN"
+  },
+  "American Airlines Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AAL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AmericanAir"
+              ]
+      },
+      "XIGNITE.AAL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AAL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "AAL"
+  },
+  "American Electric Power Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AEP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AEPNews"
+              ]
+      },
+      "XIGNITE.AEP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AEP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AEP"
+  },
+  "American Express": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AXP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AmericanExpress"
+              ]
+      },
+      "XIGNITE.AXP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AXP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AXP"
+  },
+  "American International Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AIG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AIGinsurance"
+              ]
+      },
+      "XIGNITE.AIG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AIG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AIG"
+  },
+  "American Tower": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AMT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.AMT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AMT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "AMT"
+  },
+  "Amgen": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AMGN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Amgen"
+              ]
+      },
+      "XIGNITE.AMGN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AMGN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "AMGN"
+  },
+  "Anadarko Petroleum": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.APC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.APC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.APC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "APC"
+  },
+  "Anthem": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ANTM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "AnthemInc"
+              ]
+      },
+      "XIGNITE.ANTM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ANTM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ANTM"
+  },
+  "Apache Corporation": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.APA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ApacheCorp"
+              ]
+      },
+      "XIGNITE.APA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.APA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "APA"
+  },
+  "Apple": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.AAPL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "apple",
+          "tim_cook"
+              ]
+      },
+      "XIGNITE.AAPL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.AAPL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "AAPL"
+  },
+  "Archer-Daniels Midland": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ADM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ADMUpdates"
+              ]
+      },
+      "XIGNITE.ADM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ADM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ADM"
+  },
+  "Automatic Data Processing": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ADP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ADP"
+              ]
+      },
+      "XIGNITE.ADP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ADP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "ADP"
+  },
+  "BB&T": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BBT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.BBT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BBT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BBT"
+  },
+  "Baker Hughes": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BHI.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "BHInc"
+              ]
+      },
+      "XIGNITE.BHI.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BHI.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BHI"
+  },
+  "Bank of America": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BAC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "BofA_News",
+          "MerrillLynch"
+              ]
+      },
+      "XIGNITE.BAC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BAC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BAC"
+  },
+  "Bank of New York Mellon": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "BNYMellonWealth"
+              ]
+      },
+      "XIGNITE.BK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BK"
+  },
+  "Baxter International": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BAX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Baxter_Intl"
+              ]
+      },
+      "XIGNITE.BAX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BAX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BAX"
+  },
+  "Becton Dickinson & Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BDX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.BDX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BDX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BDX"
+  },
+  "Berkshire Hathaway Class B": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BRK.B.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.BRK.B.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BRK.B.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BRK.B"
+  },
+  "Biogen Idec": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BIIB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Biogen"
+              ]
+      },
+      "XIGNITE.BIIB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BIIB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "BIIB"
+  },
+  "BlackRock": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BLK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "BlackRock"
+              ]
+      },
+      "XIGNITE.BLK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BLK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BLK"
+  },
+  "Boeing": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Boeing"
+              ]
+      },
+      "XIGNITE.BA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BA"
+  },
+  "Bristol-Myers Squibb": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BMY.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "bmsnews"
+              ]
+      },
+      "XIGNITE.BMY.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BMY.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BMY"
+  },
+  "CBS Class B": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CBS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CBS",
+          "CBSNews"
+              ]
+      },
+      "XIGNITE.CBS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CBS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CBS"
+  },
+  "CDK Global": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CDK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CDKGlobal"
+              ]
+      },
+      "XIGNITE.CDK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CDK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "CDK"
+  },
+  "CME Group Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CME.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CMEGroup"
+              ]
+      },
+      "XIGNITE.CME.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CME.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "CME"
+  },
+  "CSX": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CSX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CSX"
+              ]
+      },
+      "XIGNITE.CSX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CSX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CSX"
+  },
+  "CVS Health": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CVS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CVSHealth"
+              ]
+      },
+      "XIGNITE.CVS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CVS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CVS"
+  },
+  "Capital One Financial": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.COF.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CapitalOne"
+              ]
+      },
+      "XIGNITE.COF.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.COF.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "COF"
+  },
+  "Carnival": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CCL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CarnivalCruise"
+              ]
+      },
+      "XIGNITE.CCL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CCL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CCL"
+  },
+  "Caterpillar": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CAT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CaterpillarInc"
+              ]
+      },
+      "XIGNITE.CAT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CAT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CAT"
+  },
+  "Celgene": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CELG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Celgene"
+              ]
+      },
+      "XIGNITE.CELG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CELG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "CELG"
+  },
+  "CenturyLink": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CTL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CenturyLink"
+              ]
+      },
+      "XIGNITE.CTL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CTL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CTL"
+  },
+  "Charles Schwab": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SCHW.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CharlesSchwab",
+          "SchwabService"
+              ]
+      },
+      "XIGNITE.SCHW.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SCHW.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SCHW"
+  },
+  "Chevron": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CVX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Chevron"
+              ]
+      },
+      "XIGNITE.CVX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CVX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CVX"
+  },
+  "Chubb": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ChubbInsurance"
+              ]
+      },
+      "XIGNITE.CB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CB"
+  },
+  "Cisco Systems": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CSCO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Cisco"
+              ]
+      },
+      "XIGNITE.CSCO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CSCO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "CSCO"
+  },
+  "Citigroup": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.C.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Citi"
+              ]
+      },
+      "XIGNITE.C.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.C.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "C"
+  },
+  "Coca-Cola": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.KO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "CocaCola",
+          "CocaColaCo"
+              ]
+      },
+      "XIGNITE.KO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.KO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "KO"
+  },
+  "Cognizant Technology Solutions Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CTSH.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Cognizant"
+              ]
+      },
+      "XIGNITE.CTSH.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CTSH.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "CTSH"
+  },
+  "Colgate-Palmolive": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Colgate"
+              ]
+      },
+      "XIGNITE.CL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CL"
+  },
+  "Comcast Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CMCSA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Comcast"
+              ]
+      },
+      "XIGNITE.CMCSA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CMCSA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "CMCSA"
+  },
+  "ConocoPhillips": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.COP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ConocoPhillips"
+              ]
+      },
+      "XIGNITE.COP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.COP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "COP"
+  },
+  "Corning": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GLW.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Corning"
+              ]
+      },
+      "XIGNITE.GLW.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GLW.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "GLW"
+  },
+  "Costco Wholesale": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.COST.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Costco"
+              ]
+      },
+      "XIGNITE.COST.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.COST.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "COST"
+  },
+  "Cummins": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CMI.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Cummins"
+              ]
+      },
+      "XIGNITE.CMI.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CMI.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CMI"
+  },
+  "Danaher": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DHR.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.DHR.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DHR.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DHR"
+  },
+  "Deere & Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "JohnDeere"
+              ]
+      },
+      "XIGNITE.DE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DE"
+  },
+  "Delta Air Lines": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DAL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DeltaNewsroom"
+              ]
+      },
+      "XIGNITE.DAL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DAL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DAL"
+  },
+  "Devon Energy": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DVN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DevonEnergy"
+              ]
+      },
+      "XIGNITE.DVN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DVN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DVN"
+  },
+  "Discover Financial Services": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DFS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DN_Global"
+              ]
+      },
+      "XIGNITE.DFS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DFS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DFS"
+  },
+  "Dominion Resources": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.D.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DomNews"
+              ]
+      },
+      "XIGNITE.D.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.D.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "D"
+  },
+  "Dow Chemical": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DOW.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DowChemical"
+              ]
+      },
+      "XIGNITE.DOW.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DOW.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DOW"
+  },
+  "Duke Energy": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DUK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DukeEnergy"
+              ]
+      },
+      "XIGNITE.DUK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DUK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DUK"
+  },
+  "E I du Pont de Nemours & Company": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "DuPont_News"
+              ]
+      },
+      "XIGNITE.DD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DD"
+  },
+  "EMC": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EMC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "EMC"
+              ]
+      },
+      "XIGNITE.EMC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EMC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "EMC"
+  },
+  "EOG Resources": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EOG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.EOG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EOG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "EOG"
+  },
+  "Eaton": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ETN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "eatoncorp"
+              ]
+      },
+      "XIGNITE.ETN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ETN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ETN"
+  },
+  "Ecolab": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ECL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Ecolab"
+              ]
+      },
+      "XIGNITE.ECL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ECL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ECL"
+  },
+  "Eli Lilly and Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.LLY.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "EliLillyCo"
+              ]
+      },
+      "XIGNITE.LLY.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.LLY.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "LLY"
+  },
+  "Emerson Electric": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EMR.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Emerson_News"
+              ]
+      },
+      "XIGNITE.EMR.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EMR.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "EMR"
+  },
+  "Equity Residential": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EQR.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "EquityRes"
+              ]
+      },
+      "XIGNITE.EQR.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EQR.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "EQR"
+  },
+  "Estee Lauder Cos Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "EsteeLauder"
+              ]
+      },
+      "XIGNITE.EL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "EL"
+  },
+  "Exelon": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EXC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Exelon"
+              ]
+      },
+      "XIGNITE.EXC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EXC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "EXC"
+  },
+  "Express Scripts": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ESRX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ExpressScripts"
+              ]
+      },
+      "XIGNITE.ESRX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ESRX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "ESRX"
+  },
+  "Exxon Mobil": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.XOM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "exxonmobil"
+              ]
+      },
+      "XIGNITE.XOM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.XOM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "XOM"
+  },
+  "Facebook Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.FB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Facebook"
+              ]
+      },
+      "XIGNITE.FB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.FB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "FB"
+  },
+  "FedEx": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.FDX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "FedEx"
+              ]
+      },
+      "XIGNITE.FDX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.FDX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "FDX"
+  },
+  "Ford": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.F.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Ford"
+              ]
+      },
+      "XIGNITE.F.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.F.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "F"
+  },
+  "Franklin Resources": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.BEN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "FTI_US",
+          "FTI_Global"
+              ]
+      },
+      "XIGNITE.BEN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.BEN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "BEN"
+  },
+  "Freeport-McMoRan": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.FCX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ExploreFMJobs"
+              ]
+      },
+      "XIGNITE.FCX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.FCX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "FCX"
+  },
+  "General Dynamics": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "GDMS"
+              ]
+      },
+      "XIGNITE.GD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "GD"
+  },
+  "General Electric": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "generalelectric"
+              ]
+      },
+      "XIGNITE.GE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "GE"
+  },
+  "General Mills": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GIS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "GeneralMills"
+              ]
+      },
+      "XIGNITE.GIS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GIS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "GIS"
+  },
+  "General Motors": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "GM",
+          "GMBPress"
+              ]
+      },
+      "XIGNITE.GM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "GM"
+  },
+  "Gilead Sciences": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GILD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "GileadSciences"
+              ]
+      },
+      "XIGNITE.GILD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GILD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "GILD"
+  },
+  "Goldman Sachs": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "GoldmanSachs"
+              ]
+      },
+      "XIGNITE.GS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "GS"
+  },
+  "Google": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.GOOG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "google"
+              ]
+      },
+      "XIGNITE.GOOG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.GOOG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "GOOG"
+  },
+  "Halliburton": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.HAL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Halliburton"
+              ]
+      },
+      "XIGNITE.HAL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.HAL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "HAL"
+  },
+  "Hess": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.HES.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "HessCorporation"
+              ]
+      },
+      "XIGNITE.HES.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.HES.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "HES"
+  },
+  "Hewlett-Packard": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.HPQ.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "HP",
+          "hpnews"
+              ]
+      },
+      "XIGNITE.HPQ.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.HPQ.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "HPQ"
+  },
+  "Home Depot": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.HD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "HomeDepot"
+              ]
+      },
+      "XIGNITE.HD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.HD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "HD"
+  },
+  "Honeywell International": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.HON.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Honeywellnow",
+          "HoneywellSec"
+              ]
+      },
+      "XIGNITE.HON.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.HON.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "HON"
+  },
+  "IBM": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.IBM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "IBM"
+              ]
+      },
+      "XIGNITE.IBM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.IBM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "IBM"
+  },
+  "Illinois Tool Works": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ITW.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ITWDynatec"
+              ]
+      },
+      "XIGNITE.ITW.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ITW.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ITW"
+  },
+  "Intel": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.INTC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Intel"
+              ]
+      },
+      "XIGNITE.INTC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.INTC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "INTC"
+  },
+  "JPMorgan Chase & Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.JPM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "JPMorgan"
+              ]
+      },
+      "XIGNITE.JPM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.JPM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "JPM"
+  },
+  "Johnson & Johnson": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.JNJ.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "jnjnews",
+          "jnjcares"
+              ]
+      },
+      "XIGNITE.JNJ.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.JNJ.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "JNJ"
+  },
+  "Johnson Controls": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.JCI.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "JohnsonControls"
+              ]
+      },
+      "XIGNITE.JCI.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.JCI.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "JCI"
+  },
+  "Kellogg": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.K.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "KelloggCompany"
+              ]
+      },
+      "XIGNITE.K.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.K.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "K"
+  },
+  "Kimberly-Clark": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.KMB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "KCCorp"
+              ]
+      },
+      "XIGNITE.KMB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.KMB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "KMB"
+  },
+  "Kinder Morgan": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.KMI.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Kinder_Morgan"
+              ]
+      },
+      "XIGNITE.KMI.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.KMI.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "KMI"
+  },
+  "Kraft Heinz Company": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.KHC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "KraftFoods"
+              ]
+      },
+      "XIGNITE.KHC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.KHC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "KHC"
+  },
+  "Las Vegas Sands": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.LVS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "LasVegasSands"
+              ]
+      },
+      "XIGNITE.LVS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.LVS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "LVS"
+  },
+  "Lockheed Martin": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.LMT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "LockheedMartin"
+              ]
+      },
+      "XIGNITE.LMT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.LMT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "LMT"
+  },
+  "Lowe's Companies": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.LOW.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Lowes"
+              ]
+      },
+      "XIGNITE.LOW.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.LOW.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "LOW"
+  },
+  "LyondellBasell Industries NV": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.LYB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "LyondellBasell"
+              ]
+      },
+      "XIGNITE.LYB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.LYB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "LYB"
+  },
+  "Marathon Oil": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MRO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MarathonOil"
+              ]
+      },
+      "XIGNITE.MRO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MRO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MRO"
+  },
+  "Marathon Petroleum": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MPC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MarathonPetroCo"
+              ]
+      },
+      "XIGNITE.MPC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MPC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MPC"
+  },
+  "Marsh & McLennan Companies": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MMC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MMA_pbs",
+          "MMAUpperMidwest",
+          "MMA_FL",
+          "MMAnewengland"
+              ]
+      },
+      "XIGNITE.MMC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MMC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MMC"
+  },
+  "MasterCard Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MasterCard"
+              ]
+      },
+      "XIGNITE.MA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MA"
+  },
+  "McDonald's": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MCD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "McDonalds"
+              ]
+      },
+      "XIGNITE.MCD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MCD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MCD"
+  },
+  "McKesson": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MCK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "McKesson"
+              ]
+      },
+      "XIGNITE.MCK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MCK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MCK"
+  },
+  "Medtronic": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MDT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Medtronic"
+              ]
+      },
+      "XIGNITE.MDT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MDT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MDT"
+  },
+  "Merck & Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MRK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Merck"
+              ]
+      },
+      "XIGNITE.MRK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MRK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MRK"
+  },
+  "MetLife": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MET.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MetLife"
+              ]
+      },
+      "XIGNITE.MET.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MET.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MET"
+  },
+  "Micron Technology": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MU.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MicronTech"
+              ]
+      },
+      "XIGNITE.MU.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MU.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "MU"
+  },
+  "Microsoft": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MSFT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "microsoft"
+              ]
+      },
+      "XIGNITE.MSFT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MSFT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "MSFT"
+  },
+  "Mondelez International Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MDLZ.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MDLZ"
+              ]
+      },
+      "XIGNITE.MDLZ.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MDLZ.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "MDLZ"
+  },
+  "Monsanto": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MON.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MonsantoCo"
+              ]
+      },
+      "XIGNITE.MON.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MON.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MON"
+  },
+  "Morgan Stanley": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.MS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "MorganStanley"
+              ]
+      },
+      "XIGNITE.MS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.MS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "MS"
+  },
+  "National Oilwell Varco": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.NOV.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "NOVGlobal"
+              ]
+      },
+      "XIGNITE.NOV.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.NOV.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "NOV"
+  },
+  "NextEra Energy": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.NEE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "NextEraEnergyR"
+              ]
+      },
+      "XIGNITE.NEE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.NEE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "NEE"
+  },
+  "Nike Class B": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.NKE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Nike"
+              ]
+      },
+      "XIGNITE.NKE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.NKE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "NKE"
+  },
+  "Norfolk Southern": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.NSC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "nscorp"
+              ]
+      },
+      "XIGNITE.NSC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.NSC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "NSC"
+  },
+  "Northrop Grumman": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.NOC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "NorthropGrumman"
+              ]
+      },
+      "XIGNITE.NOC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.NOC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "NOC"
+  },
+  "Occidental Petroleum": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.OXY.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "OXY_Petroleum"
+              ]
+      },
+      "XIGNITE.OXY.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.OXY.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "OXY"
+  },
+  "Oracle": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.ORCL.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Oracle"
+              ]
+      },
+      "XIGNITE.ORCL.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.ORCL.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "ORCL"
+  },
+  "PG&E": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PCG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "PGE4Me"
+              ]
+      },
+      "XIGNITE.PCG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PCG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PCG"
+  },
+  "PNC Financial Services Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PNC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "PNCNews"
+              ]
+      },
+      "XIGNITE.PNC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PNC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PNC"
+  },
+  "PPG Industries": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PPG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "PPGIndustries"
+              ]
+      },
+      "XIGNITE.PPG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PPG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PPG"
+  },
+  "PepsiCo": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PEP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Pepsi"
+              ]
+      },
+      "XIGNITE.PEP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PEP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PEP"
+  },
+  "Pfizer": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PFE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Pfizer"
+              ]
+      },
+      "XIGNITE.PFE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PFE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PFE"
+  },
+  "Philip Morris International": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.PM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PM"
+  },
+  "Phillips 66": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PSX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Phillips66Co"
+              ]
+      },
+      "XIGNITE.PSX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PSX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PSX"
+  },
+  "Pioneer Natural Resources": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PXD.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.PXD.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PXD.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PXD"
+  },
+  "Praxair": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "PraxairInc"
+              ]
+      },
+      "XIGNITE.PX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PX"
+  },
+  "Precision Castparts": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PCP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.PCP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PCP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PCP"
+  },
+  "Priceline Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PCLN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Priceline"
+              ]
+      },
+      "XIGNITE.PCLN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PCLN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "PCLN"
+  },
+  "Procter & Gamble": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ProcterGamble"
+              ]
+      },
+      "XIGNITE.PG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PG"
+  },
+  "Prudential Financial": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PRU.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "PrudentialBYC"
+              ]
+      },
+      "XIGNITE.PRU.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PRU.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PRU"
+  },
+  "Public Storage": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.PSA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "PublicStorage"
+              ]
+      },
+      "XIGNITE.PSA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.PSA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "PSA"
+  },
+  "Qualcomm": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.QCOM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Qualcomm"
+              ]
+      },
+      "XIGNITE.QCOM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.QCOM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "QCOM"
+  },
+  "Raytheon": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.RTN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Raytheon"
+              ]
+      },
+      "XIGNITE.RTN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.RTN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "RTN"
+  },
+  "Regeneron Pharmaceuticals": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.REGN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "RegeneronPharma"
+              ]
+      },
+      "XIGNITE.REGN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.REGN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "REGN"
+  },
+  "Reynolds American": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.RAI.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "RAI_News"
+              ]
+      },
+      "XIGNITE.RAI.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.RAI.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "RAI"
+  },
+  "Salesforce.com": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.CRM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Salesforce"
+              ]
+      },
+      "XIGNITE.CRM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.CRM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "CRM"
+  },
+  "Schlumberger NV": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SLB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.SLB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SLB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SLB"
+  },
+  "Simon Property Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SPG.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "SimonPropertyGp"
+              ]
+      },
+      "XIGNITE.SPG.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SPG.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SPG"
+  },
+  "Southern Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "SouthernCompany"
+              ]
+      },
+      "XIGNITE.SO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SO"
+  },
+  "Southern Copper": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SCCO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [ ]
+      },
+      "XIGNITE.SCCO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SCCO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SCCO"
+  },
+  "Spectra Energy": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SE.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "SpectraEnergy"
+              ]
+      },
+      "XIGNITE.SE.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SE.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SE"
+  },
+  "Sprint": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.S.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Sprint",
+          "Sprintnews"
+              ]
+      },
+      "XIGNITE.S.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.S.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "S"
+  },
+  "Starbucks": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SBUX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Stabucks"
+              ]
+      },
+      "XIGNITE.SBUX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SBUX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "SBUX"
+  },
+  "State Street": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.STT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "StateStreet"
+              ]
+      },
+      "XIGNITE.STT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.STT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "STT"
+  },
+  "Stryker": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SYK.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "StrykerEndo"
+              ]
+      },
+      "XIGNITE.SYK.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SYK.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SYK"
+  },
+  "Sysco": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.SYY.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Sysco"
+              ]
+      },
+      "XIGNITE.SYY.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.SYY.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "SYY"
+  },
+  "T-Mobile US": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TMUS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Tmobile"
+              ]
+      },
+      "XIGNITE.TMUS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TMUS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TMUS"
+  },
+  "TJX Companies": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TJX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "TJXCo"
+              ]
+      },
+      "XIGNITE.TJX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TJX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TJX"
+  },
+  "Target": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TGT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Target"
+              ]
+      },
+      "XIGNITE.TGT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TGT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TGT"
+  },
+  "Texas Instruments": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TXN.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "TXInstruments"
+              ]
+      },
+      "XIGNITE.TXN.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TXN.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "TXN"
+  },
+  "Thermo Fisher Scientific": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TMO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ServingScience"
+              ]
+      },
+      "XIGNITE.TMO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TMO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TMO"
+  },
+  "Thomson Reuters": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TRI.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ThomsonReuters"
+              ]
+      },
+      "XIGNITE.TRI.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TRI.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TRI"
+  },
+  "Time Warner": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TWX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "twxcorp"
+              ]
+      },
+      "XIGNITE.TWX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TWX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TWX"
+  },
+  "Time Warner Cable": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TWC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "TWC",
+          "TWC_NYNJ"
+              ]
+      },
+      "XIGNITE.TWC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TWC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TWC"
+  },
+  "Travelers Companies": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.TRV.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Travelers"
+              ]
+      },
+      "XIGNITE.TRV.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.TRV.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "TRV"
+  },
+  "Twenty-First Century Fox Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.FOXA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "20thcenturyfox"
+              ]
+      },
+      "XIGNITE.FOXA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.FOXA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "FOXA"
+  },
+  "U.S. Bancorp": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.USB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "USBank"
+              ]
+      },
+      "XIGNITE.USB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.USB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "USB"
+  },
+  "Union Pacific": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.UNP.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "UnionPacific"
+              ]
+      },
+      "XIGNITE.UNP.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.UNP.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "UNP"
+  },
+  "United Parcel Service Class B": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.UPS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "UPS"
+              ]
+      },
+      "XIGNITE.UPS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.UPS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "UPS"
+  },
+  "United Technologies": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.UTX.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "UTC"
+              ]
+      },
+      "XIGNITE.UTX.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.UTX.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "UTX"
+  },
+  "UnitedHealth Group": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.UNH.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "UnitedHealthGrp"
+              ]
+      },
+      "XIGNITE.UNH.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.UNH.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "UNH"
+  },
+  "VMWare": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.VMW.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Vmware"
+              ]
+      },
+      "XIGNITE.VMW.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.VMW.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "VMW"
+  },
+  "Valero Energy": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.VLO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "ValeroEnergy_"
+              ]
+      },
+      "XIGNITE.VLO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.VLO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "VLO"
+  },
+  "Verizon Communications": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.VZ.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Verizon"
+              ]
+      },
+      "XIGNITE.VZ.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.VZ.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "VZ"
+  },
+  "Viacom Class B": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.VIAB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Viacom"
+              ]
+      },
+      "XIGNITE.VIAB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.VIAB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "VIAB"
+  },
+  "Visa Class A": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.V.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Visa"
+              ]
+      },
+      "XIGNITE.V.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.V.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "V"
+  },
+  "Wal-Mart Stores": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.WMT.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Walmart"
+              ]
+      },
+      "XIGNITE.WMT.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.WMT.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "WMT"
+  },
+  "Walgreen": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.WBA.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Walgreens"
+              ]
+      },
+      "XIGNITE.WBA.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.WBA.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "WBA"
+  },
+  "Walt Disney": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.DIS.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Disney"
+              ]
+      },
+      "XIGNITE.DIS.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.DIS.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "DIS"
+  },
+  "Waste Management": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.WM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "WasteManagement"
+              ]
+      },
+      "XIGNITE.WM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.WM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "WM"
+  },
+  "Wells Fargo & Co": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.WFC.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "WellsFargo"
+              ]
+      },
+      "XIGNITE.WFC.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.WFC.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "WFC"
+  },
+  "Williams Companies": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.WMB.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "WilliamsUpdates"
+              ]
+      },
+      "XIGNITE.WMB.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.WMB.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "WMB"
+  },
+  "Yahoo!": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.YHOO.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "Yahoo"
+              ]
+      },
+      "XIGNITE.YHOO.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.YHOO.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "YHOO"
+  },
+  "Yum Brands": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.YUM.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "YumBrands"
+              ]
+      },
+      "XIGNITE.YUM.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.YUM.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NYSE",
+    "symbol": "YUM"
+  },
+  "eBay": {
+        "metrics": {
+            "TWITTER.TWEET.HANDLE.EBAY.VOLUME": {
+                "metricType": "TwitterVolume",
+        "metricTypeName": "Twitter Volume",
+        "modelParams": {
+                    "minResolution": 0.6
+        },
+        "provider": "twitter",
+        "screenNames": [
+          "eBay"
+              ]
+      },
+      "XIGNITE.EBAY.CLOSINGPRICE": {
+                "metricType": "StockPrice",
+        "metricTypeName": "Stock Price",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Close"
+      },
+      "XIGNITE.EBAY.VOLUME": {
+                "metricType": "StockVolume",
+        "metricTypeName": "Stock Volume",
+        "modelParams": {
+                    "minResolution": 0.2
+        },
+        "provider": "xignite",
+        "sampleKey": "Volume"
+      }
+        },
+    "stockExchange": "NASDAQ",
+    "symbol": "EBAY"
+  }
+}

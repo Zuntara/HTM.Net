@@ -7,6 +7,7 @@ using System.Threading;
 using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
 using HTM.Net.Datagen;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -629,7 +630,7 @@ namespace HTM.Net.Tests.Network
                 true,         // forced
                 "dayOfWeek",          // fieldName
                 "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
-                "SDRPassThroughEncoder"); // encoderType
+                EncoderTypes.SDRPassThroughEncoder); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
 
@@ -829,14 +830,14 @@ namespace HTM.Net.Tests.Network
                 0, // n
                 0, // w
                 0, 0, 0, 0, null, null, null,
-                "timestamp", "datetime", "DateEncoder");
+                "timestamp", "datetime", EncoderTypes.DateEncoder);
 
             fieldEncodings = SetupMap(
                 fieldEncodings,
                 25,
                 3,
                 0, 0, 0, 0.1, null, null, null,
-                "consumption", "float", "RandomDistributedScalarEncoder");
+                "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
             fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
             fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
@@ -851,7 +852,7 @@ namespace HTM.Net.Tests.Network
         private Map<String, Map<String, Object>> SetupMap(
             Map<String, Map<String, Object>> map,
             int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-            bool? clip, bool? forced, String fieldName, String fieldType, String encoderType)
+            bool? clip, bool? forced, String fieldName, String fieldType, EncoderTypes encoderType)
         {
 
             if (map == null)
@@ -908,7 +909,7 @@ namespace HTM.Net.Tests.Network
                 true,         // forced
                 "dayOfWeek",          // fieldName
                 "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
-                "SDRPassThroughEncoder"); // encoderType
+                EncoderTypes.SDRPassThroughEncoder); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
 
@@ -1003,7 +1004,7 @@ namespace HTM.Net.Tests.Network
                 true,         // forced
                 "dayOfWeek",          // fieldName
                 "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
-                "SDRPassThroughEncoder"); // encoderType
+                EncoderTypes.SDRPassThroughEncoder); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
 

@@ -91,6 +91,6 @@ public class Map<TKey, TValue> : Dictionary<TKey, TValue>
 
     public override string ToString()
     {
-        return Arrays.ToString(Keys);
+        return Arrays.ToString(this);
     }
 }

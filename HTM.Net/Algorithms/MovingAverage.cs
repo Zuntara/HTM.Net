@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Model;
+using HTM.Net.Util;
+using Newtonsoft.Json;
 
 namespace HTM.Net.Algorithms
 {
@@ -14,9 +16,14 @@ namespace HTM.Net.Algorithms
     [Serializable]
     public class MovingAverage : Persistable
     {
-        private Calculation calc;
+        [JsonProperty]
+        private Calculation _calc;
 
-        private int windowSize;
+        [JsonProperty]
+        private int _windowSize;
+
+        [JsonConstructor]
+        protected MovingAverage() { }
 
         /**
          * Constructs a new {@code MovingAverage}
@@ -42,13 +49,13 @@ namespace HTM.Net.Algorithms
             {
                 throw new ArgumentException("Window size must be > 0");
             }
-            this.windowSize = windowSize;
+            this._windowSize = windowSize;
 
-            calc = new Calculation();
-            calc.historicalValues =
+            _calc = new Calculation();
+            _calc.historicalValues =
                 historicalValues == null || historicalValues.Count < 1 ?
                     new List<double>(windowSize) : historicalValues;
-            calc.total = total != -1 ? total : calc.historicalValues.Sum();
+            _calc.total = total != -1 ? total : _calc.historicalValues.Sum();
         }
 
         /**
@@ -112,8 +119,8 @@ namespace HTM.Net.Algorithms
          */
         public double Next(double newValue)
         {
-            Compute(calc, calc.historicalValues, calc.total, newValue, windowSize);
-            return calc.average;
+            Compute(_calc, _calc.historicalValues, _calc.total, newValue, _windowSize);
+            return _calc.average;
         }
 
         /**
@@ -122,7 +129,7 @@ namespace HTM.Net.Algorithms
          */
         public List<double> GetSlidingWindow()
         {
-            return calc.historicalValues;
+            return _calc.historicalValues;
         }
 
         /**
@@ -131,7 +138,7 @@ namespace HTM.Net.Algorithms
          */
         public double GetTotal()
         {
-            return calc.total;
+            return _calc.total;
         }
 
         /**
@@ -142,15 +149,15 @@ namespace HTM.Net.Algorithms
          */
         public int GetWindowSize()
         {
-            return windowSize;
+            return _windowSize;
         }
 
         public override int GetHashCode()
         {
             const int prime = 31;
             int result = 1;
-            result = prime * result + ((calc == null) ? 0 : calc.GetHashCode());
-            result = prime * result + windowSize;
+            result = prime * result + ((_calc == null) ? 0 : _calc.GetHashCode());
+            result = prime * result + _windowSize;
             return result;
         }
 
@@ -163,14 +170,14 @@ namespace HTM.Net.Algorithms
             if (GetType() != obj.GetType())
                 return false;
             MovingAverage other = (MovingAverage)obj;
-            if (calc == null)
+            if (_calc == null)
             {
-                if (other.calc != null)
+                if (other._calc != null)
                     return false;
             }
-            else if (!calc.Equals(other.calc))
+            else if (!_calc.Equals(other._calc))
                 return false;
-            if (windowSize != other.windowSize)
+            if (_windowSize != other._windowSize)
                 return false;
             return true;
         }
@@ -198,8 +205,11 @@ namespace HTM.Net.Algorithms
         [Serializable]
         public class Calculation
         {
+            [JsonProperty]
             internal double average;
+            [JsonProperty]
             internal List<double> historicalValues;
+            [JsonProperty]
             internal double total;
 
             public Calculation()
@@ -272,7 +282,7 @@ namespace HTM.Net.Algorithms
                     if (other.historicalValues != null)
                         return false;
                 }
-                else if (!historicalValues.Equals(other.historicalValues))
+                else if (!Arrays.AreEqual(historicalValues, other.historicalValues))
                     return false;
                 if (BitConverter.DoubleToInt64Bits(total) != BitConverter.DoubleToInt64Bits(other.total))
                     return false;

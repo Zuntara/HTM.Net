@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reactive;
 using System.Threading;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -179,7 +180,7 @@ namespace HTM.Net.Tests.Network
                             true,         // forced
                             "dayOfWeek",          // fieldName
                             "darr",               // fieldType (dense array as opposed to sparse array or "sarr")
-                            "SDRPassThroughEncoder"); // encoderType
+                            EncoderTypes.SDRPassThroughEncoder); // encoderType
 
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
 

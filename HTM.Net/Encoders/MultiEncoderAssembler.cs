@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -47,28 +45,28 @@ namespace HTM.Net.Encoders
                     throw new ArgumentException("Missing fieldname for encoder " + field);
                 }
 
-                string fieldName = (string)@params.Get("fieldName");
+            string fieldName = (string)@params.Get("fieldName");
 
                 if (!@params.ContainsKey("encoderType"))
                 {
                     throw new ArgumentException("Missing type for encoder " + field);
                 }
 
-                string encoderType = (string)@params.Get("encoderType");
-                IBuilder builder = ((MultiEncoder)encoder).GetBuilder(encoderType);
+                EncoderTypes encoderType = (EncoderTypes)@params.Get("encoderType");
+                IBuilder builder = encoder.GetBuilder(encoderType);
 
-                if (encoderType.Equals("SDRCategoryEncoder"))
+                if (encoderType == EncoderTypes.SDRCategoryEncoder)
                 {
                     // Add mappings for category list
                     ConfigureCategoryBuilder(encoder,  @params, builder);
                 }
-                else if (encoderType.Equals("DateEncoder"))
+                else if (encoderType == EncoderTypes.DateEncoder)
                 {
                     // Extract date specific mappings out of the map so that we can
                     // pre-configure the DateEncoder with its needed directives.
                     ConfigureDateBuilder(encoder, encoderSettings, (DateEncoder.Builder)builder);
                 }
-                else if (encoderType.Equals("GeospatialCoordinateEncoder"))
+                else if (encoderType == EncoderTypes.GeospatialCoordinateEncoder)
                 {
                     // Extract Geo specific mappings out of the map so that we can
                     // pre-configure the GeospatialCoordinateEncoder with its needed directives.
@@ -108,7 +106,7 @@ namespace HTM.Net.Encoders
         private static void ConfigureDateBuilder(
             MultiEncoder multiEncoder, Map<string, Map<string, object>> encoderSettings, DateEncoder.Builder b)
         {
-            Map<string, object> dateEncoderSettings = GetEncoderMap(encoderSettings, "DateEncoder");
+            Map<string, object> dateEncoderSettings = GetEncoderMap(encoderSettings, EncoderTypes.DateEncoder);
             if (dateEncoderSettings == null)
             {
                 throw new InvalidOperationException("Input requires missing DateEncoder settings mapping.");
@@ -237,7 +235,7 @@ namespace HTM.Net.Encoders
          */
         private static void ConfigureGeoBuilder(MultiEncoder multiEncoder, Map<string, Map<string, object>> encoderSettings, GeospatialCoordinateEncoder.Builder builder)
         {
-            Map<string, object> geoEncoderSettings = GetEncoderMap(encoderSettings, "GeospatialCoordinateEncoder");
+            Map<string, object> geoEncoderSettings = GetEncoderMap(encoderSettings, EncoderTypes.GeospatialCoordinateEncoder);
             if (geoEncoderSettings == null)
             {
                 throw new InvalidOperationException("Input requires missing GeospatialCoordinateEncoder settings mapping.");
@@ -314,12 +312,12 @@ namespace HTM.Net.Encoders
          * @param encoderSettings
          * @return the settings map
          */
-        private static Map<string, object> GetEncoderMap(Map<string, Map<string, object>> encoderSettings, string encoderType)
+        private static Map<string, object> GetEncoderMap(Map<string, Map<string, object>> encoderSettings, EncoderTypes encoderType)
         {
             foreach (string key in encoderSettings.Keys)
             {
-                string keyType;
-                if ((keyType = (string)encoderSettings.Get(key).Get("encoderType")) != null &&
+                EncoderTypes keyType;
+                if ((keyType = (EncoderTypes)encoderSettings.Get(key).Get("encoderType")) != null &&
                     keyType.Equals(encoderType))
                 {
                     return encoderSettings.Get(key);

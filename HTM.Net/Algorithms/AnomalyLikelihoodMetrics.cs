@@ -44,15 +44,18 @@ namespace HTM.Net.Algorithms
         public AnomalyLikelihoodMetrics Copy()
         {
             List<object> vals = new List<object>();
-            foreach (var key in @params.GetKeys())
+            vals.Add(@params.Distribution);
+            vals.Add(@params.MovingAverage);
+            vals.Add(@params.HistoricalLikelihoods);
+            /*foreach (var key in @params.GetKeys())
             {
                 vals.Add(@params.Get(key));
-            }
+            }*/
 
             return new AnomalyLikelihoodMetrics(
                 Arrays.CopyOf(likelihoods, likelihoods.Length),
                 aggRecordList,
-                new AnomalyLikelihood.AnomalyParams(@params.GetKeys(), vals.ToArray()));
+                new AnomalyLikelihood.AnomalyParams(@params.Distribution, @params.MovingAverage, @params.HistoricalLikelihoods));
         }
 
         /**

@@ -1,4 +1,5 @@
-﻿using HTM.Net.Util;
+﻿using HTM.Net.Encoders;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.B2B
 {
@@ -34,7 +35,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
         public static Map<string, Map<string, object>> SetupMap(
                 Map<string, Map<string, object>> map,
                 int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-                bool? clip, bool? forced, string fieldName, string fieldType, string encoderType)
+                bool? clip, bool? forced, string fieldName, string fieldType, EncoderTypes encoderType)
         {
 
             if (map == null)
@@ -79,13 +80,13 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                     0, // n
                     0, // w
                     0, 0, 0, 0, null, null, null,
-                    "timestamp", "datetime", "DateEncoder");
+                    "timestamp", "datetime", EncoderTypes.DateEncoder);
             fieldEncodings = SetupMap(
                     fieldEncodings,
                     25,
                     3,
                     0, 0, 0, 0.1, null, null, null,
-                    "consumption", "float", "RandomDistributedScalarEncoder");
+                    "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_HOW.GetFieldName(), new BitsTuple(1, 1.0)); // Day of week
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(5, 4.0)); // Time of day
@@ -105,13 +106,13 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                     0, // n
                     0, // w
                     0, 0, 0, 0, null, null, null,
-                    "timestamp", "datetime", "DateEncoder");
+                    "timestamp", "datetime", EncoderTypes.DateEncoder);
             fieldEncodings = SetupMap(
                     fieldEncodings,
                     50,
                     21,
                     0, 500.0, 0, 0.1, null, true, null,
-                    "consumption", "float", "ScalarEncoder");
+                    "consumption", "float", EncoderTypes.ScalarEncoder);
 
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(21, 9.5)); // Time of day
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new BitsTuple(11, 1)); // day of week
@@ -180,7 +181,7 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                     8, // n
                     3, // w
                     0.0, 8.0, 0, 1, true, null, true,
-                    "dayOfWeek", "number", "ScalarEncoder");
+                    "dayOfWeek", "number", EncoderTypes.ScalarEncoder);
             return fieldEncodings;
         }
 

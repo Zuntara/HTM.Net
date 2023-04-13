@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using HTM.Net.Model;
 using HTM.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms

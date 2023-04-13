@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -9,8 +10,13 @@ using System.Text;
 using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
+using HTM.Net.Swarming.HyperSearch.Variables;
 using HTM.Net.Util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using static HTM.Net.Parameters;
 using Tuple = HTM.Net.Util.Tuple;
+using TypeConverter = System.ComponentModel.TypeConverter;
 
 namespace HTM.Net
 {
@@ -32,7 +38,8 @@ namespace HTM.Net
         /// <summary>
         /// Map of parameters to their values
         /// </summary>
-        private ParametersMap paramMap = new ParametersMap();
+        [JsonProperty("InternalParameters")]
+        private ParametersMap _paramMap = new ParametersMap();
 
         static Parameters()
         {
@@ -106,6 +113,16 @@ namespace HTM.Net
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
 
+            ///////////  Classifier Parameters ///////////
+            ParametersMap defaultClassifierParams = new ParametersMap();
+            defaultClassifierParams.Add(KEY.AUTO_CLASSIFY, false);
+            // defaultClassifierParams.Add(KEY.AUTO_CLASSIFY_TYPE, typeof(CLAClassifier));
+            defaultClassifierParams.Add(KEY.CLASSIFIER_ALPHA, 0.001);
+            defaultClassifierParams.Add(KEY.CLASSIFIER_STEPS, new[] { 1 });
+
+            // DEFAULTS_CLASSIFIER = defaultClassifierParams;
+            defaultParams.AddAll(defaultClassifierParams);
+
             ////////////////// KNNClassifier Defaults ///////////////////
             ParametersMap defaultKNNParams = new ParametersMap();
             defaultKNNParams.Add(KEY.K, 1);
@@ -135,6 +152,7 @@ namespace HTM.Net
         /// Constant values representing configuration parameters for the <see cref="TemporalMemory"/>
         /// </summary>
         [Serializable]
+        [JsonConverter(typeof(ParameterKeyTypeConverter))]
         public sealed class KEY : ISerializable
         {
             /////////// Universal Parameters ///////////
@@ -310,6 +328,12 @@ namespace HTM.Net
             /// Network Layer indicator for auto classifier generation
             /// </summary>
             public static readonly KEY AUTO_CLASSIFY = new KEY("hasClassifiers", typeof(bool));
+            /// <summary>
+            /// This controls how fast the classifier learns/forgets.Higher values 
+            /// make it adapt faster and forget older patterns faster.
+            /// </summary>
+            public static readonly KEY CLASSIFIER_ALPHA = new KEY("classifierAlpha", typeof(double));
+            public static readonly KEY CLASSIFIER_STEPS = new KEY("classifierSteps", typeof(int[]));
 
             /// <summary>
             /// Maps encoder input field name to type of classifier to be used for them
@@ -345,7 +369,7 @@ namespace HTM.Net
             public static readonly KEY ANOMALY_KEY_LEARNING_PERIOD = new KEY("claLearningPeriod", typeof(int));
             public static readonly KEY ANOMALY_KEY_ESTIMATION_SAMPLES = new KEY("estimationSamples", typeof(int));
             public static readonly KEY ANOMALY_KEY_USE_MOVING_AVG = new KEY("useMovingAverage", typeof(bool));
-            public static readonly KEY ANOMALY_KEY_WINDOW_SIZE = new KEY("slidingWindowSize", typeof(int));
+            public static readonly KEY ANOMALY_KEY_WINDOW_SIZE = new KEY("slidingWindowSize", typeof(int?));
             public static readonly KEY ANOMALY_KEY_IS_WEIGHTED = new KEY("isWeighted", typeof(bool));
             
             // Computational argument keys
@@ -425,7 +449,7 @@ namespace HTM.Net
              */
             public static readonly KEY KNN_CELLS_PER_COL = new KEY("cellsPerCol", typeof(int));
 
-            private static readonly Map<string, KEY> fieldMap = new Map<string, KEY>();
+            private static readonly Map<string, KEY> FieldMap = new Map<string, KEY>();
 
             static KEY()
             {
@@ -433,7 +457,7 @@ namespace HTM.Net
                 List<KEY> keys = GetParametersFromClass(typeof(Parameters.KEY));
                 foreach (KEY key in keys)
                 {
-                    fieldMap.Add(key.GetFieldName(), key);
+                    FieldMap.Add(key.GetFieldName(), key);
                 }
             }
 
@@ -454,9 +478,9 @@ namespace HTM.Net
 
             public static KEY GetKeyByFieldName(string fieldName)
             {
-                if (fieldMap.ContainsKey(fieldName))
+                if (FieldMap.ContainsKey(fieldName))
                 {
-                    return fieldMap[fieldName];
+                    return FieldMap[fieldName];
                 }
                 return null;
             }
@@ -466,6 +490,9 @@ namespace HTM.Net
             private readonly Type fieldType;
             private readonly double? min;
             private readonly double? max;
+
+            [JsonIgnore]
+            public bool IsPermuteVar { get; set; }
 
             /**
              * Constructs a new KEY
@@ -615,7 +642,8 @@ namespace HTM.Net
         /// Save guard decorator around params map
         /// </summary>
         [Serializable]
-        public class ParametersMap : Dictionary<KEY, object>
+        [JsonConverter(typeof(ParametersMapTypeConverter))]
+        public class ParametersMap : Map<KEY, object>
         {
             /**
              * Default serialvers
@@ -635,12 +663,12 @@ namespace HTM.Net
 
             public new void Add(KEY key, object value)
             {
-                if (value != null)
+                if (value != null && !(value is PermuteVariable))
                 {
                     if (!(value is Type) && !key.GetFieldTypeSerializable().IsInstanceOfType(value))
                     {
-                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1}"
-                            , key.GetFieldName(), key.GetFieldType()));
+                        throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Can not set Parameters Property '{0}' because of type mismatch. The required type is class {1} and got {2}"
+                            , key.GetFieldName(), key.GetFieldType(), value.GetType()));
                     }
                     if ((value is Type) && !key.GetFieldTypeSerializable().IsAssignableFrom((Type)value))
                     {
@@ -674,7 +702,7 @@ namespace HTM.Net
         /// </summary>
         public int Size()
         {
-            return paramMap.Count;
+            return _paramMap.Count;
         }
 
         /// <summary>
@@ -773,7 +801,7 @@ namespace HTM.Net
          * It is private. Only allow instantiation with Factory methods.
          * This way we will never have erroneous Parameters with missing attributes
          */
-        internal Parameters()
+        protected Parameters()
         {
         }
 
@@ -786,8 +814,8 @@ namespace HTM.Net
         public void Apply(object cn)
         {
             BeanUtil beanUtil = BeanUtil.GetInstance();
-            List<KEY> presentKeys = paramMap.Keys.ToList();
-            lock (paramMap)
+            List<KEY> presentKeys = _paramMap.Keys.ToList();
+            lock (_paramMap)
             {
                 foreach (KEY key in presentKeys)
                 {
@@ -815,7 +843,7 @@ namespace HTM.Net
         /// <returns>this Parameters object combined with the specified <see cref="Parameters"/> object.</returns>
         public Parameters Union(Parameters p)
         {
-            foreach (KEY k in p.paramMap.Keys)
+            foreach (KEY k in p._paramMap.Keys)
             {
                 SetParameterByKey(k, p.GetParameterByKey(k));
             }
@@ -829,7 +857,7 @@ namespace HTM.Net
          */
         public List<KEY> Keys()
         {
-            List<KEY> retVal = paramMap.Keys.ToList();
+            List<KEY> retVal = _paramMap.Keys.ToList();
             return retVal;
         }
 
@@ -856,18 +884,18 @@ namespace HTM.Net
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void SetParameterByKey(KEY key, object value)
+        public virtual void SetParameterByKey(KEY key, object value)
         {
             // avoid serialization issue
             if (key == KEY.INFERRED_FIELDS)
             {
                 var dict = (IDictionary<string, Type>)value;
                 var converted = dict.ToDictionary(k => k.Key, v => v.Value?.AssemblyQualifiedName);
-                paramMap.Add(key, converted);
+                _paramMap.Add(key, converted);
             }
             else
             {
-                paramMap.Add(key, value);
+                _paramMap.Add(key, value);
             }
         }
 
@@ -879,16 +907,16 @@ namespace HTM.Net
          */
         public object GetParameterByKey(KEY key, object defaultValue = null)
         {
-            if (paramMap.ContainsKey(key) && key == KEY.INFERRED_FIELDS)
+            if (_paramMap.ContainsKey(key) && key == KEY.INFERRED_FIELDS)
             {
-                var dict = (IDictionary<string, string>)paramMap[key];
+                var dict = (IDictionary<string, string>)_paramMap[key];
                 var converted = dict.ToDictionary(k => k.Key, v => !string.IsNullOrWhiteSpace(v.Value) ? Type.GetType(v.Value, true) : null);
                 return converted;
             }
             
-            if (paramMap.ContainsKey(key))
+            if (_paramMap.ContainsKey(key))
             {
-                return paramMap[key];
+                return _paramMap[key];
             }
 
             return defaultValue;
@@ -900,7 +928,17 @@ namespace HTM.Net
          */
         public void ClearParameter(KEY key)
         {
-            paramMap.Remove(key);
+            _paramMap.Remove(key);
+        }
+
+        /// <summary>
+        /// Returns all the variables that are to be permuted.
+        /// </summary>
+        public List<Tuple<KEY, PermuteVariable>> GetPermutationVars()
+        {
+            return _paramMap.Where(pair => pair.Value != null && pair.Value is PermuteVariable)
+                .Select(p => new Tuple<KEY, PermuteVariable>(p.Key, p.Value as PermuteVariable))
+                .ToList();
         }
 
         /**
@@ -953,7 +991,7 @@ namespace HTM.Net
          */
         public void SetRandom(IRandom r)
         {
-            paramMap.Add(KEY.RANDOM, r);
+            _paramMap.Add(KEY.RANDOM, r);
         }
 
         /**
@@ -963,7 +1001,7 @@ namespace HTM.Net
          */
         public void SetColumnDimensions(int[] columnDimensions)
         {
-            paramMap.Add(KEY.COLUMN_DIMENSIONS, columnDimensions);
+            _paramMap.Add(KEY.COLUMN_DIMENSIONS, columnDimensions);
         }
 
         /**
@@ -973,7 +1011,7 @@ namespace HTM.Net
          */
         public void SetCellsPerColumn(int cellsPerColumn)
         {
-            paramMap.Add(KEY.CELLS_PER_COLUMN, cellsPerColumn);
+            _paramMap.Add(KEY.CELLS_PER_COLUMN, cellsPerColumn);
         }
 
         /**
@@ -987,7 +1025,7 @@ namespace HTM.Net
          */
         public void SetActivationThreshold(int activationThreshold)
         {
-            paramMap.Add(KEY.ACTIVATION_THRESHOLD, activationThreshold);
+            _paramMap.Add(KEY.ACTIVATION_THRESHOLD, activationThreshold);
         }
 
         /**
@@ -998,7 +1036,7 @@ namespace HTM.Net
          */
         public void SetLearningRadius(int learningRadius)
         {
-            paramMap.Add(KEY.LEARNING_RADIUS, learningRadius);
+            _paramMap.Add(KEY.LEARNING_RADIUS, learningRadius);
         }
 
         /**
@@ -1010,7 +1048,7 @@ namespace HTM.Net
          */
         public void SetMinThreshold(int minThreshold)
         {
-            paramMap.Add(KEY.MIN_THRESHOLD, minThreshold);
+            _paramMap.Add(KEY.MIN_THRESHOLD, minThreshold);
         }
 
         /**
@@ -1020,7 +1058,7 @@ namespace HTM.Net
          */
         public void SetMaxSynapsesPerSegment(int maxSynapsesPerSegment)
         {
-            paramMap.Add(KEY.MAX_SYNAPSES_PER_SEGMENT, maxSynapsesPerSegment);
+            _paramMap.Add(KEY.MAX_SYNAPSES_PER_SEGMENT, maxSynapsesPerSegment);
         }
 
         /**
@@ -1030,7 +1068,7 @@ namespace HTM.Net
          */
         public void SetMaxSegmentsPerCell(int maxSegmentsPerCell)
         {
-            paramMap.Add(KEY.MAX_SEGMENTS_PER_CELL, maxSegmentsPerCell);
+            _paramMap.Add(KEY.MAX_SEGMENTS_PER_CELL, maxSegmentsPerCell);
         }
 
         /**
@@ -1040,7 +1078,7 @@ namespace HTM.Net
          */
         public void SetMaxNewSynapseCount(int maxNewSynapseCount)
         {
-            paramMap.Add(KEY.MAX_NEW_SYNAPSE_COUNT, maxNewSynapseCount);
+            _paramMap.Add(KEY.MAX_NEW_SYNAPSE_COUNT, maxNewSynapseCount);
         }
 
         /**
@@ -1050,7 +1088,7 @@ namespace HTM.Net
          */
         public void SetSeed(int seed)
         {
-            paramMap.Add(KEY.SEED, seed);
+            _paramMap.Add(KEY.SEED, seed);
         }
 
         /**
@@ -1060,7 +1098,7 @@ namespace HTM.Net
          */
         public void SetInitialPermanence(double initialPermanence)
         {
-            paramMap.Add(KEY.INITIAL_PERMANENCE, initialPermanence);
+            _paramMap.Add(KEY.INITIAL_PERMANENCE, initialPermanence);
         }
 
         /**
@@ -1072,7 +1110,7 @@ namespace HTM.Net
          */
         public void SetConnectedPermanence(double connectedPermanence)
         {
-            paramMap.Add(KEY.CONNECTED_PERMANENCE, connectedPermanence);
+            _paramMap.Add(KEY.CONNECTED_PERMANENCE, connectedPermanence);
         }
 
         /**
@@ -1083,7 +1121,7 @@ namespace HTM.Net
          */
         public void SetPermanenceIncrement(double permanenceIncrement)
         {
-            paramMap.Add(KEY.PERMANENCE_INCREMENT, permanenceIncrement);
+            _paramMap.Add(KEY.PERMANENCE_INCREMENT, permanenceIncrement);
         }
 
         /**
@@ -1094,7 +1132,7 @@ namespace HTM.Net
          */
         public void SetPermanenceDecrement(double permanenceDecrement)
         {
-            paramMap.Add(KEY.PERMANENCE_DECREMENT, permanenceDecrement);
+            _paramMap.Add(KEY.PERMANENCE_DECREMENT, permanenceDecrement);
         }
 
         ////////////////////////////// SPACIAL POOLER PARAMS //////////////////////////////////
@@ -1111,7 +1149,7 @@ namespace HTM.Net
          */
         public void SetInputDimensions(int[] inputDimensions)
         {
-            paramMap.Add(KEY.INPUT_DIMENSIONS, inputDimensions);
+            _paramMap.Add(KEY.INPUT_DIMENSIONS, inputDimensions);
         }
 
         /**
@@ -1130,7 +1168,7 @@ namespace HTM.Net
          */
         public void SetPotentialRadius(int potentialRadius)
         {
-            paramMap.Add(KEY.POTENTIAL_RADIUS, potentialRadius);
+            _paramMap.Add(KEY.POTENTIAL_RADIUS, potentialRadius);
         }
 
         /**
@@ -1144,7 +1182,7 @@ namespace HTM.Net
          */
         public void SetInhibitionRadius(int inhibitionRadius)
         {
-            paramMap.Add(KEY.INHIBITION_RADIUS, inhibitionRadius);
+            _paramMap.Add(KEY.INHIBITION_RADIUS, inhibitionRadius);
         }
 
         /**
@@ -1163,7 +1201,7 @@ namespace HTM.Net
          */
         public void SetPotentialPct(double potentialPct)
         {
-            paramMap.Add(KEY.POTENTIAL_PCT, potentialPct);
+            _paramMap.Add(KEY.POTENTIAL_PCT, potentialPct);
         }
 
         /**
@@ -1178,7 +1216,7 @@ namespace HTM.Net
          */
         public void SetGlobalInhibition(bool globalInhibition)
         {
-            paramMap.Add(KEY.GLOBAL_INHIBITION, globalInhibition);
+            _paramMap.Add(KEY.GLOBAL_INHIBITION, globalInhibition);
         }
 
         /**
@@ -1196,7 +1234,7 @@ namespace HTM.Net
          */
         public void SetLocalAreaDensity(double localAreaDensity)
         {
-            paramMap.Add(KEY.LOCAL_AREA_DENSITY, localAreaDensity);
+            _paramMap.Add(KEY.LOCAL_AREA_DENSITY, localAreaDensity);
         }
 
         /**
@@ -1221,7 +1259,7 @@ namespace HTM.Net
          */
         public void SetNumActiveColumnsPerInhArea(double numActiveColumnsPerInhArea)
         {
-            paramMap.Add(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, numActiveColumnsPerInhArea);
+            _paramMap.Add(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, numActiveColumnsPerInhArea);
         }
 
         /**
@@ -1235,7 +1273,7 @@ namespace HTM.Net
          */
         public void SetStimulusThreshold(double stimulusThreshold)
         {
-            paramMap.Add(KEY.STIMULUS_THRESHOLD, stimulusThreshold);
+            _paramMap.Add(KEY.STIMULUS_THRESHOLD, stimulusThreshold);
         }
 
         /**
@@ -1247,7 +1285,7 @@ namespace HTM.Net
          */
         public void SetSynPermInactiveDec(double synPermInactiveDec)
         {
-            paramMap.Add(KEY.SYN_PERM_INACTIVE_DEC, synPermInactiveDec);
+            _paramMap.Add(KEY.SYN_PERM_INACTIVE_DEC, synPermInactiveDec);
         }
 
         /**
@@ -1259,7 +1297,7 @@ namespace HTM.Net
          */
         public void SetSynPermActiveInc(double synPermActiveInc)
         {
-            paramMap.Add(KEY.SYN_PERM_ACTIVE_INC, synPermActiveInc);
+            _paramMap.Add(KEY.SYN_PERM_ACTIVE_INC, synPermActiveInc);
         }
 
         /**
@@ -1272,7 +1310,7 @@ namespace HTM.Net
          */
         public void SetSynPermConnected(double synPermConnected)
         {
-            paramMap.Add(KEY.SYN_PERM_CONNECTED, synPermConnected);
+            _paramMap.Add(KEY.SYN_PERM_CONNECTED, synPermConnected);
         }
 
         /**
@@ -1283,7 +1321,7 @@ namespace HTM.Net
          */
         public void SetSynPermBelowStimulusInc(double synPermBelowStimulusInc)
         {
-            paramMap.Add(KEY.SYN_PERM_BELOW_STIMULUS_INC, synPermBelowStimulusInc);
+            _paramMap.Add(KEY.SYN_PERM_BELOW_STIMULUS_INC, synPermBelowStimulusInc);
         }
 
         /**
@@ -1291,7 +1329,7 @@ namespace HTM.Net
          */
         public void SetSynPermTrimThreshold(double synPermTrimThreshold)
         {
-            paramMap.Add(KEY.SYN_PERM_TRIM_THRESHOLD, synPermTrimThreshold);
+            _paramMap.Add(KEY.SYN_PERM_TRIM_THRESHOLD, synPermTrimThreshold);
         }
 
         /**
@@ -1317,7 +1355,7 @@ namespace HTM.Net
          */
         public void SetMinPctOverlapDutyCycles(double minPctOverlapDutyCycles)
         {
-            paramMap.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, minPctOverlapDutyCycles);
+            _paramMap.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, minPctOverlapDutyCycles);
         }
 
         /**
@@ -1337,7 +1375,7 @@ namespace HTM.Net
          */
         public void SetMinPctActiveDutyCycles(double minPctActiveDutyCycles)
         {
-            paramMap.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, minPctActiveDutyCycles);
+            _paramMap.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, minPctActiveDutyCycles);
         }
 
         /**
@@ -1350,7 +1388,7 @@ namespace HTM.Net
          */
         public void SetDutyCyclePeriod(int dutyCyclePeriod)
         {
-            paramMap.Add(KEY.DUTY_CYCLE_PERIOD, dutyCyclePeriod);
+            _paramMap.Add(KEY.DUTY_CYCLE_PERIOD, dutyCyclePeriod);
         }
 
         /**
@@ -1368,7 +1406,7 @@ namespace HTM.Net
          */
         public void SetMaxBoost(double maxBoost)
         {
-            paramMap.Add(KEY.MAX_BOOST, maxBoost);
+            _paramMap.Add(KEY.MAX_BOOST, maxBoost);
         }
 
         /**
@@ -1381,7 +1419,7 @@ namespace HTM.Net
             StringBuilder temporalInfo = new StringBuilder();
             StringBuilder otherInfo = new StringBuilder();
 
-            foreach (KEY key in paramMap.Keys)
+            foreach (KEY key in _paramMap.Keys)
             {
                 if (DEFAULTS_SPATIAL.ContainsKey(key))
                 {
@@ -1418,15 +1456,15 @@ namespace HTM.Net
             {
                 value = ArrayUtils.IntArrayToString(value);
             }
-            spatialInfo.Append("\t\t").Append(key.GetFieldName()).Append(":").Append(value).Append("\n");
+            spatialInfo.Append("\t\t").Append(key.GetFieldName()).Append(": ").Append(value).Append("\n");
         }
 
         public override int GetHashCode()
         {
-            IRandom rnd = (IRandom)paramMap.Get(KEY.RANDOM);
-            paramMap.Remove(KEY.RANDOM);
-            int hc = paramMap.GetArrayHashCode();
-            paramMap.Add(KEY.RANDOM, rnd);
+            IRandom rnd = (IRandom)_paramMap.Get(KEY.RANDOM);
+            _paramMap.Remove(KEY.RANDOM);
+            int hc = _paramMap.GetArrayHashCode();
+            _paramMap.Add(KEY.RANDOM, rnd);
 
             return hc;
         }
@@ -1440,9 +1478,9 @@ namespace HTM.Net
             if (GetType() != obj.GetType())
                 return false;
             Parameters other = (Parameters)obj;
-            if (paramMap == null)
+            if (_paramMap == null)
             {
-                if (other.paramMap != null)
+                if (other._paramMap != null)
                     return false;
             }
             else
@@ -1450,12 +1488,12 @@ namespace HTM.Net
                 Type[] classArray = new Type[] { typeof(Object) };
                 try
                 {
-                    foreach (KEY key in paramMap.Keys)
+                    foreach (KEY key in _paramMap.Keys)
                     {
-                        if (paramMap.Get(key) == null || other.paramMap.Get(key) == null) continue;
+                        if (_paramMap.Get(key) == null || other._paramMap.Get(key) == null) continue;
 
-                        Type thisValueClass = paramMap.Get(key).GetType();
-                        Type otherValueClass = other.paramMap.Get(key).GetType();
+                        Type thisValueClass = _paramMap.Get(key).GetType();
+                        Type otherValueClass = other._paramMap.Get(key).GetType();
                         bool isSpecial = IsSpecial(key, thisValueClass);
                         if (!isSpecial && (thisValueClass.GetMethod("Equals", classArray).DeclaringType != thisValueClass ||
                             otherValueClass.GetMethod("Equals", classArray).DeclaringType != otherValueClass))
@@ -1466,17 +1504,17 @@ namespace HTM.Net
                         {
                             if (typeof(int[]).IsAssignableFrom(thisValueClass))
                             {
-                                if (!Arrays.AreEqual((int[])paramMap.Get(key), (int[])other.paramMap.Get(key))) return false;
+                                if (!Arrays.AreEqual((int[])_paramMap.Get(key), (int[])other._paramMap.Get(key))) return false;
                             }
                             else if (key == KEY.FIELD_ENCODING_MAP)
                             {
-                                if (!paramMap.Get(key).IsDeepEqual(other.paramMap.Get(key)))
+                                if (!_paramMap.Get(key).IsDeepEqual(other._paramMap.Get(key)))
                                 {
                                     return false;
                                 }
                             }
                         }
-                        else if (!other.paramMap.ContainsKey(key) || !paramMap.Get(key).Equals(other.paramMap.Get(key)))
+                        else if (!other._paramMap.ContainsKey(key) || !_paramMap.Get(key).Equals(other._paramMap.Get(key)))
                         {
                             return false;
                         }
@@ -1517,6 +1555,100 @@ namespace HTM.Net
         public ParameterMapping(string fieldName)
         {
             FieldName = fieldName;
+        }
+    }
+
+    public class ParameterKeyTypeConverter : JsonConverter<Parameters.KEY>
+    {
+        public ParameterKeyTypeConverter()
+        {
+            Console.WriteLine("Constructed type converter for KEY");
+        }
+
+        public override bool CanWrite => true;
+
+        public override bool CanRead => true;
+
+        public override void WriteJson(JsonWriter writer, Parameters.KEY value, JsonSerializer serializer)
+        {
+            writer.WriteValue(value.GetFieldName());
+        }
+
+        public override Parameters.KEY ReadJson(JsonReader reader, Type objectType, Parameters.KEY existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            bool isPermuteVarType = false;
+            var prop = (string)reader.Value;
+            if (prop.StartsWith("PV_"))
+            {
+                prop = prop.Substring(3);
+                isPermuteVarType = true;
+            }
+
+            var key = Parameters.KEY.GetKeyByFieldName(prop);
+            key.IsPermuteVar = isPermuteVarType;
+            return key ?? throw new InvalidOperationException($"Key {prop} is not found!");
+        }
+    }
+
+    public class ParametersMapTypeConverter : JsonConverter<ParametersMap>
+    {
+        public override bool CanWrite => true;
+
+        public override bool CanRead => true;
+
+        public override void WriteJson(JsonWriter writer, ParametersMap value, JsonSerializer serializer)
+        {
+            var origHandling = serializer.TypeNameHandling;
+            serializer.TypeNameHandling = TypeNameHandling.Objects;
+            writer.WriteStartObject();
+            foreach (var pair in value)
+            {
+                if (pair.Value != null && pair.Value.GetType().IsSubclassOf(typeof(PermuteVariable)))
+                {
+                    writer.WritePropertyName($"PV_{pair.Key.GetFieldName()}");
+                    serializer.Serialize(writer, pair.Value, pair.Value.GetType());
+                }
+                else
+                {
+                    writer.WritePropertyName(pair.Key.GetFieldName());
+                    serializer.Serialize(writer, pair.Value, pair.Key.GetFieldType());
+                }
+            }
+            writer.WriteEndObject();
+            serializer.TypeNameHandling = origHandling;
+        }
+
+        public override ParametersMap ReadJson(JsonReader reader, Type objectType, ParametersMap existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var origHandling = serializer.TypeNameHandling;
+            serializer.TypeNameHandling = TypeNameHandling.Objects;
+            ParametersMap map = existingValue ?? new ParametersMap();
+
+            reader.Read(); // start object
+
+            do
+            {
+                KEY key = serializer.Deserialize<KEY>(reader);
+                reader.Read();
+
+                object obj;
+                if (key.IsPermuteVar)
+                {
+                    obj = serializer.Deserialize(reader);
+                    reader.Read();
+                }
+                else
+                {
+                    obj = serializer.Deserialize(reader, key.GetFieldType());
+                    reader.Read();
+                }
+
+                map.Add(key, obj);
+
+            } while (reader.TokenType == JsonToken.PropertyName);
+
+            serializer.TypeNameHandling = origHandling;
+            return map;
         }
     }
 }

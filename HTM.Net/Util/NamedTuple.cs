@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace HTM.Net.Util
 {
@@ -14,11 +15,21 @@ namespace HTM.Net.Util
     [Serializable]
     public class NamedTuple : Tuple
     {
+        [JsonProperty]
         private readonly Bucket[] _entries;
+        [JsonProperty]
         private string[] _keys;
+        [JsonProperty]
         private int _hash;
-        private readonly int _thisHashcode;
+        [JsonProperty]
+        private int _thisHashcode;
+
         private readonly string[] _emptyKeys = new string[0];
+
+        [JsonConstructor]
+        protected NamedTuple()
+        {
+        }
 
         /**
          * Constructs and new {@code NamedTuple}
@@ -222,10 +233,19 @@ namespace HTM.Net.Util
         [Serializable]
         private sealed class Entry
         {
-            internal readonly string Key;
+            [JsonProperty]
+            internal string Key;
+            [JsonProperty]
             internal object Value;
-            private readonly int _hash;
+            [JsonProperty]
+            private int _hash;
+            [JsonProperty]
             internal Entry Prev;
+
+            [JsonConstructor]
+            protected Entry()
+            {
+            }
 
             /**
              * Constructs a new {@code Entry}
@@ -302,8 +322,16 @@ namespace HTM.Net.Util
         [Serializable]
         private sealed class Bucket
         {
-            Entry _last;
-            readonly int _idx;
+            [JsonProperty]
+            private Entry _last;
+
+            [JsonProperty]
+            private int _idx;
+
+            [JsonConstructor]
+            protected Bucket()
+            {
+            }
 
             /**
              * Constructs a new {@code Bucket}

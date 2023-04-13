@@ -3,7 +3,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
+using HTM.Net.Network.Sensor;
+using HTM.Net.Network;
 using HTM.Net.Research.Vision;
 using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -96,36 +99,512 @@ namespace HTM.Net.Research.Tests.Vision
             search.Execute(dataSet: "cmr_hex.xml");
         }
 
+        //[TestMethod]
+        //public void TestPrintMethodOfCombinationParameters()
+        //{
+        //    CombinationParameters parameters = new CombinationParameters();
+        //    parameters.Define("synPermConn", new List<object> { 0.5 });
+        //    parameters.Define("synPermDecFrac", new List<object> { 1.0, 0.5, 0.1 });
+        //    parameters.Define("synPermIncFrac", new List<object> { 1.0, 0.5, 0.1 });
+
+        //    // Pick a combination of parameter values
+        //    parameters.NextCombination();
+
+        //    // Add results to the list
+        //    parameters.AppendResults(new List<object> { 67.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 68.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 57.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 47.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 37.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 27.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 17.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+        //    parameters.AppendResults(new List<object> { 16.8, 3 }); // accurancy , cycles
+        //    parameters.NextCombination();
+
+        //    parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
+        //}
+
         [TestMethod]
-        public void TestPrintMethodOfCombinationParameters()
+        public void TestParameterCombinations()
         {
             CombinationParameters parameters = new CombinationParameters();
+
             parameters.Define("synPermConn", new List<object> { 0.5 });
             parameters.Define("synPermDecFrac", new List<object> { 1.0, 0.5, 0.1 });
-            parameters.Define("synPermIncFrac", new List<object> { 1.0, 0.5, 0.1 });
+            parameters.Define("synPermIncFrac", 1.0, 0.5, 0.1);
 
             // Pick a combination of parameter values
-            parameters.NextCombination();
+            IDictionary<string, object> combis;
+            int combiNr = parameters.NextCombination(out combis);
+
+            Assert.IsNotNull(combis);
+            Assert.AreEqual(3, combis.Count);
+            Assert.AreEqual(9, parameters.GetNumCombinations());
+            Assert.AreEqual(0, combiNr);
 
             // Add results to the list
-            parameters.AppendResults(new List<object> { 67.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 68.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 57.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 47.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 37.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 27.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 17.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
-            parameters.AppendResults(new List<object> { 16.8, 3 }); // accurancy , cycles
-            parameters.NextCombination();
+            parameters.AppendResults(combiNr, new List<object> { 67.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 68.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 57.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 47.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 37.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 27.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 17.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 16.8, 3 }); // accurancy , cycles
+            combiNr = parameters.NextCombination(out combis);
+            parameters.AppendResults(combiNr, new List<object> { 14.8, 3 }); // accurancy , cycles
+
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
+            parameters.NextCombination(out combis);
 
             parameters.PrintResults(new[] { "Percent Accuracy", "Training Cycles" }, new[] { "\t{0}", "\t{0}" });
         }
+
+        //// https://github.com/numenta/nupic.vision/blob/master/nupic/vision/tests/integration/nupicvision/regions/image_knn_test.py
+        ///// <summary>
+        ///// This test is a simple end to end test. It creates a simple network with an
+        ///// ImageSensor and a KNNClassifier region.It creates a 'dataset' with two random
+        ///// images, trains the network and then runs inference to ensures we can correctly
+        ///// classify them.This tests that the plumbing is working well.
+        ///// </summary>
+        //[TestMethod]
+        //public void TestSimpleImageNetwork()
+        //{
+        //    Parameters pars = Parameters.GetAllDefaultParameters();
+
+        //    pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
+
+        //    EncoderSetting catInnerSettings = new EncoderSetting();
+        //    catInnerSettings.fieldName = "category";
+        //    catInnerSettings.name = "category";
+        //    catInnerSettings.n = 8;
+        //    catInnerSettings.w = 3;
+        //    catInnerSettings.forced = true;
+        //    catInnerSettings.resolution = 1;
+        //    catInnerSettings.radius = 0;
+        //    catInnerSettings.minVal = 0;
+        //    catInnerSettings.maxVal = 10;
+        //    catInnerSettings.fieldType = FieldMetaType.Integer;
+        //    catInnerSettings.encoderType = "ScalarEncoder";
+
+        //    EncoderSetting imgInnerSettings = new EncoderSetting();
+        //    imgInnerSettings.fieldName = "imageIn";
+        //    imgInnerSettings.n = 1024; // width
+        //    imgInnerSettings.name = "imageIn";
+        //    imgInnerSettings.fieldType = FieldMetaType.DenseArray;
+        //    imgInnerSettings.encoderType = "SDRPassThroughEncoder";
+
+        //    EncoderSettingsList settings = new EncoderSettingsList();
+        //    settings.Add("imageIn", imgInnerSettings);
+        //    settings.Add("category", catInnerSettings);
+
+        //    pars.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
+        //    //pars.SetParameterByKey(Parameters.KEY.MAX_CATEGORYCOUNT, 2);
+
+        //    var network = Network.Network.Create("ImageNetwork", pars);
+        //    network
+        //        .Add(Network.Network.CreateRegion("Region 1")
+        //        .Add(new KnnLayer("KNN Layer", network, pars))
+        //        .Add(Network.Network.CreateLayer("Layer 1", pars)
+        //        .Add(Sensor<ImageDefinition>.Create(ImageSensor.Create, SensorParams.Create(
+        //                    SensorParams.Keys.Image, new ImageSensorConfig
+        //                    {
+        //                        Width = 32,
+        //                        Height = 32,
+        //                        ExplorerConfig = new ExplorerConfig
+        //                        {
+        //                            ExplorerName = "ImageSweep"
+        //                        }
+        //                    }))))
+        //            .Connect("KNN Layer", "Layer 1"));
+
+        //    network.Close();
+
+        //    // Test the sensor data retrieval
+        //    HTMSensor<ImageDefinition> htmSensor = (HTMSensor<ImageDefinition>)network.GetSensor();
+        //    ImageSensor sensor = (ImageSensor)htmSensor.GetDelegateSensor();
+
+        //    KnnLayer classifierLayer = ((KnnLayer)network.Lookup("Region 1").Lookup("KNN Layer"));
+
+        //    // Make sure learning is on
+        //    Assert.IsTrue((bool)classifierLayer.GetParameter("learningMode"));
+
+        //    var outStream = htmSensor.GetOutputStream();
+
+        //    Bitmap b1s = new Bitmap(32, 32);
+        //    using (Graphics g = Graphics.FromImage(b1s))
+        //    {
+        //        g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+        //        g.DrawRectangle(new Pen(Color.Black, 1), 10, 10, 20, 20);
+        //    }
+        //    KalikoImage b1 = new KalikoImage(b1s);
+
+        //    Bitmap b2s = new Bitmap(32, 32);
+        //    using (Graphics g = Graphics.FromImage(b2s))
+        //    {
+        //        g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+        //        g.DrawRectangle(new Pen(Color.Black, 1), 15, 15, 25, 25);
+        //    }
+        //    KalikoImage b2 = new KalikoImage(b2s);
+
+        //    Assert.IsTrue(!b1.ByteArray.All(i => i == 255));
+        //    Assert.IsTrue(!b2.ByteArray.All(i => i == 255));
+        //    Assert.IsTrue(!b2.ByteArray.SequenceEqual(b1.ByteArray));
+
+        //    sensor.LoadSpecificImages(new[] { b1, b2 }, new[] { "1", "2" });
+
+        //    ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
+        //    //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
+
+        //    Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
+
+        //    // Same logic as in start but executed manually
+        //    tailLayer.Compute(inputObject1);
+
+        //    ImageDefinition inputObject2 = (ImageDefinition)outStream.ReadUntyped();
+        //    //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
+
+        //    // Same logic as in start but executed manually
+        //    tailLayer.Compute(inputObject2);
+
+        //    // turn off learning and turn on inference mode
+        //    classifierLayer.SetParameter("inferenceMode", true);
+        //    classifierLayer.SetParameter("learningMode", false);
+
+        //    // Check parameters
+        //    Assert.IsFalse((bool)classifierLayer.GetParameter("learningMode"));
+        //    Assert.IsTrue((bool)classifierLayer.GetParameter("inferenceMode"));
+        //    Assert.AreEqual(2, classifierLayer.GetParameter("categoryCount"), "Incorrect category count");
+        //    Assert.AreEqual(2, classifierLayer.GetParameter("patternCount"), "Incorrect pattern count");
+
+        //    // Now test the network to make sure it categories the images correctly
+        //    int numCorrect = 0;
+        //    tailLayer.Compute(inputObject1);
+
+        //    IInference inference = tailLayer.GetInference();
+
+        //    int inferredCategory = inference.GetInferredCategory();
+        //    if (inputObject1.CategoryIndices[0] == inferredCategory)
+        //    {
+        //        numCorrect += 1;
+        //    }
+        //    tailLayer.Compute(inputObject2);
+        //    inferredCategory = inference.GetInferredCategory();
+        //    if (inputObject2.CategoryIndices[0] == inferredCategory)
+        //    {
+        //        numCorrect += 1;
+        //    }
+
+        //    Assert.AreEqual(2, numCorrect, "Classification error");
+        //}
+
+        //[TestMethod]
+        //public void TestSimpleImageNetwork_WithFilter()
+        //{
+        //    Parameters pars = Parameters.GetAllDefaultParameters();
+
+        //    pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
+
+        //    EncoderSetting catInnerSettings = new EncoderSetting();
+        //    catInnerSettings.fieldName = "category";
+        //    catInnerSettings.name = "category";
+        //    catInnerSettings.n = 8;
+        //    catInnerSettings.w = 3;
+        //    catInnerSettings.forced = true;
+        //    catInnerSettings.resolution = 1;
+        //    catInnerSettings.radius = 0;
+        //    catInnerSettings.minVal = 0;
+        //    catInnerSettings.maxVal = 10;
+        //    catInnerSettings.fieldType = FieldMetaType.Integer;
+        //    catInnerSettings.encoderType = "ScalarEncoder";
+
+        //    EncoderSetting imgInnerSettings = new EncoderSetting();
+        //    imgInnerSettings.fieldName = "imageIn";
+        //    imgInnerSettings.n = 1024; // width
+        //    imgInnerSettings.name = "imageIn";
+        //    imgInnerSettings.fieldType = FieldMetaType.DenseArray;
+        //    imgInnerSettings.encoderType = "SDRPassThroughEncoder";
+
+        //    EncoderSettingsList settings = new EncoderSettingsList();
+        //    settings.Add("imageIn", imgInnerSettings);
+        //    settings.Add("category", catInnerSettings);
+
+        //    pars.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
+        //    //pars.SetParameterByKey(Parameters.KEY.MAX_CATEGORYCOUNT, 2);
+
+        //    var network = Network.Network.Create("ImageNetwork", pars);
+        //    network
+        //        .Add(Network.Network.CreateRegion("Region 1")
+        //            .Add(new KnnLayer("KNN Layer", network, pars))
+        //            .Add(Network.Network.CreateLayer("Layer 1", pars)
+        //                .Add(Sensor<ImageDefinition>.Create(ImageSensor.Create, SensorParams.Create(
+        //                    SensorParams.Keys.Image, new ImageSensorConfig
+        //                    {
+        //                        Width = 32,
+        //                        Height = 32,
+        //                        ExplorerConfig = new ExplorerConfig
+        //                        {
+        //                            ExplorerName = "ImageSweep"
+        //                        },
+        //                        FilterConfigs = new[]
+        //                        {
+        //                            new FilterConfig
+        //                            {
+        //                                FilterName = "AddNoise",
+        //                                FilterArgs = new Map<string, object> {{"noiseLevel", 0.2}}
+        //                            }
+        //                        }
+        //                    }))))
+        //            .Connect("KNN Layer", "Layer 1"));
+
+        //    network.Close();
+
+        //    // Test the sensor data retrieval
+        //    HTMSensor<ImageDefinition> htmSensor = (HTMSensor<ImageDefinition>)network.GetSensor();
+        //    ImageSensor sensor = (ImageSensor)htmSensor.GetDelegateSensor();
+
+        //    KnnLayer classifierLayer = ((KnnLayer)network.Lookup("Region 1").Lookup("KNN Layer"));
+
+        //    // Make sure learning is on
+        //    Assert.IsTrue((bool)classifierLayer.GetParameter("learningMode"));
+
+        //    var outStream = htmSensor.GetOutputStream();
+
+        //    Bitmap b1s = new Bitmap(32, 32);
+        //    using (Graphics g = Graphics.FromImage(b1s))
+        //    {
+        //        g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+        //        g.DrawRectangle(new Pen(Color.Black, 1), 10, 10, 20, 20);
+        //    }
+        //    KalikoImage b1 = new KalikoImage(b1s);
+
+        //    Bitmap b2s = new Bitmap(32, 32);
+        //    using (Graphics g = Graphics.FromImage(b2s))
+        //    {
+        //        g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+        //        g.DrawRectangle(new Pen(Color.Black, 1), 15, 15, 25, 25);
+        //    }
+        //    KalikoImage b2 = new KalikoImage(b2s);
+
+        //    Assert.IsTrue(!b1.ByteArray.All(i => i == 255));
+        //    Assert.IsTrue(!b2.ByteArray.All(i => i == 255));
+        //    Assert.IsTrue(!b2.ByteArray.SequenceEqual(b1.ByteArray));
+
+        //    sensor.LoadSpecificImages(new[] { b1, b2 }, new[] { "1", "2" });
+
+        //    ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
+        //    //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
+
+        //    Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
+
+        //    // Same logic as in start but executed manually
+        //    tailLayer.Compute(inputObject1);
+
+        //    ImageDefinition inputObject2 = (ImageDefinition)outStream.ReadUntyped();
+        //    //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
+
+        //    // Same logic as in start but executed manually
+        //    tailLayer.Compute(inputObject2);
+
+        //    // turn off learning and turn on inference mode
+        //    classifierLayer.SetParameter("inferenceMode", true);
+        //    classifierLayer.SetParameter("learningMode", false);
+
+        //    // Check parameters
+        //    Assert.IsFalse((bool)classifierLayer.GetParameter("learningMode"));
+        //    Assert.IsTrue((bool)classifierLayer.GetParameter("inferenceMode"));
+        //    Assert.AreEqual(2, classifierLayer.GetParameter("categoryCount"), "Incorrect category count");
+        //    Assert.AreEqual(2, classifierLayer.GetParameter("patternCount"), "Incorrect pattern count");
+
+        //    // Now test the network to make sure it categories the images correctly
+        //    int numCorrect = 0;
+        //    tailLayer.Compute(inputObject1);
+
+        //    IInference inference = tailLayer.GetInference();
+
+        //    int inferredCategory = inference.GetInferredCategory();
+        //    if (inputObject1.CategoryIndices[0] == inferredCategory)
+        //    {
+        //        numCorrect += 1;
+        //    }
+        //    tailLayer.Compute(inputObject2);
+        //    inferredCategory = inference.GetInferredCategory();
+        //    if (inputObject2.CategoryIndices[0] == inferredCategory)
+        //    {
+        //        numCorrect += 1;
+        //    }
+
+        //    Assert.AreEqual(2, numCorrect, "Classification error");
+        //}
+
+        //[TestMethod]
+        //public void TestSimpleImageNetwork_WithEyeMovementExplorer()
+        //{
+        //    Parameters pars = Parameters.GetAllDefaultParameters();
+
+        //    pars.SetParameterByKey(Parameters.KEY.DISTANCE_THRESHOLD, 0.01);
+
+        //    EncoderSetting catInnerSettings = new EncoderSetting();
+        //    catInnerSettings.fieldName = "category";
+        //    catInnerSettings.name = "category";
+        //    catInnerSettings.n = 8;
+        //    catInnerSettings.w = 3;
+        //    catInnerSettings.forced = true;
+        //    catInnerSettings.resolution = 1;
+        //    catInnerSettings.radius = 0;
+        //    catInnerSettings.minVal = 0;
+        //    catInnerSettings.maxVal = 10;
+        //    catInnerSettings.fieldType = FieldMetaType.Integer;
+        //    catInnerSettings.encoderType = "ScalarEncoder";
+
+        //    EncoderSetting imgInnerSettings = new EncoderSetting();
+        //    imgInnerSettings.fieldName = "imageIn";
+        //    imgInnerSettings.n = 1024; // width
+        //    imgInnerSettings.name = "imageIn";
+        //    imgInnerSettings.fieldType = FieldMetaType.DenseArray;
+        //    imgInnerSettings.encoderType = "SDRPassThroughEncoder";
+
+        //    EncoderSettingsList settings = new EncoderSettingsList();
+        //    settings.Add("imageIn", imgInnerSettings);
+        //    settings.Add("category", catInnerSettings);
+
+        //    pars.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, settings);
+        //    //pars.SetParameterByKey(Parameters.KEY.MAX_CATEGORYCOUNT, 2);
+
+        //    var network = Network.Network.Create("ImageNetwork", pars);
+        //    network
+        //        .Add(Network.Network.CreateRegion("Region 1")
+        //            .Add(new KnnLayer("KNN Layer", network, pars))
+        //            .Add(Network.Network.CreateLayer("Layer 1", pars)
+        //                .Add(Sensor<ImageDefinition>.Create(ImageSensor.Create, SensorParams.Create(
+        //                    SensorParams.Keys.Image, new ImageSensorConfig
+        //                    {
+        //                        Width = 32,
+        //                        Height = 32,
+        //                        ExplorerConfig = new ExplorerConfig
+        //                        {
+        //                            ExplorerName = "EyeMovements"
+        //                        },
+        //                        //FilterConfigs = new[]
+        //                        //{
+        //                        //    new FilterConfig
+        //                        //    {
+        //                        //        FilterName = "AddNoise",
+        //                        //        FilterArgs = new Map<string, object> {{"noiseLevel", 0.2}}
+        //                        //    }
+        //                        //}
+        //                    }))))
+        //            .Connect("KNN Layer", "Layer 1"));
+
+        //    network.Close();
+
+        //    // Test the sensor data retrieval
+        //    HTMSensor<ImageDefinition> htmSensor = (HTMSensor<ImageDefinition>)network.GetSensor();
+        //    ImageSensor sensor = (ImageSensor)htmSensor.GetDelegateSensor();
+
+        //    KnnLayer classifierLayer = ((KnnLayer)network.Lookup("Region 1").Lookup("KNN Layer"));
+
+        //    // Make sure learning is on
+        //    Assert.IsTrue((bool)classifierLayer.GetParameter("learningMode"));
+
+        //    var outStream = htmSensor.GetOutputStream();
+
+        //    Bitmap b1s = new Bitmap(32, 32);
+        //    using (Graphics g = Graphics.FromImage(b1s))
+        //    {
+        //        g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+        //        g.DrawRectangle(new Pen(Color.Black, 1), 10, 10, 20, 20);
+        //    }
+        //    KalikoImage b1 = new KalikoImage(b1s);
+
+        //    Bitmap b2s = new Bitmap(32, 32);
+        //    using (Graphics g = Graphics.FromImage(b2s))
+        //    {
+        //        g.FillRectangle(Brushes.White, 0, 0, 32, 32);
+        //        g.DrawRectangle(new Pen(Color.Black, 1), 15, 15, 25, 25);
+        //    }
+        //    KalikoImage b2 = new KalikoImage(b2s);
+
+        //    Assert.IsTrue(!b1.ByteArray.All(i => i == 255));
+        //    Assert.IsTrue(!b2.ByteArray.All(i => i == 255));
+        //    Assert.IsTrue(!b2.ByteArray.SequenceEqual(b1.ByteArray));
+
+        //    sensor.LoadSpecificImages(new[] { b1, b2 }, new[] { "1", "2" });
+
+        //    ImageDefinition inputObject1 = (ImageDefinition)outStream.ReadUntyped();
+        //    //Debug.WriteLine(Arrays.ToString(inputObject1.InputVector));
+
+        //    Layer<IInference> tailLayer = (Layer<IInference>)network.GetTail().GetTail();
+
+        //    // Same logic as in start but executed manually
+        //    tailLayer.Compute(inputObject1);
+        //    for (int i = 0; i < 8; i++)
+        //    {
+        //        // Still 8 iterations for eyemovements to go
+        //        tailLayer.Compute(outStream.ReadUntyped());
+        //    }
+
+        //    ImageDefinition inputObject2 = (ImageDefinition)outStream.ReadUntyped();
+        //    //Debug.WriteLine(Arrays.ToString(inputObject2.InputVector));
+
+        //    // Same logic as in start but executed manually
+        //    tailLayer.Compute(inputObject2);
+        //    for (int i = 0; i < 8; i++)
+        //    {
+        //        // Still 8 iterations for eyemovements to go
+        //        tailLayer.Compute(outStream.ReadUntyped());
+        //    }
+        //    // turn off learning and turn on inference mode
+        //    classifierLayer.SetParameter("inferenceMode", true);
+        //    classifierLayer.SetParameter("learningMode", false);
+
+        //    // Check parameters
+        //    Assert.IsFalse((bool)classifierLayer.GetParameter("learningMode"));
+        //    Assert.IsTrue((bool)classifierLayer.GetParameter("inferenceMode"));
+        //    Assert.AreEqual(8, classifierLayer.GetParameter("categoryCount"), "Incorrect category count");
+        //    Assert.AreEqual(8, classifierLayer.GetParameter("patternCount"), "Incorrect pattern count");
+
+        //    // Now test the network to make sure it categories the images correctly
+        //    int numCorrect = 0;
+        //    tailLayer.Compute(inputObject1);
+
+
+        //    IInference inference = tailLayer.GetInference();
+
+        //    int inferredCategory = inference.GetInferredCategory();
+        //    if (inputObject1.CategoryIndices[0] == inferredCategory)
+        //    {
+        //        numCorrect += 1;
+        //    }
+        //    tailLayer.Compute(inputObject2);
+        //    inferredCategory = inference.GetInferredCategory();
+        //    if (inputObject2.CategoryIndices[0] == inferredCategory)
+        //    {
+        //        numCorrect += 1;
+        //    }
+
+        //    Assert.AreEqual(2, numCorrect, "Classification error");
+        //}
     }
 }
