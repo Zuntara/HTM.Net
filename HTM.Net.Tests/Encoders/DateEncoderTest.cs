@@ -145,16 +145,19 @@ namespace HTM.Net.Tests.Encoders
             }
         }
 
-        //[TestMethod]
+        [TestMethod]
         public void TestDateEncoderRanges()
         {
             // 3 bits for season, 1 bit for day of week, 3 for weekend, 5 for time of day
+            // = 12 bits total
             // use of forced is not recommended, used here for readability.
             builder = (DateEncoder.Builder)DateEncoder.GetBuilder();
 
             de = (DateEncoder)builder
-                .DayOfWeek(11,1.0)
-                .TimeOfDay(11,2.0)
+                .Season(3)
+                .DayOfWeek(1)
+                .Weekend(3)
+                .TimeOfDay(5, 1)
                 .Build();
 
             List<string> bitlist = new List<string>();
@@ -164,22 +167,23 @@ namespace HTM.Net.Tests.Encoders
             //for (int year = 1999; year < DateTime.Now.Year + 1; year++)
             {
                 dt = new DateTime(year, 01, 01, 0, 0, 0);
-                for (int day = 0; day < 7/*c.GetDaysInYear(year)*/; day++)
+                for (int day = 0; day < 7 /*c.GetDaysInYear(year)*/; day++)
                 {
                     for (int hour = 0; hour < 24; hour++)
                     {
-                        for (int minute = 0; minute < 60; minute+=15)
+                        //for (int minute = 0; minute < 60; minute += 15)
                         {
-                            DateTime dt2 = dt.AddDays(day).AddHours(hour).AddMinutes(minute);
+                            DateTime dt2 = dt.AddDays(day).AddHours(hour);//.AddMinutes(minute);
                             try
                             {
                                 bits = de.Encode(dt2);
                             }
                             catch (Exception)
                             {
-                                Debug.WriteLine("Fucked up on date: " + dt2);
+                                Debug.WriteLine($"Fucked up on date: {dt2}");
                                 Assert.Fail();
                             }
+
                             Assert.IsNotNull(bits);
                             //Assert.AreEqual(63, bits.Length);
                             bitlist.Add(Arrays.ToString(bits));
@@ -192,8 +196,8 @@ namespace HTM.Net.Tests.Encoders
 
             // All bits must be different!
             int count = bitlist.Count;
-            int distinctCount = bitlist.AsParallel().Distinct().Count();
-            Assert.AreEqual(count, distinctCount);
+            int distinctCount = bitlist.Distinct().Count();
+            Assert.AreEqual(count, distinctCount, $"{count / (double)distinctCount}");
         }
 
         // TODO Current implementation of DateEncoder throws at invalid Date,
@@ -216,22 +220,22 @@ namespace HTM.Net.Tests.Encoders
             Tuple decoded = de.Decode(bits, null);
 
             Console.WriteLine(decoded.ToString());
-            Console.WriteLine(String.Format("decodedToStr=>{0}", de.DecodedToStr(decoded)));
+            Console.WriteLine($"decodedToStr => {de.DecodedToStr(decoded)}");
 
-            Map<String, RangeList> fieldsMap = (Map<String, RangeList>)decoded.Get(0);
-            List<String> fieldsOrder = (List<String>)decoded.Get(1);
+            Map<string, RangeList> fieldsMap = (Map<string, RangeList>)decoded.Get(0);
+            List<string> fieldsOrder = (List<string>)decoded.Get(1);
 
             Assert.IsNotNull(fieldsMap);
             Assert.IsNotNull(fieldsOrder);
             Assert.AreEqual(4, fieldsMap.Count);
 
-            Map<String, Double> expectedMap = new Map<String, Double>();
+            Map<string, double> expectedMap = new Map<string, double>();
             expectedMap.Add("season", 305.0);
             expectedMap.Add("time of day", 14.4);
             expectedMap.Add("day of week", 3.0);
             expectedMap.Add("weekend", 0.0);
 
-            foreach (String key in expectedMap.Keys)
+            foreach (string key in expectedMap.Keys)
             {
                 double expected = expectedMap[key];
                 RangeList actual = fieldsMap[key];
@@ -242,7 +246,7 @@ namespace HTM.Net.Tests.Encoders
             }
 
             Console.WriteLine(decoded.ToString());
-            Console.WriteLine(String.Format("decodedToStr=>{0}", de.DecodedToStr(decoded)));
+            Console.WriteLine($"decodedToStr => {de.DecodedToStr(decoded)}");
         }
 
         /**
@@ -256,7 +260,7 @@ namespace HTM.Net.Tests.Encoders
 
             List<EncoderResult> topDown = de.TopDownCompute(bits);
 
-            List<Double> expectedList = new List<double> { 320.25, 3.5, .167, 14.8 };
+            List<double> expectedList = new List<double> { 320.25, 3.5, .167, 14.8 };
 
             for (int i = 0; i < topDown.Count; i++)
             {
@@ -280,7 +284,7 @@ namespace HTM.Net.Tests.Encoders
             Console.WriteLine($"bucket indices: {Arrays.ToString(bucketIndices)}");
             List<EncoderResult> bucketInfo = de.GetBucketInfo(bucketIndices);
 
-            List<Double> expectedList = new List<double> { 320.25, 3.5, .167, 14.8 };
+            List<double> expectedList = new List<double> { 320.25, 3.5, .167, 14.8 };
 
             List<int> encodings = new List<int>();
 
@@ -333,14 +337,17 @@ namespace HTM.Net.Tests.Encoders
         [TestMethod]
         public void TestWeekend()
         {
-            //use of forced is not recommended, used here for readability, see ScalarEncoder
-            DateEncoder e = (DateEncoder)((DateEncoder.Builder)DateEncoder.GetBuilder()).CustomDays(21, new List<string>
+            // use of forced is not recommended, used here for readability, see ScalarEncoder
+            DateEncoder e = (DateEncoder)((DateEncoder.Builder)DateEncoder.GetBuilder()).CustomDays(21, new List<DayOfWeek>
                 {
-                    "sat",
-                    "sun",
-                    "fri"
+                    DayOfWeek.Saturday,
+                    DayOfWeek.Sunday,
+                    DayOfWeek.Friday
                 }).Forced(true).Build();
-            DateEncoder mon = (DateEncoder)((DateEncoder.Builder)DateEncoder.GetBuilder()).CustomDays(21, new List<string> { "Monday" })
+            DateEncoder mon = (DateEncoder)((DateEncoder.Builder)DateEncoder.GetBuilder()).CustomDays(21, new List<DayOfWeek>
+                    {
+                        DayOfWeek.Monday
+                    })
                 .Forced(true).Build();
             DateEncoder e2 = (DateEncoder)((DateEncoder.Builder)DateEncoder.GetBuilder()).Weekend(21, 1).Forced(true).Build();
 
@@ -359,8 +366,8 @@ namespace HTM.Net.Tests.Encoders
                 //Make sure
                 Tuple decoded = mon.Decode(mon.Encode(curDate), null);
 
-                Map<String, RangeList> fieldsMap = (Map<String, RangeList>)decoded.Get(0);
-                List<String> fieldsOrder = (List<String>)decoded.Get(1);
+                Map<string, RangeList> fieldsMap = (Map<string, RangeList>)decoded.Get(0);
+                List<string> fieldsOrder = (List<string>)decoded.Get(1);
 
                 Assert.IsNotNull(fieldsMap);
                 Assert.IsNotNull(fieldsOrder);

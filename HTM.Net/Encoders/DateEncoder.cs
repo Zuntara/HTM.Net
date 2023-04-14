@@ -7,51 +7,68 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
 {
-    /**
- * DOCUMENTATION TAKEN DIRECTLY FROM THE PYTHON VERSION:
- *
- * A date encoder encodes a date according to encoding parameters specified in its constructor.
- *
- * The input to a date encoder is a datetime.datetime object. The output is
- * the concatenation of several sub-encodings, each of which encodes a different
- * aspect of the date. Which sub-encodings are present, and details of those
- * sub-encodings, are specified in the DateEncoder constructor.
- *
- * Each parameter describes one attribute to encode. By default, the attribute
- * is not encoded.
- *
- * season (season of the year; units = day):
- * (int) width of attribute; default radius = 91.5 days (1 season)
- * (tuple)  season[0] = width; season[1] = radius
- *
- * dayOfWeek (monday = 0; units = day)
- * (int) width of attribute; default radius = 1 day
- * (tuple) dayOfWeek[0] = width; dayOfWeek[1] = radius
- *
- * weekend (boolean: 0, 1)
- * (int) width of attribute
- *
- * holiday (boolean: 0, 1)
- * (int) width of attribute
- *
- * timeOfday (midnight = 0; units = hour)
- * (int) width of attribute: default radius = 4 hours
- * (tuple) timeOfDay[0] = width; timeOfDay[1] = radius
- *
- * customDays TODO: what is it?
- *
- * forced (default True) : if True, skip checks for parameters' settings; see {@code ScalarEncoders} for details
- *
- * @author utensil
- *
- * TODO Improve the document:
- *
- * - improve wording on unspecified attributes: "Each parameter describes one extra attribute(other than the datetime
- *   object itself) to encode. By default, the unspecified attributes are not encoded."
- * - refer to DateEncoder::Builder, which where these parameters are defined.
- * - explain customDays here and at Python version
- */
- [Serializable]
+    public enum DateEncoderSelection
+    {
+        None,
+        Season,
+        DayOfWeek,
+        TimeOfDay,
+        Weekend,
+        Holiday,
+        CustomDays
+    }
+
+    public record BaseDateTuple(int BitsToUse);
+    public record SeasonTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    public record DayOfWeekTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    public record TimeOfDayTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    public record WeekendTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    public record HolidayTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    public record CustomDaysTuple(int BitsToUse, List<DayOfWeek> Days) : BaseDateTuple(BitsToUse);
+
+    /// <summary>
+    /// DOCUMENTATION TAKEN DIRECTLY FROM THE PYTHON VERSION:
+    ///
+    /// A date encoder encodes a date according to encoding parameters specified in its constructor.
+    ///
+    /// The input to a date encoder is a datetime.datetime object. The output is
+    /// the concatenation of several sub-encodings, each of which encodes a different
+    /// aspect of the date. Which sub-encodings are present, and details of those
+    /// sub-encodings, are specified in the DateEncoder constructor.
+    ///
+    /// Each parameter describes one attribute to encode. By default, the attribute
+    /// is not encoded.
+    ///
+    /// season (season of the year; units = day):
+    /// (int) width of attribute; default radius = 91.5 days (1 season)
+    /// (tuple)  season[0] = width; season[1] = radius
+    ///
+    /// dayOfWeek (monday = 0; units = day)
+    /// (int) width of attribute; default radius = 1 day
+    /// (tuple) dayOfWeek[0] = width; dayOfWeek[1] = radius
+    ///
+    /// weekend (boolean: 0, 1)
+    /// (int) width of attribute
+    ///
+    /// holiday (boolean: 0, 1)
+    /// (int) width of attribute
+    ///
+    /// timeOfday (midnight = 0; units = hour)
+    /// (int) width of attribute: default radius = 4 hours
+    /// (tuple) timeOfDay[0] = width; timeOfDay[1] = radius
+    ///
+    /// customDays TODO: what is it?
+    ///
+    /// forced (default True) : if True, skip checks for parameters' settings; see {@code ScalarEncoders} for details
+    ///
+    /// TODO Improve the document:
+    ///
+    /// - improve wording on unspecified attributes: "Each parameter describes one extra attribute(other than the datetime
+    ///   object itself) to encode. By default, the unspecified attributes are not encoded."
+    /// - refer to DateEncoder::Builder, which where these parameters are defined.
+    /// - explain customDays here and at Python version
+    /// </summary>
+    [Serializable]
     public class DateEncoder : Encoder<DateTime>
     {
 
@@ -59,22 +76,22 @@ namespace HTM.Net.Encoders
 
         //See IBuilder for default values.
 
-        protected Tuple season;
+        protected SeasonTuple season;
         protected ScalarEncoder seasonEncoder;
 
-        protected Tuple dayOfWeek;
+        protected DayOfWeekTuple dayOfWeek;
         protected ScalarEncoder dayOfWeekEncoder;
 
-        protected Tuple weekend;
+        protected WeekendTuple weekend;
         protected ScalarEncoder weekendEncoder;
 
-        protected Tuple customDays;
+        protected CustomDaysTuple customDays;
         protected ScalarEncoder customDaysEncoder;
 
-        protected Tuple holiday;
+        protected HolidayTuple holiday;
         protected ScalarEncoder holidayEncoder;
 
-        protected Tuple timeOfDay;
+        protected TimeOfDayTuple timeOfDay;
         protected ScalarEncoder timeOfDayEncoder;
 
         protected List<int> customDaysList = new List<int>();
@@ -112,7 +129,7 @@ namespace HTM.Net.Encoders
          * Package private to encourage construction using the Builder Pattern
          * but still allow inheritance.
          */
-        DateEncoder()
+        private DateEncoder()
         {
         }
 
@@ -147,8 +164,8 @@ namespace HTM.Net.Encoders
             if (IsValidEncoderPropertyTuple(season))
             {
                 seasonEncoder = (ScalarEncoder)ScalarEncoder.GetBuilder()
-                    .W((int)season.Get(0))
-                    .Radius((double)season.Get(1))
+                    .W(season.BitsToUse)
+                    .Radius(season.Radius)
                     .MinVal(0)
                     .MaxVal(366)
                     .Periodic(true)
@@ -161,8 +178,8 @@ namespace HTM.Net.Encoders
             if (IsValidEncoderPropertyTuple(dayOfWeek))
             {
                 dayOfWeekEncoder = (ScalarEncoder)ScalarEncoder.GetBuilder()
-                        .W((int)dayOfWeek.Get(0))
-                        .Radius((double)dayOfWeek.Get(1))
+                        .W((int)dayOfWeek.BitsToUse)
+                        .Radius((double)dayOfWeek.Radius)
                         .MinVal(0)
                         .MaxVal(7)
                         .Periodic(true)
@@ -175,8 +192,8 @@ namespace HTM.Net.Encoders
             if (IsValidEncoderPropertyTuple(weekend))
             {
                 weekendEncoder = (ScalarEncoder)ScalarEncoder.GetBuilder()
-                        .W((int)weekend.Get(0))
-                        .Radius((double)weekend.Get(1))
+                        .W((int)weekend.BitsToUse)
+                        .Radius((double)weekend.Radius)
                         .MinVal(0)
                         .MaxVal(1)
                         .Periodic(false)
@@ -188,23 +205,23 @@ namespace HTM.Net.Encoders
 
             if (IsValidEncoderPropertyTuple(customDays))
             {
-                List<string> days = (List<string>)customDays.Get(1);
+                List<DayOfWeek> days = (List<DayOfWeek>)customDays.Days;
 
                 StringBuilder customDayEncoderName = new StringBuilder();
 
                 if (days.Count == 1)
                 {
-                    customDayEncoderName.Append(days[0]);
+                    customDayEncoderName.Append(days[0].ToString());
                 }
                 else {
-                    foreach (string day in days)
+                    foreach (DayOfWeek day in days)
                     {
-                        customDayEncoderName.Append(day).Append(" ");
+                        customDayEncoderName.Append(day.ToString()).Append(" ");
                     }
                 }
 
                 customDaysEncoder = (ScalarEncoder)ScalarEncoder.GetBuilder()
-                        .W((int)customDays.Get(0))
+                        .W((int)customDays.BitsToUse)
                         .Radius(1)
                         .MinVal(0)
                         .MaxVal(1)
@@ -220,8 +237,8 @@ namespace HTM.Net.Encoders
             if (IsValidEncoderPropertyTuple(holiday))
             {
                 holidayEncoder = (ScalarEncoder)ScalarEncoder.GetBuilder()
-                        .W((int)holiday.Get(0))
-                        .Radius((double)holiday.Get(1))
+                        .W((int)holiday.BitsToUse)
+                        .Radius((double)holiday.Radius)
                         .MinVal(0)
                         .MaxVal(1)
                         .Periodic(false)
@@ -234,8 +251,8 @@ namespace HTM.Net.Encoders
             if (IsValidEncoderPropertyTuple(timeOfDay))
             {
                 timeOfDayEncoder = (ScalarEncoder)ScalarEncoder.GetBuilder()
-                        .W((int)timeOfDay.Get(0))
-                        .Radius((double)timeOfDay.Get(1))
+                        .W((int)timeOfDay.BitsToUse)
+                        .Radius((double)timeOfDay.Radius)
                         .MinVal(0)
                         .MaxVal(24)
                         .Periodic(true)
@@ -247,15 +264,15 @@ namespace HTM.Net.Encoders
 
         }
 
-        private bool IsValidEncoderPropertyTuple(Tuple encoderPropertyTuple)
+        private bool IsValidEncoderPropertyTuple(BaseDateTuple encoderPropertyTuple)
         {
-            return encoderPropertyTuple != null && (int)encoderPropertyTuple.Get(0) != 0;
+            return encoderPropertyTuple != null && encoderPropertyTuple.BitsToUse != 0;
         }
 
         // Adapted from MultiEncoder
-        public void AddEncoder(string name, IEncoder child)
+        public void AddEncoder(string encoderName, IEncoder child)
         {
-            base.AddEncoder(this, name, child, width);
+            AddEncoder(this, encoderName, child, width);
 
             foreach (Tuple d in child.GetDescription())
             {
@@ -270,102 +287,95 @@ namespace HTM.Net.Encoders
             AddEncoder(encoder.GetName(), encoder);
         }
 
-        protected void AddCustomDays(List<string> daysList)
+        protected void AddCustomDays(List<DayOfWeek> daysList)
         {
-            foreach (string dayStr in daysList)
+            foreach (DayOfWeek weekDay in daysList)
             {
-                switch (dayStr.ToLower())
+                switch (weekDay)
                 {
-                    case "mon":
-                    case "monday":
+                    case DayOfWeek.Monday:
                         customDaysList.Add(0);
                         break;
-                    case "tue":
-                    case "tuesday":
+                    case DayOfWeek.Tuesday:
                         customDaysList.Add(1);
                         break;
-                    case "wed":
-                    case "wednesday":
+                    case DayOfWeek.Wednesday:
                         customDaysList.Add(2);
                         break;
-                    case "thu":
-                    case "thursday":
+                    case DayOfWeek.Thursday:
                         customDaysList.Add(3);
                         break;
-                    case "fri":
-                    case "friday":
+                    case DayOfWeek.Friday:
                         customDaysList.Add(4);
                         break;
-                    case "sat":
-                    case "saturday":
+                    case DayOfWeek.Saturday:
                         customDaysList.Add(5);
                         break;
-                    case "sun":
-                    case "sunday":
+                    case DayOfWeek.Sunday:
                         customDaysList.Add(6);
                         break;
                     default:
-                        throw new ArgumentException(string.Format("Unable to understand {0} as a day of week", dayStr));
+                        throw new ArgumentException($"Unable to understand {weekDay} as a day of week");
                 }
             }
         }
 
-        public Tuple GetSeason()
+        public SeasonTuple GetSeason()
         {
             return season;
         }
 
-        public void SetSeason(Tuple season)
+        public void SetSeason(SeasonTuple season)
         {
             this.season = season;
         }
 
-        public Tuple GetDayOfWeek()
+        public DayOfWeekTuple GetDayOfWeek()
         {
             return dayOfWeek;
         }
 
-        public void SetDayOfWeek(Tuple dayOfWeek)
+        public void SetDayOfWeek(DayOfWeekTuple dayOfWeek)
         {
             this.dayOfWeek = dayOfWeek;
         }
 
-        public Tuple GetWeekend()
+        public WeekendTuple GetWeekend()
         {
             return weekend;
         }
 
-        public void SetWeekend(Tuple weekend)
+        public void SetWeekend(WeekendTuple weekend)
         {
             this.weekend = weekend;
         }
 
-        public Tuple GetCustomDays()
+        public CustomDaysTuple GetCustomDays()
         {
             return customDays;
         }
 
-        public void SetCustomDays(Tuple customDays)
+        public void SetCustomDays(CustomDaysTuple customDays)
         {
             this.customDays = customDays;
         }
 
-        public Tuple GetHoliday()
+        public HolidayTuple GetHoliday()
         {
             return holiday;
         }
 
-        public void SetHoliday(Tuple holiday)
+        public void SetHoliday(HolidayTuple holiday)
         {
             this.holiday = holiday;
         }
 
-        public Tuple GetTimeOfDay()
+        public TimeOfDayTuple GetTimeOfDay()
         {
             return timeOfDay;
         }
 
-        public void SetTimeOfDay(Tuple timeOfDay)
+        public void SetTimeOfDay(TimeOfDayTuple timeOfDay)
         {
             this.timeOfDay = timeOfDay;
         }
@@ -708,28 +718,28 @@ namespace HTM.Net.Encoders
             //    Ignore leap year differences -- assume 366 days in a year
             //    Radius = 91.5 days = length of season
             //    Value is number of days since beginning of year (0 - 355)
-            protected Tuple season = new Tuple(0, 91.5);
+            protected SeasonTuple season = new SeasonTuple(0, 91.5);
 
             // Value is day of week (floating point)
             // Radius is 1 day
-            protected Tuple dayOfWeek = new Tuple(0, 1.0);
+            protected DayOfWeekTuple dayOfWeek = new DayOfWeekTuple(0, 1.0);
 
             // Binary value.
-            protected Tuple weekend = new Tuple(0, 1.0);
+            protected WeekendTuple weekend = new WeekendTuple(0, 1.0);
 
             // Custom days encoder, first argument in tuple is width
             // second is either a single day of the week or a list of the days
             // you want encoded as ones.
-            protected Tuple customDays = new Tuple(0, new List<string>());
+            protected CustomDaysTuple customDays = new CustomDaysTuple(0, new List<DayOfWeek>());
 
             // A "continuous" binary value. = 1 on the holiday itself and smooth ramp
             //  0->1 on the day before the holiday and 1->0 on the day after the holiday.
-            protected Tuple holiday = new Tuple(0, 1.0);
+            protected HolidayTuple holiday = new HolidayTuple(0, 1.0);
 
             // Value is time of day in hours
             // Radius = 4 hours, e.g. morning, afternoon, evening, early night,
             //  late night, etc.
-            protected Tuple timeOfDay = new Tuple(0, 4.0);
+            protected TimeOfDayTuple timeOfDay = new TimeOfDayTuple(0, 4.0);
 
             protected DateTimeFormatInfo customFormatter;
 
@@ -767,103 +777,103 @@ namespace HTM.Net.Encoders
             /**
              * Set how many bits are used to encode season
              */
-            public Builder Season(int season, double radius)
+            public Builder Season(int bitsToUse, double radius)
             {
-                this.season = new Tuple(season, radius);
+                this.season = new SeasonTuple(bitsToUse, radius);
                 return this;
             }
 
             /**
              * Set how many bits are used to encode season
              */
-            public Builder Season(int season)
+            public Builder Season(int bitsToUse)
             {
-                return this.Season(season, (double)this.season.Get(1));
+                return this.Season(bitsToUse, (double)this.season.Radius);
             }
 
             /**
              * Set how many bits are used to encode dayOfWeek
              */
-            public Builder DayOfWeek(int dayOfWeek, double radius)
+            public Builder DayOfWeek(int bitsToUse, double radius)
             {
-                this.dayOfWeek = new Tuple(dayOfWeek, radius);
+                this.dayOfWeek = new DayOfWeekTuple(bitsToUse, radius);
                 return this;
             }
 
             /**
              * Set how many bits are used to encode dayOfWeek
              */
-            public Builder DayOfWeek(int dayOfWeek)
+            public Builder DayOfWeek(int bitsToUse)
             {
-                return this.DayOfWeek(dayOfWeek, (double)this.dayOfWeek.Get(1));
+                return this.DayOfWeek(bitsToUse, (double)this.dayOfWeek.Radius);
             }
 
             /**
              * Set how many bits are used to encode weekend
              */
-            public Builder Weekend(int weekend, double radius)
+            public Builder Weekend(int bitsToUse, double radius)
             {
-                this.weekend = new Tuple(weekend, radius);
+                this.weekend = new WeekendTuple(bitsToUse, radius);
                 return this;
             }
 
             /**
              * Set how many bits are used to encode weekend
              */
-            public Builder Weekend(int weekend)
+            public Builder Weekend(int bitsToUse)
             {
-                return this.Weekend(weekend, (double)this.weekend.Get(1));
+                return this.Weekend(bitsToUse, (double)this.weekend.Radius);
             }
 
             /**
              * Set how many bits are used to encode customDays
              */
-            public Builder CustomDays(int customDays, List<string> customDaysList)
+            public Builder CustomDays(int bitsToUse, List<DayOfWeek> customDaysList)
             {
-                this.customDays = new Tuple(customDays, customDaysList);
+                this.customDays = new CustomDaysTuple(bitsToUse, customDaysList);
                 return this;
             }
 
             /**
              * Set how many bits are used to encode customDays
              */
-            public Builder CustomDays(int customDays)
+            public Builder CustomDays(int bitsToUse)
             {
-                return this.CustomDays(customDays, (List<string>)this.customDays.Get(1));
+                return this.CustomDays(bitsToUse, (List<DayOfWeek>)this.customDays.Days);
             }
 
             /**
              * Set how many bits are used to encode holiday
              */
-            public Builder Holiday(int holiday, double radius)
+            public Builder Holiday(int bitsToUse, double radius)
             {
-                this.holiday = new Tuple(holiday, radius);
+                this.holiday = new HolidayTuple(bitsToUse, radius);
                 return this;
             }
 
             /**
              * Set how many bits are used to encode holiday
              */
-            public Builder Holiday(int holiday)
+            public Builder Holiday(int bitsToUse)
             {
-                return this.Holiday(holiday, (double)this.holiday.Get(1));
+                return this.Holiday(bitsToUse, (double)this.holiday.Radius);
             }
 
             /**
              * Set how many bits are used to encode timeOfDay
              */
-            public Builder TimeOfDay(int timeOfDay, double radius)
+            public Builder TimeOfDay(int bitsToUse, double radius)
             {
-                this.timeOfDay = new Tuple(timeOfDay, radius);
+                this.timeOfDay = new TimeOfDayTuple(bitsToUse, radius);
                 return this;
             }
 
             /**
              * Set how many bits are used to encode timeOfDay
              */
-            public Builder TimeOfDay(int timeOfDay)
+            public Builder TimeOfDay(int bitsToUse)
             {
-                return this.TimeOfDay(timeOfDay, (double)this.timeOfDay.Get(1));
+                return this.TimeOfDay(bitsToUse, (double)this.timeOfDay.Radius);
             }
 
             /**

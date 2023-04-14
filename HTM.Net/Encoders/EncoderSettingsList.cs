@@ -239,11 +239,11 @@ public class EncoderSetting
     public EncoderTypes? encoderType { get; set; }
     public EncoderTypes type { get; set; }
 
-    public Tuple dayOfWeek { get; set; }
-    public Tuple timeOfDay { get; set; }
-    public Tuple weekend { get; set; }
-    public Tuple season { get; set; }
-    public Tuple holiday { get; set; }
+    public DayOfWeekTuple dayOfWeek { get; set; }
+    public TimeOfDayTuple timeOfDay { get; set; }
+    public WeekendTuple weekend { get; set; }
+    public SeasonTuple season { get; set; }
+    public HolidayTuple holiday { get; set; }
     public string formatPattern { get; set; }
 
     public int? timestep { get; set; }

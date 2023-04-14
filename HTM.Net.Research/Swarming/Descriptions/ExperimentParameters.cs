@@ -151,23 +151,23 @@ namespace HTM.Net.Research.Swarming.Descriptions
 
                     foreach (string name in grouping)
                     {
-                        if (name.EndsWith("timeOfDay"))
+                        if (name.EndsWith("timeOfDay", StringComparison.InvariantCultureIgnoreCase))
                         {
                             setting.timeOfDay = selection.Single(s => s.Key == name).Value.timeOfDay;
                         }
-                        else if (name.EndsWith("dayOfWeek"))
+                        else if (name.EndsWith("dayOfWeek", StringComparison.InvariantCultureIgnoreCase))
                         {
                             setting.dayOfWeek = selection.Single(s => s.Key == name).Value.dayOfWeek;
                         }
-                        else if (name.EndsWith("weekend"))
+                        else if (name.EndsWith("weekend", StringComparison.InvariantCultureIgnoreCase))
                         {
                             setting.weekend = selection.Single(s => s.Key == name).Value.weekend;
                         }
-                        else if (name.EndsWith("season"))
+                        else if (name.EndsWith("season", StringComparison.InvariantCultureIgnoreCase))
                         {
                             setting.season = selection.Single(s => s.Key == name).Value.season;
                         }
-                        else if (name.EndsWith("holiday"))
+                        else if (name.EndsWith("holiday", StringComparison.InvariantCultureIgnoreCase))
                         {
                             setting.holiday = selection.Single(s => s.Key == name).Value.holiday;
                         }

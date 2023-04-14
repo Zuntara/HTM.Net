@@ -210,16 +210,4 @@ namespace HTM.Net.Util
             }
         }
     }
-
-    public class BitsTuple : Tuple
-    {
-        public BitsTuple(int bitsToUse, double radius)
-            : base(bitsToUse, radius)
-        {
-
-        }
-
-        public int BitsToUse => (int)Get(0);
-        public double Radius => (double)Get(1);
-    }
 }

@@ -88,8 +88,8 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                     0, 0, 0, 0.1, null, null, null,
                     "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_HOW.GetFieldName(), new BitsTuple(1, 1.0)); // Day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(5, 4.0)); // Time of day
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new DayOfWeekTuple(1, 1.0)); // Day of week
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(5, 4.0)); // Time of day
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             return fieldEncodings;
@@ -114,10 +114,10 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                     0, 500.0, 0, 0.1, null, true, null,
                     "consumption", "float", EncoderTypes.ScalarEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(21, 9.5)); // Time of day
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new BitsTuple(11, 1)); // day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_WKEND.GetFieldName(), new BitsTuple(0, 1)); // Weekend
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_SEASON.GetFieldName(), new BitsTuple(3, 91.5)); // Season
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(21, 9.5)); // Time of day
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new DayOfWeekTuple(11, 1)); // day of week
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_WKEND.GetFieldName(), new WeekendTuple(0, 1)); // Weekend
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_SEASON.GetFieldName(), new SeasonTuple(3, 91.5)); // Season
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "dd/MM/yyyy HH:mm");
 
             return fieldEncodings;

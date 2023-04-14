@@ -306,7 +306,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     minmaxMap[6].Min(), minmaxMap[6].Max(), 0, 0, null, null, true,
                     "Bonus", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
 
-            fieldEncodings["Date"].dayOfWeek = new Tuple(1, 1.0); // Day of week
+            fieldEncodings["Date"].dayOfWeek = new DayOfWeekTuple(1, 1.0); // Day of week
             //fieldEncodings["Date"].timeOfDay = new Tuple(5, 4.0); // Time of day
             fieldEncodings["Date"].formatPattern = "dd/MM/YY";
 

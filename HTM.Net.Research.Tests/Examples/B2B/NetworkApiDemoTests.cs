@@ -64,8 +64,8 @@ namespace HTM.Net.Research.Tests.Examples.B2B
 
         #endregion
 
-        //[TestMethod]
-        //[DeploymentItem("Resources\\rec-center-hourly.Csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\b2b_2014_output.csv")]
         public void TestCreateBasicNetwork()
         {
             NetworkAPIDemo demo = new NetworkAPIDemo(NetworkAPIDemo.Mode.BASIC);
@@ -108,8 +108,8 @@ namespace HTM.Net.Research.Tests.Examples.B2B
 
         }
 
-        //[TestMethod]
-        //[DeploymentItem("Resources\\b2b_2014_output.csv")]
+        [TestMethod]
+        [DeploymentItem("Resources\\b2b_2014_output.csv")]
         //[DeploymentItem("Resources\\rec-center-15m.Csv")]
         public void RunBasicNetwork()
         {

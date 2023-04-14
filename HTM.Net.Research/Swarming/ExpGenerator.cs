@@ -1144,7 +1144,7 @@ namespace HTM.Net.Research.Swarming
                         type = EncoderTypes.DateEncoder,
                         name = $"{fieldName}_timeOfDay",
                         fieldName = fieldName,
-                        timeOfDay = new Tuple(width, 1)
+                        timeOfDay = new TimeOfDayTuple(width, 1)
                     };
                     if (fieldInfo.encoderType != EncoderTypes.None)
                     {
@@ -1158,7 +1158,7 @@ namespace HTM.Net.Research.Swarming
                         type = EncoderTypes.DateEncoder,
                         name = $"{fieldName}_dayOfWeek",
                         fieldName = fieldName,
-                        dayOfWeek = new Tuple(width, 1)
+                        dayOfWeek = new DayOfWeekTuple(width, 1)
                     };
                     if (fieldInfo.encoderType != EncoderTypes.None)
                     {
@@ -1172,7 +1172,7 @@ namespace HTM.Net.Research.Swarming
                         type = EncoderTypes.DateEncoder,
                         name = $"{fieldName}_weekend",
                         fieldName = fieldName,
-                        dayOfWeek = new Tuple(width)
+                        dayOfWeek = new DayOfWeekTuple(width, -1) // -1 = take default
                     };
                     if (fieldInfo.encoderType != EncoderTypes.None)
                     {
@@ -1322,19 +1322,19 @@ namespace HTM.Net.Research.Swarming
                         if (key == "fieldname") key = "fieldName";
                         else if (key == "name") continue;
 
-                        if (key == "timeOfDay")
+                        if (key == "TimeOfDay")
                         {
                             enc.EncoderType = $"{encoderType}.timeOfDay";
                             enc.Radius = new PermuteFloat(0.5, 12);
                             enc.W = ((Tuple)value).Get(0);
                         }
-                        else if (key == "dayOfWeek")
+                        else if (key == "DayOfWeek")
                         {
                             enc.EncoderType = $"{encoderType}.dayOfWeek";
                             enc.Radius = new PermuteFloat(1, 6);
                             enc.W = ((Tuple)value).Get(0);
                         }
-                        else if (key == "weekend")
+                        else if (key == "Weekend")
                         {
                             enc.EncoderType = $"{encoderType}.weekend";
                             enc.Radius = new PermuteChoices(new object[] { 1 });

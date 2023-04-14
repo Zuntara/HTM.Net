@@ -117,24 +117,34 @@ namespace HTM.Net.Encoders
          * representations
          */
         protected double radius = 0;
-        /** inputs separated by more than, or equal to this distance will have different representations */
+        /// <summary>
+        /// inputs separated by more than, or equal to this distance will have different representations
+        /// </summary>
         protected double resolution = 0;
-        /**
-         * If true, then the input value "wraps around" such that minval = maxval
-         * For a periodic value, the input must be strictly less than maxval,
-         * otherwise maxval is a true upper bound.
-         */
+        /// <summary>
+        /// If true, then the input value "wraps around" such that minval = maxval
+        /// For a periodic value, the input must be strictly less than maxval,
+        /// otherwise maxval is a true upper bound.
+        /// </summary>
         protected bool periodic = true;
-        /** The minimum value of the input signal.  */
+        /// <summary>
+        /// The minimum value of the input signal.
+        /// </summary>
         protected double minVal = 0;
-        /** The maximum value of the input signal. */
+        /// <summary>
+        /// The maximum value of the input signal.
+        /// </summary>
         protected double maxVal = 0;
         /** if true, non-periodic inputs smaller than minval or greater
                 than maxval will be clipped to minval/maxval */
         protected bool clipInput;
-        /** if true, skip some safety checks (for compatibility reasons), default false */
+        /// <summary>
+        /// if true, skip some safety checks (for compatibility reasons), default false
+        /// </summary>
         protected bool forced;
-        /** Encoder name - an optional string which will become part of the description */
+        /// <summary>
+        /// Encoder name - an optional string which will become part of the description
+        /// </summary>
         protected string name = "";
         protected int padding;
         protected int nInternal;

@@ -11,6 +11,7 @@ using HTM.Net.Datagen;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
 using HTM.Net.Research.Tests.Properties;
+using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.B2B
 {
@@ -79,6 +80,8 @@ namespace HTM.Net.Research.Tests.Examples.B2B
             Parameters p = NetworkDemoHarness.GetParameters();
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
 
+            p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("consumption", typeof(CLAClassifier)));
+
             // This is how easy it is to create a full running Network!
 
             return Network.Network.Create("Network API Demo", p)
@@ -90,6 +93,19 @@ namespace HTM.Net.Research.Tests.Examples.B2B
                 .Add(new Algorithms.SpatialPooler())
                 .Add(Sensor<FileInfo>.Create(FileSensor.Create,
                     SensorParams.Create(SensorParams.Keys.Path, "", ResourceLocator.Path(typeof(Resources), "b2b_2014_output.csv"))))));
+        }
+
+        /**
+         * @return a Map that can be used as the value for a Parameter
+         * object's KEY.INFERRED_FIELDS key, to classify the specified
+         * field with the specified Classifier type.
+        */
+        public Map<string, Type> GetInferredFieldsMap(
+            string field, Type classifier)
+        {
+            Map<string, Type> inferredFieldsMap = new Map<string, Type>();
+            inferredFieldsMap.Add(field, classifier);
+            return inferredFieldsMap;
         }
 
         /**

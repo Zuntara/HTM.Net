@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HTM.Net.Util;
 using Tuple = HTM.Net.Util.Tuple;
 
@@ -45,7 +46,7 @@ namespace HTM.Net.Encoders
                     throw new ArgumentException("Missing fieldname for encoder " + field);
                 }
 
-            string fieldName = (string)@params.Get("fieldName");
+                string fieldName = (string)@params.Get("fieldName");
 
                 if (!@params.ContainsKey("encoderType"))
                 {
@@ -118,10 +119,13 @@ namespace HTM.Net.Encoders
                     !key.Equals("fieldType") && !key.Equals("fieldEncodings"))
                 {
 
-                    if (!key.Equals("season") && !key.Equals("dayOfWeek") &&
-                        !key.Equals("weekend") && !key.Equals("holiday") &&
-                        !key.Equals("timeOfDay") && !key.Equals("customDays") &&
-                        !key.Equals("formatPattern"))
+                    if (!key.Equals("season", StringComparison.InvariantCultureIgnoreCase)
+                        && !key.Equals("dayOfWeek", StringComparison.InvariantCultureIgnoreCase) 
+                        && !key.Equals("weekend", StringComparison.InvariantCultureIgnoreCase)
+                        && !key.Equals("holiday", StringComparison.InvariantCultureIgnoreCase)
+                        && !key.Equals("timeOfDay", StringComparison.InvariantCultureIgnoreCase)
+                        && !key.Equals("customDays", StringComparison.InvariantCultureIgnoreCase) 
+                        && !key.Equals("formatPattern"))
                     {
                         multiEncoder.SetValue(b, key, dateEncoderSettings[key]);
                     }
@@ -133,7 +137,7 @@ namespace HTM.Net.Encoders
                         }
                         else
                         {
-                            SetDateFieldBits(b, dateEncoderSettings, key);
+                            SetDateFieldBits(b, dateEncoderSettings, Enum.Parse<DateEncoderSelection>(key, true));
                         }
                     }
                 }
@@ -146,80 +150,86 @@ namespace HTM.Net.Encoders
          * @param m         the map containing the values
          * @param key       the key to be set.
          */
-        private static void SetDateFieldBits(DateEncoder.Builder b, Map<string, object> m, string key)
+        private static void SetDateFieldBits(DateEncoder.Builder b, Map<string, object> m, DateEncoderSelection key)
         {
-            Tuple t = (Tuple)m[key];
+            BaseDateTuple t = (BaseDateTuple)m[key.ToString()];
             switch (key)
             {
-                case "season":
+                case DateEncoderSelection.Season:
                     {
-                        if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
+                        SeasonTuple seasonTuple = (SeasonTuple)t;
+                        if (seasonTuple.Radius > 0.0)
                         {
-                            b.Season((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.Season((int)t.BitsToUse, seasonTuple.Radius);
                         }
                         else
                         {
-                            b.Season((int)t.Get(0));
+                            b.Season((int)t.BitsToUse);
                         }
                         break;
                     }
-                case "dayOfWeek":
+                case DateEncoderSelection.DayOfWeek:
                     {
-                        if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1)) > 0.0))
+                        DayOfWeekTuple dayOfWeekTuple = (DayOfWeekTuple)t;
+                        if (dayOfWeekTuple.Radius > 0.0)
                         {
-                            b.DayOfWeek((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.DayOfWeek((int)t.BitsToUse, dayOfWeekTuple.Radius);
                         }
                         else
                         {
-                            b.DayOfWeek((int)t.Get(0));
+                            b.DayOfWeek((int)t.BitsToUse);
                         }
                         break;
                     }
-                case "weekend":
+                case DateEncoderSelection.Weekend:
                     {
-                        if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
+                        WeekendTuple weekendTuple = (WeekendTuple)t;
+                        if (weekendTuple.Radius > 0.0)
                         {
-                            b.Weekend((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.Weekend((int)t.BitsToUse, weekendTuple.Radius);
                         }
                         else
                         {
-                            b.Weekend((int)t.Get(0));
+                            b.Weekend((int)t.BitsToUse);
                         }
                         break;
                     }
-                case "holiday":
+                case DateEncoderSelection.Holiday:
                     {
-                        if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
+                        HolidayTuple holidayTuple = (HolidayTuple)t;
+                        if (holidayTuple.Radius > 0.0)
                         {
-                            b.Holiday((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.Holiday((int)t.BitsToUse, holidayTuple.Radius);
                         }
                         else
                         {
-                            b.Holiday((int)t.Get(0));
+                            b.Holiday((int)t.BitsToUse);
                         }
                         break;
                     }
-                case "timeOfDay":
+                case DateEncoderSelection.TimeOfDay:
                     {
-                        if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
+                        TimeOfDayTuple timeOfDayTuple = (TimeOfDayTuple)t;
+                        if (timeOfDayTuple.Radius > 0.0)
                         {
-                            b.TimeOfDay((int)t.Get(0), TypeConverter.Convert<double>(t.Get(1)));
+                            b.TimeOfDay((int)t.BitsToUse, timeOfDayTuple.Radius);
                         }
                         else
                         {
-                            b.TimeOfDay((int)t.Get(0));
+                            b.TimeOfDay((int)t.BitsToUse);
                         }
                         break;
                     }
-                case "customDays":
+                case DateEncoderSelection.CustomDays:
                     {
-                        if (t.Count > 1 && (TypeConverter.Convert<double>(t.Get(1))) > 0.0)
+                        CustomDaysTuple customDaysTuple = (CustomDaysTuple)t;
+                        if (customDaysTuple.Days.Any())
                         {
-                            b.CustomDays((int)t.Get(0), (List<string>)t.Get(1));
+                            b.CustomDays((int)t.BitsToUse, (List<DayOfWeek>)customDaysTuple.Days);
                         }
                         else
                         {
-                            b.CustomDays((int)t.Get(0));
+                            b.CustomDays((int)t.BitsToUse);
                         }
                         break;
                     }
