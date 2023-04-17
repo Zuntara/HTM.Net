@@ -173,7 +173,7 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
                 {
                     "timestamp_dayOfWeek", new EncoderSetting
                     {
-                        dayOfWeek = new DayOfWeekTuple(7, 3),
+                        DayOfWeek = new DayOfWeekTuple(7, 3),
                         fieldName = "timestamp",
                         name = "timestamp_dayOfWeek",
                         type = EncoderTypes.DateEncoder
@@ -184,7 +184,7 @@ namespace HTM.Net.Research.Tests.Swarming.Experiments
                     {
                         fieldName = "timestamp",
                         name = "timestamp_timeOfDay",
-                        timeOfDay = new TimeOfDayTuple(7, 8),
+                        TimeOfDay = new TimeOfDayTuple(7, 8),
                         type = EncoderTypes.DateEncoder
                     }
                 }

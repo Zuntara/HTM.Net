@@ -1144,7 +1144,7 @@ namespace HTM.Net.Research.Swarming
                         type = EncoderTypes.DateEncoder,
                         name = $"{fieldName}_timeOfDay",
                         fieldName = fieldName,
-                        timeOfDay = new TimeOfDayTuple(width, 1)
+                        TimeOfDay = new TimeOfDayTuple(width, 1)
                     };
                     if (fieldInfo.encoderType != EncoderTypes.None)
                     {
@@ -1158,7 +1158,7 @@ namespace HTM.Net.Research.Swarming
                         type = EncoderTypes.DateEncoder,
                         name = $"{fieldName}_dayOfWeek",
                         fieldName = fieldName,
-                        dayOfWeek = new DayOfWeekTuple(width, 1)
+                        DayOfWeek = new DayOfWeekTuple(width, 1)
                     };
                     if (fieldInfo.encoderType != EncoderTypes.None)
                     {
@@ -1172,7 +1172,7 @@ namespace HTM.Net.Research.Swarming
                         type = EncoderTypes.DateEncoder,
                         name = $"{fieldName}_weekend",
                         fieldName = fieldName,
-                        dayOfWeek = new DayOfWeekTuple(width, -1) // -1 = take default
+                        DayOfWeek = new DayOfWeekTuple(width, -1) // -1 = take default
                     };
                     if (fieldInfo.encoderType != EncoderTypes.None)
                     {

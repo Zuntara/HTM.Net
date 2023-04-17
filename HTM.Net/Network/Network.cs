@@ -183,12 +183,11 @@ namespace HTM.Net.Network
             return new Network(name, parameters);
         }
 
-        /**
-         * Creates and returns a child <see cref="Region"/> of this {@code Network}
-         * 
-         * @param   name    The String identifier for the specified <see cref="Region"/>
-         * @return
-         */
+        /// <summary>
+        /// Creates and returns a child <see cref="Region"/> of this <see cref="Network"/>
+        /// </summary>
+        /// <param name="name">The String identifier for the specified<see cref= "Region" /></param>
+        /// <returns></returns>
         public static Region CreateRegion(string name)
         {
             CheckName(name);

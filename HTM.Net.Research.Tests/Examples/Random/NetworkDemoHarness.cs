@@ -123,7 +123,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     1, 45, 0, 0, null, null, null,
                     "Bonus", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
 
-            fieldEncodings["Date"].dayOfWeek = new DayOfWeekTuple(1, 1.0); // Day of week
+            fieldEncodings["Date"].DayOfWeek = new DayOfWeekTuple(1, 1.0); // Day of week
+            fieldEncodings["Date"].Season = new SeasonTuple(3, 95.5); // Season
             //fieldEncodings["Date"].timeOfDay = new Tuple(5, 4.0); // Time of day
             fieldEncodings["Date"].formatPattern = "dd/MM/YY";
 
@@ -148,7 +149,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     $"Number {(i + 1)}", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
             }
             
-            fieldEncodings["Date"].dayOfWeek = new DayOfWeekTuple(1, 1.0); // Day of week
+            fieldEncodings["Date"].DayOfWeek = new DayOfWeekTuple(1, 1.0); // Day of week
             //fieldEncodings["Date"].timeOfDay = new Tuple(5, 4.0); // Time of day
             fieldEncodings["Date"].formatPattern = "dd/MM/YY";
 
@@ -174,7 +175,7 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     0, 100, 0, 0.1, null, true, null,
                     "consumption", FieldMetaType.Float, EncoderTypes.ScalarEncoder);
 
-            fieldEncodings["timestamp"].timeOfDay = new TimeOfDayTuple(21, 9.5); // Time of day
+            fieldEncodings["timestamp"].TimeOfDay = new TimeOfDayTuple(21, 9.5); // Time of day
             fieldEncodings["timestamp"].formatPattern = "MM/dd/YY HH:mm";
 
             return fieldEncodings;

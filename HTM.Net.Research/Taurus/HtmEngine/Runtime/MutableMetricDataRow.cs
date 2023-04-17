@@ -326,7 +326,7 @@ public class BestSingleMetricAnomalyParameters : ExperimentParameters
                 {
                     "c0_timeOfDay", new EncoderSetting
                     {
-                        dayOfWeek = new DayOfWeekTuple(21, 9.49),
+                        DayOfWeek = new DayOfWeekTuple(21, 9.49),
                         fieldName = "c0",
                         name = "c0",
                         type = EncoderTypes.DateEncoder

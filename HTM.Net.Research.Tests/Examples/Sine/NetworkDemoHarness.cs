@@ -22,8 +22,8 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         /// <param name="w">the number of bits to use in the representation</param>
         /// <param name="min">the minimum value (if known i.e. for the ScalarEncoder)</param>
         /// <param name="max">the maximum value (if known i.e. for the ScalarEncoder)</param>
-        /// <param name="radius">see {@link Encoder}</param>
-        /// <param name="resolution">see {@link Encoder}</param>
+        /// <param name="radius">inputs separated by more than, or equal to this distance will have non-overlapping representations</param>
+        /// <param name="resolution">inputs separated by more than, or equal to this distance will have different representations</param>
         /// <param name="periodic">such as hours of the day or days of the week, which repeat in cycles</param>
         /// <param name="clip">whether the outliers should be clipped to the min and max values</param>
         /// <param name="forced">use the implied or explicitly stated ratio of w to n bits rather than the "suggested" number</param>
@@ -34,7 +34,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         public static Map<string, Map<string, object>> SetupMap(
                 Map<string, Map<string, object>> map,
                 int n, int w, double min, double max, double radius, double resolution, bool? periodic,
-                bool? clip, bool? forced, string fieldName, string fieldType, EncoderTypes encoderType)
+                bool? clip, bool? forced, string fieldName, FieldMetaType? fieldType, EncoderTypes? encoderType)
         {
 
             if (map == null)
@@ -74,18 +74,15 @@ namespace HTM.Net.Research.Tests.Examples.Sine
          */
         public static Map<string, Map<string, object>> GetNetworkDemoFieldEncodingMap()
         {
-            //Map<string, Map<string, object>> fieldEncodings = SetupMap(
-            //        null,
-            //        0, // n
-            //        0, // w
-            //        0, 0, 0, 0, null, null, null,
-            //        "timestamp", "datetime", "DateEncoder");
+            int nrOfPossibeValueReps = (int)(20.0 / 0.1);
+
+            int width = 51;
             Map<string, Map<string, object>> fieldEncodings = SetupMap(
                     null,
-                    50,
-                    21,
-                    -10.0, 10.0, 0, 0.1, null, true, null,
-                    "sinedata", "float", EncoderTypes.ScalarEncoder);
+                    nrOfPossibeValueReps * 12,
+                    width,
+                    -10.0, 10.0, 0.01, 0.01, false, false, true,
+                    "sinedata", FieldMetaType.Float, EncoderTypes.ScalarEncoder);
 
             //fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new BitsTuple(21, 9.5)); // Time of day
             //fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new BitsTuple(11, 1)); // day of week
@@ -97,7 +94,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         }
 
         /**
-         * Returns Encoder parameters and meta information for the "Hot Gym" encoder
+         * Returns Encoder parameters and meta information for the "sinedata" encoder
          * @return
          */
         public static Parameters GetNetworkDemoTestEncoderParams()
@@ -105,23 +102,25 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             Map<string, Map<string, object>> fieldEncodings = GetNetworkDemoFieldEncodingMap();
 
             Parameters p = Parameters.GetEncoderDefaultParameters();
-            p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
-            p.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 128 });
-            p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 4);
-            p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 20.0);
+            p.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, false);
+            p.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 256 });
+            p.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 6);
+            p.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 12.0);
+            p.SetParameterByKey(Parameters.KEY.LEARNING_RADIUS, 5);
 
-            p.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.7);
-            p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.1);
-            p.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.0001); // 0.07
-            p.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.0005); // 0.01
+            // how much of the connections need to be connected, 0 to 1
+            p.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.9);
+            p.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.2);
+            p.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.1001); // 0.07
+            p.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.1005); // 0.01
             p.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
 
-            p.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 5);
-            p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.21);
-            p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.1);
-            p.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.1);
+            p.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 10);
+            p.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.31);
+            p.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.01);
+            p.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.02);
             p.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 9); 
-            p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 6); 
+            p.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 24); 
 
             p.SetParameterByKey(Parameters.KEY.CLIP_INPUT, true);
             p.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, fieldEncodings);
@@ -142,7 +141,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                     8, // n
                     3, // w
                     0.0, 8.0, 0, 1, true, null, true,
-                    "dayOfWeek", "number", EncoderTypes.ScalarEncoder);
+                    "dayOfWeek", FieldMetaType.Float, EncoderTypes.ScalarEncoder);
             return fieldEncodings;
         }
 

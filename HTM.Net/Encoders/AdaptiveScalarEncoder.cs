@@ -227,15 +227,15 @@ namespace HTM.Net.Encoders
         {
             this.recordNum += 1;
             bool learn = false;
-            if (!this.encLearningEnabled)
+            if (!encLearningEnabled)
             {
                 learn = true;
             }
             if ((double.IsNaN(input.GetValueOrDefault())) && (input.HasValue))
             {
-                input = AdaptiveScalarEncoder.SENTINEL_VALUE_FOR_MISSING_DATA;
+                input = SENTINEL_VALUE_FOR_MISSING_DATA;
             }
-            if (input == AdaptiveScalarEncoder.SENTINEL_VALUE_FOR_MISSING_DATA)
+            if (double.IsNaN(input.GetValueOrDefault()))
             {
                 return new int[this.n];
             }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -9,14 +8,12 @@ using System.Runtime.Serialization;
 using System.Text;
 using DeepEqual.Syntax;
 using HTM.Net.Algorithms;
+using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Swarming.HyperSearch.Variables;
 using HTM.Net.Util;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using static HTM.Net.Parameters;
-using Tuple = HTM.Net.Util.Tuple;
-using TypeConverter = System.ComponentModel.TypeConverter;
+//using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net
 {
@@ -51,65 +48,71 @@ namespace HTM.Net
             defaultParams.Add(KEY.RANDOM, new MersenneTwister((int)defaultParams[KEY.SEED]));
 
             /////////// Temporal Memory Parameters ///////////
-            ParametersMap defaultTemporalParams = new ParametersMap();
-            defaultTemporalParams.Add(KEY.COLUMN_DIMENSIONS, new int[] { 2048 });
-            defaultTemporalParams.Add(KEY.CELLS_PER_COLUMN, 32);
-            defaultTemporalParams.Add(KEY.ACTIVATION_THRESHOLD, 13);
-            defaultTemporalParams.Add(KEY.LEARNING_RADIUS, 2048);
-            defaultTemporalParams.Add(KEY.MIN_THRESHOLD, 10);
-            defaultTemporalParams.Add(KEY.MAX_NEW_SYNAPSE_COUNT, 20);
-            defaultTemporalParams.Add(KEY.MAX_SYNAPSES_PER_SEGMENT, 255);
-            defaultTemporalParams.Add(KEY.MAX_SEGMENTS_PER_CELL, 255);
-            defaultTemporalParams.Add(KEY.INITIAL_PERMANENCE, 0.21);
-            defaultTemporalParams.Add(KEY.CONNECTED_PERMANENCE, 0.5);
-            defaultTemporalParams.Add(KEY.PERMANENCE_INCREMENT, 0.10);
-            defaultTemporalParams.Add(KEY.PERMANENCE_DECREMENT, 0.10);
-            defaultTemporalParams.Add(KEY.PREDICTED_SEGMENT_DECREMENT, 0.0);
-            defaultTemporalParams.Add(KEY.LEARN, true);
+            ParametersMap defaultTemporalParams = new ParametersMap
+            {
+                { KEY.COLUMN_DIMENSIONS, new int[] { 2048 } },
+                { KEY.CELLS_PER_COLUMN, 32 },
+                { KEY.ACTIVATION_THRESHOLD, 13 },
+                { KEY.LEARNING_RADIUS, 2048 },
+                { KEY.MIN_THRESHOLD, 10 },
+                { KEY.MAX_NEW_SYNAPSE_COUNT, 20 },
+                { KEY.MAX_SYNAPSES_PER_SEGMENT, 255 },
+                { KEY.MAX_SEGMENTS_PER_CELL, 255 },
+                { KEY.INITIAL_PERMANENCE, 0.21 },
+                { KEY.CONNECTED_PERMANENCE, 0.5 },
+                { KEY.PERMANENCE_INCREMENT, 0.10 },
+                { KEY.PERMANENCE_DECREMENT, 0.10 },
+                { KEY.PREDICTED_SEGMENT_DECREMENT, 0.0 },
+                { KEY.LEARN, true }
+            };
             DEFAULTS_TEMPORAL = defaultTemporalParams;
             defaultParams.AddAll(DEFAULTS_TEMPORAL);
 
             //////////// Spatial Pooler Parameters ///////////
-            ParametersMap defaultSpatialParams = new ParametersMap();
-            defaultSpatialParams.Add(KEY.INPUT_DIMENSIONS, new int[] { 64 });
-            defaultSpatialParams.Add(KEY.POTENTIAL_RADIUS, -1);
-            defaultSpatialParams.Add(KEY.POTENTIAL_PCT, 0.5);
-            defaultSpatialParams.Add(KEY.GLOBAL_INHIBITION, false);
-            defaultSpatialParams.Add(KEY.INHIBITION_RADIUS, 0);
-            defaultSpatialParams.Add(KEY.LOCAL_AREA_DENSITY, -1.0);
-            defaultSpatialParams.Add(KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 10.0);
-            defaultSpatialParams.Add(KEY.STIMULUS_THRESHOLD, 0.0);
-            defaultSpatialParams.Add(KEY.SYN_PERM_INACTIVE_DEC, 0.008);
-            defaultSpatialParams.Add(KEY.SYN_PERM_ACTIVE_INC, 0.05);
-            defaultSpatialParams.Add(KEY.SYN_PERM_CONNECTED, 0.10);
-            defaultSpatialParams.Add(KEY.SYN_PERM_BELOW_STIMULUS_INC, 0.01);
-            defaultSpatialParams.Add(KEY.SYN_PERM_TRIM_THRESHOLD, 0.05);
-            defaultSpatialParams.Add(KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.001);
-            defaultSpatialParams.Add(KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.001);
-            defaultSpatialParams.Add(KEY.DUTY_CYCLE_PERIOD, 1000);
-            defaultSpatialParams.Add(KEY.MAX_BOOST, 10.0);
-            defaultSpatialParams.Add(KEY.WRAP_AROUND, true);
-            defaultSpatialParams.Add(KEY.LEARN, true);
-            defaultSpatialParams.Add(KEY.SP_PARALLELMODE, false);   // default off
+            ParametersMap defaultSpatialParams = new ParametersMap
+            {
+                { KEY.INPUT_DIMENSIONS, new int[] { 64 } },
+                { KEY.POTENTIAL_RADIUS, -1 },
+                { KEY.POTENTIAL_PCT, 0.5 },
+                { KEY.GLOBAL_INHIBITION, false },
+                { KEY.INHIBITION_RADIUS, 0 },
+                { KEY.LOCAL_AREA_DENSITY, -1.0 },
+                { KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 10.0 },
+                { KEY.STIMULUS_THRESHOLD, 0.0 },
+                { KEY.SYN_PERM_INACTIVE_DEC, 0.008 },
+                { KEY.SYN_PERM_ACTIVE_INC, 0.05 },
+                { KEY.SYN_PERM_CONNECTED, 0.10 },
+                { KEY.SYN_PERM_BELOW_STIMULUS_INC, 0.01 },
+                { KEY.SYN_PERM_TRIM_THRESHOLD, 0.05 },
+                { KEY.MIN_PCT_OVERLAP_DUTY_CYCLES, 0.001 },
+                { KEY.MIN_PCT_ACTIVE_DUTY_CYCLES, 0.001 },
+                { KEY.DUTY_CYCLE_PERIOD, 1000 },
+                { KEY.MAX_BOOST, 10.0 },
+                { KEY.WRAP_AROUND, true },
+                { KEY.LEARN, true },
+                { KEY.SP_PARALLELMODE, false }   // default off
+            };
             DEFAULTS_SPATIAL = defaultSpatialParams;
             defaultParams.AddAll(DEFAULTS_SPATIAL);
 
             ///////////  Encoder Parameters ///////////
-            ParametersMap defaultEncoderParams = new ParametersMap();
-            defaultEncoderParams.Add(KEY.N, 500);
-            defaultEncoderParams.Add(KEY.W, 21);
-            defaultEncoderParams.Add(KEY.MIN_VAL, 0.0);
-            defaultEncoderParams.Add(KEY.MAX_VAL, 1000.0);
-            defaultEncoderParams.Add(KEY.RADIUS, 21.0);
-            defaultEncoderParams.Add(KEY.RESOLUTION, 1.0);
-            defaultEncoderParams.Add(KEY.PERIODIC, false);
-            defaultEncoderParams.Add(KEY.CLIP_INPUT, false);
-            defaultEncoderParams.Add(KEY.FORCED, false);
-            defaultEncoderParams.Add(KEY.FIELD_NAME, "UNSET");
-            defaultEncoderParams.Add(KEY.FIELD_TYPE, "int");
-            defaultEncoderParams.Add(KEY.ENCODER, "ScalarEncoder");
-            defaultEncoderParams.Add(KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
-            defaultEncoderParams.Add(KEY.AUTO_CLASSIFY, false);
+            ParametersMap defaultEncoderParams = new ParametersMap
+            {
+                { KEY.N, 500 },
+                { KEY.W, 21 },
+                { KEY.MIN_VAL, 0.0 },
+                { KEY.MAX_VAL, 1000.0 },
+                { KEY.RADIUS, 21.0 },
+                { KEY.RESOLUTION, 1.0 },
+                { KEY.PERIODIC, false },
+                { KEY.CLIP_INPUT, false },
+                { KEY.FORCED, false },
+                { KEY.FIELD_NAME, "UNSET" },
+                { KEY.FIELD_TYPE, "int" },
+                { KEY.ENCODER, "ScalarEncoder" },
+                { KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>() },
+                { KEY.AUTO_CLASSIFY, false }
+            };
             DEFAULTS_ENCODER = defaultEncoderParams;
             defaultParams.AddAll(DEFAULTS_ENCODER);
 
@@ -124,24 +127,26 @@ namespace HTM.Net
             defaultParams.AddAll(defaultClassifierParams);
 
             ////////////////// KNNClassifier Defaults ///////////////////
-            ParametersMap defaultKNNParams = new ParametersMap();
-            defaultKNNParams.Add(KEY.K, 1);
-            defaultKNNParams.Add(KEY.EXACT, false);
-            defaultKNNParams.Add(KEY.DISTANCE_NORM, 2.0);
-            defaultKNNParams.Add(KEY.DISTANCE_METHOD, DistanceMethod.Norm);
-            defaultKNNParams.Add(KEY.DISTANCE_THRESHOLD, .0);
-            defaultKNNParams.Add(KEY.DO_BINARIZATION, false);
-            defaultKNNParams.Add(KEY.BINARIZATION_THRESHOLD, 0.5);
-            defaultKNNParams.Add(KEY.USE_SPARSE_MEMORY, true);
-            defaultKNNParams.Add(KEY.SPARSE_THRESHOLD, 0.1);
-            defaultKNNParams.Add(KEY.RELATIVE_THRESHOLD, false);
-            defaultKNNParams.Add(KEY.NUM_WINNERS, 0);
-            defaultKNNParams.Add(KEY.NUM_SVD_SAMPLES, -1);
-            defaultKNNParams.Add(KEY.NUM_SVD_DIMS, null);
-            defaultKNNParams.Add(KEY.FRACTION_OF_MAX, -1.0);
-            defaultKNNParams.Add(KEY.MAX_STORED_PATTERNS, -1);
-            defaultKNNParams.Add(KEY.REPLACE_DUPLICATES, false);
-            defaultKNNParams.Add(KEY.KNN_CELLS_PER_COL, 0);
+            ParametersMap defaultKNNParams = new ParametersMap
+            {
+                { KEY.K, 1 },
+                { KEY.EXACT, false },
+                { KEY.DISTANCE_NORM, 2.0 },
+                { KEY.DISTANCE_METHOD, DistanceMethod.Norm },
+                { KEY.DISTANCE_THRESHOLD, .0 },
+                { KEY.DO_BINARIZATION, false },
+                { KEY.BINARIZATION_THRESHOLD, 0.5 },
+                { KEY.USE_SPARSE_MEMORY, true },
+                { KEY.SPARSE_THRESHOLD, 0.1 },
+                { KEY.RELATIVE_THRESHOLD, false },
+                { KEY.NUM_WINNERS, 0 },
+                { KEY.NUM_SVD_SAMPLES, -1 },
+                { KEY.NUM_SVD_DIMS, null },
+                { KEY.FRACTION_OF_MAX, -1.0 },
+                { KEY.MAX_STORED_PATTERNS, -1 },
+                { KEY.REPLACE_DUPLICATES, false },
+                { KEY.KNN_CELLS_PER_COL, 0 }
+            };
             DEFAULTS_KNN = defaultKNNParams;
             defaultParams.AddAll(DEFAULTS_KNN);
 
@@ -178,25 +183,23 @@ namespace HTM.Net
             public static readonly KEY SEED = new KEY("seed", typeof(int));
 
             /////////// Temporal Memory Parameters ///////////
-            /**
-             * If the number of active connected synapses on a segment
-             * is at least this threshold, the segment is said to be active.
-             */
+            /// <summary>
+            /// If the number of active connected synapses on a segment
+            /// is at least this threshold, the segment is said to be active.
+            /// </summary>
             public static readonly KEY ACTIVATION_THRESHOLD = new KEY("activationThreshold", typeof(int), 0, null);
-            /**
-             * Radius around cell from which it can
-             * sample to form distal {@link DistalDendrite} connections.
-             */
+            /// <summary>
+            /// Radius around cell from which it can sample to form distal <see cref="DistalDendrite"/> connections.
+            /// </summary>
             public static readonly KEY LEARNING_RADIUS = new KEY("learningRadius", typeof(int), 0, null);
-            /**
-             * If the number of synapses active on a segment is at least this
-             * threshold, it is selected as the best matching
-             * cell in a bursting column.
-             */
+            /// <summary>
+            /// If the number of synapses active on a segment is at least this
+            /// threshold, it is selected as the best matching cell in a bursting column.
+            /// </summary>
             public static readonly KEY MIN_THRESHOLD = new KEY("minThreshold", typeof(int), 0, null);
-            /**
-             * The maximum number of synapses added to a segment during learning.
-             */
+            /// <summary>
+            /// The maximum number of synapses added to a segment during learning.
+            /// </summary>
             public static readonly KEY MAX_NEW_SYNAPSE_COUNT = new KEY("maxNewSynapseCount", typeof(int));
             /**
              * The maximum number of synapses that can be added to a segment.
@@ -239,9 +242,35 @@ namespace HTM.Net
             public static readonly KEY INPUT_DIMENSIONS = new KEY("inputDimensions", typeof(int[]));
             public static readonly KEY POTENTIAL_RADIUS = new KEY("potentialRadius", typeof(int));
             public static readonly KEY POTENTIAL_PCT = new KEY("potentialPct", typeof(double)); //TODO add range here?
+            /// <summary>
+            /// If true, then during inhibition phase the winning
+            ///  columns are selected as the most active columns from
+            ///  the region as a whole. Otherwise, the winning columns
+            ///  are selected with respect to their local
+            ///  neighborhoods. Using global inhibition boosts
+            ///  performance x60.
+            /// </summary>
             public static readonly KEY GLOBAL_INHIBITION = new KEY("globalInhibition", typeof(bool));
             public static readonly KEY INHIBITION_RADIUS = new KEY("inhibitionRadius", typeof(int), 0, null);
             public static readonly KEY LOCAL_AREA_DENSITY = new KEY("localAreaDensity", typeof(double)); //TODO add range here?
+            /// <summary>
+            /// An alternate way to control the density of the active
+            /// columns. If numActivePerInhArea is specified then
+            /// localAreaDensity must be less than 0, and vice versa.
+            /// When using numActivePerInhArea, the inhibition logic
+            /// will insure that at most 'numActivePerInhArea'
+            /// columns remain ON within a local inhibition area (the
+            /// size of which is set by the internally calculated
+            /// inhibitionRadius, which is in turn determined from
+            /// the average size of the connected receptive fields of
+            /// all columns). When using this method, as columns
+            /// learn and grow their effective receptive fields, the
+            /// inhibitionRadius will grow, and hence the net density
+            /// of the active columns will *decrease*. This is in
+            /// contrast to the localAreaDensity method, which keeps
+            /// the density of active columns the same regardless of
+            /// the size of their receptive fields.
+            /// </summary>
             public static readonly KEY NUM_ACTIVE_COLUMNS_PER_INH_AREA = new KEY("numActiveColumnsPerInhArea", typeof(double));//TODO add range here?
             public static readonly KEY STIMULUS_THRESHOLD = new KEY("stimulusThreshold", typeof(double)); //TODO add range here?
             public static readonly KEY SYN_PERM_INACTIVE_DEC = new KEY("synPermInactiveDec", typeof(double), 0.0, 1.0);
@@ -285,18 +314,20 @@ namespace HTM.Net
             /// The maximum value of the input signal.
             /// </summary>
             public static readonly KEY MAX_VAL = new KEY("maxVal", typeof(double));
-            /**
-             * inputs separated by more than, or equal to this distance will have non-overlapping
-             * representations
-             */
+            /// <summary>
+            /// inputs separated by more than, or equal to this distance will have non-overlapping
+            /// representations
+            /// </summary>
             public static readonly KEY RADIUS = new KEY("radius", typeof(double));
-            /** inputs separated by more than, or equal to this distance will have different representations */
+            /// <summary>
+            /// inputs separated by more than, or equal to this distance will have different representations
+            /// </summary>
             public static readonly KEY RESOLUTION = new KEY("resolution", typeof(double));
-            /**
-             * If true, then the input value "wraps around" such that minval = maxval
-             * For a periodic value, the input must be strictly less than maxval,
-             * otherwise maxval is a true upper bound.
-             */
+            /// <summary>
+            /// If true, then the input value "wraps around" such that minval = maxval
+            /// For a periodic value, the input must be strictly less than maxval,
+            /// otherwise maxval is a true upper bound.
+            /// </summary>
             public static readonly KEY PERIODIC = new KEY("periodic", typeof(bool));
             /** 
              * if true, non-periodic inputs smaller than minval or greater
@@ -342,22 +373,19 @@ namespace HTM.Net
 
             // How many bits to use if encoding the respective date fields.
             // e.g. Tuple(bits to use:int, radius:double)
-            public static readonly KEY DATEFIELD_SEASON = new KEY("season", typeof(BitsTuple));
+            public static readonly KEY DATEFIELD_SEASON = new KEY(DateEncoderSelection.Season.ToString(), typeof(SeasonTuple));
             /// <summary>
             /// Day of week
             /// </summary>
-            public static readonly KEY DATEFIELD_DOFW = new KEY("dayOfWeek", typeof(BitsTuple));
-            public static readonly KEY DATEFIELD_WKEND = new KEY("weekend", typeof(BitsTuple));
-            public static readonly KEY DATEFIELD_HOLIDAY = new KEY("holiday", typeof(BitsTuple));
-            /// <summary>
-            /// Hours of week
-            /// </summary>
-            public static readonly KEY DATEFIELD_HOW = new KEY("dayOfWeek", typeof(BitsTuple));
+            public static readonly KEY DATEFIELD_DOFW = new KEY(DateEncoderSelection.DayOfWeek.ToString(), typeof(DayOfWeekTuple));
+            public static readonly KEY DATEFIELD_WKEND = new KEY(DateEncoderSelection.Weekend.ToString(), typeof(WeekendTuple));
+            public static readonly KEY DATEFIELD_HOLIDAY = new KEY(DateEncoderSelection.Holiday.ToString(), typeof(HolidayTuple));
+
             /// <summary>
             /// Time of day
             /// </summary>
-            public static readonly KEY DATEFIELD_TOFD = new KEY("timeOfDay", typeof(BitsTuple));
-            public static readonly KEY DATEFIELD_CUSTOM = new KEY("customDays", typeof(Tuple)); // e.g. Tuple(bits:int, List<String>:"mon,tue,fri")
+            public static readonly KEY DATEFIELD_TOFD = new KEY(DateEncoderSelection.TimeOfDay.ToString(), typeof(TimeOfDayTuple));
+            public static readonly KEY DATEFIELD_CUSTOM = new KEY(DateEncoderSelection.CustomDays.ToString(), typeof(CustomDaysTuple)); // e.g. Tuple(bits:int, List<String>:"mon,tue,fri")
             public static readonly KEY DATEFIELD_PATTERN = new KEY("formatPattern", typeof(string));
             public static readonly KEY DATEFIELD_FORMATTER = new KEY("dateFormatter", typeof(DateTimeFormatInfo));
 
@@ -715,9 +743,9 @@ namespace HTM.Net
         }
 
         /**
-         * Factory method. Return temporal {@link Parameters} object with default values
+         * Factory method. Return temporal <see cref="Parameters"/> object with default values
          *
-         * @return {@link Parameters} object
+         * @return <see cref="Parameters"/> object
          */
         public static Parameters GetTemporalDefaultParameters()
         {
@@ -725,26 +753,26 @@ namespace HTM.Net
         }
 
         /**
-         * Factory method. Return spatial {@link Parameters} object with default values
+         * Factory method. Return spatial <see cref="Parameters"/> object with default values
          *
-         * @return {@link Parameters} object
+         * @return <see cref="Parameters"/> object
          */
         public static Parameters GetSpatialDefaultParameters()
         {
             return GetParameters(DEFAULTS_SPATIAL);
         }
 
-        /**
-         * Factory method. Return Encoder {@link Parameters} object with default values
-         * @return
-         */
+        /// <summary>
+        /// Factory method. Return Encoder <see cref="Parameters"/> object with default values
+        /// </summary>
+        /// <returns>Return Encoder <see cref="Parameters"/> object with default values</returns>
         public static Parameters GetEncoderDefaultParameters()
         {
             return GetParameters(DEFAULTS_ENCODER);
         }
 
         /// <summary>
-        /// Factory method. Return KNNClassifier {@link Parameters} object with default values
+        /// Factory method. Return KNNClassifier <see cref="Parameters"/> object with default values
         /// </summary>
         /// <returns></returns>
         public static Parameters GetKnnDefaultParameters()
@@ -752,12 +780,12 @@ namespace HTM.Net
             return GetParameters(DEFAULTS_KNN);
         }
 
-        /**
-         * Called internally to populate a {@link Parameters} object with the keys
-         * and values specified in the passed in map.
-         *
-         * @return {@link Parameters} object
-         */
+        /// <summary>
+        /// Called internally to populate a <see cref="Parameters"/> object with the keys
+        /// and values specified in the passed in map.
+        /// </summary>
+        /// <param name="map">Key-value map to use for filling</param>
+        /// <returns><see cref= "Parameters" /> object</returns>
         private static Parameters GetParameters(IDictionary<KEY, object> map)
         {
             Parameters result = new Parameters();
@@ -1469,7 +1497,7 @@ namespace HTM.Net
             return hc;
         }
 
-        public override bool Equals(Object obj)
+        public override bool Equals(object obj)
         {
             if (this == obj)
                 return true;
@@ -1485,7 +1513,7 @@ namespace HTM.Net
             }
             else
             {
-                Type[] classArray = new Type[] { typeof(Object) };
+                Type[] classArray = new Type[] { typeof(object) };
                 try
                 {
                     foreach (KEY key in _paramMap.Keys)
@@ -1525,20 +1553,19 @@ namespace HTM.Net
             return true;
         }
 
-        /**
-             * Returns a flag indicating whether the type is an equality
-             * special case.
-             * @param key       the {@link KEY}
-             * @param klazz     the class of the type being considered.
-             * @return
-             */
+        /// <summary>
+        /// Returns a flag indicating whether the type is an equality special case.
+        /// </summary>
+        /// <param name="key">The related KEY</param>
+        /// <param name="klazz">the class of the type being considered.</param>
+        /// <returns>true or false</returns>
         private bool IsSpecial(KEY key, Type klazz)
         {
             if (typeof(int[]).IsAssignableFrom(klazz) || key == KEY.FIELD_ENCODING_MAP)
             {
-
                 return true;
             }
+
             return false;
         }
     }
@@ -1590,13 +1617,13 @@ namespace HTM.Net
         }
     }
 
-    public class ParametersMapTypeConverter : JsonConverter<ParametersMap>
+    public class ParametersMapTypeConverter : JsonConverter<Parameters.ParametersMap>
     {
         public override bool CanWrite => true;
 
         public override bool CanRead => true;
 
-        public override void WriteJson(JsonWriter writer, ParametersMap value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, Parameters.ParametersMap value, JsonSerializer serializer)
         {
             var origHandling = serializer.TypeNameHandling;
             serializer.TypeNameHandling = TypeNameHandling.Objects;
@@ -1618,17 +1645,17 @@ namespace HTM.Net
             serializer.TypeNameHandling = origHandling;
         }
 
-        public override ParametersMap ReadJson(JsonReader reader, Type objectType, ParametersMap existingValue, bool hasExistingValue, JsonSerializer serializer)
+        public override Parameters.ParametersMap ReadJson(JsonReader reader, Type objectType, Parameters.ParametersMap existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
             var origHandling = serializer.TypeNameHandling;
             serializer.TypeNameHandling = TypeNameHandling.Objects;
-            ParametersMap map = existingValue ?? new ParametersMap();
+            Parameters.ParametersMap map = existingValue ?? new Parameters.ParametersMap();
 
             reader.Read(); // start object
 
             do
             {
-                KEY key = serializer.Deserialize<KEY>(reader);
+                Parameters.KEY key = serializer.Deserialize<Parameters.KEY>(reader);
                 reader.Read();
 
                 object obj;

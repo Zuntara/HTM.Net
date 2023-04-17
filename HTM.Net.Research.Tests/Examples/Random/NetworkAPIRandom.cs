@@ -11,6 +11,7 @@ using HTM.Net.Datagen;
 using HTM.Net.Encoders;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
+using HTM.Net.Research.Tests.Examples.Sine;
 using HTM.Net.Research.Tests.Properties;
 using HTM.Net.Util;
 using MathNet.Numerics.Statistics;
@@ -83,14 +84,21 @@ namespace HTM.Net.Research.Tests.Examples.Random
                 ("Number 6", typeof(CLAClassifier)),
                 ("Bonus", typeof(CLAClassifier))));
 
-            return Network.Network.Create("RandomData Demo", p)
+            return NetworkBuilder.Create("RandomData API Demo", p)
+                .AddRegion("Region 1",
+                    b => b.AddLayer("Layer 2/3",
+                        LayerMask.SpatialPooler | LayerMask.AnomalyComputer | LayerMask.TemporalMemory,
+                        autoClassify: true, sensor: sensor))
+                .Build();
+
+            /*return Network.Network.Create("RandomData Demo", p)
                 .Add(Network.Network.CreateRegion("Region 1")
                     .Add(Network.Network.CreateLayer("Layer 2/3", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                         .Add(Anomaly.Create())
                         .Add(new TemporalMemory())
                         .Add(new Algorithms.SpatialPooler())
-                        .Add(sensor)));
+                        .Add(sensor)));*/
         }
 
         private static Map<string, Type> GetInferredFieldsMap(
@@ -142,11 +150,11 @@ namespace HTM.Net.Research.Tests.Examples.Random
 
                 // Statistical good numbers for chances
                 List<int[]> goodChances = GetBestChances(_offsetFromEnd + 1);
-                foreach (int[] chance in goodChances)
+                /*foreach (int[] chance in goodChances)
                 {
                     gd.AddPrediction(chance.Select(c => (double)c).ToArray(), false);
                     gd.NextPredictions.Add(chance);
-                }
+                }*/
                 gd.NextPredictions = gd.NextPredictions.Take(10).ToList();
 
                 _predictedValues = newPredictions;
@@ -251,8 +259,8 @@ namespace HTM.Net.Research.Tests.Examples.Random
         {
             List<MinMax> minmaxMap = GetFieldStatistics();
 
-            int outputN = 63;
-            int outputW = 21;
+            int outputN = 45 * 12;
+            int outputW = (outputN / 11) + ((outputN / 11.0) % 2 == 0 ?  1 : 0);
 
             EncoderSettingsList fieldEncodings = NetworkDemoHarness.SetupMap(
                     null,
@@ -262,51 +270,52 @@ namespace HTM.Net.Research.Tests.Examples.Random
                     "Date", FieldMetaType.DateTime, EncoderTypes.DateEncoder);
 
             fieldEncodings = NetworkDemoHarness.SetupMap(
-                    fieldEncodings,
+                fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[0].Min(), minmaxMap[0].Max(), 0, 0, null, null, true,
-                    $"Number 1", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[0].Min(), minmaxMap[0].Max(), 1, 1, null, null, true,
+                    $"Number 1", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
             fieldEncodings = NetworkDemoHarness.SetupMap(
                     fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[1].Min(), minmaxMap[1].Max(), 0, 0, null, null, true,
-                    $"Number 2", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[1].Min(), minmaxMap[1].Max(), 1, 1, null, null, true,
+                    $"Number 2", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
             fieldEncodings = NetworkDemoHarness.SetupMap(
                     fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[2].Min(), minmaxMap[2].Max(), 0, 0, null, null, true,
-                    $"Number 3", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[2].Min(), minmaxMap[2].Max(), 1, 1, null, null, true,
+                    $"Number 3", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
             fieldEncodings = NetworkDemoHarness.SetupMap(
                     fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[3].Min(), minmaxMap[3].Max(), 0, 0, null, null, true,
-                    $"Number 4", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[3].Min(), minmaxMap[3].Max(), 1, 1, null, null, true,
+                    $"Number 4", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
             fieldEncodings = NetworkDemoHarness.SetupMap(
                     fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[4].Min(), minmaxMap[4].Max(), 0, 0, null, null, true,
-                    $"Number 5", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[4].Min(), minmaxMap[4].Max(), 1, 1, null, null, true,
+                    $"Number 5", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
             fieldEncodings = NetworkDemoHarness.SetupMap(
                     fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[5].Min(), minmaxMap[5].Max(), 0, 0, null, null, true,
-                    $"Number 6", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[5].Min(), minmaxMap[5].Max(), 1, 1, null, null, true,
+                    $"Number 6", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
 
 
             fieldEncodings = NetworkDemoHarness.SetupMap(
                     fieldEncodings,
                     outputN,
                     outputW,
-                    minmaxMap[6].Min(), minmaxMap[6].Max(), 0, 0, null, null, true,
-                    "Bonus", FieldMetaType.Integer, EncoderTypes.ScalarEncoder);
+                    minmaxMap[6].Min(), minmaxMap[6].Max(), 1, 1, null, null, true,
+                    "Bonus", FieldMetaType.Integer, EncoderTypes.RandomDistributedScalarEncoder);
 
-            fieldEncodings["Date"].dayOfWeek = new DayOfWeekTuple(1, 1.0); // Day of week
+            fieldEncodings["Date"].DayOfWeek = new DayOfWeekTuple(7, 1.0); // Day of week
+            fieldEncodings["Date"].Season = new SeasonTuple(3, 95.5); // Season
             //fieldEncodings["Date"].timeOfDay = new Tuple(5, 4.0); // Time of day
             fieldEncodings["Date"].formatPattern = "dd/MM/YY";
 

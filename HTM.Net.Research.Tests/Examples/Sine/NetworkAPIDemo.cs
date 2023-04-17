@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Text;
 using HTM.Net.Algorithms;
 using HTM.Net.Network;
 using HTM.Net.Network.Sensor;
@@ -15,6 +14,9 @@ using HTM.Net.Util;
 
 namespace HTM.Net.Research.Tests.Examples.Sine
 {
+
+
+
     /**
  * Demonstrates the Java version of the NuPIC Network API (NAPI) Demo.
  *
@@ -44,7 +46,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
         private readonly StreamWriter _pw;
 
         private double _predictedValue = 0.0;
-        private List<PredictionValue> _predictions;
+        internal List<PredictionValue> _predictions;
 
         public NetworkAPIDemo(Mode mode)
         {
@@ -82,8 +84,9 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("sinedata", typeof(CLAClassifier)));
 
             // This is how easy it is to create a full running Network!
-            var sineData = SineGenerator.GenerateSineWave(100, 100*20, 10, 1)
-                .Select(s => s.ToString(NumberFormatInfo.InvariantInfo));
+            var sineData = SineGenerator.GenerateSineWave(100, 2000, 10, 1)
+                .Select(s => Math.Round(s, 1).ToString(NumberFormatInfo.InvariantInfo))
+                .ToArray();
 
             string[] header = new[]
             {
@@ -92,18 +95,25 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 ""
             };
 
-            object[] n = { "sine", header.Union(sineData).ToObservable() };
+            object[] n = { "sine", header.Concat(sineData).ToObservable() };
             SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, n);
             Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(ObservableSensor<string[]>.Create, parms);
 
-            return Network.Network.Create("Network API Demo", p)
+            return NetworkBuilder.Create("Network API Demo", p)
+                .AddRegion("Region 1",
+                    b => b.AddLayer("Layer 2/3",
+                        LayerMask.SpatialPooler | LayerMask.AnomalyComputer | LayerMask.TemporalMemory,
+                        autoClassify: true, sensor: sensor))
+                .Build();
+
+            /*return Network.Network.Create("Network API Demo", p)
                 .Add(Network.Network.CreateRegion("Region 1")
                 .Add(Network.Network.CreateLayer("Layer 2/3", p)
                 .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
                 .Add(Anomaly.Create())
                 .Add(new TemporalMemory())
                 .Add(new Algorithms.SpatialPooler())
-                .Add(sensor)));
+                .Add(sensor)));*/
         }
 
         /**
@@ -120,8 +130,8 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("sinedata", typeof(CLAClassifier)));
 
             // This is how easy it is to create a full running Network!
-            var sineData = SineGenerator.GenerateSineWave(100, 100 * 20, 10, 1)
-                .Select(s => s.ToString(NumberFormatInfo.InvariantInfo));
+            var sineData = SineGenerator.GenerateSineWave(100, 5000, 10, 1)
+                .Select(s => Math.Round(s, 1).ToString(NumberFormatInfo.InvariantInfo));
 
             string[] header = new[]
             {
@@ -130,7 +140,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 ""
             };
 
-            object[] n = { "sine", header.Union(sineData).ToObservable() };
+            object[] n = { "sine", header.Concat(sineData).ToObservable() };
             SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, n);
             Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(ObservableSensor<string[]>.Create, parms);
 
@@ -161,8 +171,8 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             p = p.Union(NetworkDemoHarness.GetNetworkDemoTestEncoderParams());
             p.SetParameterByKey(Parameters.KEY.INFERRED_FIELDS, GetInferredFieldsMap("sinedata", typeof(CLAClassifier)));
 
-            var sineData = SineGenerator.GenerateSineWave(100, 100 * 20, 10, 1)
-                .Select(s => s.ToString(NumberFormatInfo.InvariantInfo));
+            var sineData = SineGenerator.GenerateSineWave(100, 5000, 10, 1)
+                .Select(s => Math.Round(s, 1).ToString(NumberFormatInfo.InvariantInfo));
 
             string[] header = new[]
             {
@@ -171,12 +181,24 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 ""
             };
 
-            object[] n = { "sine", header.Union(sineData).ToObservable() };
+            object[] n = { "sine", header.Concat(sineData).ToObservable() };
             SensorParams parms = SensorParams.Create(SensorParams.Keys.Obs, n);
             Sensor<ObservableSensor<string[]>> sensor = Sensor<ObservableSensor<string[]>>.Create(ObservableSensor<string[]>.Create, parms);
 
-
-            return Network.Network.Create("Network API Demo", p)
+            var network = NetworkBuilder.Create("Network Demo", p)
+                .AddRegion("Region 1", rb => rb
+                    .AddLayer("Layer 2/3", LayerMask.AnomalyComputer | LayerMask.TemporalMemory, p: p,
+                        autoClassify: true)
+                    .AddLayer("Layer 4", LayerMask.SpatialPooler, connectToPrev: true, p: p))
+                .AddRegion("Region 2", rb => rb
+                        .AddLayer("Layer 2/3",
+                            LayerMask.AnomalyComputer | LayerMask.TemporalMemory | LayerMask.SpatialPooler, p: p,
+                            autoClassify: true)
+                        .AddLayer("Layer 4", LayerMask.None, connectToPrev: true, sensor: sensor),
+                    connectToPrev: true)
+                .Build();
+            return network;
+            /*return Network.Network.Create("Network API Demo", p)
                 .Add(Network.Network.CreateRegion("Region 1")
                     .Add(Network.Network.CreateLayer("Layer 2/3", p)
                         .AlterParameter(Parameters.KEY.AUTO_CLASSIFY, true)
@@ -194,7 +216,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                     .Add(Network.Network.CreateLayer("Layer 4", p)
                         .Add(sensor))
                     .Connect("Layer 2/3", "Layer 4"))
-               .Connect("Region 1", "Region 2");
+               .Connect("Region 1", "Region 2");*/
 
         }
 
@@ -218,6 +240,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 //Debug.WriteLine("Writing to file");
                 WriteToFile(output, "sinedata");
                 RecordStep(output, "sinedata");
+                _pw.Flush();
             }, Console.WriteLine, () =>
             {
                 Console.WriteLine("Stream completed. see output: " + _outputFile.FullName);
@@ -229,6 +252,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
+                    
                 }
             });
         }
@@ -255,21 +279,18 @@ namespace HTM.Net.Research.Tests.Examples.Sine
                 if (infer.GetRecordNum() > 0)
                 {
                     double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
-                    double error = Math.Abs(_predictedValue - actual);
-                    StringBuilder sb = new StringBuilder()
-                            .Append(infer.GetRecordNum()).Append(", ")
-                            //.Append("classifier input=")
-                            .Append(string.Format("{0}", actual.ToString(NumberFormatInfo.InvariantInfo))).Append(",")
-                            //.Append("prediction= ")
-                            .Append(string.Format("{0}", _predictedValue.ToString(NumberFormatInfo.InvariantInfo))).Append(",")
-                            .Append(string.Format("{0}", error.ToString(NumberFormatInfo.InvariantInfo))).Append(",")
-                            //.Append("anomaly score=")
-                            .Append(infer.GetAnomalyScore().ToString(NumberFormatInfo.InvariantInfo));
-                    _pw.WriteLine(sb.ToString());
+                    double error = Math.Round(Math.Abs(Math.Round(_predictedValue, 2) - actual), 2);
+                    string line = $"{infer.GetRecordNum(),-10}" +
+                                  $"{actual.ToString(NumberFormatInfo.InvariantInfo),-10}" +
+                                  $"{_predictedValue.ToString(NumberFormatInfo.InvariantInfo),-10}" +
+                                  $"{error.ToString(NumberFormatInfo.InvariantInfo),-10}" +
+                                  $"{infer.GetAnomalyScore().ToString(NumberFormatInfo.InvariantInfo),-10}";
+                    
+                    _pw.WriteLine(line);
                     _pw.Flush();
                     if (infer.GetRecordNum() % 100 == 0)
                     {
-                        Console.WriteLine(sb.ToString());
+                        Console.WriteLine(line);
                     }
                 }
                 _predictedValue = newPrediction;
@@ -292,10 +313,11 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             else {
                 newPrediction = _predictedValue;
             }
+
             if (infer.GetRecordNum() > 0)
             {
                 double actual = (double)infer.GetClassifierInput()[classifierField].Get("inputValue");
-                double error = Math.Abs(_predictedValue - actual);
+                double error = Math.Abs(newPrediction - actual);
 
                 PredictionValue value = new PredictionValue();
                 value.RecordNum = infer.GetRecordNum();
@@ -317,6 +339,19 @@ namespace HTM.Net.Research.Tests.Examples.Sine
 
             _network.Start();
             _network.GetHead().GetHead().GetLayerThread().Wait();
+        }
+
+        public double GetAccurancy(double rangePct, bool fromBehind)
+        {
+            int totalLength = _predictions.Count;
+            int takeRange = (int)(totalLength * rangePct);
+            if (fromBehind)
+            {
+                int offset = totalLength - takeRange;
+                return _predictions.Skip(offset).Average(p => p.PredictionError);
+            }
+
+            return _predictions.Take(takeRange).Average(p => p.PredictionError);
         }
 
         public double GetTotalAccurancy(double rangePct, bool fromBehind)
@@ -353,7 +388,7 @@ namespace HTM.Net.Research.Tests.Examples.Sine
             return inferredFieldsMap;
         }
 
-        public class PredictionValue
+        public record PredictionValue
         {
             public int RecordNum { get; set; }
             public double ActualValue { get; set; }
