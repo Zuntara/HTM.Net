@@ -159,21 +159,55 @@ namespace HTM.Net.Model
          * to be connected.
          */
         private double connectedPermanence = 0.50;
-        /**
-         * Amount by which permanences of synapses
-         * are incremented during learning.
-         */
+        /// <summary>
+        /// Amount by which permanences of synapses are incremented during learning.
+        /// </summary>
         private double permanenceIncrement = 0.10;
-        /**
-         * Amount by which permanences of synapses
-         * are decremented during learning.
-         */
+        /// <summary>
+        /// Amount by which permanences of synapses are decremented during learning.
+        /// </summary>
         private double permanenceDecrement = 0.10;
 
         /** The main data structure containing columns, cells, and synapses */
         private SparseObjectMatrix<Column> memory;
 
         private Cell[] cells;
+
+        /////////////////////////////////////// Apical Temporal Memory Vars ///////////////////////////////////////////
+
+        /// <summary>
+        /// The number of bits in the basal input
+        /// </summary>
+        protected int basalInputSize = 0;
+        /// <summary>
+        /// The number of bits in the apical input
+        /// </summary>
+        protected int apicalInputSize = 0;
+        /// <summary>
+        /// The activation threshold of basal (lateral) segments for cells that have
+        /// active apical segments.If equal to activationThreshold(default),
+        /// this parameter has no effect.
+        /// </summary>
+        protected int reducedBasalThreshold = 13;
+        /// <summary>
+        /// How much of the active SDR to sample with synapses.
+        /// </summary>
+        protected int sampleSize = 13;
+        /// <summary>
+        /// Amount by which segments are punished for incorrect predictions.
+        /// </summary>
+        private double apicalPredictedSegmentDecrement = 0.0;
+        /// <summary>
+        /// Amount by which segments are punished for incorrect predictions.
+        /// </summary>
+        private double basalPredictedSegmentDecrement = 0.0;
+
+        protected SparseObjectMatrix<Column> basalConnections;
+        protected SparseObjectMatrix<Column> apicalConnections;
+        protected List<DistalDendrite> activeBasalSegments = new List<DistalDendrite>();
+        protected List<DistalDendrite> activeApicalSegments = new List<DistalDendrite>();
+        protected List<DistalDendrite> matchingBasalSegments = new List<DistalDendrite>();
+        protected List<DistalDendrite> matchingApicalSegments = new List<DistalDendrite>();
 
         ///////////////////////   Structural Elements /////////////////////////
         /** Reverse mapping from source cell to {@link Synapse} */
@@ -1330,6 +1364,86 @@ namespace HTM.Net.Model
             this.boostFactors = boostFactors;
         }
 
+        // Apical methods
+        public void SetApicalInputSize(int apicalInputSize)
+        {
+            this.apicalInputSize = apicalInputSize;
+        }
+
+        public int GetApicalInputSize()
+        {
+            return apicalInputSize;
+        }
+
+        public void SetBasalInputSize(int basalInputSize)
+        {
+            this.basalInputSize = basalInputSize;
+        }
+
+        public int GetBasalInputSize()
+        {
+            return basalInputSize;
+        }
+
+        public void SetReducedBasalThreshold(int reducedBasalThreshold)
+        {
+            this.reducedBasalThreshold = reducedBasalThreshold;
+        }
+
+        public int GetReducedBasalThreshold()
+        {
+            return reducedBasalThreshold;
+        }
+
+        public void SetSampleSize(int sampleSize)
+        {
+            this.sampleSize = sampleSize;
+        }
+
+        public int GetSampleSize()
+        {
+            return sampleSize;
+        }
+
+        public void SetApicalPredictedSegmentDecrement(double apicalPredictedSegmentDecrement)
+        {
+            this.apicalPredictedSegmentDecrement = apicalPredictedSegmentDecrement;
+        }
+
+        public double GetApicalPredictedSegmentDecrement()
+        {
+            return apicalPredictedSegmentDecrement;
+        }
+
+        public void SetBasalPredictedSegmentDecrement(double basalPredictedSegmentDecrement)
+        {
+            this.basalPredictedSegmentDecrement = basalPredictedSegmentDecrement;
+        }
+
+        public double GetBasalPredictedSegmentDecrement()
+        {
+            return basalPredictedSegmentDecrement;
+        }
+
+        public void SetBasalConnections(SparseObjectMatrix<Column> basalConnections)
+        {
+            this.basalConnections = basalConnections;
+        }
+
+        public SparseObjectMatrix<Column> GetBasalConnections()
+        {
+            return this.basalConnections;
+        }
+
+        public void SetApicalConnections(SparseObjectMatrix<Column> apicalConnections)
+        {
+            this.apicalConnections = apicalConnections;
+        }
+
+        public SparseObjectMatrix<Column> GetApicalConnections()
+        {
+            return this.apicalConnections;
+        }
 
         ////////////////////////////////////////
         //       TemporalMemory Methods       //

@@ -629,6 +629,31 @@ namespace HTM.Net.Util
         }
 
         /**
+        * Returns an array whose members are the quotient of the dividend array
+        * values and the divisor value.
+        *
+        * @param dividend
+        * @param divisor
+        * @param dividend adjustment
+        * @param divisor  adjustment
+        *
+        * @return
+        * @throws ArgumentException if the two argument arrays are not the same length
+        */
+        public static int[] Divide(int[] dividend, int divisor)
+        {
+            int[] quotient = new int[dividend.Length];
+            int denom = 1;
+            for (int i = 0; i < dividend.Length; i++)
+            {
+                quotient[i] = (dividend[i]) /
+                              (int)((denom = divisor) == 0 ? 1 : denom); //Protect against division by 0
+            }
+            return quotient;
+        }
+
+
+        /**
          * Returns an array whose members are the quotient of the dividend array
          * values and the divisor value.
          *

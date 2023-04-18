@@ -44,7 +44,7 @@ namespace HTM.Net.Algorithms
             int cellsPerColumn = c.GetCellsPerColumn();
             Cell[] cells = new Cell[numColumns * cellsPerColumn];
 
-            //Used as flag to determine if Column objects have been created.
+            // Used as flag to determine if Column objects have been created.
             Column colZero = matrix.GetObject(0);
             for (int i = 0; i < numColumns; i++)
             {
@@ -56,7 +56,8 @@ namespace HTM.Net.Algorithms
                 //If columns have not been previously configured
                 if (colZero == null) matrix.Set(i, column);
             }
-            //Only the TemporalMemory initializes cells so no need to test for redundancy
+
+            // Only the TemporalMemory initializes cells so no need to test for redundancy
             c.SetCells(cells);
         }
 

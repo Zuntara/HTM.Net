@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
+using static HTM.Net.Parameters;
+using System.Xml.Linq;
 
 namespace HTM.Net.Util
 {
@@ -315,6 +317,93 @@ namespace HTM.Net.Util
                 result = 31 * result + element.GetHashCode();
 
             return result;
+        }
+
+        /// <summary>
+        /// Test whether each element of a 1-D array is also present in a second array.
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public static bool[] In1D(int[] a, int[] b)
+        {
+            bool[] result = new bool[a.Length];
+
+            for (int i = 0; i < a.Length; i++)
+            {
+                result[i] = b.Contains(a[i]);
+            }
+
+            return result;
+        }
+
+        public static T[] Filter<T>(this T[] arr, bool[] mask, bool inverted = false)
+        {
+            return arr
+                .Where((val, index) => inverted ? !mask[index] : mask[index])
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Calculate all cell indices in the specified columns.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="columns"></param>
+        /// <param name="cellsPerColumn"></param>
+        /// <returns>
+        /// All cells within the specified columns.
+        /// The cells are in the same order as the
+        /// provided columns, so they're sorted if the columns are sorted.</returns>
+        public static int[] GetAllCellsInColumns(int[] columns, int cellsPerColumn)
+        {
+            // Add
+            //   [[beginningOfColumn0],
+            //    [beginningOfColumn1],
+            //     ...]
+            // to
+            //   [0, 1, 2, ..., cellsPerColumn - 1]
+            // to get
+            //   [beginningOfColumn0 + 0, beginningOfColumn0 + 1, ...
+            // beginningOfColumn1 + 0, ...
+            //    ...]
+            // then flatten it.
+            return columns
+                .SelectMany(column => Enumerable.Range(column * cellsPerColumn, cellsPerColumn))
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Compute the intersection and differences between two arrays, comparing elements by their key.
+        /// </summary>
+        /// <returns></returns>
+        public static (int[] intersectionA, int[]? intersectionB, int[]? intersectionC) SetCompare(int[] a, int[] b, int[]? aKey = null, int[]? bKey = null, bool leftMinusRight = false, bool rightMinusLeft = false)
+        {
+            aKey ??= a;
+            bKey ??= b;
+
+            bool[] aWithinBMask = In1D(aKey, bKey);
+
+            if (rightMinusLeft)
+            {
+                bool[] bWithinAMask = In1D(bKey, aKey);
+
+                if (leftMinusRight)
+                {
+                    return (a.Filter(aWithinBMask), a.Filter(aWithinBMask, true), b.Filter(bWithinAMask));
+                }
+                else
+                {
+                    return (a.Filter(aWithinBMask), b.Filter(bWithinAMask, true), null);
+                }
+            }
+            else if (leftMinusRight)
+            {
+                return (a.Filter(aWithinBMask), a.Filter(aWithinBMask, true), null);
+            }
+            else
+            {
+                return (a.Filter(aWithinBMask), null, null);
+            }
         }
     }
 
