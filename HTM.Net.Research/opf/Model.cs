@@ -16,8 +16,8 @@ namespace HTM.Net.Research.opf
     /// </summary>
     public abstract class Model
     {
-        protected int? _numPredictions;
-        protected InferenceType __inferenceType;
+        protected int? NumPredictions;
+        protected InferenceType InferenceType;
         private bool _learningEnabled;
         private bool _inferenceEnabled;
         private InferenceArgsDescription _inferenceArgs;
@@ -28,20 +28,20 @@ namespace HTM.Net.Research.opf
         /// <param name="inferenceType">A value that specifies the type of inference (i.e. TemporalNextStep, Classification, etc.).</param>
         protected Model(InferenceType inferenceType)
         {
-            this._numPredictions = 0;
-            this.__inferenceType = inferenceType;
+            this.NumPredictions = 0;
+            this.InferenceType = inferenceType;
             this._learningEnabled = true;
             this._inferenceEnabled = true;
             this._inferenceArgs = new InferenceArgsDescription();
         }
 
-        public virtual ModelResult run(Tuple<Map<string, object>, string[]> inputRecord)
+        public virtual ModelResult Run((IDictionary<string, object>, string[]) inputRecord)
         {
             int? predictionNumber;
-            if (_numPredictions.HasValue)
+            if (NumPredictions.HasValue)
             {
-                predictionNumber = this._numPredictions.Value;
-                _numPredictions++;
+                predictionNumber = this.NumPredictions.Value;
+                NumPredictions++;
             }
             else
             {
@@ -51,51 +51,54 @@ namespace HTM.Net.Research.opf
             return result;
         }
 
-        public abstract void finishLearning();
-        public abstract void resetSequenceStates();
-        public abstract List<FieldMetaInfo> getFieldInfo(bool includeClassifierOnlyField = false);
-        public abstract void setFieldStatistics(Map<string, double> fieldStats);
-        public abstract void getRuntimeStats();
-        protected abstract ILog _getLogger();
+        public abstract void FinishLearning();
+        public abstract void ResetSequenceStates();
+        public abstract List<FieldMetaInfo> GetFieldInfo(bool includeClassifierOnlyField = false);
+        public abstract void SetFieldStatistics(Map<string, double> fieldStats);
+        public abstract void GetRuntimeStats();
+        protected abstract ILog GetLogger();
 
         // Common learning/inference methods
 
-        public virtual InferenceType getInferenceType()
+        public virtual InferenceType GetInferenceType()
         {
-            return __inferenceType;
+            return InferenceType;
         }
 
-        public void enableLearning()
+        public void EnableLearning()
         {
             _learningEnabled = true;
         }
-        public void disableLearning()
+        public void DisableLearning()
         {
             _learningEnabled = false;
         }
-        public bool isLearningEnabled()
+        public bool IsLearningEnabled()
         {
             return _learningEnabled;
         }
 
-        public void enableInference(InferenceArgsDescription inferenceArgs = null)
+        public void EnableInference(InferenceArgsDescription inferenceArgs = null)
         {
             _inferenceEnabled = true;
             _inferenceArgs = inferenceArgs;
         }
-        public InferenceArgsDescription getInferenceArgs()
+        public InferenceArgsDescription GetInferenceArgs()
         {
             return _inferenceArgs;
         }
-        public void disableInference()
+        public void DisableInference()
         {
             _inferenceEnabled = false;
         }
-        public bool isInferenceEnabled()
+        public bool IsInferenceEnabled()
         {
             return _inferenceEnabled;
         }
 
 
+        public virtual void StartNetwork(int numRecords)
+        {
+        }
     }
 }

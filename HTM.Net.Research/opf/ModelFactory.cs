@@ -12,6 +12,10 @@ namespace HTM.Net.Research.opf
             {
                 modelClass = typeof(CLAModel);
             }
+            else if (modelConfig.Model == "CLA-RX")
+            {
+                modelClass = typeof(CLAModelRx);
+            }
             else if (modelConfig.Model == "TwoGram")
             {
                 throw new NotSupportedException("ModelFactory received unsupported Model type: " + modelConfig.Model);

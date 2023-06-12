@@ -209,6 +209,9 @@ namespace HTM.Net.Model
         protected List<DistalDendrite> matchingBasalSegments = new List<DistalDendrite>();
         protected List<DistalDendrite> matchingApicalSegments = new List<DistalDendrite>();
 
+        private double tmAnomalyScore = 0.0;
+        private AnomalyMode tmAnomalyMode = AnomalyMode.Disabled;
+
         ///////////////////////   Structural Elements /////////////////////////
         /** Reverse mapping from source cell to {@link Synapse} */
         public Map<Cell, HashSet<Synapse>> receptorSynapses;
@@ -653,6 +656,26 @@ namespace HTM.Net.Model
         public int GetPotentialRadius()
         {
             return potentialRadius;
+        }
+
+        public double GetTmAnomalyScore()
+        {
+            return tmAnomalyScore;
+        }
+
+        public void SetTmAnomalyScore(double tmAnomalyScore)
+        {
+            this.tmAnomalyScore = tmAnomalyScore;
+        }
+
+        public AnomalyMode GetTmAnomalyMode()
+        {
+            return tmAnomalyMode;
+        }
+
+        public void SetTmAnomalyMode(AnomalyMode tmAnomalyMode)
+        {
+            this.tmAnomalyMode = tmAnomalyMode;
         }
 
         /**

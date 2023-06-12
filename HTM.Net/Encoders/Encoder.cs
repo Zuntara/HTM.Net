@@ -14,6 +14,7 @@ namespace HTM.Net.Encoders
     {
         void SetN(int i);
         void SetW(int i);
+        void SetMaxBuckets(int maxBuckets);
         void SetMinVal(double minVal);
         void SetMaxVal(double maxVal);
         void SetRadius(double radius);
@@ -110,6 +111,8 @@ namespace HTM.Net.Encoders
         protected int w = 0;
         /** number of bits in the representation (must be >= w) */
         protected int n = 0;
+
+        protected int maxBuckets = 0;
         /** the half width value */
         protected int halfWidth;
         /**
@@ -331,6 +334,16 @@ namespace HTM.Net.Encoders
         public virtual int GetN()
         {
             return n;
+        }
+
+        public virtual void SetMaxBuckets(int buckets)
+        {
+            this.maxBuckets = buckets;
+        }
+
+        public virtual int GetMaxBuckets()
+        {
+            return maxBuckets;
         }
 
         /**
@@ -1417,6 +1430,7 @@ namespace HTM.Net.Encoders
         {
             protected int n;
             protected int w;
+            protected int maxBuckets;
             protected double minVal;
             protected double maxVal;
             protected double radius;
@@ -1445,6 +1459,7 @@ namespace HTM.Net.Encoders
                 encoder.SetClipInput(clipInput);
                 encoder.SetForced(forced);
                 encoder.SetName(name);
+                encoder.SetMaxBuckets(maxBuckets);
 
                 return (IEncoder)encoder;
             }
@@ -1457,6 +1472,11 @@ namespace HTM.Net.Encoders
             public IBuilder W(int w)
             {
                 this.w = w;
+                return this;
+            }
+            public virtual IBuilder MaxBuckets(int value)
+            {
+                this.maxBuckets = value;
                 return this;
             }
             public virtual IBuilder MinVal(double minVal)
@@ -1506,6 +1526,7 @@ namespace HTM.Net.Encoders
     {
         IBuilder N(int n);
         IBuilder W(int w);
+        IBuilder MaxBuckets(int value);
         IBuilder MinVal(double minVal);
         IBuilder MaxVal(double value);
         IBuilder Radius(double value);

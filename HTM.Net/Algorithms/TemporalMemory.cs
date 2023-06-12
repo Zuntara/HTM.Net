@@ -5,10 +5,20 @@ using System.Linq;
 using HTM.Net.Model;
 using HTM.Net.Monitor;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra.Double;
 using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Algorithms
 {
+    public enum AnomalyMode
+    {
+        None,
+        Disabled = 0,
+        Raw,
+        Likelihood,
+        LogLikelihood
+    }
+
     [Serializable]
     public class TemporalMemory : Persistable, IComputeDecorator
     {
@@ -18,6 +28,8 @@ namespace HTM.Net.Algorithms
         private const double EPSILON = 0.00001;
 
         private const int ACTIVE_COLUMNS = 1;
+
+        AnomalyLikelihoodCpp anomalyLikelihood = new AnomalyLikelihoodCpp();
 
         /**
          * Uses the specified {@link Connections} object to Build the structural 
@@ -75,9 +87,70 @@ namespace HTM.Net.Algorithms
             ComputeCycle cycle = new ComputeCycle();
             ActivateCells(connections, cycle, activeColumns, learn);
             ActivateDendrites(connections, cycle, learn);
+            CalculateAnomalyScore(connections, activeColumns);
 
             return cycle;
         }
+
+        private void CalculateAnomalyScore(Connections connections, int[] activeColumns)
+        {
+
+            AnomalyMode mode = connections.GetTmAnomalyMode();
+            switch (mode)
+            {
+                case AnomalyMode.None:
+                {
+                    connections.SetTmAnomalyScore(0.5);
+                    break;
+                }
+                case AnomalyMode.Raw:
+                {
+                    var raw = ComputeRawAnomalyScore(connections, activeColumns,
+                        connections.GetPredictiveCells().Select(c => c.GetColumn().GetIndex()).ToArray());
+                    
+                    connections.SetTmAnomalyScore(raw);
+                    break;
+                }
+                case AnomalyMode.Likelihood:
+                {
+                    var raw = ComputeRawAnomalyScore(connections, activeColumns,
+                        connections.GetPredictiveCells().Select(c => c.GetColumn().GetIndex()).ToArray());
+
+                    var res = anomalyLikelihood.AnomalyProbability(raw);
+
+                    connections.SetTmAnomalyScore(res);
+                        break;
+                }
+                case AnomalyMode.LogLikelihood:
+                {
+                    var raw = ComputeRawAnomalyScore(connections, activeColumns,
+                        connections.GetPredictiveCells().Select(c => c.GetColumn().GetIndex()).ToArray());
+
+                    var like = anomalyLikelihood.AnomalyProbability(raw);
+                    var log = anomalyLikelihood.ComputeLogLikelihood(raw);
+
+                    connections.SetTmAnomalyScore(raw);
+                        break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private double ComputeRawAnomalyScore(Connections connections, int[] active, int[] predicted)
+        {
+            // Return 0 if no active columns are present
+            if (active.Sum() == 0 || predicted.Length == 0)
+            {
+                return 0.0;
+            }
+
+            var both = active.Intersect(predicted).ToArray();
+
+            var score = (active.Length - both.Length) / (double)active.Length;
+            return score;
+        }
+
         /**
 	     * Calculate the active cells, using the current active columns and dendrite
          * segments. Grow and reinforce synapses.

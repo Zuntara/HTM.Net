@@ -223,6 +223,9 @@ namespace HTM.Net.Encoders
                 case "w":
                     builder.W((int)value);
                     break;
+                case "numbuckets":
+                    builder.MaxBuckets((int)value);
+                    break;
                 case "minval":
                     builder.MinVal(TypeConverter.Convert<double>(value));
                     break;

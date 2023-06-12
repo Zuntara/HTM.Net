@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HTM.Net.Util;
 
 namespace HTM.Net.Research.opf;
@@ -5,7 +6,7 @@ namespace HTM.Net.Research.opf;
 public class ModelResult
 {
     public int? predictionNumber;
-    public Map<string, object> rawInput;
+    public IDictionary<string, object> rawInput;
     public SensorInput sensorInput;
     public Map<InferenceElement, object> inferences;
     public Map<string, double?> metrics;
@@ -14,7 +15,7 @@ public class ModelResult
     public ClassifierInput classifierInput;
 
     public ModelResult(int? predictionNumber = null,
-        Map<string, object> rawInput = null,
+        IDictionary<string, object> rawInput = null,
         SensorInput sensorInput = null,
         Map<InferenceElement, object> inferences = null,
         Map<string, double?> metrics = null,

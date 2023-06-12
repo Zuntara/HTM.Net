@@ -956,7 +956,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         public string persistentJobGUID { get; set; }
         /// <summary>
-        /// path to permutations.py file
+        /// Path to permutations.py file
         /// </summary>
         public string permutationsPyFilename { get; set; }
         /// <summary>
@@ -1176,7 +1176,7 @@ namespace HTM.Net.Research.Swarming
         ///                        garbage collection.
         /// 
         ///    permutationsPyFilename:
-        ///                        OPTIONAL - path to permutations.py file
+        ///                        OPTIONAL - Path to permutations.py file
         ///    permutationsPyContents:
         ///                        OPTIONAL - JSON encoded string with
         ///                                    contents of permutations.py file
@@ -1304,7 +1304,7 @@ namespace HTM.Net.Research.Swarming
                 // Get the permutations info. This can be either:
                 //  1.) JSON encoded search description (this will be used to generate a
                 //       permutations.py and description.py files using ExpGenerator)
-                //  2.) path to a pre-generated permutations.py file. The description.py is
+                //  2.) Path to a pre-generated permutations.py file. The description.py is
                 //       assumed to be in the same directory
                 //  3.) contents of the permutations.py and descrption.py files.
                 string permutationsScript = null;
@@ -1412,7 +1412,7 @@ namespace HTM.Net.Research.Swarming
                     throw new InvalidOperationException("Either 'description' or 'permutationsScript' must be specified");
                 }
 
-                // Get the base path of the experiment and read in the base description
+                // Get the base Path of the experiment and read in the base description
                 //this._basePath = Path.GetDirectoryName(permutationsScript);
                 //this._baseDescription = new StreamReader(Path.Combine(this._basePath, "description.py")).ReadToEnd();
                 //this._baseDescriptionHash = GetMd5Hash(MD5.Create(), this._baseDescription); // hashlib.md5(this._baseDescription).digest();

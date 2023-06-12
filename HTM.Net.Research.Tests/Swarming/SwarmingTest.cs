@@ -47,14 +47,14 @@ namespace HTM.Net.Research.Tests.Swarming
         }
 
         /// <summary>
-        /// Put the path to our datasets int the NTA_DATA_PATH variable which will 
+        /// Put the Path to our datasets int the NTA_DATA_PATH variable which will 
         /// be used to set the environment for each of the workers
         /// </summary>
         public void _setDataPath(/*env*/)
         {
             //assert env is not None;
             string newPath;
-            // If already have a path, concatenate to it
+            // If already have a Path, concatenate to it
             if (Environment.GetEnvironmentVariable("NTA_DATA_PATH") != null)
             {
                 newPath = string.Format("{0}:{1}", Environment.GetEnvironmentVariable("NTA_DATA_PATH"), g_myEnv.testSrcDataDir);
@@ -182,7 +182,7 @@ namespace HTM.Net.Research.Tests.Swarming
                 // Form the stream definition
                 if (dataPath == null)
                 {
-                    //dataPath = resource_filename("nupic.data", os.path.join("extra", "qa", "hotgym", "qa_hotgym.csv"));
+                    //dataPath = resource_filename("nupic.data", os.Path.join("extra", "qa", "hotgym", "qa_hotgym.csv"));
                 }
 
                 var streamDef = new Map<string, object>
@@ -414,7 +414,7 @@ namespace HTM.Net.Research.Tests.Swarming
                       int? predictionCacheMaxRecords = null, KWArgsModel kwargs = null)
         {
 
-            // Put in the path to our datasets
+            // Put in the Path to our datasets
             //if (env is None)
             //{
             //    env = dict();

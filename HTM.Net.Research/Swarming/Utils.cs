@@ -530,7 +530,7 @@ namespace HTM.Net.Research.Swarming
         /// 
         /// value: python object to validate against the schema
         /// 
-        /// The json schema may be specified either as a path of the file containing
+        /// The json schema may be specified either as a Path of the file containing
         /// the json schema or as a python dictionary using one of the
         /// following keywords as arguments:
         /// schemaPath: Path of file containing the json schema object.
@@ -1078,7 +1078,7 @@ def runModelGivenBaseAndParams(modelID, jobID, baseDescription, params,
     logger.info("Using experiment directory: %s" % (experimentDir));
 
     // Create the decription.py from the overrides in params
-    paramsFilePath = os.path.join(experimentDir, 'description.py');
+    paramsFilePath = os.Path.join(experimentDir, 'description.py');
     paramsFile = open(paramsFilePath, 'wb');
     paramsFile.write(_paramsFileHead());
 
@@ -1103,7 +1103,7 @@ def runModelGivenBaseAndParams(modelID, jobID, baseDescription, params,
 
 
     // Write out the base description
-    baseParamsFile = open(os.path.join(experimentDir, 'base.py'), 'wb');
+    baseParamsFile = open(os.Path.join(experimentDir, 'base.py'), 'wb');
     baseParamsFile.write(baseDescription);
     baseParamsFile.close();
 
@@ -1469,7 +1469,7 @@ def validate(value, **kwds)
 
   value:          python object to validate against the schema
 
-  The json schema may be specified either as a path of the file containing
+  The json schema may be specified either as a Path of the file containing
   the json schema or as a python dictionary using one of the
   following keywords as arguments:
     schemaPath:     Path of file containing the json schema object.

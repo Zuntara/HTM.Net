@@ -16,6 +16,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="NAB\common_models\best_single_metric_anomaly_params_cpp - Copy.json" />
+	  <None Remove="NAB\common_models\best_single_metric_anomaly_params_tm_cpp.json" />
+	  <None Remove="NAB\data\realKnownCause\nyc_taxi.csv" />
+	  <None Remove="NAB\test_data\artificialWithAnomaly\art_daily_nojump.csv" />
+	  <None Remove="NAB\test_data\realAWSCloudwatch\ec2_cpu_utilization_f5f5533.csv" />
+	  <None Remove="NAB\test_data\realAWSCloudwatch\iio_us-east-1_ia2eb1cd9.csv" />
+	  <None Remove="NAB\test_labels\labels.json" />
 	  <None Remove="Resources\1_100.csv" />
 	  <None Remove="Resources\b2b_2014_15_min.csv" />
 	  <None Remove="Resources\b2b_2014_output.csv" />
@@ -34,6 +41,30 @@
 	  <None Remove="Resources\rec-center-hourly-small-noheaderflags.csv" />
 	  <None Remove="Resources\rec-center-hourly-small.csv" />
 	  <None Remove="Resources\rec-center-hourly.csv" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="NAB\common_models\best_single_metric_anomaly_params_cpp - Copy.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="NAB\common_models\best_single_metric_anomaly_params_tm_cpp.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="NAB\data\realKnownCause\nyc_taxi.csv">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="NAB\test_data\artificialWithAnomaly\art_daily_nojump.csv">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="NAB\test_data\realAWSCloudwatch\iio_us-east-1_ia2eb1cd9.csv">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="NAB\test_data\realAWSCloudwatch\ec2_cpu_utilization_f5f5533.csv">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="NAB\test_labels\labels.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -94,15 +125,21 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.0.2" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.2" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.0.4" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.0.4" />
 		<PackageReference Include="Moq" Version="4.18.4" />
+		<PackageReference Include="ScottPlot" Version="4.1.64" />
 	</ItemGroup>
 
 
 	<ItemGroup>
 		<ProjectReference Include="..\HTM.Net.Research\HTM.Net.Research.csproj" />
 		<ProjectReference Include="..\HTM.Net\HTM.Net.csproj" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <Folder Include="NAB\test_results\" />
 	</ItemGroup>
 </Project>

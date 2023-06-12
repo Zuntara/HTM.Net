@@ -5,6 +5,7 @@ using System.Linq;
 using HTM.Net.Encoders;
 using HTM.Net.Model;
 using HTM.Net.Util;
+using Microsoft.VisualBasic.FileIO;
 
 namespace HTM.Net.Network.Sensor
 {

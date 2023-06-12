@@ -286,7 +286,7 @@ public class PredictionMetricsManager
     /// Get what the inferred value for this field was
     /// </summary>
     /// <returns></returns>
-    internal Map<string, object> _getRawGroundTruth()
+    internal IDictionary<string, object> _getRawGroundTruth()
     {
         return __currentGroundTruth.rawInput;
     }

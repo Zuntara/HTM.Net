@@ -50,7 +50,7 @@ namespace HTM.Net.Research.opf
         /// <param name="modelID">ID for this model in the models table</param>
         /// <param name="jobID">ID for this hypersearch job in the jobs table</param>
         /// <param name="predictedField">Name of the input field for which this model is being optimized</param>
-        /// <param name="experimentDir"> Directory path containing the experiment's description.py script</param>
+        /// <param name="experimentDir"> Directory Path containing the experiment's description.py script</param>
         /// <param name="reportKeyPatterns">list of items from the results dict to include in the report. These can be regular expressions.</param>
         /// <param name="optimizeKeyPattern">Which report item, if any, we will be optimizing for. 
         /// This can also be a regular expression, but is an error if it matches more than one key from the experiment's results.
@@ -538,7 +538,7 @@ namespace HTM.Net.Research.opf
       checkpointSink=predictions,
       maxRows=int(Configuration.get('nupic.model.checkpoint.maxPredictionRows')));
 
-    this._model.save(os.path.join(this._experimentDir, str(this._modelCheckpointGUID)));
+    this._model.save(os.Path.join(this._experimentDir, str(this._modelCheckpointGUID)));
     this._jobsDAO.modelSetFields(modelID,
                                  {'modelCheckpointId':str(this._modelCheckpointGUID)},
                                  ignoreUnchanged=True);
@@ -572,7 +572,7 @@ namespace HTM.Net.Research.opf
 
     try
     {
-      shutil.rmtree(os.path.join(this._experimentDir, str(this._modelCheckpointGUID)));
+      shutil.rmtree(os.Path.join(this._experimentDir, str(this._modelCheckpointGUID)));
     }
     catch()
     {

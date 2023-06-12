@@ -76,7 +76,7 @@ namespace HTM.Net.Research.Swarming
     //    /// <param name="modelID">ID for this model in the models table</param>
     //    /// <param name="jobID">ID for this hypersearch job in the jobs table</param>
     //    /// <param name="predictedField">Name of the input field for which this model is being optimized</param>
-    //    /// <param name="experimentDir"> Directory path containing the experiment's description.py script</param>
+    //    /// <param name="experimentDir"> Directory Path containing the experiment's description.py script</param>
     //    /// <param name="reportKeyPatterns">list of items from the results dict to include in the report. These can be regular expressions.</param>
     //    /// <param name="optimizeKeyPattern">Which report item, if any, we will be optimizing for. 
     //    /// This can also be a regular expression, but is an error if it matches more than one key from the experiment's results.
@@ -1362,7 +1362,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         public ExperimentPermutationParameters permutationParams { get; set; }
         /// <summary>
-        /// REQUIRED-An absolute path to a directory with a valid description.py file.
+        /// REQUIRED-An absolute Path to a directory with a valid description.py file.
         /// NOTE: This does not actually affect the running of the model or the metrics
         /// produced. It is required to create certain objects (such as the output stream)
         /// </summary>

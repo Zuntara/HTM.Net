@@ -87,8 +87,8 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, 0, 0, 0.1, null, null, null,
                 "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new DayOfWeekTuple(1, 1.0)); // Day of week
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(5, 4.0)); // Time of day
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             // This will work also
@@ -121,8 +121,8 @@ namespace HTM.Net.Tests.Network.Sensor
                 0, 0, 0, 0.0, null, null, true,
                 "type", "list", EncoderTypes.SDRCategoryEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new DayOfWeekTuple(1, 1.0)); // Day of week
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(5, 4.0)); // Time of day
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             string categories = "ES;S1;S2;S3;S4;S5;S6;S7;S8;S9;S10;S11;S12;S13;S14;S15;S16;S17;S18;S19;GB;US";

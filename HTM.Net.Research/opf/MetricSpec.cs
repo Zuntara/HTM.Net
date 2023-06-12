@@ -137,7 +137,7 @@ namespace HTM.Net.Research.opf
         /// <param name="record"></param>
         /// <param name="result">An ModelResult class </param>
         /// <returns></returns>
-        public abstract double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null);
+        public abstract double? addInstance(double? groundTruth, object prediction, IDictionary<string, object> record = null, ModelResult result = null);
 
         public abstract Map<string, object> getMetric();
 
@@ -254,7 +254,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of MetricIFace
 
-        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        public override double? addInstance(double? groundTruth, object prediction, IDictionary<string, object> record = null, ModelResult result = null)
         {
             // This base class does not support time shifting the ground truth or a
             // subErrorMetric.
@@ -434,7 +434,7 @@ namespace HTM.Net.Research.opf
             };
         }
 
-        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        public override double? addInstance(double? groundTruth, object prediction, IDictionary<string, object> record = null, ModelResult result = null)
         {
             // if missing data
             if (groundTruth == (double?)SENTINEL_VALUE_FOR_MISSING_DATA)
@@ -574,7 +574,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of AggregateMetric
 
-        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        public override double? addInstance(double? groundTruth, object prediction, IDictionary<string, object> record = null, ModelResult result = null)
         {
             // If missing data
             if (!groundTruth.HasValue)
@@ -649,7 +649,7 @@ namespace HTM.Net.Research.opf
 
         #region Overrides of MetricIFace
 
-        public override double? addInstance(double? groundTruth, object prediction, Map<string, object> record = null, ModelResult result = null)
+        public override double? addInstance(double? groundTruth, object prediction, IDictionary<string, object> record = null, ModelResult result = null)
         {
             throw new NotImplementedException();
         }

@@ -89,8 +89,8 @@ namespace HTM.Net.Tests.Network
                     0, 0, 0, 0.1, null, null, null,
                     "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new DayOfWeekTuple(1, 1.0)); // Day of week
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(5, 4.0)); // Time of day
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             return fieldEncodings;
@@ -115,7 +115,7 @@ namespace HTM.Net.Tests.Network
                     0, 100, 0, 0.1, null, true, null,
                     "consumption", "float", EncoderTypes.ScalarEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(21, 9.5)); // Time of day
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(21, 9.5)); // Time of day
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             return fieldEncodings;
@@ -246,7 +246,7 @@ namespace HTM.Net.Tests.Network
             fieldEncodings = SetupMap(fieldEncodings, 50, 21, 0.0D, 100.0D, 0.0D, 0.1D, null, true, null, "consumption", "float", EncoderTypes.ScalarEncoder);
             fieldEncodings = SetupMap(fieldEncodings, 999, 25, 0.0D, 100.0D, 0.0D, 0.1D, null, true, null, "location", "geo", EncoderTypes.GeospatialCoordinateEncoder);
 
-            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(new object[] { 21, 9.5d }));
+            fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(21, 9.5d));
             fieldEncodings["timestamp"].Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             fieldEncodings["location"].Add("timestep", "60");

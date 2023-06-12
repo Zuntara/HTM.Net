@@ -73,7 +73,6 @@ namespace HTM.Net.Encoders
         MersenneTwister rng;
 
         int maxOverlap;
-        int maxBuckets;
         double? offset;
         long seed;
         int minIndex;
@@ -619,7 +618,7 @@ namespace HTM.Net.Encoders
         /**
          * @return the maxBuckets for this RDSE
          */
-        public int GetMaxBuckets()
+        public override int GetMaxBuckets()
         {
             return maxBuckets;
         }
@@ -669,7 +668,7 @@ namespace HTM.Net.Encoders
         /**
          * @param maxBuckets the new maximum number of buckets allowed
          */
-        public void SetMaxBuckets(int maxBuckets)
+        public override void SetMaxBuckets(int maxBuckets)
         {
             this.maxBuckets = maxBuckets;
         }
@@ -751,7 +750,6 @@ namespace HTM.Net.Encoders
         public class Builder : BuilderBase
         {
             private int maxOverlap;
-            private int maxBuckets;
             private double? offset;
             private long seed;
             private int minIndex;
@@ -804,7 +802,7 @@ namespace HTM.Net.Encoders
                 return this;
             }
 
-            public IBuilder SetMaxBuckets(int maxBuckets)
+            public override IBuilder MaxBuckets(int maxBuckets)
             {
                 this.maxBuckets = maxBuckets;
                 return this;

@@ -1399,6 +1399,13 @@ namespace HTM.Net.Network
 
                     if (!doComputation) continue;
 
+                    if (intArray == null || intArray.Length == 0)
+                    {
+                        Logger.Info($"Layer [{GetName()}] received null or zero length input");
+                        Thread.Sleep(100); 
+                        continue;
+                    }
+
                     try
                     {
 

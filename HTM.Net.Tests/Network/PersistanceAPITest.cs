@@ -839,8 +839,8 @@ namespace HTM.Net.Tests.Network
                 0, 0, 0, 0.1, null, null, null,
                 "consumption", "float", EncoderTypes.RandomDistributedScalarEncoder);
 
-            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new Tuple(1, 1.0)); // Day of week
-            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new Tuple(5, 4.0)); // Time of day
+            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_DOFW.GetFieldName(), new DayOfWeekTuple(1, 1.0)); // Day of week
+            fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_TOFD.GetFieldName(), new TimeOfDayTuple(5, 4.0)); // Time of day
             fieldEncodings.Get("timestamp").Add(Parameters.KEY.DATEFIELD_PATTERN.GetFieldName(), "MM/dd/YY HH:mm");
 
             Parameters p = Parameters.GetEncoderDefaultParameters();

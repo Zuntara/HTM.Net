@@ -28,7 +28,7 @@ namespace HTM.Net.Research.Swarming
         /// </summary>
         /// <param name="swarmConfig">{dict} A complete [swarm description](https://github.com/numenta/nupic/wiki/Running-Swarms#the-swarm-description) object.</param>
         /// <param name="options"> </param>
-        /// <param name="outDir">Optional path to write swarm details (defaults to current working directory).</param>
+        /// <param name="outDir">Optional Path to write swarm details (defaults to current working directory).</param>
         /// <param name="outputLabel">Optional label for output (defaults to "default").</param>
         /// <param name="permWorkDir">Optional location of working directory (defaults to current working directory).</param>
         /// <param name="verbosity">Optional (1,2,3) increasing verbosity of output.</param>

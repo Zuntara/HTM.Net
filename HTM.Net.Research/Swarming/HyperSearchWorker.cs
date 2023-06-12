@@ -311,7 +311,7 @@ namespace HTM.Net.Research.Swarming
             jobParams.Populate(jobParamsMap);
 
             // Validate job params
-            //var jsonSchemaPath = os.path.join(os.path.dirname(__file__), "jsonschema", "jobParamsSchema.json");
+            //var jsonSchemaPath = os.Path.join(os.Path.dirname(__file__), "jsonschema", "jobParamsSchema.json");
             //Utils.validate(jobParams, new Dictionary<string, object> { { "schemaPath", jsonSchemaPath } });
 
             string hsVersion = jobParams.hsVersion ?? null;
@@ -1140,7 +1140,7 @@ if( __name__ == "__main__")
     jobParams = json.loads(jobInfo.params);
 
     // Validate job params
-    jsonSchemaPath = os.path.join(os.path.dirname(__file__),
+    jsonSchemaPath = os.Path.join(os.Path.dirname(__file__),
                                   "jsonschema",
                                   "jobParamsSchema.json");
     validate(jobParams, schemaPath=jsonSchemaPath);

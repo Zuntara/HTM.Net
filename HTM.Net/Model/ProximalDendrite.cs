@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using HTM.Net.Util;
+using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Single;
+using Vector = MathNet.Numerics.LinearAlgebra.Double.Vector;
 
 namespace HTM.Net.Model
 {
@@ -85,13 +87,35 @@ namespace HTM.Net.Model
             _pool.ResetConnections();
             c.GetConnectedCounts().ClearStatistics(index);
             List<Synapse> synapses = c.GetSynapses(this);
-            foreach (Synapse s in synapses)
+
+            if (synapses.Count > 1000)
             {
-                s.SetPermanence(c, perms[s.GetInputIndex()]);
-                if (perms[s.GetInputIndex()] >= c.GetSynPermConnected())
+                // Run in parallel
+                var connectedCounts = c.GetConnectedCounts();
+                var row = connectedCounts.Row(index).ToArray();
+                Parallel.ForEach(synapses, s =>
                 {
-                    //c.GetConnectedCounts().Set(1, index, s.GetInputIndex());
-                    c.GetConnectedCounts()[index, s.GetInputIndex()] = 1;
+                    int inputIndex = s.GetInputIndex();
+                    s.SetPermanence(c, perms[inputIndex]);
+                    if (perms[inputIndex] >= c.GetSynPermConnected())
+                    {
+                        //c.GetConnectedCounts().Set(1, index, s.GetInputIndex());
+                        //connectedCounts[index, s.GetInputIndex()] = 1;
+                        row[inputIndex] = 1;
+                    }
+                });
+                connectedCounts.SetRow(index, row);
+            }
+            else
+            {
+                foreach (Synapse s in synapses)
+                {
+                    s.SetPermanence(c, perms[s.GetInputIndex()]);
+                    if (perms[s.GetInputIndex()] >= c.GetSynPermConnected())
+                    {
+                        //c.GetConnectedCounts().Set(1, index, s.GetInputIndex());
+                        c.GetConnectedCounts()[index, s.GetInputIndex()] = 1;
+                    }
                 }
             }
         }

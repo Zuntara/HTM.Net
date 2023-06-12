@@ -44,6 +44,18 @@ public class EncoderSettingsList : Map<string, EncoderSetting>
 
     }
 
+    public EncoderSetting Pop(string key)
+    {
+        var kvp = this.SingleOrDefault(k => k.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+
+        if (kvp.Key != null)
+        {
+            Remove(kvp.Key);
+        }
+
+        return kvp.Value;
+    }
+
     public EncoderSetting For(string encoderName)
     {
         return this.Where(k => k.Key.Equals(encoderName, StringComparison.InvariantCultureIgnoreCase))
@@ -56,6 +68,10 @@ public class EncoderSettingsList : Map<string, EncoderSetting>
 
         foreach (var kvp in this)
         {
+            if (kvp.Value == null)
+            {
+                continue;
+            }
             map[kvp.Key] = kvp.Value.ToMap();
         }
 
@@ -218,7 +234,7 @@ public class EncoderSetting
     /// otherwise maxval is a true upper bound.
     /// </summary>
     public bool? periodic { get; set; }
-    public double? numBuckets { get; set; }
+    public int? numBuckets { get; set; }
     /// <summary>
     /// If true, skip some safety checks (for compatibility reasons), default false
     /// Mostly having to do with being able to set the window size &lt; 21 

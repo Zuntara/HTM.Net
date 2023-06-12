@@ -7,6 +7,7 @@ using Tuple = HTM.Net.Util.Tuple;
 
 namespace HTM.Net.Encoders
 {
+    [Serializable]
     public enum DateEncoderSelection
     {
         None,
@@ -18,12 +19,19 @@ namespace HTM.Net.Encoders
         CustomDays
     }
 
+    [Serializable]
     public record BaseDateTuple(int BitsToUse);
+    [Serializable]
     public record SeasonTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    [Serializable]
     public record DayOfWeekTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    [Serializable]
     public record TimeOfDayTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    [Serializable]
     public record WeekendTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    [Serializable]
     public record HolidayTuple(int BitsToUse, double Radius) : BaseDateTuple(BitsToUse);
+    [Serializable]
     public record CustomDaysTuple(int BitsToUse, List<DayOfWeek> Days) : BaseDateTuple(BitsToUse);
 
     /// <summary>
@@ -434,11 +442,11 @@ namespace HTM.Net.Encoders
         public DateTime Parse(string dateTimeStr)
         {
             DateTime date;
-            if (DateTime.TryParseExact(dateTimeStr, customFormatter.FullDateTimePattern, customFormatter, DateTimeStyles.AssumeLocal, out date))
+            if (customFormatter != null && DateTime.TryParseExact(dateTimeStr, customFormatter.FullDateTimePattern, customFormatter, DateTimeStyles.AssumeLocal, out date))
             {
                 return date;
             }
-            if (DateTime.TryParse(dateTimeStr, customFormatter, DateTimeStyles.None, out date))
+            if (customFormatter != null && DateTime.TryParse(dateTimeStr, customFormatter, DateTimeStyles.None, out date))
             {
                 return date;
             }

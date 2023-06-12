@@ -344,7 +344,7 @@ public class BestSingleMetricAnomalyParameters : ExperimentParameters
                         fieldName = "c1",
                         name = "c1",
                         type = EncoderTypes.RandomDistributedScalarEncoder,
-                        numBuckets = 130.0
+                        numBuckets = 130
                     }
                 }
             });
@@ -521,8 +521,9 @@ public class ModelRunner
         // Convert a flat input row into a format that is consumable by an OPF model
         _inputRowEncoder.AppendRecord(row.Data);
         var inputRecord = _inputRowEncoder.GetNextRecordDict();
+
         // Infer
-        ModelResult r = _model.run(inputRecord);
+        ModelResult r = _model.Run((inputRecord.Item1, inputRecord.Item2));
 
         currentRunInputSamples?.Add(row.Data);
 
@@ -560,8 +561,8 @@ public class ModelRunner
             //ModelParams modelParams = modelDefinition.modelParams;
             //_model = ModelFactory.Create(modelConfig: modelParams.ModelConfig);
             _model = null;// let it crash, look at line above, description mechanism has been changed
-            _model.enableLearning();
-            _model.enableInference(modelParams.InferenceArgs);
+            _model.EnableLearning();
+            _model.EnableInference(modelParams.InferenceArgs);
         }
 
         // Construct the object for converting a flat input row into a format

@@ -131,7 +131,8 @@ namespace HTM.Net.Research.Swarming.Descriptions
         {
             if (_groupedEncoders)
             {
-                return (EncoderSettingsList)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+                var map = (Map<string, Map<string, object>>)GetParameterByKey(KEY.FIELD_ENCODING_MAP);
+                return new EncoderSettingsList(map);
             }
             _groupedEncoders = true;
 

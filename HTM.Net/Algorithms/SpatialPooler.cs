@@ -97,7 +97,7 @@ namespace HTM.Net.Algorithms
 
             c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
             
-            c.SetConnectedMatrix(Matrix<float>.Build.Sparse(numColumns, numInputs));
+            c.SetConnectedMatrix(Matrix<float>.Build.Dense(numColumns, numInputs));
 
             //Initialize state meta-management statistics
             c.SetOverlapDutyCycles(new double[numColumns]);

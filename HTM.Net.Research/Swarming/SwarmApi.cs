@@ -98,11 +98,11 @@ def getSwarmModelParams(modelID):
   # params, and use opfhelpers to extract model params from those files
   descriptionDirectory = tempfile.mkdtemp()
   try:
-    baseDescriptionFilePath = os.path.join(descriptionDirectory, "base.py")
+    baseDescriptionFilePath = os.Path.join(descriptionDirectory, "base.py")
     with open(baseDescriptionFilePath, mode="wb") as f:
       f.write(baseDescription)
     
-    descriptionFilePath = os.path.join(descriptionDirectory, "description.py")
+    descriptionFilePath = os.Path.join(descriptionDirectory, "description.py")
     with open(descriptionFilePath, mode="wb") as f:
       f.write(description)
     

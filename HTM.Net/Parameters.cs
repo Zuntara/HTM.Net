@@ -63,7 +63,8 @@ namespace HTM.Net
                 { KEY.PERMANENCE_INCREMENT, 0.10 },
                 { KEY.PERMANENCE_DECREMENT, 0.10 },
                 { KEY.PREDICTED_SEGMENT_DECREMENT, 0.0 },
-                { KEY.LEARN, true }
+                { KEY.LEARN, true },
+                { KEY.TM_ANOMALY_MODE, AnomalyMode.Disabled }
             };
             DEFAULTS_TEMPORAL = defaultTemporalParams;
             defaultParams.AddAll(DEFAULTS_TEMPORAL);
@@ -253,6 +254,8 @@ namespace HTM.Net
             public static readonly KEY GLOBAL_INHIBITION = new KEY("globalInhibition", typeof(bool));
             public static readonly KEY INHIBITION_RADIUS = new KEY("inhibitionRadius", typeof(int), 0, null);
             public static readonly KEY LOCAL_AREA_DENSITY = new KEY("localAreaDensity", typeof(double)); //TODO add range here?
+            public static readonly KEY TM_ANOMALY_MODE = new KEY("tmAnomalyMode", typeof(AnomalyMode));
+
             /// <summary>
             /// An alternate way to control the density of the active
             /// columns. If numActivePerInhArea is specified then

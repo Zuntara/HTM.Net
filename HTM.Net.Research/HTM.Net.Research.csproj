@@ -31,6 +31,10 @@
 
 	<ItemGroup>
 	  <Folder Include="Data\" />
+	  <Folder Include="NAB\Detectors\HtmCore\" />
+	  <Folder Include="NAB\Detectors\Null\" />
+	  <Folder Include="NAB\Detectors\Skyline\" />
+	  <Folder Include="NAB\Detectors\Numenta\" />
 	  <Folder Include="Taurus\HtmEngine\Adapters\" />
 	  <Folder Include="Taurus\HtmEngine\Runtime\" />
 	  <Folder Include="Taurus\HtmEngine\Repository\" />

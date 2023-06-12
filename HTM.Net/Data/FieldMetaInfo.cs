@@ -34,6 +34,11 @@ public class AggregationSettings
     public double microseconds { get; set; }
     public Map<string, object> fields { get; set; }
 
+    public AggregationSettings()
+    {
+        fields = new Map<string, object>();
+    }
+
     public bool AboveZero()
     {
         if (years > 0) return true;
