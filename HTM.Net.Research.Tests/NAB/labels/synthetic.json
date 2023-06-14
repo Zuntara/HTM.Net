@@ -1,0 +1,65 @@
+{
+    "artificialNoAnomaly/art_daily_no_noise.csv": [],
+    "artificialNoAnomaly/art_daily_perfect_square_wave.csv": [],
+    "artificialNoAnomaly/art_daily_small_noise.csv": [],
+    "artificialNoAnomaly/art_flatline.csv": [],
+    "artificialNoAnomaly/art_noisy.csv": [],
+    "artificialWithAnomaly/art_daily_flatmiddle.csv": [
+        [
+            "2014-04-10 07:15:00.000000",
+            "2014-04-11 16:45:00.000000"
+        ]
+    ],
+    "artificialWithAnomaly/art_daily_jumpsdown.csv": [
+        [
+            "2014-04-10 16:15:00.000000",
+            "2014-04-12 01:45:00.000000"
+        ]
+    ],
+    "artificialWithAnomaly/art_daily_jumpsup.csv": [
+        [
+            "2014-04-10 16:15:00.000000",
+            "2014-04-12 01:45:00.000000"
+        ]
+    ],
+    "artificialWithAnomaly/art_daily_nojump.csv": [
+        [
+            "2014-04-10 16:15:00.000000",
+            "2014-04-12 01:45:00.000000"
+        ]
+    ],
+    "artificialWithAnomaly/art_increase_spike_density.csv": [
+        [
+            "2014-04-07 06:25:00.000000",
+            "2014-04-08 15:55:00.000000"
+        ]
+    ],
+    "artificialWithAnomaly/art_load_balancer_spikes.csv": [
+        [
+            "2014-04-10 11:50:00.000000",
+            "2014-04-11 21:20:00.000000"
+        ]
+    ],
+    "realKnownCause/nyc_taxi.csv": [
+        [
+            "2014-10-30 15:30:00.000000",
+            "2014-11-03 22:30:00.000000"
+        ],
+        [
+            "2014-11-25 12:00:00.000000",
+            "2014-11-29 19:00:00.000000"
+        ],
+        [
+            "2014-12-23 11:30:00.000000",
+            "2014-12-27 18:30:00.000000"
+        ],
+        [
+            "2014-12-29 21:30:00.000000",
+            "2015-01-03 04:30:00.000000"
+        ],
+        [
+            "2015-01-24 20:30:00.000000",
+            "2015-01-29 03:30:00.000000"
+        ]
+    ]
+}

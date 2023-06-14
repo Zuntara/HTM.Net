@@ -4,6 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HTM.Net.Research.NAB.Detectors;
+using HTM.Net.Research.NAB.Detectors.Expose;
+using HTM.Net.Research.NAB.Detectors.HtmCore;
+using HTM.Net.Research.NAB.Detectors.Knncad;
+using HTM.Net.Research.NAB.Detectors.Null;
+using HTM.Net.Research.NAB.Detectors.Numenta;
+using HTM.Net.Research.NAB.Detectors.RelativeEntropy;
+using HTM.Net.Research.NAB.Detectors.Skyline;
 using Newtonsoft.Json;
 
 namespace HTM.Net.Research.NAB;
@@ -225,5 +232,170 @@ public class Runner<TCorpus, TCorpusLabel>
         Utils.UpdateFinalResults(finalResults, resultsPath);
 
         Console.WriteLine($"Final scores have been written to {resultsPath}.");
+    }
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="root">Root folder to look in</param>
+/// <param name="dataDir">This holds all the label windows for the corpus.</param>
+/// <param name="windowsFile">JSON file containing ground truth labels for the corpus</param>
+/// <param name="resultsDir">This will hold the results after running detectors on the data</param>
+/// <param name="profilesFile">The configuration file to use while running the benchmark</param>
+/// <param name="thresholdsFile"></param>
+/// <param name="detectors"></param>
+public record FileRunnerArguments(string root, string dataDir = "data",
+    string windowsFile = "labels/combined_windows.json",
+    string resultsDir = "results", string profilesFile = "config/profiles.json",
+    string thresholdsFile = "config/thresholds.json")
+{
+    public List<string> detectors = DefaultDetectors.ToList();
+
+    public static string[] DefaultDetectors => new string[]
+    {
+        "numenta", "numentaTM", "htmcore", "htmnet", "null", "random",
+        "bayesChangePt", "windowedGaussian", "expose",
+        "relativeEntropy", "earthgeckoSkyline"
+    };
+}
+
+public class FileRunner
+{
+    private string root;
+    private int? numCPUs;
+    private string dataDir;
+    private string windowsFile;
+    private string resultsDir;
+    private string profilesFile;
+    private string thresholdsFile;
+
+    private Runner<Corpus, CorpusLabel> runner;
+
+    /// <summary>
+    /// Creates a filebased runner for the benchmark
+    /// </summary>
+    /// <param name="arguments"></param>
+    /// <param name="detect">Generate detector results but do not analyze results</param>
+    /// <param name="optimize">Optimize the thresholds for each detector and user</param>
+    /// <param name="score">Analyze results in the results directory</param>
+    /// <param name="normalize">Normalize the final scores</param>
+    public FileRunner(FileRunnerArguments arguments, bool detect = false, bool optimize = false, bool score = false, bool normalize = false)
+    {
+        (this.root, this.dataDir, this.windowsFile, this.resultsDir, this.profilesFile, this.thresholdsFile) =
+            (arguments.root, Path.Combine(arguments.root, arguments.dataDir),
+                Path.Combine(arguments.root, arguments.windowsFile), Path.Combine(arguments.root, arguments.resultsDir),
+                Path.Combine(arguments.root, arguments.profilesFile), Path.Combine(arguments.root, arguments.thresholdsFile));
+
+        if (!detect && !optimize && !score && !normalize)
+        {
+            detect = true;
+            optimize = true;
+            score = true;
+            normalize = true;
+        }
+
+        runner = new Runner<Corpus, CorpusLabel>(this.dataDir, this.resultsDir, this.windowsFile, this.profilesFile, this.thresholdsFile);
+
+        runner.Initialize();
+
+        if (detect)
+        {
+            var detectorConstructors = GetDetectorClassConstructors(arguments.detectors);
+            runner.Detect(detectorConstructors);
+        }
+
+        if (optimize)
+        {
+            runner.Optimize(arguments.detectors);
+        }
+
+        if (score)
+        {
+            var detectorThresholds = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, Dictionary<string, double>>>>(File.ReadAllText(this.thresholdsFile));
+            runner.Score(arguments.detectors, detectorThresholds);
+
+            if (normalize)
+            {
+                runner.Normalize();
+            }
+        }
+    }
+
+    public static Dictionary<string, Type> GetDetectorClassConstructors(List<string> detectors)
+    {
+        var detectorConstructors = new Dictionary<string, Type>();
+
+        if (detectors.Contains("bayesChangePt"))
+        {
+            //detectorConstructors["bayesChangePt"] = typeof(BayesChangePtDetector);
+        }
+
+        if (detectors.Contains("null"))
+        {
+            detectorConstructors["null"] = typeof(NullDetector);
+        }
+
+        if (detectors.Contains("random"))
+        {
+            //detectorConstructors["random"] = typeof(RandomDetector);
+        }
+
+        if (detectors.Contains("skyline"))
+        {
+            detectorConstructors["skyline"] = typeof(SkylineDetector);
+        }
+
+        if (detectors.Contains("windowedGaussian"))
+        {
+            //detectorConstructors["windowedGaussian"] = typeof(WindowedGaussianDetector);
+        }
+
+        if (detectors.Contains("knncad"))
+        {
+            detectorConstructors["knncad"] = typeof(KnncadDetector);
+        }
+
+        if (detectors.Contains("relativeEntropy"))
+        {
+            detectorConstructors["relativeEntropy"] = typeof(RelativeEntropyDetector);
+        }
+
+        if (detectors.Contains("expose"))
+        {
+            detectorConstructors["expose"] = typeof(ExposeDetector);
+        }
+
+        if (detectors.Contains("contextOSE"))
+        {
+            ///detectorConstructors["contextOSE"] = typeof(ContextOSEDetector);
+        }
+
+        if (detectors.Contains("earthgeckoSkyline"))
+        {
+            //detectorConstructors["earthgeckoSkyline"] = typeof(EarthgeckoSkylineDetector);
+        }
+
+        if (detectors.Contains("htmcore"))
+        {
+            detectorConstructors["htmcore"] = typeof(HtmcoreDetector);
+        }
+
+        if (detectors.Contains("htmnet"))
+        {
+            detectorConstructors["htmnet"] = typeof(HtmNetDetector);
+        }
+
+        if (detectors.Contains("numenta"))
+        {
+            detectorConstructors["numenta"] = typeof(NumentaDetector);
+        }
+
+        if (detectors.Contains("threshold"))
+        {
+            //detectorConstructors["threshold"] = typeof(ThresholdDetector);
+        }
+
+        return detectorConstructors;
     }
 }
