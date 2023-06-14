@@ -22,7 +22,7 @@ namespace HTM.Net.Research.NAB.Detectors.Numenta;
 /// <summary>
 /// This detector uses an HTM based anomaly detection technique.
 /// </summary>
-public class NumentaDetector : AnomalyDetector
+public class NumentaDetector : AnomalyRxDetector<AnomalyDetectorResult>
 {
     protected CLAModelRx model;
     private readonly bool useLikelihood;
@@ -63,10 +63,10 @@ public class NumentaDetector : AnomalyDetector
     /// <param name="inputData"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    protected override List<object> HandleRecord(Dictionary<string, object> inputData)
+    protected override void HandleRecord(Dictionary<string, object> inputData)
     {
         // Send it to Numenta detector and get back the results
-        var result = this.model.Run((new Map<string, object>(inputData), inputData.Keys.ToArray()));
+        this.model.Run((new Map<string, object>(inputData), inputData.Keys.ToArray()));
 
         //// Get the value
         //var value = (double)inputData["value"];
@@ -119,7 +119,6 @@ public class NumentaDetector : AnomalyDetector
         //{
         //    finalScore, rawScore
         //};
-        return null;
     }
 
     private void PostProcessRecord(ModelResult result)
@@ -190,6 +189,8 @@ public class NumentaDetector : AnomalyDetector
 
         model = (CLAModelRx)ModelFactory.Create(modelParams);
         model.EnableInference(new InferenceArgsDescription { predictedField = "value" });
+        
+        // Subscribe the handling of the records
         model.HandleRecord.Subscribe(result =>
         {
             PostProcessRecord(result);
@@ -237,30 +238,16 @@ public class NumentaDetector : AnomalyDetector
         }
     }
 
-    public override DataFrame Run()
+    public override void Run()
     {
         this.model.StartNetwork(DataSet.Data.GetShape0());
-        /*var headers = GetHeader();
 
-        var rows = new List<List<object>>();
-
-        int i = 0;*/
         foreach (Dictionary<string, object> inputData in DataSet.Data.IterateRows())
         {
-            var detectorValues = HandleRecord(inputData);
-
-            /*var outputRow = inputData.Select(v => v.Value).ToList();
-            outputRow.AddRange(detectorValues);
-
-            rows.Add(outputRow);
-            i++;*/
+            HandleRecord(inputData);
         }
 
         this.model.Complete();
-        /*DataFrame frame = new DataFrame();
-        frame.Populate(rows, headers);
-        return frame;*/
-        return null;
     }
 
     protected EncoderSettingsList SetupEncoderParams(EncoderSettingsList encoderParams)
@@ -331,6 +318,9 @@ public class NumentaDetector : AnomalyDetector
             paramFileRelativePath = Path.Combine(
                 "anomaly_params_random_encoder",
                 "best_single_metric_anomaly_params_tm_cpp.json");
+            paramSet = LoadSingleMetricAnomalyParamsTm();
+            FixupRandomEncoderParams(paramSet, minVal.Value, maxVal.Value, minResolution.Value);
+            return paramSet;
         }
         else
         {
@@ -385,6 +375,81 @@ public class NumentaDetector : AnomalyDetector
         experimentParameters.EnableSpatialPooler = true;
         experimentParameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.8);
         experimentParameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[]{2048});
+        experimentParameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
+        experimentParameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
+        experimentParameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 40.0);
+        experimentParameters.SetParameterByKey(Parameters.KEY.SEED, 1956);
+        experimentParameters.SetParameterByKey(Parameters.KEY.SP_VERBOSITY, 0);
+        experimentParameters.SetParameterByKey(Parameters.KEY.SYN_PERM_ACTIVE_INC, 0.003);
+        experimentParameters.SetParameterByKey(Parameters.KEY.SYN_PERM_CONNECTED, 0.2);
+        experimentParameters.SetParameterByKey(Parameters.KEY.SYN_PERM_INACTIVE_DEC, 0.0005);
+
+        experimentParameters.TrainSPNetOnlyIfRequested = false;
+        experimentParameters.EnableTemporalMemory = true;
+        experimentParameters.SetParameterByKey(Parameters.KEY.ACTIVATION_THRESHOLD, 20);
+        experimentParameters.SetParameterByKey(Parameters.KEY.CELLS_PER_COLUMN, 32);
+        experimentParameters.SetParameterByKey(Parameters.KEY.INITIAL_PERMANENCE, 0.24);
+        experimentParameters.SetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS, new int[] { 2048 });
+        experimentParameters.SetParameterByKey(Parameters.KEY.MAX_SEGMENTS_PER_CELL, 128);
+        experimentParameters.SetParameterByKey(Parameters.KEY.MAX_SYNAPSES_PER_SEGMENT, 32);
+        experimentParameters.SetParameterByKey(Parameters.KEY.MIN_THRESHOLD, 13);
+        experimentParameters.SetParameterByKey(Parameters.KEY.MAX_NEW_SYNAPSE_COUNT, 31);
+        experimentParameters.SetParameterByKey(Parameters.KEY.PERMANENCE_DECREMENT, 0.008);
+        experimentParameters.SetParameterByKey(Parameters.KEY.PERMANENCE_INCREMENT, 0.04);
+        experimentParameters.SetParameterByKey(Parameters.KEY.PREDICTED_SEGMENT_DECREMENT, 0.001);
+        experimentParameters.SetParameterByKey(Parameters.KEY.TM_ANOMALY_MODE, AnomalyMode.Raw);
+
+        experimentParameters.EnableClassification = false;
+        experimentParameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_ALPHA, 0.035828933612157998);
+        experimentParameters.SetParameterByKey(Parameters.KEY.CLASSIFIER_STEPS, new[] { 1 });
+
+        experimentParameters.SetParameterByKey(Parameters.KEY.ANOMALY_KEY_MODE, Anomaly.Mode.PURE);
+
+        experimentParameters.Control = new ExperimentControl
+        {
+            InputRecordSchema = new FieldMetaInfo[]
+            {
+                new FieldMetaInfo("timestamp", FieldMetaType.DateTime, SensorFlags.T),
+                new FieldMetaInfo("value", FieldMetaType.Float, SensorFlags.L),
+            }
+        };
+        return experimentParameters;
+    }
+
+    private ExperimentParameters LoadSingleMetricAnomalyParamsTm()
+    {
+        ExperimentParameters experimentParameters = ExperimentParameters.Default();
+
+        experimentParameters.AggregationInfo = new AggregationSettings();
+        experimentParameters.Model = "CLA-RX";
+        experimentParameters.PredictAheadTime = null;
+        experimentParameters.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, new Map<string, Map<string, object>>());
+        experimentParameters.InferenceType = InferenceType.TemporalAnomaly;
+
+        EncoderSettingsList encoders = experimentParameters.GetEncoderSettings();
+        encoders["c0_timeOfDay"] = new EncoderSetting
+        {
+            encoderType = EncoderTypes.DateEncoder,
+            type = EncoderTypes.DateEncoder,
+            TimeOfDay = new TimeOfDayTuple(21, 9.49),
+            Weekend = new WeekendTuple(0, 1.0),
+            fieldName = "c0",
+            name = "c0"
+        };
+        encoders["c1"] = new EncoderSetting
+        {
+            encoderType = EncoderTypes.RandomDistributedScalarEncoder,
+            type = EncoderTypes.RandomDistributedScalarEncoder,
+            fieldName = "c1",
+            name = "c1",
+            numBuckets = 130,
+        };
+        experimentParameters.SetParameterByKey(Parameters.KEY.FIELD_ENCODING_MAP, encoders.AsMap());
+        experimentParameters.SensorAutoReset = null;
+
+        experimentParameters.EnableSpatialPooler = true;
+        experimentParameters.SetParameterByKey(Parameters.KEY.POTENTIAL_PCT, 0.8);
+        experimentParameters.SetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS, new int[] { 2048 });
         experimentParameters.SetParameterByKey(Parameters.KEY.GLOBAL_INHIBITION, true);
         experimentParameters.SetParameterByKey(Parameters.KEY.MAX_BOOST, 1.0);
         experimentParameters.SetParameterByKey(Parameters.KEY.NUM_ACTIVE_COLUMNS_PER_INH_AREA, 40.0);
@@ -462,4 +527,3 @@ public class NumentaDetector : AnomalyDetector
         model.WaitNetwork();
     }
 }
-

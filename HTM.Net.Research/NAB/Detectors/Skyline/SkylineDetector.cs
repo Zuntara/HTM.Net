@@ -16,7 +16,7 @@ public class SkylineDetector : AnomalyDetector
     private List<(DateTime timestamp, double value)> timeseries;
     private List<Func<List<(DateTime timestamp, double value)>, bool>> algorithms;
 
-    public SkylineDetector(IDataFile dataSet, float probationaryPercent)
+    public SkylineDetector(IDataFile dataSet, double probationaryPercent)
         : base(dataSet, probationaryPercent)
     {
         timeseries = new List<(DateTime timestamp, double value)>();

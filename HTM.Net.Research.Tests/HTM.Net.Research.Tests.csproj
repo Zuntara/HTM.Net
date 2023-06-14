@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="NAB\common_models\best_single_metric_anomaly_params_cpp - Copy.json" />
+	  <None Remove="NAB\common_models\best_single_metric_anomaly_params_cpp.json" />
 	  <None Remove="NAB\common_models\best_single_metric_anomaly_params_tm_cpp.json" />
 	  <None Remove="NAB\data\realKnownCause\nyc_taxi.csv" />
 	  <None Remove="NAB\test_data\artificialWithAnomaly\art_daily_nojump.csv" />
@@ -44,7 +44,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Include="NAB\common_models\best_single_metric_anomaly_params_cpp - Copy.json">
+	  <Content Include="NAB\common_models\best_single_metric_anomaly_params_cpp.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="NAB\common_models\best_single_metric_anomaly_params_tm_cpp.json">

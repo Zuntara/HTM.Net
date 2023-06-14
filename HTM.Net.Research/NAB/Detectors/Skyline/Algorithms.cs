@@ -1,9 +1,7 @@
-﻿using MathNet.Numerics;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System;
 using System.Linq;
 using MathNet.Numerics.Statistics;
-using System.Diagnostics.Metrics;
 using MathNet.Numerics.LinearRegression;
 
 namespace HTM.Net.Research.NAB.Detectors.Skyline;
@@ -17,8 +15,13 @@ public static class Algorithms
             double t = (timeseries[^1].value + timeseries[^2].value + timeseries[^3].value) / 3;
             return t;
         }
-        catch (IndexOutOfRangeException)
+        catch (ArgumentOutOfRangeException)
         {
+            if (timeseries.Count == 0)
+            {
+                return 0;
+            }
+
             return timeseries[^1].value;
         }
     }
@@ -48,7 +51,7 @@ public static class Algorithms
             .Where(x => x.timestamp >= startTime && x.timestamp < lastHourThreshold)
             .Select(x => x.value)
             .ToList();
-        var mean = series.Average();
+        var mean = series.Any() ? series.Average() : 0.0;
         var stdDev = series.StandardDeviation();
         var t = TailAvg(timeseries);
 
@@ -77,7 +80,14 @@ public static class Algorithms
     public static bool MeanSubtractionCumulation(List<(DateTime timestamp, double value)> timeseries)
     {
         var series = timeseries.Select(x => x.value).ToList();
-        series = series.Select((x, i) => x - series.Take(i).Average()).ToList();
+        series = series.Select((x, i) =>
+        {
+            if (series.Count >= i && i > 0)
+            {
+                return x - series.Take(i).Average();
+            }
+            return x;
+        }).ToList();
         var stdDev = series.Take(series.Count - 1).StandardDeviation();
 
         return Math.Abs(series.Last()) > 3 * stdDev;
@@ -113,6 +123,11 @@ public static class Algorithms
 
     public static bool LeastSquares(List<(DateTime timestamp, double value)> timeseries)
     {
+        if (timeseries.Count < 2)
+        {
+            return false;
+        }
+
         var x = timeseries.Select(t => (t.timestamp - new DateTime(1970, 1, 1)).TotalSeconds).ToArray();
         var y = timeseries.Select(t => t.value).ToArray();
         var A = x.Select((xi, i) => new[] { xi, 1.0 }).ToArray();
@@ -139,20 +154,21 @@ public static class Algorithms
     {
         var series = timeseries.Select(x => x.value).ToArray();
         var t = TailAvg(timeseries);
-        var h = Histogram(series, 15);// Util.Histogram(series, 15);
-        var bins = h.binEdges;
+        var h =  new MathNet.Numerics.Statistics.Histogram(series, 15);
+        //var h = Histogram(series, 15);// Util.Histogram(series, 15);
+        var bins = Enumerable.Range(0, h.BucketCount).Select(x => h[x]).ToArray(); // h.binEdges;
 
-        for (int i = 0; i < h.histogram.Length; i++)
+        for (int i = 0; i < h.BucketCount; i++)
         {
-            int binSize = h.histogram[i];
+            int binSize = (int)h[i].Count; //h.histogram[i];
             if (binSize <= 20)
             {
                 if (i == 0)
                 {
-                    if (t <= bins[0])
+                    if (t <= bins[0].UpperBound)
                         return true;
                 }
-                else if (t >= bins[i] && t < bins[i + 1])
+                else if (t >= bins[i].LowerBound && t < bins[i].UpperBound)
                 {
                     return true;
                 }

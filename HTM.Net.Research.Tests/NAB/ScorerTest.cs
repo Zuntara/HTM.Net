@@ -5,9 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using HTM.Net.Research.NAB;
+using HTM.Net.Research.NAB.Detectors;
 using HTM.Net.Research.NAB.Detectors.HtmCore;
+using HTM.Net.Research.NAB.Detectors.Knncad;
 using HTM.Net.Research.NAB.Detectors.Numenta;
+using HTM.Net.Research.NAB.Detectors.Skyline;
 using HTM.Net.Util;
+using log4net;
+using log4net.Appender;
+using log4net.Core;
 using MathNet.Numerics.LinearAlgebra.Double;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ScottPlot;
@@ -258,7 +264,7 @@ public class NYCTaxiTest
         Console.WriteLine("Temporal Memory: " + model.TmInfo);
 
         // Plot the results.
-        PlotResults(ts, val, raw, anom, anomalyWindows);
+        PlotResults(1, ts, val, raw, anom, anomalyWindows);
     }
 
     [TestMethod]
@@ -306,7 +312,7 @@ public class NYCTaxiTest
             Console.WriteLine("Done");
 
             // Plot the results.
-            PlotResults(ts, val, raw, anom, anomalyWindows);
+            PlotResults(2, ts, val, raw, anom, anomalyWindows);
         });
         model.Initialize();
         model.Run();
@@ -314,7 +320,160 @@ public class NYCTaxiTest
         model.Wait();
     }
 
-    private static void PlotResults(double[] ts, double[] val, double[] raw, double[] anom, List<(DateTime start, DateTime end)> anomalyWindows)
+    [TestMethod]
+    public void TestDetectorSkyline()
+    {
+        bool fast = true;
+
+        string srcPath = "data/realKnownCause/nyc_taxi.csv";
+        IDataFile dataSet = new DataFile(Path.Combine(_corpusSource, srcPath));
+        if (fast == true)
+            dataSet.Data = dataSet.Data.Take(1000);
+
+        dataSet.UpdateColumnType("timestamp", typeof(DateTime), x => DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        dataSet.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
+
+        double[] val = dataSet.Data.ColumnData["value"].Select(x => Convert.ToDouble(x.value)).ToArray();
+        double[] ts = dataSet.Data.ColumnData["timestamp"].Select(x => ((DateTime)x.value).ToOADate()).ToArray();
+
+        // Ground truth anomaly windows
+        List<(DateTime start, DateTime end)> anomalyWindows = new List<(DateTime start, DateTime end)>
+        {
+            (DateTime.ParseExact("2014-10-30 15:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-03 22:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-11-25 12:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-29 19:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-23 11:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-12-27 18:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-29 21:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-03 04:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2015-01-24 20:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-29 03:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+        };
+
+        SkylineDetector model = new SkylineDetector(dataSet: dataSet, probationaryPercent: 0.15);
+        model.Initialize();
+        DataFrame results = model.Run();
+        //double[] raw = results["raw_score"].Select(d => (double)d).ToArray();
+        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray(); ;
+
+        Console.WriteLine();
+
+        // Plot the results.
+        PlotResults(3, ts, val, null, anom, anomalyWindows);
+    }
+
+    [TestMethod]
+    public void TestDetectorKnnCad()
+    {
+        bool fast = true;
+
+        string srcPath = "data/realKnownCause/nyc_taxi.csv";
+        IDataFile dataSet = new DataFile(Path.Combine(_corpusSource, srcPath));
+        if (fast == true)
+            dataSet.Data = dataSet.Data.Take(1000);
+
+        dataSet.UpdateColumnType("timestamp", typeof(DateTime), x => DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        dataSet.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
+
+        double[] val = dataSet.Data.ColumnData["value"].Select(x => Convert.ToDouble(x.value)).ToArray();
+        double[] ts = dataSet.Data.ColumnData["timestamp"].Select(x => ((DateTime)x.value).ToOADate()).ToArray();
+
+        // Ground truth anomaly windows
+        List<(DateTime start, DateTime end)> anomalyWindows = new List<(DateTime start, DateTime end)>
+        {
+            (DateTime.ParseExact("2014-10-30 15:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-03 22:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-11-25 12:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-29 19:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-23 11:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-12-27 18:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-29 21:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-03 04:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2015-01-24 20:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-29 03:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+        };
+
+        KnncadDetector model = new KnncadDetector(dataSet: dataSet, probationaryPercent: 0.10);
+        model.Initialize();
+        DataFrame results = model.Run();
+        //double[] raw = results["raw_score"].Select(d => (double)d).ToArray();
+        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray(); ;
+
+        Console.WriteLine();
+
+        // Plot the results.
+        PlotResults(4, ts, val, null, anom, anomalyWindows);
+    }
+
+    [TestMethod]
+    public void TestDetectorHtmNet()
+    {
+        bool fast = true;
+
+        var consoleAppender = new ConsoleAppender();
+        var hierarchy = (log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository();
+        hierarchy.Root.AddAppender(consoleAppender);
+        hierarchy.Root.Level = Level.Info;
+        log4net.Config.BasicConfigurator.Configure(hierarchy);
+
+        string srcPath = "data/realKnownCause/nyc_taxi.csv";
+        IDataFile dataSet = new DataFile(Path.Combine(_corpusSource, srcPath));
+        dataSet.UpdateColumnType("timestamp", typeof(DateTime), x => DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        dataSet.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
+
+        if (fast)
+            dataSet.Data = dataSet.Data.Take(1500);
+
+        double[] val = dataSet.Data.ColumnData["value"].Select(x => Convert.ToDouble(x.value)).ToArray();
+        double[] ts = dataSet.Data.ColumnData["timestamp"].Select(x => ((DateTime)x.value).ToOADate()).ToArray();
+
+        // Ground truth anomaly windows
+        List<(DateTime start, DateTime end)> anomalyWindows = new List<(DateTime start, DateTime end)>
+        {
+            (DateTime.ParseExact("2014-10-30 15:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-03 22:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-11-25 12:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-29 19:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-23 11:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-12-27 18:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-29 21:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-03 04:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2015-01-24 20:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-29 03:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+        };
+
+        var model = new HtmNetDetector(dataSet: dataSet, probationaryPercent: 0.15);
+        model.AllRecordsProcessed.Subscribe(results =>
+        {
+            double[] raw = results["raw_score"].Select(d => (double)d).ToArray();
+            double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray(); ;
+
+            Console.WriteLine();
+            Console.WriteLine("Done");
+
+            // Plot the results.
+            PlotResults(5, ts, val, raw, anom, anomalyWindows);
+        });
+        model.Initialize();
+        model.Run();
+
+        model.Wait();
+    }
+
+    private static void PlotResults(int id, double[] ts, double[] val, double[] raw, double[] anom, List<(DateTime start, DateTime end)> anomalyWindows)
     {
         // Create a new ScottPlot plot
         var plt = new Plot(800, 600);
@@ -324,7 +483,10 @@ public class NYCTaxiTest
 
         // Plot the data
         plt.AddSignalXY(ts, val, label: "NYC Taxi (scaled)", color: System.Drawing.Color.Black);
-        plt.AddSignalXY(ts, raw, label: "Raw Anomaly", color: System.Drawing.Color.Blue);
+        if (raw != null)
+        {
+            plt.AddSignalXY(ts, raw, label: "Raw Anomaly", color: System.Drawing.Color.Blue);
+        }
         plt.AddSignalXY(ts, anom, label: "Anomaly Likelihood", color: System.Drawing.Color.Red);
 
         foreach (var window in anomalyWindows)
@@ -351,7 +513,7 @@ public class NYCTaxiTest
         plt.Legend();
 
         // Save the plot as either PNG or JPEG based on the file extension
-        string filePath = @"C:\temp\plot_tm_ny.png";
+        string filePath = @$"C:\temp\plot_tm_ny_{id}.png";
         if (filePath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
         {
             plt.SaveFig(filePath);

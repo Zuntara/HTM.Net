@@ -1,5 +1,4 @@
-﻿using HTM.Net.Research.NAB.Detectors.Numenta;
-using HTM.Net.Research.opf;
+﻿using HTM.Net.Research.opf;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,17 +9,14 @@ namespace HTM.Net.Research.NAB.Detectors;
 
 public record AnomalyDetectorResult(double FinalScore, double RawScore, ModelResult OriginalModelResult);
 
-public abstract class AnomalyDetector : IDetector
+public abstract class BaseAnomalyDetector : IDetector
 {
     protected IDataFile DataSet { get; }
     protected double ProbationaryPeriod { get; }
     protected double InputMin { get; }
     protected double InputMax { get; }
-    protected Subject<AnomalyDetectorResult> RecordProcessed { get; } = new Subject<AnomalyDetectorResult>();
 
-    public Subject<DataFrame> AllRecordsProcessed { get; } = new Subject<DataFrame>();
-
-    public AnomalyDetector(IDataFile dataSet, double probationaryPercent)
+    protected BaseAnomalyDetector(IDataFile dataSet, double probationaryPercent)
     {
         DataSet = dataSet;
         ProbationaryPeriod = Utils.getProbationPeriod(probationaryPercent, dataSet.Data.GetShape0());
@@ -52,6 +48,50 @@ public abstract class AnomalyDetector : IDetector
     }
 
     /// <summary>
+    /// Gets the outputPath and all the headers needed to write the results files.
+    /// </summary>
+    /// <returns></returns>
+    protected virtual List<string> GetHeader()
+    {
+        List<string> header = new() { "timestamp", "value", "anomaly_score" };
+        header.AddRange(GetAdditionalHeaders());
+        return header;
+    }
+}
+
+public abstract class AnomalyRxDetector<TRecord> : BaseAnomalyDetector, IRxDetector
+{
+    protected Subject<TRecord> RecordProcessed { get; } = new Subject<TRecord>();
+
+    public Subject<DataFrame> AllRecordsProcessed { get; } = new Subject<DataFrame>();
+
+    protected AnomalyRxDetector(IDataFile dataSet, double probationaryPercent)
+    : base(dataSet, probationaryPercent)
+    {
+    }
+
+    /// <summary>
+    /// Returns a list[anomalyScore, *]. It is required that the first
+    ///     element of the list is the anomalyScore.The other elements may
+    ///     be anything, but should correspond to the names returned by
+    /// getAdditionalHeaders().
+    /// 
+    /// This method MUST be overridden by subclasses
+    /// </summary>
+    /// <param name="inputData"></param>
+    protected abstract void HandleRecord(Dictionary<string, object> inputData);
+
+    public abstract void Run();
+}
+
+public abstract class AnomalyDetector : BaseAnomalyDetector, IDirectDetector
+{
+    protected AnomalyDetector(IDataFile dataSet, double probationaryPercent)
+    : base(dataSet, probationaryPercent)
+    {
+    }
+
+    /// <summary>
     /// Returns a list[anomalyScore, *]. It is required that the first
     ///     element of the list is the anomalyScore.The other elements may
     ///     be anything, but should correspond to the names returned by
@@ -62,17 +102,6 @@ public abstract class AnomalyDetector : IDetector
     /// <param name="inputData"></param>
     /// <returns></returns>
     protected abstract List<object> HandleRecord(Dictionary<string, object> inputData);
-
-    /// <summary>
-    /// Gets the outputPath and all the headers needed to write the results files.
-    /// </summary>
-    /// <returns></returns>
-    protected virtual List<string> GetHeader()
-    {
-        List<string> header = new() { "timestamp", "value", "anomaly_score" };
-        header.AddRange(GetAdditionalHeaders());
-        return header;
-    }
 
     public virtual DataFrame Run()
     {

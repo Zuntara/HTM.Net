@@ -245,5 +245,10 @@ namespace HTM.Net.Research.Swarming.Descriptions
                 }
             }
         }
+
+        public bool Has(KEY key)
+        {
+            return base.Keys().Contains(key);
+        }
     }
 }

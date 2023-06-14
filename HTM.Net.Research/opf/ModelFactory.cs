@@ -10,7 +10,7 @@ namespace HTM.Net.Research.opf
             Type modelClass;
             if (modelConfig.Model == "CLA")
             {
-                modelClass = typeof(CLAModel);
+                modelClass = typeof(CLAModelRx);
             }
             else if (modelConfig.Model == "CLA-RX")
             {
