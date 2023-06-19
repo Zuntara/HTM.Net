@@ -69,11 +69,6 @@
         "reward_low_FP_rate": 49.94586314087259,
         "standard": 50.82949995800923
     },
-    "twitterADVec": {
-        "reward_low_FN_rate": 53.50107495100574,
-        "reward_low_FP_rate": 33.610051641206894,
-        "standard": 47.06195725408189
-    },
     "windowedGaussian": {
         "reward_low_FN_rate": 47.4100271583046,
         "reward_low_FP_rate": 20.86798582474138,

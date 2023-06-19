@@ -1,0 +1,45 @@
+{
+  "Null": {
+    "standard": {
+      "score": 0.0
+    },
+    "reward_low_FP_rate": {
+      "score": 0.0
+    },
+    "reward_low_FN_rate": {
+      "score": 0.0
+    }
+  },
+  "Skyline": {
+    "skyline": {
+      "score": 0.0
+    }
+  },
+  "HtmNet": {
+    "htmnet": {
+      "score": 0.0
+    }
+  },
+  "RelativeEntropy": {
+    "standard": {
+      "score": 0.0
+    },
+    "reward_low_FP_rate": {
+      "score": 0.0
+    },
+    "reward_low_FN_rate": {
+      "score": 0.0
+    }
+  },
+  "KnnCad": {
+    "standard": {
+      "score": 0.0
+    },
+    "reward_low_FP_rate": {
+      "score": 0.0
+    },
+    "reward_low_FN_rate": {
+      "score": 0.0
+    }
+  }
+}
