@@ -1,4 +1,5 @@
 ﻿using HTM.Net.Research.NAB;
+using HTM.Net.Util;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System.Collections.Generic;
@@ -14,10 +15,10 @@ public class ThresholdsTest
     [TestInitialize]
     public void SetUp()
     {
-        var oldThresholds = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>
+        var oldThresholds = new Dictionary<Detector, Dictionary<string, Dictionary<string, double>>>
         {
             {
-                "lucky_detector",
+                Detector.LuckyDetector,
                 new Dictionary<string, Dictionary<string, double>>
                 {
                     {
@@ -31,7 +32,7 @@ public class ThresholdsTest
                 }
             },
             {
-                "deep_thought",
+                Detector.DeepThought,
                 new Dictionary<string, Dictionary<string, double>>
                 {
                     {
@@ -63,15 +64,15 @@ public class ThresholdsTest
     [TestMethod]
     public void TestThresholdUpdateNewDetector()
     {
-        var newThresholds = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>
+        var newThresholds = new Dictionary<Detector, Map<string, Map<string, double>>>
         {
             {
-                "bad_detector",
-                new Dictionary<string, Dictionary<string, double>>
+                Detector.BadDetector,
+                new Map<string, Map<string, double>>
                 {
                     {
                         "standard",
-                        new Dictionary<string, double>
+                        new Map<string, double>
                         {
                             { "score", -1.0 },
                             { "threshold", 0.5 }
@@ -85,10 +86,10 @@ public class ThresholdsTest
 
         var threshDict = ReadJSON(_thresholdsPath);
 
-        var expectedDict = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>
+        var expectedDict = new Dictionary<Detector, Dictionary<string, Dictionary<string, double>>>
         {
             {
-                "lucky_detector",
+                Detector.LuckyDetector,
                 new Dictionary<string, Dictionary<string, double>>
                 {
                     {
@@ -102,7 +103,7 @@ public class ThresholdsTest
                 }
             },
             {
-                "deep_thought",
+                Detector.DeepThought,
                 new Dictionary<string, Dictionary<string, double>>
                 {
                     {
@@ -116,7 +117,7 @@ public class ThresholdsTest
                 }
             },
             {
-                "bad_detector",
+                Detector.BadDetector,
                 new Dictionary<string, Dictionary<string, double>>
                 {
                     {
@@ -140,15 +141,15 @@ public class ThresholdsTest
     [TestMethod]
     public void TestThresholdUpdateDifferentScores()
     {
-        var newThresholds = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>
+        var newThresholds = new Dictionary<Detector, Map<string, Map<string, double>>>
         {
             {
-                "lucky_detector",
-                new Dictionary<string, Dictionary<string, double>>
+                Detector.LuckyDetector,
+                new Map<string, Map<string, double>>
                 {
                     {
                         "standard",
-                        new Dictionary<string, double>
+                        new Map<string, double>
                         {
                             { "score", 23.0 },
                             { "threshold", 0.77 }
@@ -157,12 +158,12 @@ public class ThresholdsTest
                 }
             },
             {
-                "deep_thought",
-                new Dictionary<string, Dictionary<string, double>>
+                Detector.DeepThought,
+                new Map<string, Map<string, double>>
                 {
                     {
                         "standard",
-                        new Dictionary<string, double>
+                        new Map<string, double>
                         {
                             { "score", 32.0 },
                             { "threshold", 0.99 }

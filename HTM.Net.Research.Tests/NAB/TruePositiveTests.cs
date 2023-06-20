@@ -8,18 +8,18 @@ namespace HTM.Net.Research.Tests.NAB;
 [TestClass]
 public class TruePositiveTests
 {
-    private Dictionary<string, double> costMatrix;
+    private CostMatrix _costMatrix;
 
     [TestInitialize]
     public void SetUp()
     {
-        costMatrix = new Dictionary<string, double>()
+        _costMatrix = CostMatrix.FromDictionary(new Dictionary<string, double>()
         {
             { "tpWeight", 1.0 },
             { "fnWeight", 1.0 },
             { "fpWeight", 1.0 },
             { "tnWeight", 1.0 }
-        };
+        });
     }
 
     [TestMethod]
@@ -47,11 +47,11 @@ public class TruePositiveTests
         int index = timestamps.IndexOf(windows[0].start);
         anomalyScores[index] = 1.0;
 
-        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: costMatrix);
+        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: _costMatrix);
         var result = sweeper.ScoreDataSet(timestamps, anomalyScores, windows, "testData", threshold);
         var matchingRow = result.thresholdScore;
 
-        Assert.AreEqual(matchingRow.Score, costMatrix["tpWeight"]);
+        Assert.AreEqual(matchingRow.Score, _costMatrix.TpWeight);
         CheckCounts(matchingRow, length - windowSize * numWindows, 1, 0, windowSize * numWindows - 1);
     }
 
@@ -80,7 +80,7 @@ public class TruePositiveTests
 
         int index1 = timestamps.IndexOf(t1);
         anomalyScores1[index1] = 1;
-        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: costMatrix);
+        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: _costMatrix);
         var result1 = sweeper.ScoreDataSet(timestamps, anomalyScores1, windows, "testData", threshold);
         var matchingRow1 = result1.thresholdScore;
 
@@ -122,7 +122,7 @@ public class TruePositiveTests
         // Score with a single true positive at start of window
         int index1 = timestamps.FindIndex(t => t == t1);
         anomalyScores[index1] = 1;
-        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: costMatrix);
+        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: _costMatrix);
         var result1 = sweeper.ScoreDataSet(timestamps, anomalyScores, windows, "testData", threshold);
         var matchingRow1 = result1.thresholdScore;
 
@@ -173,7 +173,7 @@ public class TruePositiveTests
         }
         anomalyScores2[index] = 1;
 
-        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: costMatrix);
+        Sweeper sweeper = new Sweeper(probationPercent: 0, costMatrix: _costMatrix);
         var result1 = sweeper.ScoreDataSet(timestamps, anomalyScores1, windows1, "testData", threshold);
         var matchingRow1 = result1.thresholdScore;
 

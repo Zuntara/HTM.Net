@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -103,7 +102,7 @@ public class CorpusTest
             (DateTime.Now.Date.AddDays(1), 0.2),
             (DateTime.Now.Date.AddDays(2), 0.9),
             (DateTime.Now.Date.AddDays(3), 2.1),
-        });
+        }, true);
 
         Assert.AreEqual(true, result1);
     }
@@ -119,11 +118,12 @@ public class CorpusTest
         {
             var copyCorpus = _corpus.Copy(copyLocation);
 
-            foreach (var relativePath in _corpus.DataFiles.Keys.ToList())
+            foreach (var relativePaths in _corpus.DataFiles.Keys.Zip(copyCorpus.DataFiles.Keys))
             {
-                CollectionAssert.Contains(copyCorpus.DataFiles.Keys.ToList(), relativePath);
+                CollectionAssert.Contains(copyCorpus.DataFiles.Keys.ToList(), relativePaths.First);
+                CollectionAssert.Contains(_corpus.DataFiles.Keys.ToList(), relativePaths.Second);
 
-                Assert.IsTrue((_corpus.DataFiles[relativePath].Data == copyCorpus.DataFiles[relativePath].Data));
+                Assert.IsTrue((_corpus.DataFiles[relativePaths.First].Data == copyCorpus.DataFiles[relativePaths.Second].Data));
             }
         }
         finally

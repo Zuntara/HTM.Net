@@ -19,7 +19,7 @@ public class TestSweeper
         o = new Sweeper(probationPercent: 0.30);
         Assert.AreEqual(0.30, o.ProbationPercent, "ProbationPercent wrong");
 
-        o = new Sweeper(costMatrix: new Dictionary<string, double> { { "tpWeight", 0 }, { "fpWeight", 1 }, { "fnWeight", 2 } });
+        o = new Sweeper(costMatrix: CostMatrix.FromDictionary(new Dictionary<string, double> { { "tpWeight", 0 }, { "fpWeight", 1 }, { "fnWeight", 2 } }));
         Assert.AreEqual(0f, o.TpWeight);
         Assert.AreEqual(1f, o.FpWeight);
         Assert.AreEqual(2f, o.FnWeight);
@@ -52,12 +52,12 @@ public class TestSweeper
         float expectedFN = 3.0f;
         float expectedFP = 4.0f;
 
-        Dictionary<string, double> costMatrix = new Dictionary<string, double>
+        CostMatrix costMatrix = CostMatrix.FromDictionary(new Dictionary<string, double>
         {
             { "tpWeight", expectedTP },
             { "fnWeight", expectedFN },
             { "fpWeight", expectedFP }
-        };
+        });
 
         o.SetCostMatrix(costMatrix);
 
@@ -80,13 +80,13 @@ public class TestSweeper
         var expectedInWindowCount = ((windowA.Item2 - windowA.Item1).Add(TimeSpan.FromDays(1) + (windowB.Item2 - windowB.Item1).Add(TimeSpan.FromDays(1)))).TotalDays;
 
         // Standard profile
-        Dictionary<string, double> costMatrix = new Dictionary<string, double>
+        CostMatrix costMatrix = CostMatrix.FromDictionary(new Dictionary<string, double>
         {
             { "tpWeight", 1.0 },
             { "fnWeight", 1.0 },
             { "fpWeight", 0.11 }
-        };
-        float probationPercent = 0.1f;
+        });
+        double probationPercent = 0.1;
         Sweeper o = new Sweeper(probationPercent: probationPercent, costMatrix: costMatrix);
         List<AnomalyPoint> scoredAnomalies = o.CalcSweepScore(fakeTimestamps, fakeAnomalyScores, windowLimits, fakeName);
 

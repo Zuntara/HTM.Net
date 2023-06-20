@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Formats.Asn1;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using HTM.Net.Research.NAB;
 using HTM.Net.Research.NAB.Detectors;
 using HTM.Net.Research.NAB.Detectors.Expose;
 using HTM.Net.Research.NAB.Detectors.HtmCore;
 using HTM.Net.Research.NAB.Detectors.Knncad;
+using HTM.Net.Research.NAB.Detectors.Null;
 using HTM.Net.Research.NAB.Detectors.Numenta;
 using HTM.Net.Research.NAB.Detectors.RelativeEntropy;
 using HTM.Net.Research.NAB.Detectors.Skyline;
@@ -19,13 +22,14 @@ using log4net.Core;
 using MathNet.Numerics.LinearAlgebra.Double;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ScottPlot;
+using ScottPlot.Plottable.DataLoggerViews;
 
 namespace HTM.Net.Research.Tests.NAB;
 
 [TestClass]
 public class ScorerTest
 {
-    private Dictionary<string, double> CostMatrix { get; set; }
+    private CostMatrix CostMatrix { get; set; }
 
     private void _checkCounts(ThresholdScore scoreRow, int tn, int tp, int fp, int fn)
     {
@@ -38,13 +42,13 @@ public class ScorerTest
     [TestInitialize]
     public void TestInitialize()
     {
-        CostMatrix = new Dictionary<string, double>()
+        CostMatrix = Research.NAB.CostMatrix.FromDictionary(new Dictionary<string, double>()
         {
             { "tpWeight", 1.0 },
             { "fnWeight", 1.0 },
             { "fpWeight", 1.0 },
             { "tnWeight", 1.0 }
-        };
+        });
     }
 
     [TestMethod]
@@ -81,13 +85,13 @@ public class ScorerTest
         var windows = Utils.TimeMap(DateTime.Parse, windowsRaw);
 
         // Scale for 10% = windowSize/length
-        Dictionary<string, double> costMatrix = new Dictionary<string, double>()
+        CostMatrix costMatrix = Research.NAB.CostMatrix.FromDictionary(new Dictionary<string, double>()
         {
             { "tpWeight", 1.0 },
             { "fnWeight", 1.0 },
             { "fpWeight", 0.11 },
             { "tnWeight", 1.0 }
-        };
+        });
         Sweeper sweeper = new Sweeper(0, costMatrix);
 
         List<double> scores = new List<double>();
@@ -127,9 +131,7 @@ public class ScorerTest
         var windows = Utils.TimeMap(DateTime.Parse, windowsRaw);
         List<double> anomalyScores = new List<double>(new double[length]);
 
-        Dictionary<string, double> costMatrixFN = new Dictionary<string, double>(CostMatrix);
-        costMatrixFN["fnWeight"] = 2.0;
-        costMatrixFN["fpWeight"] = 0.055;
+        CostMatrix costMatrixFN = new CostMatrix(0, 0, 0.055, 2.0);
 
         Sweeper sweeper1 = new Sweeper(0, CostMatrix);
         Sweeper sweeper2 = new Sweeper(0, costMatrixFN);
@@ -157,9 +159,9 @@ public class ScorerTest
         var windows = Utils.TimeMap(DateTime.Parse, windowsRaw);
         List<double> anomalyScores = new List<double>(new double[length]);
 
-        Dictionary<string, double> costMatrixFP = new Dictionary<string, double>(CostMatrix);
-        costMatrixFP["fpWeight"] = 2.0;
-        costMatrixFP["fnWeight"] = 0.5;
+        CostMatrix costMatrixFP = new CostMatrix(CostMatrix);
+        costMatrixFP.FpWeight = 2.0;
+        costMatrixFP.FnWeight = 0.5;
 
         Sweeper sweeper1 = new Sweeper(0, CostMatrix);
         Sweeper sweeper2 = new Sweeper(0, costMatrixFP);
@@ -332,6 +334,55 @@ public class NYCTaxiTest
         if (fast == true)
             dataSet.Data = dataSet.Data.Take(1000);
 
+        //dataSet.UpdateColumnType("timestamp", typeof(DateTime), x => DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        dataSet.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
+
+        double[] val = dataSet.Data.ColumnData["value"].Select(x => Convert.ToDouble(x.value)).ToArray();
+        double[] ts = dataSet.Data.ColumnData["timestamp"].Select(x => DateTime.ParseExact((string)x.value, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture).ToOADate()).ToArray();
+
+        // Ground truth anomaly windows
+        List<(DateTime start, DateTime end)> anomalyWindows = new List<(DateTime start, DateTime end)>
+        {
+            (DateTime.ParseExact("2014-10-30 15:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-03 22:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-11-25 12:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-11-29 19:00:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-23 11:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2014-12-27 18:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2014-12-29 21:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-03 04:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+
+            (DateTime.ParseExact("2015-01-24 20:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                DateTime.ParseExact("2015-01-29 03:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+        };
+
+        SkylineDetector model = new SkylineDetector(dataSet: dataSet, probationaryPercent: 0.15);
+        //model.EnableTimings = true;
+
+        model.Initialize();
+        DataFrame results = model.Run();
+        //double[] raw = results["raw_score"].Select(d => (double)d).ToArray();
+        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray(); ;
+
+        Console.WriteLine();
+
+        // Plot the results.
+        PlotResults(3, ts, val, null, anom, anomalyWindows);
+    }
+
+    [TestMethod]
+    public void TestDetectorNull()
+    {
+        bool fast = false;
+
+        string srcPath = "data/realKnownCause/nyc_taxi.csv";
+        IDataFile dataSet = new DataFile(Path.Combine(_corpusSource, srcPath));
+        if (fast == true)
+            dataSet.Data = dataSet.Data.Take(1000);
+
         dataSet.UpdateColumnType("timestamp", typeof(DateTime), x => DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         dataSet.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
 
@@ -357,22 +408,56 @@ public class NYCTaxiTest
                 DateTime.ParseExact("2015-01-29 03:30:00", "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
         };
 
-        SkylineDetector model = new SkylineDetector(dataSet: dataSet, probationaryPercent: 0.15);
+        NullDetector model = new NullDetector(dataSet: dataSet, probationaryPercent: 0.10);
         model.Initialize();
         DataFrame results = model.Run();
         //double[] raw = results["raw_score"].Select(d => (double)d).ToArray();
-        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray(); ;
+        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray();
 
         Console.WriteLine();
 
         // Plot the results.
-        PlotResults(3, ts, val, null, anom, anomalyWindows);
+        PlotResults(4, ts, val, null, anom, anomalyWindows);
+
+        foreach (Dictionary<string, object> row in results.IterateRows())
+        {
+            if (anomalyWindows.Any(w => w.start == (DateTime)row["timestamp"])
+                || anomalyWindows.Any(w => w.end == (DateTime)row["timestamp"]))
+            {
+                Console.WriteLine(string.Join(',', row.Values));
+            }
+        }
+
+        var timestamps = results["timestamp"].Select(r => (DateTime)r).ToList();
+        var anomalyScores = anom.ToList();
+        timestamps = timestamps.GetRange(0, anomalyScores.Count);
+
+        var sweeper = new Sweeper(0.10, new CostMatrix(1, 1, 0.11, 1));
+        var curAnomalyRows = sweeper
+            .CalcSweepScore(timestamps, anomalyScores, anomalyWindows, "nyc_taxi");
+
+        foreach (var row in curAnomalyRows)
+        {
+            if (anomalyWindows.Any(w => w.start == row.Timestamp))
+            {
+                Console.WriteLine(row);
+            }
+        }
+
+        // Get score by threshold for the entire corpus
+        var scoresByThreshold = sweeper
+            .CalcScoreByThreshold(curAnomalyRows);
+        scoresByThreshold = scoresByThreshold.OrderByDescending(x => x.Score).ToList();
+        var bestParams = scoresByThreshold.First();
+
+        var scored = sweeper.ScoreDataSet(timestamps, anomalyScores, anomalyWindows, "nyc_taxi", bestParams.Threshold);
+        Console.WriteLine($"Scored: {scored.thresholdScore}");
     }
 
     [TestMethod]
     public void TestDetectorKnnCad()
     {
-        bool fast = true;
+        bool fast = false;
 
         string srcPath = "data/realKnownCause/nyc_taxi.csv";
         IDataFile dataSet = new DataFile(Path.Combine(_corpusSource, srcPath));
@@ -408,12 +493,29 @@ public class NYCTaxiTest
         model.Initialize();
         DataFrame results = model.Run();
         //double[] raw = results["raw_score"].Select(d => (double)d).ToArray();
-        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray(); ;
+        double[] anom = results["anomaly_score"].Select(d => (double)d).ToArray();
 
         Console.WriteLine();
 
         // Plot the results.
         PlotResults(4, ts, val, null, anom, anomalyWindows);
+
+        var timestamps = results["timestamp"].Select(r => (DateTime)r).ToList();
+        var anomalyScores = anom.ToList();
+        timestamps = timestamps.GetRange(0, anomalyScores.Count);
+
+        var sweeper = new Sweeper(0.10, new CostMatrix(1, 1, 0.11, 1));
+        var curAnomalyRows = sweeper
+            .CalcSweepScore(timestamps, anomalyScores, anomalyWindows, "nyc_taxi");
+
+        // Get score by threshold for the entire corpus
+        var scoresByThreshold = sweeper
+            .CalcScoreByThreshold(curAnomalyRows);
+        scoresByThreshold = scoresByThreshold.OrderByDescending(x => x.Score).ToList();
+        var bestParams = scoresByThreshold.First();
+
+        var scored = sweeper.ScoreDataSet(timestamps, anomalyScores, anomalyWindows, "nyc_taxi", bestParams.Threshold);
+        Console.WriteLine($"Scored: {scored.thresholdScore}");
     }
 
     [TestMethod]
@@ -433,7 +535,7 @@ public class NYCTaxiTest
         dataSet.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
 
         if (fast)
-            dataSet.Data = dataSet.Data.Take(1500);
+            dataSet.Data = dataSet.Data.Take(500);
 
         double[] val = dataSet.Data.ColumnData["value"].Select(x => Convert.ToDouble(x.value)).ToArray();
         double[] ts = dataSet.Data.ColumnData["timestamp"].Select(x => ((DateTime)x.value).ToOADate()).ToArray();
@@ -570,11 +672,18 @@ public class NYCTaxiTest
     }
 
     [TestMethod]
+    public void TestScaledSigmoid()
+    {
+        double result = Sweeper.ScaledSigmoid(1.0);
+        Assert.AreEqual(-0.98661, result);
+    }
+
+    [TestMethod]
     public void TestFileRunnerBenchmark()
     {
-        FileRunnerArguments arguments = new FileRunnerArguments(_corpusSource);
-
-        FileRunner runner = new FileRunner(arguments);
+        FileRunnerArguments arguments = new FileRunnerArguments(_corpusSource, ResultsDir: "test_results");
+        arguments.Detectors = new List<Detector> { Detector.Null,  /*Detector.KnnCad, "relativeEntropy","skyline", "htmnet"*/ };
+        FileRunner runner = new FileRunner(arguments, true, true, true, true);
 
         // Check the result directories
     }

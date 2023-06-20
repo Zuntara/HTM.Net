@@ -8,18 +8,18 @@ namespace HTM.Net.Research.Tests.NAB;
 [TestClass]
 public class FalsePositiveTests
 {
-    private Dictionary<string, double> costMatrix;
+    private CostMatrix costMatrix;
 
     [TestInitialize]
     public void SetUp()
     {
-        costMatrix = new Dictionary<string, double>()
+        costMatrix = CostMatrix.FromDictionary(new Dictionary<string, double>()
         {
             { "tpWeight", 1.0 },
             { "fnWeight", 1.0 },
             { "fpWeight", 1.0 },
             { "tnWeight", 1.0 }
-        };
+        });
     }
 
     [TestMethod]
@@ -92,7 +92,7 @@ public class FalsePositiveTests
         Sweeper sweeper = new Sweeper(0, costMatrix);
         var matchingRow = sweeper.ScoreDataSet(timestamps, anomalyScores, windows, "testData", threshold);
 
-        Assert.AreEqual(-costMatrix["fpWeight"], matchingRow.thresholdScore.Score);
+        Assert.AreEqual(-costMatrix.FpWeight, matchingRow.thresholdScore.Score);
         _checkCounts(matchingRow.thresholdScore, length - windowSize * numWindows - 1, 0, 1, windowSize * numWindows);
     }
 

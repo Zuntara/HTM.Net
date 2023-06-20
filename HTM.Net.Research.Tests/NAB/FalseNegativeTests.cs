@@ -19,18 +19,18 @@ public class FalseNegativeTests
         Assert.AreEqual(fn, scoreRow.FN, "Incorrect fn count");
     }
 
-    private Dictionary<string, double> costMatrix;
+    private CostMatrix costMatrix;
 
     [TestInitialize]
     public void SetUp()
     {
-        costMatrix = new Dictionary<string, double>
+        costMatrix = CostMatrix.FromDictionary(new Dictionary<string, double>
         {
             { "tpWeight", 1.0 },
             { "fnWeight", 1.0 },
             { "fpWeight", 1.0 },
             { "tnWeight", 1.0 }
-        };
+        });
     }
 
     [TestMethod]
@@ -58,7 +58,7 @@ public class FalseNegativeTests
             threshold
         );
 
-        Assert.AreEqual(-costMatrix["fnWeight"], matchingRow.Score);
+        Assert.AreEqual(-costMatrix.FnWeight, matchingRow.Score);
         CheckCounts(matchingRow, length - windowSize * numWindows, 0, 0, windowSize * numWindows);
     }
 
@@ -87,7 +87,7 @@ public class FalseNegativeTests
             threshold
         );
 
-        Assert.AreEqual(4 * -costMatrix["fnWeight"], matchingRow.Score);
+        Assert.AreEqual(4 * -costMatrix.FnWeight, matchingRow.Score);
         CheckCounts(matchingRow, length - windowSize * numWindows, 0, 0, windowSize * numWindows);
     }
 }
