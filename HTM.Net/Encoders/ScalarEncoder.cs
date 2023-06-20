@@ -845,7 +845,8 @@ namespace HTM.Net.Encoders
             SparseObjectMatrix<int[]> topDownMapping = GetTopDownMapping();
 
             // See which "category" we match the closest.
-            int category = ArrayUtils.Argmax(RightVecProd(topDownMapping, encoded));
+            var rvp = RightVecProd(topDownMapping, encoded);
+            int category = ArrayUtils.Argmax(rvp);
 
             return GetBucketInfo(new int[] { category });
         }

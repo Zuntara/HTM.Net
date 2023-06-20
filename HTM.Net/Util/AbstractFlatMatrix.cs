@@ -128,19 +128,19 @@ namespace HTM.Net.Util
         /// <param name="array">the array to shrink</param>
         protected int[] CopyInnerArray(int[] array)
         {
-            if (array.Length == 1) return array;
+            if (array.Length == 1)
+                return array;
 
             int[] retVal = new int[array.Length - 1];
-
             Array.Copy(array, 1, retVal, 0, array.Length - 1);
-            //System.arraycopy(array, 1, retVal, 0, array.Length - 1);
             return retVal;
         }
 
         /// <summary>
         /// Reverses the specified array.
         /// </summary>
-        /// <param name="input"></param>
+        /// <param name="input">the array to reverse</param>
+        /// <returns>the reversed array</returns>
         public static int[] Reverse(int[] input)
         {
             int[] retVal = new int[input.Length];

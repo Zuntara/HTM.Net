@@ -16,6 +16,7 @@ namespace HTM.Net.Util
         private Dictionary<Type, InternalPropertyInfo[]> properties = new Dictionary<Type, InternalPropertyInfo[]>();
         private static readonly MemberInfo[] EMPTY_PROPERTY_DESCRIPTOR = new MemberInfo[0];
         private static BeanUtil INSTANCE = new BeanUtil();
+        private static object SyncRoot = new object();
 
         public static BeanUtil GetInstance()
         {
@@ -174,6 +175,7 @@ namespace HTM.Net.Util
         }
 
 
+
         public InternalPropertyInfo[] GetPropertiesInfoForBean(Type beanClass)
         {
             if (beanClass == null)
@@ -210,7 +212,15 @@ namespace HTM.Net.Util
             {
                 infos[i] = CreatePropertyInfo(beanClass, descriptors[i]);
             }
-            properties.Add(beanClass, infos);
+
+            lock (SyncRoot)
+            {
+                if (!properties.ContainsKey(beanClass))
+                {
+                    properties.Add(beanClass, infos);
+                }
+            }
+            
             return infos;
         }
 

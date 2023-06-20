@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using static HTM.Net.Parameters;
 using System.Xml.Linq;
+using Newtonsoft.Json.Linq;
+using System.Runtime.CompilerServices;
 
 namespace HTM.Net.Util
 {
@@ -218,30 +220,16 @@ namespace HTM.Net.Util
         //    }
         //}
 
-        public unsafe static void Fill(int[] array, int i)
+        public unsafe static void Fill(int[] array, int value)
         {
-            fixed (int* arr = array)
-            {
-                int* pArr = arr;
-                for (int j = 0; j < array.Length; j++)
-                {
-                    *pArr = i;
-                    pArr++;
-                }
-            }
+            Span<int> span = array.AsSpan();
+            span.Fill(value);
         }
 
-        public unsafe static void Fill(double[] array, double i)
+        public static void Fill(double[] array, double value)
         {
-            fixed (double* arr = array)
-            {
-                double* pArr = arr;
-                for (int j = 0; j < array.Length; j++)
-                {
-                    *pArr = i;
-                    pArr++;
-                }
-            }
+            Span<double> span = array.AsSpan();
+            span.Fill(value);
         }
 
         internal static void Fill(bool[] array, bool b)
@@ -409,43 +397,25 @@ namespace HTM.Net.Util
 
     public static class MemsetUtil
     {
-        private static readonly Action<IntPtr, bool, int> MemsetDelegateBool;
-        private static readonly Action<IntPtr, byte, int> MemsetDelegateByte;
-
-        static MemsetUtil()
-        {
-            CreateDyamicDelegate(out MemsetDelegateBool);
-            CreateDyamicDelegate(out MemsetDelegateByte);
-        }
-
-        private static void CreateDyamicDelegate<T>(out Action<IntPtr, T, int> memDelegate)
-        {
-            var dynamicMethod = new DynamicMethod("Memset", MethodAttributes.Public | MethodAttributes.Static,
-                CallingConventions.Standard,
-                null, new[] { typeof(IntPtr), typeof(T), typeof(int) }, typeof(MemsetUtil), true);
-
-            ILGenerator generator = dynamicMethod.GetILGenerator();
-            generator.Emit(OpCodes.Ldarg_0);
-            generator.Emit(OpCodes.Ldarg_1);
-            generator.Emit(OpCodes.Ldarg_2);
-            generator.Emit(OpCodes.Initblk);
-            generator.Emit(OpCodes.Ret);
-
-            memDelegate = (Action<IntPtr, T, int>)dynamicMethod.CreateDelegate(typeof(Action<IntPtr, T, int>));
-        }
-
         public static void Memset(bool[] array, bool what, int length)
         {
-            GCHandle gcHandle = GCHandle.Alloc(array, GCHandleType.Pinned);
-            MemsetDelegateBool(gcHandle.AddrOfPinnedObject(), what, length);
-            gcHandle.Free();
+            Array.Clear(array, 0, length);
+            if (what)
+            {
+                for (int i = 0; i < length; i++)
+                {
+                    array[i] = true;
+                }
+            }
         }
 
-        public static void Memset(byte[] array, byte what, int length)
+        public static unsafe void Memset(byte[] array, byte what, int length)
         {
-            GCHandle gcHandle = GCHandle.Alloc(array, GCHandleType.Pinned);
-            MemsetDelegateByte(gcHandle.AddrOfPinnedObject(), what, length);
-            gcHandle.Free();
+            if (length > 0)
+            {
+                byte* ptr = (byte*)Unsafe.AsPointer(ref array[0]);
+                Unsafe.InitBlock(ptr, what, (uint)length);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using HTM.Net.Model;
@@ -96,8 +97,15 @@ namespace HTM.Net.Algorithms
             for (int i = 0; i < numColumns; i++) { mem.Set(i, new Column(c.GetCellsPerColumn(), i)); }
 
             c.SetPotentialPools(new SparseObjectMatrix<Pool>(c.GetMemory().GetDimensions()));
+            if (numInputs > numColumns && numInputs > 2000)
+            {
+                c.SetConnectedMatrix(Matrix<float>.Build.Sparse(numColumns, numInputs));
+            }
+            else
+            {
+                c.SetConnectedMatrix(Matrix<float>.Build.Dense(numColumns, numInputs));
+            }
             
-            c.SetConnectedMatrix(Matrix<float>.Build.Dense(numColumns, numInputs));
 
             //Initialize state meta-management statistics
             c.SetOverlapDutyCycles(new double[numColumns]);
@@ -499,7 +507,27 @@ namespace HTM.Net.Algorithms
             //});
             int[] weakColumns = ArrayUtils.Where(c.GetMemory().Get1DIndexes(), i => c.GetOverlapDutyCycles()[i] < c.GetMinOverlapDutyCycles()[i]);
 
-            for (int i = 0; i < weakColumns.Length; i++)
+            if (weakColumns.Length == 0) return;
+
+            var prepared = weakColumns
+                .AsParallel()
+                .Select((wc) =>
+                {
+                    Pool pool = c.GetPotentialPools().Get(wc);
+                    double[] perm = pool.GetSparsePermanences();
+                    ArrayUtils.RaiseValuesBy(c.GetSynPermBelowStimulusInc(), perm);
+                    int[] indexes = pool.GetSparsePotential();
+                    Column col = c.GetColumn(wc);
+
+                    return (perm, col, indexes);
+                }).ToList();
+
+            c.GetConnectedCounts().ClearRows(weakColumns);
+
+            prepared
+                .ForEach((p) => UpdatePermanencesForColumnSparse(c, p.perm, p.col, p.indexes, true));
+
+            /*for (int i = 0; i < weakColumns.Length; i++)
             {
                 Pool pool = c.GetPotentialPools().Get(weakColumns[i]);
                 double[] perm = pool.GetSparsePermanences();
@@ -507,7 +535,7 @@ namespace HTM.Net.Algorithms
                 int[] indexes = pool.GetSparsePotential();
                 Column col = c.GetColumn(weakColumns[i]);
                 UpdatePermanencesForColumnSparse(c, perm, col, indexes, true);
-            }
+            }*/
         }
 
         /**
@@ -782,7 +810,7 @@ namespace HTM.Net.Algorithms
             // the potential pool
             int numPotential = (int)(columnInputs.Length * c.GetPotentialPct() + 0.5);
             int[] retVal = new int[numPotential];
-            return ArrayUtils.Sample(columnInputs, ref retVal, c.GetRandom());
+            return ArrayUtils.SampleFast(columnInputs, ref retVal, c.GetRandom());
         }
 
         /**

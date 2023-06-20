@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
@@ -157,18 +156,19 @@ namespace HTM.Net.Util
         public static void SetRow<T>(this Array givenArray, T value, int level1)
         {
             int length = givenArray.GetLength(1);
-           
             T[] destRow = new T[length];
             for (int i = 0; i < length; i++)
             {
                 destRow[i] = value;
             }
-            Buffer.BlockCopy(destRow, 0, givenArray, level1 * Marshal.SizeOf<T>(), length);
 
-            //for (int i = 0; i < length; i++)
-            //{
-            //    givenArray.SetValue(value, i, level1);
-            //}
+            Array.Copy(destRow, 0, givenArray, level1 * length, length);
+
+            // Alternative approach using SetValue:
+            // for (int i = 0; i < length; i++)
+            // {
+            //     givenArray.SetValue(value, i, level1);
+            // }
         }
 
         public static int GetArrayHashCode<T>(this T[] array)
@@ -177,23 +177,23 @@ namespace HTM.Net.Util
             unchecked // Overflow is fine, just wrap
             {
                 int hash = 17;
-                for (int i = 0; i < array.Length; i++)
+                foreach (T element in array)
                 {
-                    hash = hash * 23 + (array[i] != null ? array[i].GetHashCode() : 0);
+                    hash = hash * 23 + (element != null ? element.GetHashCode() : 0);
                 }
                 return hash;
             }
         }
 
-        public static int GetArrayHashCode(this IDictionary array)
+        public static int GetArrayHashCode<TKey, TValue>(this IDictionary<TKey, TValue> dictionary)
         {
-            if (array == null || array.Count == 0) return 0;
+            if (dictionary == null || dictionary.Count == 0) return 0;
             unchecked // Overflow is fine, just wrap
             {
                 int hash = 17;
-                foreach (DictionaryEntry entry in array)
+                foreach (KeyValuePair<TKey, TValue> pair in dictionary)
                 {
-                    hash = hash * 23 + entry.GetHashCode();
+                    hash = hash * 23 + pair.GetHashCode();
                 }
                 return hash;
             }

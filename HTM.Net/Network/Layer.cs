@@ -292,14 +292,14 @@ namespace HTM.Net.Network
                 // dimensions retrieved from the encoder
                 int product = 0, inputLength, columnLength;
                 if (((inputLength = ((int[])Params.GetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS)).Length) != (columnLength = ((int[])Params.GetParameterByKey(Parameters.KEY.COLUMN_DIMENSIONS)).Length))
-                            || Encoder.GetWidth() != (product = ArrayUtils.Product((int[])Params.GetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS))))
+                            || Encoder.GetWidth() != (product = ArrayUtils.ProductFast((int[])Params.GetParameterByKey(Parameters.KEY.INPUT_DIMENSIONS))))
                 {
 
                     Logger.Warn(
                         $"The number of Input Dimensions ({inputLength}) != number of Column Dimensions ({columnLength}) --OR-- Encoder width ({Encoder.GetWidth()}) != product of dimensions ({product}) -- now attempting to fix it.");
 
                     int[] inferredDims = InferInputDimensions(Encoder.GetWidth(), columnLength);
-                    if (inferredDims != null && inferredDims.Length > 0 && Encoder.GetWidth() == ArrayUtils.Product(inferredDims))
+                    if (inferredDims != null && inferredDims.Length > 0 && Encoder.GetWidth() == ArrayUtils.ProductFast(inferredDims))
                     {
                         Logger.Info("Input dimension fix successful!");
                         Logger.Info($"Using calculated input dimensions: {Arrays.ToString(inferredDims)}");
@@ -1489,6 +1489,11 @@ namespace HTM.Net.Network
                 //});
             }, TaskCreationOptions.LongRunning);
 
+            LayerThread.ContinueWith(t =>
+            {
+                Logger.Info("Thread staopped");
+                NotifyComplete();
+            });
             //LayerThread.Name = "Sensor Layer [" + GetName() + "] Thread";
             LayerThread.Start();
             Logger.Debug($"Start called on Layer thread {LayerThread}");

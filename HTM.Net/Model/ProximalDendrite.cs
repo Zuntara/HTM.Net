@@ -88,7 +88,7 @@ namespace HTM.Net.Model
             c.GetConnectedCounts().ClearStatistics(index);
             List<Synapse> synapses = c.GetSynapses(this);
 
-            if (synapses.Count > 1000)
+            if (synapses.Count > 100)
             {
                 // Run in parallel
                 var connectedCounts = c.GetConnectedCounts();
@@ -135,14 +135,27 @@ namespace HTM.Net.Model
         public void SetPermanences(Connections c, double[] perms, int[] inputIndexes)
         {
             _pool.ResetConnections();
-            c.GetConnectedCounts().ClearStatistics(index);
+            Matrix<float> connectedCounts = c.GetConnectedCounts();
+            lock (connectedCounts)
+            {
+                connectedCounts.ClearStatistics(index);
+            }
+
+            var pool = _pool; // Store _pool in a local variable for faster access
+            double connectedSynPerm = c.GetSynPermConnected();
+
             for (int i = 0; i < inputIndexes.Length; i++)
             {
-                _pool.SetPermanence(c, _pool.GetSynapseWithInput(inputIndexes[i]), perms[i]);
-                if (perms[i] >= c.GetSynPermConnected())
+                int inputIndex = inputIndexes[i];
+                double permanence = perms[i];
+                pool.SetPermanence(c, pool.GetSynapseWithInput(inputIndex), permanence);
+
+                if (permanence >= connectedSynPerm)
                 {
-                    c.GetConnectedCounts()[index, i] = 1;
-                    //c.GetConnectedCounts().Set(1, index, i);
+                    lock (connectedCounts)
+                    {
+                        connectedCounts.At(index, inputIndex, 1);
+                    }
                 }
             }
         }

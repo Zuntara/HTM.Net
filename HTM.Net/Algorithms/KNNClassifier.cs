@@ -866,8 +866,7 @@ namespace HTM.Net.Algorithms
               print "  dist of each prototype:", dist
               print "  dist of each category:", categoryDist*/
             var classification = new KnnClassification();
-            classification.SetInferResult(
-                new KnnInferResult(new[] { "winner", "inference", "protoDistance", "categoryDistances" }, winner, inferenceResult, dist, categoryDist));
+            classification.SetInferResult(new KnnInferResult(winner, inferenceResult, dist, categoryDist));
             return classification;
         }
 
@@ -1317,7 +1316,7 @@ namespace HTM.Net.Algorithms
                 if (distanceMethod == DistanceMethod.Norm)
                 {
                     double[][] mArr = _M.ToDense();
-                    double[][] subbed = ArrayUtils.SubstractRows(mArr, inputPattern.ToArray());
+                    double[][] subbed = ArrayUtils.SubtractRows(mArr, inputPattern.ToArray());
                     double[][] abs = ArrayUtils.Abs(subbed);
                     double[][] powDist = ArrayUtils.Power(abs, distanceNorm.Value);
 
@@ -1963,10 +1962,12 @@ namespace HTM.Net.Algorithms
         public int[] Steps { get; set; }
     }
 
+    public record KnnInferResult(int? Winner, Vector<double> Inference, Vector<double> ProtoDistance, double[] CategoryDistance);
+
     [Serializable]
-    public class KnnInferResult : NamedTuple
+    public class KnnInferResult2 : NamedTuple
     {
-        public KnnInferResult(string[] keys, params object[] objects) : base(keys, objects)
+        public KnnInferResult2(string[] keys, params object[] objects) : base(keys, objects)
         {
         }
 

@@ -73,31 +73,31 @@ namespace HTM.Net.Algorithms;
 [Serializable]
 public class AnomalyLikelihood : Anomaly
 {
-    private static readonly ILog LOG = LogManager.GetLogger(typeof(AnomalyLikelihood));
+    private static readonly ILog Log = LogManager.GetLogger(typeof(AnomalyLikelihood));
 
-    private int claLearningPeriod = 300;
-    private int estimationSamples = 300;
-    private int probationaryPeriod;
-    private int iteration;
-    private int reestimationPeriod;
+    private int _claLearningPeriod = 300;
+    private int _estimationSamples = 300;
+    private int _probationaryPeriod;
+    private int _iteration;
+    private int _reestimationPeriod;
 
-    private bool isWeighted;
+    private bool _isWeighted;
 
-    private List<Sample> historicalScores = new List<Sample>();
-    private AnomalyParams distribution;
+    private List<Sample> _historicalScores = new List<Sample>();
+    private AnomalyParams _distribution;
 
     public AnomalyLikelihood(bool useMovingAvg, int windowSize, bool isWeighted, int claLearningPeriod = -1, int estimationSamples = -1, int reestimationPeriod = 100)
         : base(useMovingAvg, windowSize)
     {
-        this.isWeighted = isWeighted;
-        this.claLearningPeriod = claLearningPeriod == VALUE_NONE ? this.claLearningPeriod : claLearningPeriod;
-        this.estimationSamples = estimationSamples == VALUE_NONE ? this.estimationSamples : estimationSamples;
-        this.probationaryPeriod = claLearningPeriod + estimationSamples;
+        this._isWeighted = isWeighted;
+        this._claLearningPeriod = claLearningPeriod == VALUE_NONE ? this._claLearningPeriod : claLearningPeriod;
+        this._estimationSamples = estimationSamples == VALUE_NONE ? this._estimationSamples : estimationSamples;
+        this._probationaryPeriod = claLearningPeriod + estimationSamples;
         // How often we re-estimate the Gaussian distribution. The ideal is to
         // re-estimate every iteration but this is a performance hit. In general the
         // system is not very sensitive to this number as long as it is small
         // relative to the total number of records processed.
-        this.reestimationPeriod = reestimationPeriod;
+        this._reestimationPeriod = reestimationPeriod;
     }
 
     /**
@@ -137,23 +137,23 @@ public class AnomalyLikelihood : Anomaly
 
         Sample dataPoint = new Sample(timestamp, value, anomalyScore);
         double likelihoodRetval;
-        if (historicalScores.Count < probationaryPeriod)
+        if (_historicalScores.Count < _probationaryPeriod)
         {
             likelihoodRetval = 0.5;
         }
         else
         {
-            if (distribution == null || iteration % reestimationPeriod == 0)
+            if (_distribution == null || _iteration % _reestimationPeriod == 0)
             {
-                this.distribution = EstimateAnomalyLikelihoods(
-                    historicalScores, 10, claLearningPeriod).GetParams();
+                this._distribution = EstimateAnomalyLikelihoods(
+                    _historicalScores, 10, _claLearningPeriod).GetParams();
             }
-            AnomalyLikelihoodMetrics metrics = UpdateAnomalyLikelihoods(new List<Sample> { dataPoint }, this.distribution);
-            this.distribution = metrics.GetParams();
+            AnomalyLikelihoodMetrics metrics = UpdateAnomalyLikelihoods(new List<Sample> { dataPoint }, this._distribution);
+            this._distribution = metrics.GetParams();
             likelihoodRetval = 1.0 - metrics.GetLikelihoods()[0];
         }
-        historicalScores.Add(dataPoint);
-        this.iteration += 1;
+        _historicalScores.Add(dataPoint);
+        this._iteration += 1;
 
         return likelihoodRetval;
     }
@@ -228,9 +228,9 @@ public class AnomalyLikelihood : Anomaly
                 ? Arrays.CopyOfRange(likelihoods, len - Math.Min(averagingWindow, len), len)
                 : Array.Empty<double>());
 
-        if (LOG.IsDebugEnabled)
+        if (Log.IsDebugEnabled)
         {
-            LOG.Debug(
+            Log.Debug(
                 $"Discovered params={@params} " +
                 $"Number of likelihoods:{len}  " +
                 $"First 20 likelihoods:{Arrays.CopyOfRange(filteredLikelihoods, 0, 20)}");
@@ -252,12 +252,12 @@ public class AnomalyLikelihood : Anomaly
     {
         int anomalySize = anomalyScores.Count;
 
-        if (LOG.IsDebugEnabled)
+        if (Log.IsDebugEnabled)
         {
-            LOG.Debug("in updateAnomalyLikelihoods");
-            LOG.Debug($"Number of anomaly scores: {anomalySize}");
-            LOG.Debug($"First 20: {anomalyScores.SubList(0, Math.Min(20, anomalySize))}");
-            LOG.Debug($"Params: {@params}");
+            Log.Debug("in updateAnomalyLikelihoods");
+            Log.Debug($"Number of anomaly scores: {anomalySize}");
+            Log.Debug($"First 20: {anomalyScores.SubList(0, Math.Min(20, anomalySize))}");
+            Log.Debug($"Params: {@params}");
         }
 
         if (anomalyScores.Count == 0)
@@ -414,9 +414,9 @@ public class AnomalyLikelihood : Anomaly
             averagedRecordList.Add(avgRecord);
             total = calc.GetTotal();
 
-            if (LOG.IsDebugEnabled)
+            if (Log.IsDebugEnabled)
             {
-                LOG.Debug(
+                Log.Debug(
                     $"Aggregating input record: {record}, Result: {averagedRecordList[averagedRecordList.Count - 1]}");
             }
         }
@@ -463,9 +463,9 @@ public class AnomalyLikelihood : Anomaly
          */
     public Statistic NullDistribution()
     {
-        if (LOG.IsDebugEnabled)
+        if (Log.IsDebugEnabled)
         {
-            LOG.Debug("Returning nullDistribution");
+            Log.Debug("Returning nullDistribution");
         }
         return new Statistic(0.5, 1e6, 1e3);
     }
@@ -534,7 +534,7 @@ public class AnomalyLikelihood : Anomaly
         double probability = AnomalyProbability(inputValue, retVal, time);
 
         // Apply weighting if configured
-        retVal = isWeighted ? retVal * (1 - probability) : 1 - probability;
+        retVal = _isWeighted ? retVal * (1 - probability) : 1 - probability;
 
         // Last, do moving-average if windowSize was specified
         if (useMovingAverage)

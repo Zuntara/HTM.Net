@@ -16,22 +16,22 @@ public class KnnClassification : Classification<object>
 
     public int? GetWinner()
     {
-        return _knnInferResult.GetWinner();
+        return _knnInferResult.Winner;
     }
 
     public double[] GetCategoryDistances()
     {
-        return _knnInferResult.GetCategoryDistances();
+        return _knnInferResult.CategoryDistance;
     }
 
     public Vector<double> GetInference()
     {
-        return _knnInferResult.GetInference();
+        return _knnInferResult.Inference;
     }
 
     public Vector<double> GetProtoDistance()
     {
-        return _knnInferResult.GetProtoDistance();
+        return _knnInferResult.ProtoDistance;
     }
 
     public void SetNumPatterns(int numPatterns)

@@ -1,16 +1,25 @@
 using System;
+using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using HTM.Net.Model;
+using System.Xml.Linq;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 using MathNet.Numerics.Statistics;
+using Newtonsoft.Json.Linq;
+using Vector = System.Numerics.Vector;
+
 
 namespace HTM.Net.Util
 {
@@ -33,6 +42,49 @@ namespace HTM.Net.Util
         public static int Product(int[] dims)
         {
             return dims.AsParallel().Aggregate(1, (current, t) => current * t);
+        }
+
+        public static int ProductFast(int[] dims)
+        {
+            int length = dims.Length;
+
+            if (length >= System.Numerics.Vector<int>.Count)
+            {
+                System.Numerics.Vector<int> productVector = System.Numerics.Vector<int>.One;
+                int i = 0;
+
+                for (; i < length - System.Numerics.Vector<int>.Count + 1; i += System.Numerics.Vector<int>.Count)
+                {
+                    System.Numerics.Vector<int> values = new System.Numerics.Vector<int>(dims, i);
+                    productVector = System.Numerics.Vector.Multiply(productVector, values);
+                }
+
+                int product = productVector[0];
+
+                for (int j = 1; j < System.Numerics.Vector<int>.Count; j++)
+                {
+                    product *= productVector[j];
+                }
+
+                while (i < length)
+                {
+                    product *= dims[i];
+                    i++;
+                }
+
+                return product;
+            }
+            else
+            {
+                int product = 1;
+
+                for (int i = 0; i < length; i++)
+                {
+                    product *= dims[i];
+                }
+
+                return product;
+            }
         }
 
         /// <summary>
@@ -327,58 +379,50 @@ namespace HTM.Net.Util
         /// <summary>
         /// Returns an array with the same shape and the contents converted to doubles.
         /// </summary>
-        /// <param name="ints">Array of ints</param>
-        /// <returns></returns>
+        /// <param name="ints">Array of ints.</param>
+        /// <returns>An array with the contents converted to doubles.</returns>
         public static double[] ToDoubleArray(int[] ints)
         {
-            return ints.Select(d => (double)d).ToArray();
+            double[] doubles = new double[ints.Length];
+            for (int i = 0; i < ints.Length; i++)
+            {
+                doubles[i] = ints[i];
+            }
+            return doubles;
         }
 
-        /**
-         * Performs a modulus operation in Python style.
-         *
-         * @param a
-         * @param b
-         * @return
-         */
+        /// <summary>
+        /// Performs a modulus operation in Python style.
+        /// </summary>
+        /// <param name="a">The dividend.</param>
+        /// <param name="b">The divisor.</param>
+        /// <returns>The result of the modulus operation.</returns>
         public static int Modulo(int a, int b)
         {
-            if (b == 0) throw new ArgumentException("Division by Zero!");
-            if (a > 0 && b > 0 && b > a) return a;
-            bool isMinus = Math.Abs(b - (a - b)) < Math.Abs(b - (a + b));
-            if (isMinus)
+            if (b == 0)
             {
-                while (a >= b)
-                {
-                    a -= b;
-                }
+                throw new ArgumentException("Division by zero!");
             }
-            else
-            {
-                if (a % b == 0) return 0;
 
-                while (a + b < b)
-                {
-                    a += b;
-                }
-            }
-            return a;
+            int result = a % b;
+            return result >= 0 ? result : result + b;
         }
 
-        /**
-         * Performs a modulus on every index of the first argument using
-         * the second argument and places the result in the same index of
-         * the first argument.
-         *
-         * @param a
-         * @param b
-         * @return
-         */
+        /// <summary>
+        /// Performs a modulus operation on every element of the array using the specified divisor.
+        /// </summary>
+        /// <param name="a">The array of values.</param>
+        /// <param name="b">The divisor.</param>
+        /// <returns>The array with each element modulo the divisor.</returns>
         public static int[] Modulo(int[] a, int b)
         {
             for (int i = 0; i < a.Length; i++)
             {
-                a[i] = Modulo(a[i], b);
+                a[i] %= b;
+                if (a[i] < 0)
+                {
+                    a[i] += b;
+                }
             }
             return a;
         }
@@ -400,14 +444,24 @@ namespace HTM.Net.Util
             return retVal;
         }
 
-        public static Vector<double> Maximum(Vector<double> vector, double maxValue)
+        /// <summary>
+        /// Returns a new vector with each element set to the maximum of the corresponding element in the input vector and the specified maximum value.
+        /// </summary>
+        /// <param name="vector">The input vector.</param>
+        /// <param name="maxValue">The maximum value.</param>
+        /// <returns>A new vector with each element set to the maximum value.</returns>
+        public static MathNet.Numerics.LinearAlgebra.Vector<double> Maximum(MathNet.Numerics.LinearAlgebra.Vector<double> vector, double maxValue)
         {
-            Vector<double> retVal = Vector<double>.Build.Dense(vector.Count);
-            for (int i = 0; i < vector.Count; i++)
+            int count = vector.Count;
+            MathNet.Numerics.LinearAlgebra.Vector<double> result = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.Dense(count);
+
+            for (int i = 0; i < count; i++)
             {
-                retVal[i] = Math.Max(vector[i], maxValue);
+                double value = vector[i];
+                result[i] = value < maxValue ? maxValue : value;
             }
-            return retVal;
+
+            return result;
         }
 
         /**
@@ -427,44 +481,44 @@ namespace HTM.Net.Util
             return retVal;
         }
 
-        /**
-         * Returns an array of identical shape containing the maximum
-         * of the values between each corresponding index. Input arrays
-         * must be the same length.
-         *
-         * @param arr1
-         * @param arr2
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of identical shape containing the maximum value between each corresponding index of the input arrays.
+        /// The input arrays must have the same length.
+        /// </summary>
+        /// <param name="arr1">The first input array.</param>
+        /// <param name="arr2">The second input array.</param>
+        /// <returns>An array of maximum values between corresponding indices.</returns>
         public static int[] MaxBetween(int[] arr1, int[] arr2)
         {
-            if (arr1.Length != arr2.Length) throw new InvalidOperationException("Arrays must be the same length!");
+            if (arr1.Length != arr2.Length)
+                throw new InvalidOperationException("Arrays must be the same length!");
+
             int[] retVal = new int[arr1.Length];
+
             for (int i = 0; i < arr1.Length; i++)
             {
                 retVal[i] = Math.Max(arr1[i], arr2[i]);
             }
+
             return retVal;
         }
 
-
-
-        /**
-         * Returns an array of identical shape containing the minimum
-         * of the values between each corresponding index. Input arrays
-         * must be the same length.
-         *
-         * @param arr1
-         * @param arr2
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of identical shape containing the minimum value between each corresponding index of the input arrays.
+        /// The input arrays must have the same length.
+        /// </summary>
+        /// <param name="arr1">The first input array.</param>
+        /// <param name="arr2">The second input array.</param>
+        /// <returns>An array of minimum values between corresponding indices.</returns>
         public static int[] MinBetween(int[] arr1, int[] arr2)
         {
             int[] retVal = new int[arr1.Length];
+
             for (int i = 0; i < arr1.Length; i++)
             {
                 retVal[i] = Math.Min(arr1[i], arr2[i]);
             }
+
             return retVal;
         }
 
@@ -491,29 +545,34 @@ namespace HTM.Net.Util
             return l.ToArray();
         }
 
-        /**
-         * Returns an array of values that test true for all of the
-         * specified {@link Condition}s.
-         *
-         * @param values
-         * @param conditions
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of values that satisfy all of the specified conditions.
+        /// </summary>
+        /// <param name="values">The array of values to filter.</param>
+        /// <param name="conditions">The conditions that must be satisfied.</param>
+        /// <returns>An array of values that satisfy all of the conditions.</returns>
         public static double[] RetainLogicalAnd(double[] values, params Func<double, bool>[] conditions)
         {
-            List<double> l = new List<double>();
+            List<double> filteredValues = new List<double>();
+
             for (int i = 0; i < values.Length; i++)
             {
-                bool result = true;
-                for (int j = 0; j < conditions.Length && result; j++)
-                {
-                    result &= conditions[j](values[i]);
-                }
-                if (result) l.Add(values[i]);
-            }
-            return l.ToArray();
-        }
+                bool satisfiesAllConditions = true;
 
+                for (int j = 0; j < conditions.Length && satisfiesAllConditions; j++)
+                {
+                    satisfiesAllConditions &= conditions[j](values[i]);
+                }
+
+                if (satisfiesAllConditions)
+                {
+                    filteredValues.Add(values[i]);
+                }
+            }
+
+            return filteredValues.ToArray();
+        }
+        
         /**
          * Returns an array whose members are the quotient of the dividend array
          * values and the divisor array values.
@@ -526,7 +585,7 @@ namespace HTM.Net.Util
          * @return
          * @throws ArgumentException if the two argument arrays are not the same length
          */
-        public static double[] Divide(double[] dividend, double[] divisor,
+        public static double[] Divide2(double[] dividend, double[] divisor,
             double dividendAdjustment, double divisorAdjustment)
         {
 
@@ -544,31 +603,64 @@ namespace HTM.Net.Util
             return quotient;
         }
 
-        /**
-         * Returns an array whose members are the quotient of the dividend array
-         * values and the divisor array values.
-         *
-         * @param dividend
-         * @param divisor
-         * @param dividend adjustment
-         * @param divisor  adjustment
-         *
-         * @return
-         * @throws ArgumentException if the two argument arrays are not the same length
-         */
+        /// <summary>
+        /// Divides each element of the dividend array by the corresponding element of the divisor array,
+        /// applying adjustments to both dividend and divisor values.
+        /// </summary>
+        /// <param name="dividend">The array of dividend values.</param>
+        /// <param name="divisor">The array of divisor values.</param>
+        /// <param name="dividendAdjustment">The adjustment to be applied to the dividend values.</param>
+        /// <param name="divisorAdjustment">The adjustment to be applied to the divisor values.</param>
+        /// <returns>An array of quotients obtained by dividing the dividend elements by the divisor elements.</returns>
+        public static double[] Divide(double[] dividend, double[] divisor, double dividendAdjustment, double divisorAdjustment)
+        {
+            if (dividend.Length != divisor.Length)
+            {
+                throw new ArgumentException("The dividend array and the divisor array must be the same length");
+            }
+
+            double[] quotient = new double[dividend.Length];
+
+            // Process the elements in parallel using Parallel.For
+            Parallel.For(0, dividend.Length, i =>
+            {
+                double dividendValue = dividend[i] + dividendAdjustment;
+                double divisorValue = divisor[i] + divisorAdjustment;
+
+                // Protect against division by zero
+                double denom = divisorValue != 0 ? divisorValue : 1;
+
+                quotient[i] = dividendValue / denom;
+            });
+
+            return quotient;
+        }
+
+
+        /// <summary>
+        /// Returns an array whose elements are the quotients of the corresponding elements
+        /// in the dividend array divided by the divisor array.
+        /// </summary>
+        /// <param name="dividend">The array of dividend values.</param>
+        /// <param name="divisor">The array of divisor values.</param>
+        /// <returns>An array of quotients obtained by dividing the dividend elements by the divisor elements.</returns>
+        /// <exception cref="ArgumentException">Thrown when the dividend and divisor arrays are not the same length.</exception>
         public static double[] Divide(int[] dividend, int[] divisor)
         {
             if (dividend.Length != divisor.Length)
             {
                 throw new ArgumentException("The dividend array and the divisor array must be the same length");
             }
+
             double[] quotient = new double[dividend.Length];
-            double denom = 1;
+
             for (int i = 0; i < dividend.Length; i++)
             {
-                quotient[i] = (dividend[i]) /
-                              (double)((denom = divisor[i]) == 0 ? 1 : denom); //Protect against division by 0
+                double denom = divisor[i];
+
+                quotient[i] = denom != 0 ? dividend[i] / (double)denom : 0; // Protect against division by zero
             }
+
             return quotient;
         }
 
@@ -652,28 +744,23 @@ namespace HTM.Net.Util
             return quotient;
         }
 
-
-        /**
-         * Returns an array whose members are the quotient of the dividend array
-         * values and the divisor value.
-         *
-         * @param dividend
-         * @param divisor
-         * @param dividend adjustment
-         * @param divisor  adjustment
-         *
-         * @return
-         * @throws ArgumentException if the two argument arrays are not the same length
-         */
+        /// <summary>
+        /// Returns an array whose elements are the quotients of the corresponding elements
+        /// in the dividend array divided by the divisor value.
+        /// </summary>
+        /// <param name="dividend">The array of dividend values.</param>
+        /// <param name="divisor">The divisor value.</param>
+        /// <returns>An array of quotients obtained by dividing the dividend elements by the divisor value.</returns>
         public static double[] Divide(double[] dividend, double divisor)
         {
             double[] quotient = new double[dividend.Length];
-            double denom = 1;
+            double denom = divisor;
+
             for (int i = 0; i < dividend.Length; i++)
             {
-                quotient[i] = (dividend[i]) /
-                              (double)((denom = divisor) == 0 ? 1 : denom); //Protect against division by 0
+                quotient[i] = denom != 0 ? dividend[i] / denom : 0; // Protect against division by zero
             }
+
             return quotient;
         }
 
@@ -825,32 +912,30 @@ namespace HTM.Net.Util
             return quotient;
         }
 
-        /**
-         * Returns an array whose members are the product of the multiplicand array
-         * values and the factor array values.
-         *
-         * @param multiplicand
-         * @param factor
-         * @param multiplicand adjustment
-         * @param factor       adjustment
-         *
-         * @return
-         * @throws ArgumentException if the two argument arrays are not the same length
-         */
-        public static double[] Multiply(
-            double[] multiplicand, double[] factor, double multiplicandAdjustment, double factorAdjustment)
+        /// <summary>
+        /// Returns an array whose elements are the product of the corresponding elements
+        /// in the multiplicand array and the factor array, after applying the specified adjustments.
+        /// </summary>
+        /// <param name="multiplicand">The array of multiplicand values.</param>
+        /// <param name="factor">The array of factor values.</param>
+        /// <param name="multiplicandAdjustment">The adjustment to be applied to the multiplicand values.</param>
+        /// <param name="factorAdjustment">The adjustment to be applied to the factor values.</param>
+        /// <returns>An array of products obtained by multiplying the multiplicand and factor elements.</returns>
+        /// <exception cref="ArgumentException">Thrown when the multiplicand and factor arrays have different lengths.</exception>
+        public static double[] Multiply(double[] multiplicand, double[] factor, double multiplicandAdjustment, double factorAdjustment)
         {
-
             if (multiplicand.Length != factor.Length)
             {
-                throw new ArgumentException(
-                    "The multiplicand array and the factor array must be the same length");
+                throw new ArgumentException("The multiplicand array and the factor array must be the same length");
             }
+
             double[] product = new double[multiplicand.Length];
+
             for (int i = 0; i < multiplicand.Length; i++)
             {
                 product[i] = (multiplicand[i] + multiplicandAdjustment) * (factor[i] + factorAdjustment);
             }
+
             return product;
         }
 
@@ -858,27 +943,25 @@ namespace HTM.Net.Util
          * Returns an array whose members are the product of the multiplicand array
          * values and the factor array values.
          *
-         * @param multiplicand
-         * @param factor
-         * @param multiplicand adjustment
-         * @param factor       adjustment
-         *
-         * @return
-         * @throws ArgumentException if the two argument arrays are not the same length
+         * @param multiplicand The multiplicand array.
+         * @param factor       The factor array.
+         * @return             The array of products.
+         * @throws ArgumentException If the two argument arrays are not the same length.
          */
         public static double[] Multiply(double[] multiplicand, int[] factor)
         {
-
             if (multiplicand.Length != factor.Length)
             {
-                throw new ArgumentException(
-                    "The multiplicand array and the factor array must be the same length");
+                throw new ArgumentException("The multiplicand array and the factor array must be the same length");
             }
+
             double[] product = new double[multiplicand.Length];
+
             for (int i = 0; i < multiplicand.Length; i++)
             {
-                product[i] = (multiplicand[i]) * (factor[i]);
+                product[i] = multiplicand[i] * factor[i];
             }
+
             return product;
         }
 
@@ -923,22 +1006,29 @@ namespace HTM.Net.Util
             return shape[0] * Math.Max(1, InitDimensionMultiples(shape)[0]) - 1;
         }
 
-        /**
-         * Returns an integer array containing the result of subtraction
-         * operations between corresponding indexes of the specified arrays.
-         *
-         * @param minuend
-         * @param subtrahend
-         * @return
-         */
+        /// <summary>
+        /// Returns an integer array containing the result of subtracting the corresponding elements
+        /// of the minuend array from the subtrahend array.
+        /// </summary>
+        /// <param name="minuend">The array of minuend values.</param>
+        /// <param name="subtrahend">The array of subtrahend values.</param>
+        /// <returns>An integer array of subtraction results.</returns>
+        /// <exception cref="ArgumentException">Thrown when the minuend and subtrahend arrays have different lengths.</exception>
         public static int[] Subtract(int[] minuend, int[] subtrahend)
         {
-            int[] retVal = new int[minuend.Length];
+            if (minuend.Length != subtrahend.Length)
+            {
+                throw new ArgumentException("The minuend array and the subtrahend array must be the same length");
+            }
+
+            int[] result = new int[minuend.Length];
+
             for (int i = 0; i < minuend.Length; i++)
             {
-                retVal[i] = minuend[i] - subtrahend[i];
+                result[i] = minuend[i] - subtrahend[i];
             }
-            return retVal;
+
+            return result;
         }
 
         public static double[] Subtract(double[] minuend, double[] subtrahend)
@@ -975,45 +1065,70 @@ namespace HTM.Net.Util
          */
         public static double Average(int[] arr)
         {
-            return arr.AsParallel().Average();
-            //int sum = 0;
-            //for (int i = 0; i < arr.Length; i++)
-            //{
-            //    sum += arr[i];
-            //}
-            //return sum / (double)arr.Length;
+            int length = arr.Length;
+            if (length == 0)
+            {
+                throw new ArgumentException("The array cannot be empty.");
+            }
+
+            long sum = 0;
+
+            // Compute the sum of all elements in parallel
+            Parallel.ForEach(
+                arr,
+                () => 0L, // Initialize local sum to 0
+                (item, state, localSum) => localSum + item, // Add each item to the local sum
+                localSum => Interlocked.Add(ref sum, localSum) // Add local sum to the global sum
+            );
+
+            // Calculate the average
+            return (double)sum / length;
+
+            //var avg = arr.AsParallel().Average();
+            //return avg;
         }
 
-        /**
-         * Returns the average of all the specified array contents.
-         * @param arr
-         * @return
-         */
+        /// <summary>
+        /// Returns the average of all the elements in the specified double array.
+        /// </summary>
+        /// <param name="arr">The array of double values.</param>
+        /// <returns>The average of the array elements.</returns>
         public static double Average(double[] arr)
         {
-            return arr.AsParallel().Average();
-            //double sum = 0;
-            //for (int i = 0; i < arr.Length; i++)
-            //{
-            //    sum += arr[i];
-            //}
-            //return sum / (double)arr.Length;
+            int length = arr.Length;
+            if (length == 0)
+            {
+                throw new ArgumentException("The array cannot be empty.");
+            }
+
+            double sum = 0.0;
+
+            // Compute the sum of all elements in parallel
+            Parallel.ForEach(
+                arr,
+                () => 0.0, // Initialize local sum to 0
+                (item, state, localSum) => localSum + item, // Add each item to the local sum
+                localSum => Interlocked.Exchange(ref sum, sum + localSum) // Add local sum to the global sum
+            );
+
+            // Calculate the average
+            return sum / length;
         }
 
-        /**
-         * Computes and returns the variance.
-         * @param arr
-         * @param mean
-         * @return
-         */
+        /// <summary>
+        /// Computes and returns the variance of the specified array given the mean.
+        /// </summary>
+        /// <param name="arr">The input array.</param>
+        /// <param name="mean">The mean value of the array.</param>
+        /// <returns>The variance of the array.</returns>
         public static double Variance(double[] arr, double mean)
         {
             double accum = 0.0;
-            double dev = 0.0;
             double accum2 = 0.0;
+
             for (int i = 0; i < arr.Length; i++)
             {
-                dev = arr[i] - mean;
+                double dev = arr[i] - mean;
                 accum += dev * dev;
                 accum2 += dev;
             }
@@ -1023,24 +1138,23 @@ namespace HTM.Net.Util
             return var;
         }
 
-        /**
-         * Computes and returns the variance.
-         * @param arr
-         * @return
-         */
+        /// <summary>
+        /// Computes and returns the variance of the specified array.
+        /// </summary>
+        /// <param name="arr">The input array.</param>
+        /// <returns>The variance of the array.</returns>
         public static double Variance(double[] arr)
         {
-            return Variance(arr, Average(arr));
+            double mean = Average(arr);
+            return Variance(arr, mean);
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the addition of the specified amount.
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value altered by the addition of the specified amount.
+        /// </summary>
+        /// <param name="arr">The input array.</param>
+        /// <param name="amount">The amount to add to each element of the array.</param>
+        /// <returns>The modified array.</returns>
         public static int[] Add(int[] arr, int amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -1050,15 +1164,12 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the addition of the specified double amount at the same
-         * index
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value altered by the addition of the corresponding element in the amount array.
+        /// </summary>
+        /// <param name="arr">The input array.</param>
+        /// <param name="amount">The array containing the amounts to add to each element of the input array.</param>
+        /// <returns>The modified array.</returns>
         public static int[] Add(int[] arr, int[] amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -1068,15 +1179,12 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the addition of the specified double amount at the same
-         * index
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value altered by the addition of the corresponding element in the amount array.
+        /// </summary>
+        /// <param name="arr">The input array.</param>
+        /// <param name="amount">The array containing the amounts to add to each element of the input array.</param>
+        /// <returns>The modified array.</returns>
         public static double[] Add(double[] arr, double[] amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -1086,14 +1194,12 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the addition of the specified double amount
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value altered by the addition of the specified amount.
+        /// </summary>
+        /// <param name="arr">The input array.</param>
+        /// <param name="amount">The amount to add to each element of the array.</param>
+        /// <returns>The modified array.</returns>
         public static double[] Add(double[] arr, double amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -1103,32 +1209,28 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the sum of all contents in the specified array.
-         * @param array
-         * @return
-         */
+        /// <summary>
+        /// Returns the sum of all contents in the specified array.
+        /// </summary>
+        /// <param name="array">The array to calculate the sum.</param>
+        /// <returns>The sum of the array contents.</returns>
         public static int Sum(int[] array)
         {
-            return array.AsParallel().Sum();
-            //int sum = 0;
-            //for (int i = 0; i < array.Length; i++)
-            //{
-            //    sum += array[i];
-            //}
-            //return sum;
+            int sum = 0;
+            int length = array.Length;
+            for (int i = 0; i < length; i++)
+            {
+                sum += array[i];
+            }
+            return sum;
         }
 
-        /**
-         * Test whether each element of a 1-D array is also present in a second 
-         * array.
-         *
-         * Returns a int array whose length is the number of intersections.
-         * 
-         * @param ar1   the array of values to find in the second array 
-         * @param ar2   the array to test for the presence of elements in the first array.
-         * @return  an array containing the intersections or an empty array if none are found.
-         */
+        /// <summary>
+        /// Test whether each element of a 1-D array is also present in a second array.
+        /// </summary>
+        /// <param name="ar1">The array of values to find in the second array.</param>
+        /// <param name="ar2">The array to test for the presence of elements in the first array.</param>
+        /// <returns>An array containing the intersections or an empty array if none are found.</returns>
         public static int[] In1d(int[] ar1, int[] ar2)
         {
             if (ar1 == null || ar2 == null)
@@ -1138,58 +1240,62 @@ namespace HTM.Net.Util
 
             HashSet<int> retVal = new HashSet<int>(ar2);
             retVal.IntersectWith(ar1);
-            //retVal.RetainAll(ar1);
             return retVal.ToArray();
         }
 
-        /**
-         * Returns the sum of all contents in the specified array.
-         * @param array
-         * @return
-         */
+        /// <summary>
+        /// Returns the sum of all contents in the specified array.
+        /// </summary>
+        /// <param name="array">The array to calculate the sum.</param>
+        /// <returns>The sum of the array contents.</returns>
         public static double Sum(double[] array)
         {
-            return array.AsParallel().Sum();
-            //double sum = 0;
-            //for (int i = 0; i < array.Length; i++)
-            //{
-            //    sum += array[i];
-            //}
-            //return sum;
+            double sum = 0;
+            int length = array.Length;
+            for (int i = 0; i < length; i++)
+            {
+                sum += array[i];
+            }
+            return sum;
         }
 
+        /// <summary>
+        /// Computes the sum of elements along the specified axis of a 2-D array.
+        /// </summary>
+        /// <param name="array">The 2-D array to calculate the sum.</param>
+        /// <param name="axis">The axis along which to compute the sum (0 for columns, 1 for rows).</param>
+        /// <returns>An array containing the sum of elements along the specified axis.</returns>
         public static double[] Sum(double[][] array, int axis)
         {
-            /*
-            >>> np.sum([[0, 1], [0, 5]], axis=0)
-            array([0, 6])
-            >>> np.sum([[0, 1], [0, 5]], axis=1)
-            array([1, 5])
-            */
             switch (axis)
             {
                 case 0: // cols
-                {
+                    int rows = array.Length;
                     int cols = array[0].Length;
                     double[] result = new double[cols];
                     for (int c = 0; c < cols; c++)
                     {
-                        for (int r = 0; r < array.Length; r++)
+                        for (int r = 0; r < rows; r++)
                         {
                             result[c] += array[r][c];
                         }
                     }
                     return result;
-                }
+
                 case 1: // rows
-                {
-                    double[] result = new double[array.Length];
+                    int numElements = array[0].Length;
+                    double[] rowSums = new double[array.Length];
                     for (int r = 0; r < array.Length; r++)
                     {
-                        result[r] += array[r].Sum();
+                        double sum = 0;
+                        for (int c = 0; c < numElements; c++)
+                        {
+                            sum += array[r][c];
+                        }
+                        rowSums[r] = sum;
                     }
-                    return result;
-                }
+                    return rowSums;
+
                 default:
                     throw new ArgumentException("axis must be either '0' or '1'");
             }
@@ -1255,84 +1361,84 @@ namespace HTM.Net.Util
             }
         }
 
-        /**
-         * Returns an array which starts from lowerBounds (inclusive) and
-         * ends at the upperBounds (exclusive).
-         *
-         * @param lowerBounds
-         * @param upperBounds
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of integers starting from the lower bounds (inclusive) and ending at the upper bounds (exclusive).
+        /// </summary>
+        /// <param name="lowerBounds">The lower bounds of the range (inclusive).</param>
+        /// <param name="upperBounds">The upper bounds of the range (exclusive).</param>
+        /// <returns>An array of integers representing the range.</returns>
         public static int[] Range(int lowerBounds, int upperBounds)
         {
-            int[] ints = new int[upperBounds - lowerBounds];
+            int[] result = new int[upperBounds - lowerBounds];
+
             for (int i = lowerBounds, j = 0; i < upperBounds; i++, j++)
             {
-                ints[j] = i;
+                result[j] = i;
             }
-            //return Enumerable.Range(lowerBounds, upperBounds - lowerBounds).ToArray();
-            return ints;
+
+            return result;
         }
 
-        /**
-         * Returns an array which starts from lowerBounds (inclusive) and
-         * ends at the upperBounds (exclusive).
-         *
-         * @param lowerBounds the starting value
-         * @param upperBounds the maximum value (exclusive)
-         * @param interval    the amount by which to increment the values
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of doubles that starts from the lower bounds (inclusive), ends at the upper bounds (exclusive),
+        /// and increments the values by the specified interval.
+        /// </summary>
+        /// <param name="lowerBounds">The starting value.</param>
+        /// <param name="upperBounds">The maximum value (exclusive).</param>
+        /// <param name="interval">The amount by which to increment the values.</param>
+        /// <returns>An array of doubles representing the arranged values.</returns>
         public static double[] Arrange(double lowerBounds, double upperBounds, double interval)
         {
-            List<double> doubs = new List<double>();
-            for (double i = lowerBounds; i < upperBounds; i += interval)
+            int count = (int)Math.Ceiling((upperBounds - lowerBounds) / interval);
+            double[] result = new double[count];
+
+            for (int i = 0; i < count; i++)
             {
-                doubs.Add(i);
+                result[i] = lowerBounds + i * interval;
             }
-            return doubs.ToArray();
+
+            return result;
         }
 
-        /**
-         * Returns an array which starts from lowerBounds (inclusive) and
-         * ends at the upperBounds (exclusive).
-         *
-         * @param lowerBounds the starting value
-         * @param upperBounds the maximum value (exclusive)
-         * @param interval    the amount by which to increment the values
-         * @return
-         */
+        /// <summary>
+        /// Returns an enumerable sequence of integers that starts from the lower bounds (inclusive),
+        /// ends at the upper bounds (exclusive), and increments the values by the specified step.
+        /// </summary>
+        /// <param name="start">The starting value.</param>
+        /// <param name="stop">The maximum value (exclusive).</param>
+        /// <param name="step">The amount by which to increment the values.</param>
+        /// <returns>An enumerable sequence of integers representing the range of values.</returns>
         public static IEnumerable<int> XRange(int start, int stop, int step)
         {
-            // go up
-            if (start < stop && stop != -1)
+            if (step == 0)
             {
-                for (int i = start; i < stop; i += step)
+                throw new ArgumentException("Step cannot be zero.");
+            }
+
+            int current = start;
+            int count = 0;
+            bool isIncreasing = step > 0;
+            bool shouldContinue = isIncreasing ? current < stop : current > stop;
+
+            while (shouldContinue)
+            {
+                yield return current;
+                current += step;
+                count++;
+
+                if (isIncreasing)
                 {
-                    yield return i;
+                    shouldContinue = current < stop;
+                }
+                else
+                {
+                    shouldContinue = current > stop;
                 }
             }
-            else if (start < stop && stop == -1)
+
+            if (count == 0)
             {
-                for (int i = start; ; i += step)
-                {
-                    yield return i;
-                }
-            }
-            // go down
-            else if (start > stop && stop != -1)
-            {
-                for (int i = start; i > stop; i += step)
-                {
-                    yield return i;
-                }
-            }
-            else if (start > stop && stop == -1)
-            {
-                for (int i = start; ; i += step)
-                {
-                    yield return i;
-                }
+                yield break; // Return an empty sequence if no values are generated
             }
         }
 
@@ -1359,37 +1465,37 @@ namespace HTM.Net.Util
             return array;
         }
 
-        /**
-         * Replaces the range specified by "start" and "end" of "orig" with the 
-         * array of replacement ints found in "replacement".
-         * 
-         * @param start         start index of "orig" to be replaced
-         * @param end           end index of "orig" to be replaced
-         * @param orig          the array containing entries to be replaced by "replacement"
-         * @param replacement   the array of ints to put in "orig" in the indicated indexes
-         * @return
-         */
+        /// <summary>
+        /// Replaces the range specified by the "start" and "end" indices of the "orig" array
+        /// with the values from the "replacement" array.
+        /// </summary>
+        /// <param name="start">Start index of the range to be replaced.</param>
+        /// <param name="end">End index (exclusive) of the range to be replaced.</param>
+        /// <param name="orig">The array containing entries to be replaced by "replacement".</param>
+        /// <param name="replacement">The array of ints to put in "orig" at the indicated indexes.</param>
+        /// <returns>The modified "orig" array.</returns>
         public static int[] Replace(int start, int end, int[] orig, int[] replacement)
         {
+            if (replacement.Length != end - start)
+            {
+                throw new ArgumentException("The length of the replacement array must match the range being replaced.");
+            }
+
             for (int i = start, j = 0; i < end; i++, j++)
             {
                 orig[i] = replacement[j];
             }
+
             return orig;
         }
 
-        /**
-         * Returns a sorted unique array of integers
-         *
-         * @param nums an unsorted array of integers with possible duplicates.
-         * @return
-         */
+        /// <summary>
+        /// Returns a sorted unique array of integers.
+        /// </summary>
+        /// <param name="nums">An unsorted array of integers with possible duplicates.</param>
+        /// <returns>A sorted array of unique integers.</returns>
         public static int[] Unique(int[] nums)
         {
-            //HashSet<int> set = new HashSet<int>(nums);
-            //int[] result = set.ToArray();
-            //Array.Sort(result);
-            //return result;
             int[] result = nums.Distinct().ToArray();
             Array.Sort(result);
             return result;
@@ -1400,39 +1506,53 @@ namespace HTM.Net.Util
          */
         private class CoordinateAssembler
         {
-            private readonly int[] position;
             private readonly List<int[]> dimensions;
             private readonly List<int[]> result = new List<int[]>();
 
             public static List<int[]> Assemble(List<int[]> dimensions)
             {
                 CoordinateAssembler assembler = new CoordinateAssembler(dimensions);
-                assembler.Process(dimensions.Count);
+                assembler.Process();
                 return assembler.result;
             }
 
             private CoordinateAssembler(List<int[]> dimensions)
             {
                 this.dimensions = dimensions;
-                position = new int[dimensions.Count];
             }
 
-            private void Process(int level)
+            private void Process()
             {
-                if (level == 0)
-                {// terminating condition
-                    int[] coordinates = new int[position.Length];
-                    Array.Copy(position, 0, coordinates, 0, position.Length);
-                    result.Add(coordinates);
+                int[] position = new int[dimensions.Count];
+                int[] maxIndices = new int[dimensions.Count];
+
+                for (int i = 0; i < dimensions.Count; i++)
+                {
+                    maxIndices[i] = dimensions[i].Length - 1;
                 }
-                else
-                {// inductive condition
-                    int index = dimensions.Count - level;
-                    int[] currentDimension = dimensions[index];
-                    for (int i = 0; i < currentDimension.Length; i++)
+
+                bool finished = false;
+                while (!finished)
+                {
+                    int[] coordinates = new int[position.Length];
+                    Array.Copy(position, coordinates, position.Length);
+                    result.Add(coordinates);
+
+                    int level = dimensions.Count - 1;
+                    while (level >= 0)
                     {
-                        position[index] = currentDimension[i];
-                        Process(level - 1);
+                        position[level]++;
+                        if (position[level] <= maxIndices[level])
+                        {
+                            break;
+                        }
+                        position[level] = 0;
+                        level--;
+                    }
+
+                    if (level < 0)
+                    {
+                        finished = true;
                     }
                 }
             }
@@ -1452,51 +1572,107 @@ namespace HTM.Net.Util
             return CoordinateAssembler.Assemble(dimensions);
         }
 
-        /**
-         * Sets the values in the specified values array at the indexes specified,
-         * to the value "setTo".
-         *
-         * @param values  the values to alter if at the specified indexes.
-         * @param indexes the indexes of the values array to alter
-         * @param setTo   the value to set at the specified indexes.
-         */
+        /// <summary>
+        /// Sets the values in the specified values array at the indexes specified,
+        /// to the value "setTo".
+        /// </summary>
+        /// <param name="values">The values to alter if at the specified indexes.</param>
+        /// <param name="indexes">The indexes of the values array to alter.</param>
+        /// <param name="setTo">The value to set at the specified indexes.</param>
         public static void SetIndexesTo(double[] values, int[] indexes, double setTo)
         {
-            foreach (int index in indexes)
+            int valuesLength = values.Length;
+            int indexesLength = indexes.Length;
+
+            // Create a boolean array to mark the indices to be set
+            bool[] indexFlags = new bool[valuesLength];
+
+            // Iterate over the indexes array to mark the corresponding indices in indexFlags
+            for (int i = 0; i < indexesLength; i++)
             {
-                values[index] = setTo;
+                int index = indexes[i];
+                // Check if the index is within the valid range of the values array
+                if (index >= 0 && index < valuesLength)
+                {
+                    // Set the flag to true for the current index
+                    indexFlags[index] = true;
+                }
+            }
+
+            // Iterate over the values array and update values at marked indices
+            for (int i = 0; i < valuesLength; i++)
+            {
+                // Check if the flag is true for the current index
+                if (indexFlags[i])
+                {
+                    // Update the value at the current index to the specified setTo value
+                    values[i] = setTo;
+                }
             }
         }
 
-        /**
-         * Sets the values in the specified values array at the indexes specified,
-         * to the value "setTo".
-         *
-         * @param values  the values to alter if at the specified indexes.
-         * @param indexes the indexes of the values array to alter
-         * @param setTo   the value to set at the specified indexes.
-         */
+        /// <summary>
+        /// Sets the values in the specified values array at the indexes specified,
+        /// to the value "setTo".
+        /// </summary>
+        /// <param name="values">The values to alter if at the specified indexes.</param>
+        /// <param name="indexes">The indexes of the values array to alter.</param>
+        /// <param name="setTo">The value to set at the specified indexes.</param>
         public static void SetIndexesTo(int[] values, int[] indexes, int setTo)
         {
-            foreach (int index in indexes)
+            int valuesLength = values.Length;
+            int indexesLength = indexes.Length;
+
+            // Create a boolean array to mark the indices to be set
+            bool[] indexFlags = new bool[valuesLength];
+
+            // Iterate over the indexes array to mark the corresponding indices in indexFlags
+            for (int i = 0; i < indexesLength; i++)
             {
-                values[index] = setTo;
+                int index = indexes[i];
+                // Check if the index is within the valid range of the values array
+                if (index >= 0 && index < valuesLength)
+                {
+                    // Set the flag to true for the current index
+                    indexFlags[index] = true;
+                }
+            }
+
+            // Iterate over the values array and update values at marked indices
+            for (int i = 0; i < valuesLength; i++)
+            {
+                // Check if the flag is true for the current index
+                if (indexFlags[i])
+                {
+                    // Update the value at the current index to the specified setTo value
+                    values[i] = setTo;
+                }
             }
         }
 
-        /**
-         * Sets the values in range start to stop to the value specified. If
-         * stop &lt; 0, then stop indicates the number of places counting from the
-         * length of "values" back.
-         *
-         * @param values the array to alter
-         * @param start  the start index (inclusive)
-         * @param stop   the end index (exclusive)
-         * @param setTo  the value to set the indexes to
-         */
+        /// <summary>
+        /// Sets the values in range start to stop to the value specified. If stop &lt; 0,
+        /// then stop indicates the number of places counting from the length of "values" back.
+        /// </summary>
+        /// <param name="values">The array to alter.</param>
+        /// <param name="start">The start index (inclusive).</param>
+        /// <param name="stop">The end index (exclusive).</param>
+        /// <param name="setTo">The value to set the indexes to.</param>
         public static void SetRangeTo(int[] values, int start, int stop, int setTo)
         {
-            stop = stop < 0 ? values.Length + stop : stop;
+            int length = values.Length;
+
+            // Adjust the stop index if it's negative
+            if (stop < 0)
+            {
+                stop = length + stop;
+            }
+
+            // Ensure that the start and stop indices are within the valid range
+            start = Math.Max(0, start);
+            stop = Math.Min(stop, length);
+
+            // Set the values in the specified range to the specified value
             for (int i = start; i < stop; i++)
             {
                 values[i] = setTo;
@@ -1522,7 +1698,7 @@ namespace HTM.Net.Util
             }
         }
 
-        public static void SetRangeTo(Vector<double> values, int start, int stop, double setTo)
+        public static void SetRangeTo(MathNet.Numerics.LinearAlgebra.Vector<double> values, int start, int stop, double setTo)
         {
             stop = stop < 0 ? values.Count + stop : stop;
             for (int i = start; i < stop; i++)
@@ -1531,34 +1707,47 @@ namespace HTM.Net.Util
             }
         }
 
-        /**
-         * Returns a random, sorted, and  unique array of the specified sample size of
-         * selections from the specified list of choices.
-         *
-         * @param sampleSize the number of selections in the returned sample
-         * @param choices    the list of choices to select from
-         * @param random     a random number generator
-         * @return a sample of numbers of the specified size
-         */
+        /// <summary>
+        /// Returns a random, sorted, and unique array of the specified sample size of
+        /// selections from the specified list of choices.
+        /// </summary>
+        /// <param name="sampleSize">The number of selections in the returned sample.</param>
+        /// <param name="choices">The list of choices to select from.</param>
+        /// <param name="random">A random number generator.</param>
+        /// <returns>A sample of numbers of the specified size.</returns>
         public static int[] Sample(int[] choices, ref int[] selectedIndices, IRandom random)
         {
             List<int> supply = new List<int>(choices);
 
             int[] chosen = supply.SelectCombination(selectedIndices.Length, (Random) random).ToArray();
 
-            //List<int> choiceSupply = new List<int>(choices);
-            //int upperBound = choices.Length;
-            //for (int i = 0; i < selectedIndices.Length; i++)
-            //{
-            //    int randomIdx = random.NextInt(upperBound);
-            //    int removedVal = choiceSupply[randomIdx];
-            //    choiceSupply.RemoveAt(randomIdx);
-            //    selectedIndices[i] = removedVal;
-            //    upperBound--;
-            //}
             selectedIndices = chosen; // use ref so we can replace this instance
             Array.Sort(selectedIndices);
 
+            return selectedIndices;
+        }
+
+        /// <summary>
+        /// Returns a random, sorted, and unique array of the specified sample size of
+        /// selections from the specified list of choices.
+        /// </summary>
+        /// <param name="sampleSize">The number of selections in the returned sample</param>
+        /// <param name="choices">The list of choices to select from</param>
+        /// <param name="random">A random number generator</param>
+        /// <returns>A sample of numbers of the specified size</returns>
+        public static int[] SampleFast(int[] choices, ref int[] selectedIndices, IRandom random)
+        {
+            int sampleSize = selectedIndices.Length;
+            if (sampleSize <= 0)
+            {
+                selectedIndices = Array.Empty<int>();
+                return selectedIndices;
+            }
+
+            HashSet<int> supply = new HashSet<int>(choices);
+            int[] chosen = supply.SelectCombination(sampleSize, (Random)random).OrderBy(n => n).ToArray();
+
+            selectedIndices = chosen;
             return selectedIndices;
         }
 
@@ -1605,27 +1794,59 @@ namespace HTM.Net.Util
             return sample;
         }
 
-        /**
-         * Ensures that each entry in the specified array has a min value
-         * equal to or greater than the specified min and a maximum value less
-         * than or equal to the specified max.
-         *
-         * @param values the values to clip
-         * @param min    the minimum value
-         * @param max    the maximum value
-         */
-        public static double[] Clip(double[] values, double min, double max)
+        /// <summary>
+        /// Ensures that each entry in the specified array has a minimum value equal to or greater than
+        /// the specified minimum and a maximum value less than or equal to the specified maximum.
+        /// </summary>
+        /// <param name="values">The values to clip.</param>
+        /// <param name="min">The minimum value.</param>
+        /// <param name="max">The maximum value.</param>
+        /// <returns>The clipped array.</returns>
+        public static double[] Clip2(double[] values, double min, double max)
         {
             Parallel.For(0, values.Length, i =>
             {
-                values[i] = Math.Min(1, Math.Max(0, values[i]));
+                // Clip the value between 0 and 1
+                values[i] = Math.Min(max, Math.Max(min, values[i]));
             });
 
-
+            // Sequential version using regular for loop:
             //for (int i = 0; i < values.Length; i++)
             //{
-            //    values[i] = Math.Min(1, Math.Max(0, values[i]));
+            //    values[i] = Math.Min(max, Math.Max(min, values[i]));
             //}
+
+            return values;
+        }
+
+        /// <summary>
+        /// Ensures that each entry in the specified array has a minimum value equal to or greater than
+        /// the specified minimum and a maximum value less than or equal to the specified maximum.
+        /// </summary>
+        /// <param name="values">The values to clip.</param>
+        /// <param name="min">The minimum value.</param>
+        /// <param name="max">The maximum value.</param>
+        /// <returns>The clipped array.</returns>
+        public static double[] Clip(double[] values, double min, double max)
+        {
+            int length = values.Length;
+            int vectorSize = System.Numerics.Vector<double>.Count;
+            int endIndex = length - length % vectorSize;
+
+            // Process the vectorizable part using SIMD
+            for (int i = 0; i < endIndex; i += vectorSize)
+            {
+                System.Numerics.Vector<double> vector = new System.Numerics.Vector<double>(values, i);
+                vector = Vector.Min(Vector.Max(vector, new System.Numerics.Vector<double>(min)), new System.Numerics.Vector<double>(max));
+                vector.CopyTo(values, i);
+            }
+
+            // Process the remaining elements sequentially
+            for (int i = endIndex; i < length; i++)
+            {
+                values[i] = Math.Min(Math.Max(values[i], min), max);
+            }
+
             return values;
         }
 
@@ -1671,81 +1892,83 @@ namespace HTM.Net.Util
             return values;
         }
 
-        /**
-         * Ensures that each entry in the specified array has a min value
-         * equal to or greater than the min at the specified index and a maximum value less
-         * than or equal to the max at the specified index.
-         *
-         * @param values the values to clip
-         * @param max    the minimum value
-         * @param adj    the adjustment amount
-         */
+        /// <summary>
+        /// Ensures that each entry in the specified array has a minimum value equal to or greater than
+        /// the minimum at the specified index and a maximum value less than or equal to the maximum at
+        /// the specified index.
+        /// </summary>
+        /// <param name="values">The values to clip.</param>
+        /// <param name="max">The maximum values.</param>
+        /// <param name="adj">The adjustment amount.</param>
+        /// <returns>The clipped array.</returns>
         public static int[] Clip(int[] values, int[] max, int adj)
         {
             for (int i = 0; i < values.Length; i++)
             {
+                // Clip the value between 0 and (max[i] + adj)
                 values[i] = Math.Max(0, Math.Min(max[i] + adj, values[i]));
             }
             return values;
         }
 
-        /**
-         * Returns the count of values in the specified array that are
-         * greater than the specified compare value
-         *
-         * @param compare the value to compare to
-         * @param array   the values being compared
-         *
-         * @return the count of values greater
-         */
+        /// <summary>
+        /// Returns the count of values in the specified array that are greater than the specified compare value.
+        /// </summary>
+        /// <param name="compare">The value to compare to.</param>
+        /// <param name="array">The values being compared.</param>
+        /// <returns>The count of values greater than the compare value.</returns>
         public static int ValueGreaterCount(double compare, double[] array)
         {
             int count = 0;
             for (int i = 0; i < array.Length; i++)
             {
+                // Increment the count if the value is greater than compare
                 if (array[i] > compare)
                 {
                     count++;
                 }
             }
-
             return count;
         }
 
+        /// <summary>
+        /// Returns the count of values in the specified array that are greater than or equal to the specified compare value.
+        /// </summary>
+        /// <param name="compare">The value to compare to.</param>
+        /// <param name="array">The values being compared.</param>
+        /// <returns>The count of values greater than or equal to the compare value.</returns>
         public static int ValueGreaterOrEqualCount(double compare, double[] array)
         {
             int count = 0;
             for (int i = 0; i < array.Length; i++)
             {
+                // Increment the count if the value is greater than or equal to compare
                 if (array[i] >= compare)
                 {
                     count++;
                 }
             }
-
             return count;
         }
 
-        /**
-         * Returns the count of values in the specified array that are
-         * greater than the specified compare value
-         *
-         * @param compare the value to compare to
-         * @param array   the values being compared
-         *
-         * @return the count of values greater
-         */
+        /// <summary>
+        /// Returns the count of values in the specified array, at the specified indexes, that are greater than the specified compare value.
+        /// </summary>
+        /// <param name="compare">The value to compare to.</param>
+        /// <param name="array">The values being compared.</param>
+        /// <param name="indexes">The indexes of values to consider.</param>
+        /// <returns>The count of values greater than the compare value.</returns>
         public static int ValueGreaterCountAtIndex(double compare, double[] array, int[] indexes)
         {
             int count = 0;
             for (int i = 0; i < indexes.Length; i++)
             {
+                // Increment the count if the value at the specified index is greater than compare
                 if (array[indexes[i]] > compare)
                 {
                     count++;
                 }
             }
-
             return count;
         }
 
@@ -1856,68 +2079,92 @@ namespace HTM.Net.Util
         //    return retVal.ToArray();
         //}
 
-        /**
-         * Scans the specified values and applies the {@link Condition} to each
-         * value, returning the indexes of the values where the condition evaluates
-         * to true.
-         *
-         * @param values the values to test
-         * @param c      the condition used to test each value
-         * @return
-         */
+        /// <summary>
+        /// Scans the specified values and applies the <see cref="Condition"/> to each value,
+        /// returning the indexes of the values where the condition evaluates to true.
+        /// </summary>
+        /// <typeparam name="T">The type of values in the collection.</typeparam>
+        /// <param name="values">The values to test.</param>
+        /// <param name="condition">The condition used to test each value.</param>
+        /// <returns>An array of indexes where the condition evaluates to true.</returns>
         public static int[] Where<T>(IEnumerable<T> values, Func<T, bool> condition)
         {
-            return values
-                .Select((n, i) => new { Index = i, Value = n })
-                .Where(a => condition(a.Value))
-                .Select(a => a.Index).ToArray();
+            // Create a List to collect the indexes
+            List<int> indexes = new List<int>();
 
-            //List<int> retVal = new List<int>();
-            //int len = values.Length;
-            //for (int i = 0; i < len; i++)
-            //{
-            //    if (c.eval(values[i]))
-            //    {
-            //        retVal.Add(i);
-            //    }
-            //}
-            //return retVal.ToArray();
+            int i = 0;
+            foreach (T value in values)
+            {
+                // Check the condition and add the index to the list if true
+                if (condition(value))
+                {
+                    indexes.Add(i);
+                }
+
+                i++;
+            }
+
+            // Convert the List to an array
+            return indexes.ToArray();
         }
 
-        /**
-         * Returns a flag indicating whether the specified array
-         * is a sparse array of 0's and 1's or not.
-         * 
-         * @param ia
-         * @return
-         */
-        public static bool IsSparse(int[] ia)
+        /// <summary>
+        /// Returns a flag indicating whether the specified array is a sparse array of 0's and 1's or not.
+        /// </summary>
+        /// <param name="ia">Array to check</param>
+        /// <returns>True if the array is sparse, False otherwise</returns>
+        public static bool IsSparse(ReadOnlySpan<int> ia)
         {
-            if (ia == null || ia.Length < 3) return false;
+            if (ia.Length < 3)
+            {
+                return false;
+            }
+
             int end = ia[ia.Length - 1];
+
             for (int i = ia.Length - 1, j = 0; i >= 0; i--, j++)
             {
-                if (ia[i] > 1) return true;
-                else if (j > 0 && ia[i] == end) return false;
+                if (ia[i] != 0 && ia[i] != 1)
+                {
+                    return true;
+                }
+                else if (j > 0 && ia[i] == end)
+                {
+                    return false;
+                }
             }
 
             return false;
         }
 
-        /**
-         * Returns a bit vector of the specified size whose "on" bit
-         * indexes are specified in "in"; basically converting a sparse
-         * array to a dense one.
-         * 
-         * @param in       the sparse array specifying the on bits of the returned array
-         * @param size    the size of the dense array to be returned.
-         * @return
-         */
-        public static int[] AsDense(int[] @in, int size)
+        /// <summary>
+        /// Returns a bit vector of the specified size whose "on" bit indexes are specified in "in";
+        /// basically converting a sparse array to a dense one.
+        /// </summary>
+        /// <param name="input">Sparse array specifying the "on" bits</param>
+        /// <param name="size">Size of the dense array</param>
+        /// <returns>Dense array</returns>
+        public static int[] AsDense(ReadOnlySpan<int> input, int size)
         {
             int[] retVal = new int[size];
-            new List<int>(@in).AsParallel().ForAll(i => retVal[i] = 1);
-            //Arrays.stream(in).forEach(i-> { retVal[i] = 1; });
+            int vectorSize = System.Numerics.Vector<int>.Count;
+
+            // Process vector-sized chunks
+            int i = 0;
+            for (; i <= input.Length - vectorSize; i += vectorSize)
+            {
+                System.Numerics.Vector<int> indices = new System.Numerics.Vector<int>(input.Slice(i));
+                System.Numerics.Vector<int> mask = System.Numerics.Vector.Equals(indices, System.Numerics.Vector<int>.Zero);
+                mask.CopyTo(retVal, i);
+            }
+
+            // Process remaining elements
+            for (; i < input.Length; i++)
+            {
+                int index = input[i];
+                retVal[index] = 1;
+            }
+
             return retVal;
         }
 
@@ -1966,18 +2213,23 @@ namespace HTM.Net.Util
         //    return retVal.ToArray();
         //}
 
-        /**
-         * Makes all values in the specified array which are less than or equal to the specified
-         * "x" value, equal to the specified "y".
-         * @param array
-         * @param x     the comparison
-         * @param y     the value to set if the comparison fails
-         */
+        /// <summary>
+        /// Makes all values in the specified array which are less than or equal to the specified "x" value, equal to the specified "y".
+        /// </summary>
+        /// <param name="array">Array to process</param>
+        /// <param name="x">The comparison value</param>
+        /// <param name="y">The value to set if the comparison fails</param>
         public static void LessThanOrEqualXThanSetToY(double[] array, double x, double y)
         {
+            // Iterate over each element in the array
             for (int i = 0; i < array.Length; i++)
             {
-                if (array[i] <= x) array[i] = y;
+                // Check if the current element is less than or equal to x
+                if (array[i] <= x)
+                {
+                    // Set the current element to y
+                    array[i] = y;
+                }
             }
         }
 
@@ -2057,27 +2309,31 @@ namespace HTM.Net.Util
             }
         }
 
-        /**
-         * Sets value to "y" in "targetB" if the value in the same index in "sourceA" is bigger than "x".
-         * @param sourceA array to compare elements with X
-         * @param targetB array to set elements to Y
-         * @param x     the comparison
-         * @param y     the value to set if the comparison fails
-         */
+        /// <summary>
+        /// Sets the value to "y" in "targetB" if the value in the same index in "sourceA" is bigger than "x".
+        /// </summary>
+        /// <param name="sourceA">Array to compare elements with x</param>
+        /// <param name="targetB">Array to set elements to y</param>
+        /// <param name="x">The comparison value</param>
+        /// <param name="y">The value to set if the comparison fails</param>
         public static void GreaterThanXThanSetToYInB(int[] sourceA, double[] targetB, int x, double y)
         {
+            // Iterate over each element in sourceA and compare it with x
             for (int i = 0; i < sourceA.Length; i++)
             {
                 if (sourceA[i] > x)
+                {
+                    // Set the corresponding element in targetB to y
                     targetB[i] = y;
+                }
             }
         }
 
-        /**
-         * Returns the index of the max value in the specified array
-         * @param array the array to find the max value index in
-         * @return the index of the max value
-         */
+        /// <summary>
+        /// Returns the index of the max value in the specified array.
+        /// </summary>
+        /// <param name="array">The array to find the max value index in.</param>
+        /// <returns>The index of the max value.</returns>
         public static int Argmax(int[] array)
         {
             int index = -1;
@@ -2153,23 +2409,35 @@ namespace HTM.Net.Util
             return index;
         }
 
-        /**
-         * Returns the maximum value in the specified array
-         * @param array
-         * @return
-         */
+        /// <summary>
+        /// Returns the maximum value in the specified array
+        /// </summary>
+        /// <param name="array">Array to investigate</param>
+        /// <returns>The maximum value in the specified array</returns>
         public static int Max(int[] array)
         {
-            return array.AsParallel().Max();
-            //int max = int.MinValue;
-            //for (int i = 0; i < array.Length; i++)
-            //{
-            //    if (array[i] > max)
-            //    {
-            //        max = array[i];
-            //    }
-            //}
-            //return max;
+            int max = int.MinValue;
+            int length = array.Length;
+
+            // Unroll the loop to process multiple elements at once
+            int i = 0;
+            for (; i < length - 3; i += 4)
+            {
+                int val1 = array[i];
+                int val2 = array[i + 1];
+                int val3 = array[i + 2];
+                int val4 = array[i + 3];
+
+                max = Math.Max(max, Math.Max(Math.Max(val1, val2), Math.Max(val3, val4)));
+            }
+
+            // Process the remaining elements (if any)
+            for (; i < length; i++)
+            {
+                max = Math.Max(max, array[i]);
+            }
+
+            return max;
         }
 
         /**
@@ -2179,19 +2447,55 @@ namespace HTM.Net.Util
          */
         public static double Max(double[] array)
         {
-            return array.AsParallel().Max();
-            //double max = double.MinValue;
-            //for (int i = 0; i < array.Length; i++)
-            //{
-            //    if (array[i] > max)
-            //    {
-            //        max = array[i];
-            //    }
-            //}
-            //return max;
+            int length = array.Length;
+
+            // Check if the array length is within a range suitable for vectorization
+            if (length >= System.Numerics.Vector<double>.Count)
+            {
+                int remaining = length % System.Numerics.Vector<double>.Count;
+                int lastIndex = length - remaining;
+
+                System.Numerics.Vector<double> maxVector = new System.Numerics.Vector<double>(double.MinValue);
+                int i = 0;
+
+                // Process vectorized blocks
+                for (; i < lastIndex; i += System.Numerics.Vector<double>.Count)
+                {
+                    System.Numerics.Vector<double> values = new System.Numerics.Vector<double>(array, i);
+                    maxVector = System.Numerics.Vector.Max(maxVector, values);
+                }
+
+                // Find the maximum value in the maxVector
+                double[] tempArray = new double[System.Numerics.Vector<double>.Count];
+                maxVector.CopyTo(tempArray);
+
+                double max = tempArray[0];
+                for (int j = 1; j < System.Numerics.Vector<double>.Count; j++)
+                {
+                    max = Math.Max(max, tempArray[j]);
+                }
+
+                // Process the remaining elements (if any)
+                for (; i < length; i++)
+                {
+                    max = Math.Max(max, array[i]);
+                }
+
+                return max;
+            }
+            else
+            {
+                // Process the array using a simple loop for small lengths
+                double max = double.MinValue;
+                for (int i = 0; i < length; i++)
+                {
+                    max = Math.Max(max, array[i]);
+                }
+                return max;
+            }
         }
 
-        internal static double[][] SubstractRows(double[][] matrix, double[] vector)
+        internal static double[][] SubtractRows(double[][] matrix, double[] vector)
         {
             double[][] retVal = (double[][])matrix.Clone();
             for (int row = 0; row < retVal.Length; row++)
@@ -2205,12 +2509,12 @@ namespace HTM.Net.Util
         }
 
         /// <summary>
-        /// Returns the passed in array with every value being altered
-        /// by the subtraction of the specified double amount
+        /// Returns the passed-in array with every value being altered
+        /// by the subtraction of the specified double amount.
         /// </summary>
         /// <param name="arr">Array to subtract from</param>
         /// <param name="amount">Amount to subtract</param>
-        /// <returns>Double matrix</returns>
+        /// <returns>Double array</returns>
         public static double[] Sub(double[] arr, double amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -2221,60 +2525,86 @@ namespace HTM.Net.Util
         }
 
         /// <summary>
-        /// Returns the passed in matrix with every value being altered
-        /// by the subtraction of the specified double amount
+        /// Returns the passed-in matrix with every value being altered
+        /// by the subtraction of the specified double amount.
         /// </summary>
         /// <param name="matrix">Matrix to subtract from</param>
         /// <param name="amount">Amount to subtract</param>
         /// <returns>Double matrix</returns>
         internal static Matrix<double> Sub(Matrix<double> matrix, Vector<double> amount)
         {
-            Matrix<double> retVal = (Matrix<double>)matrix.Clone();
-            for (int row = 0; row < retVal.RowCount; row++)
+            if (matrix.RowCount == amount.Count)
             {
-                for (int col = 0; col < retVal.Row(row).Count; col++)
-                {
-                    if (retVal.RowCount == amount.Count)
-                        retVal.Row(row)[col] = matrix.Row(row)[col] - amount[row];
-                    else
-                        retVal.Row(row)[col] = matrix.Row(row)[col] - amount[col];
-                }
-            }
+                int rowCount = matrix.RowCount;
+                int colCount = matrix.ColumnCount;
 
-            return retVal;
+                var result = matrix.Clone();
+                for (int row = 0; row < rowCount; row++)
+                {
+                    for (int col = 0; col < colCount; col++)
+                    {
+                        result.At(row, col, result.At(row, col) - amount[col]);
+                    }
+                }
+
+                return result;
+            }
+            else
+            {
+                var result = matrix.Clone();
+                for (int row = 0; row < result.RowCount; row++)
+                {
+                    result.SetRow(row, result.Row(row).Subtract(amount));
+                }
+
+                return result;
+            }
         }
 
         /// <summary>
-        /// Returns the passed in matrix with every value being altered
-        /// by the subtraction of the specified double amount
+        /// Returns the passed-in jagged array with every value being altered
+        /// by the subtraction of the specified double amount.
         /// </summary>
         /// <param name="arr">Jagged array to subtract from</param>
         /// <param name="amount">Amount to subtract</param>
-        /// <returns>Double matrix</returns>
+        /// <returns>Double jagged array</returns>
         internal static double[][] Sub(double[][] arr, double[] amount)
         {
-            double[][] retVal = (double[][])arr.Clone();
-            for (int row = 0; row < retVal.Length; row++)
+            int rows = arr.Length;
+            int cols = amount.Length;
+
+            double[][] result = new double[rows][];
+            for (int row = 0; row < rows; row++)
             {
-                for (int col = 0; col < retVal[row].Length; col++)
+                int rowLength = arr[row].Length;
+                result[row] = new double[rowLength];
+
+                if (rowLength == cols)
                 {
-                    if (retVal.Length == amount.Length)
-                        retVal[row][col] = arr[row][col] - amount[row];
-                    else
-                        retVal[row][col] = arr[row][col] - amount[col];
+                    for (int col = 0; col < rowLength; col++)
+                    {
+                        result[row][col] = arr[row][col] - amount[col];
+                    }
+                }
+                else
+                {
+                    for (int col = 0; col < rowLength; col++)
+                    {
+                        result[row][col] = arr[row][col] - amount[row % cols];
+                    }
                 }
             }
-            return retVal;
+            return result;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the subtraction of the specified double amount
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+
+        /// <summary>
+        /// Returns the passed-in array with every value being altered
+        /// by the subtraction of the specified double amount.
+        /// </summary>
+        /// <param name="amount">Amount to subtract</param>
+        /// <param name="arr">Array to subtract from</param>
+        /// <returns>Double array</returns>
         public static double[] Sub(double amount, double[] arr)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -2284,14 +2614,13 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the subtraction of the specified double amount
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value being altered
+        /// by the subtraction of the specified int amount.
+        /// </summary>
+        /// <param name="arr">Array to subtract from</param>
+        /// <param name="amount">Amount to subtract</param>
+        /// <returns>Int array</returns>
         public static int[] Sub(int[] arr, int amount)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -2301,14 +2630,13 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the subtraction of the specified double amount
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value being altered
+        /// by the subtraction of the specified int amount.
+        /// </summary>
+        /// <param name="amount">Amount to subtract</param>
+        /// <param name="arr">Array to subtract from</param>
+        /// <returns>Int array</returns>
         public static int[] Sub(int amount, int[] arr)
         {
             for (int i = 0; i < arr.Length; i++)
@@ -2318,149 +2646,100 @@ namespace HTM.Net.Util
             return arr;
         }
 
-        /**
-         * Returns the passed in array with every value being altered
-         * by the subtraction of the specified double amount at the same
-         * index
-         *
-         * @param arr
-         * @param amount
-         * @return
-         */
+        /// <summary>
+        /// Returns the passed-in array with every value being altered
+        /// by the subtraction of the specified double amount at the same index.
+        /// </summary>
+        /// <param name="arr">Array to subtract from</param>
+        /// <param name="amount">Amount to subtract</param>
+        /// <returns>Double array</returns>
         public static double[] Sub(double[] arr, double[] amount)
         {
             for (int i = 0; i < Math.Min(arr.Length, amount.Length); i++)
             {
                 arr[i] -= amount[i];
             }
-
             return arr;
         }
 
-        /**
-         * Returns a new array containing the items specified from
-         * the source array by the indexes specified.
-         *
-         * @param source
-         * @param indexes
-         * @return
-         */
+        /// <summary>
+        /// Returns a new array containing the items specified from
+        /// the source array by the indexes specified.
+        /// </summary>
+        /// <param name="source">Source array</param>
+        /// <param name="indexes">Indexes of the items to retrieve</param>
+        /// <returns>Double array</returns>
         public static double[] Sub(double[] source, int[] indexes)
         {
-            double[] retVal = new double[indexes.Length];
+            double[] result = new double[indexes.Length];
             for (int i = 0; i < indexes.Length; i++)
             {
-                retVal[i] = source[indexes[i]];
+                result[i] = source[indexes[i]];
             }
-            return retVal;
+            return result;
         }
 
-        /**
-         * Returns a new array containing the items specified from
-         * the source array by the indexes specified.
-         *
-         * @param source
-         * @param indexes
-         * @return
-         */
+        /// <summary>
+        /// Returns a new array containing the items specified from
+        /// the source array by the indexes specified.
+        /// </summary>
+        /// <param name="source">Source array</param>
+        /// <param name="indexes">Indexes of the items to retrieve</param>
+        /// <returns>Int array</returns>
         public static int[] Sub(int[] source, int[] indexes)
         {
-            int[] retVal = new int[indexes.Length];
+            int[] result = new int[indexes.Length];
             for (int i = 0; i < indexes.Length; i++)
             {
-                retVal[i] = source[indexes[i]];
-            }
-            return retVal;
-        }
-
-        /**
-         * Returns a new 2D array containing the items specified from
-         * the source array by the indexes specified.
-         *
-         * @param source
-         * @param indexes
-         * @return
-         */
-        public static int[][] Sub(int[][] source, int[] indexes)
-        {
-            int[][] retVal = new int[indexes.Length][];
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                retVal[i] = source[indexes[i]];
-            }
-            return retVal;
-        }
-
-        /**
-         * Takes an input array of m rows and n columns, and transposes it to form an array
-         * of n rows and m columns. The value in location [i][j] of the input array is copied
-         * into location [j][i] of the new array.
-         * 
-         * @param array The array to transpose.
-         * @return The transposed array.
-         */
-        public static int[][] Transpose(int[][] array)
-        {
-            int r = array.Length;
-            if (r == 0)
-            {
-                return CreateJaggedArray<int>(0, 0); //new int[0][0]; // Special case: zero-length array
-            }
-            int c = array[0].Length;
-            //int[][] result = new int[c][r];
-            int[][] result = CreateJaggedArray<int>(c, r);
-            for (int i = 0; i < r; i++)
-            {
-                for (int j = 0; j < c; j++)
-                {
-                    result[j][i] = array[i][j];
-                }
+                result[i] = source[indexes[i]];
             }
             return result;
         }
 
-        /**
-         * Takes an input array of m rows and n columns, and transposes it to form an array
-         * of n rows and m columns. The value in location [i][j] of the input array is copied
-         * into location [j][i] of the new array.
-         * 
-         * @param array The array to transpose.
-         * @return The transposed array.
-         */
-        public static double[][] Transpose(double[][] array)
+        /// <summary>
+        /// Takes an input array of m rows and n columns, and transposes it to form an array
+        /// of n rows and m columns. The value in location [i][j] of the input array is copied
+        /// into location [j][i] of the new array.
+        /// </summary>
+        /// <param name="array">The array to transpose.</param>
+        /// <returns>The transposed array.</returns>
+        public static T[][] Transpose<T>(T[][] array)
         {
-            int r = array.Length;
-            if (r == 0)
+            int rowCount = array.Length;
+            if (rowCount == 0)
             {
-                return CreateJaggedArray<double>(0, 0); //new double[0][0]; // Special case: zero-length array
+                return CreateJaggedArray<T>(0, 0); // Special case: zero-length array
             }
-            int c = array[0].Length;
-            //double[][] result = new double[c][r];
-            double[][] result = CreateJaggedArray<double>(c, r);
-            for (int i = 0; i < r; i++)
+
+            int colCount = array[0].Length;
+            T[][] result = CreateJaggedArray<T>(colCount, rowCount);
+
+            for (int i = 0; i < rowCount; i++)
             {
-                for (int j = 0; j < c; j++)
+                for (int j = 0; j < colCount; j++)
                 {
                     result[j][i] = array[i][j];
                 }
             }
+
             return result;
         }
 
-        /**
-         * Transforms 2D matrix of doubles to 1D by concatenation
-         * @param A
-         * @return
-         */
+        /// <summary>
+        /// Transforms a 2D matrix of doubles to a 1D array by concatenation.
+        /// </summary>
+        /// <param name="A">The 2D matrix of doubles</param>
+        /// <returns>A new 1D array containing the concatenated elements</returns>
         public static double[] To1D(double[][] A)
         {
-
-            double[] B = new double[A.Length * A[0].Length];
+            int rows = A.Length;
+            int cols = A[0].Length;
+            double[] B = new double[rows * cols];
             int index = 0;
 
-            for (int i = 0; i < A.Length; i++)
+            for (int i = 0; i < rows; i++)
             {
-                for (int j = 0; j < A[0].Length; j++)
+                for (int j = 0; j < cols; j++)
                 {
                     B[index++] = A[i][j];
                 }
@@ -2468,20 +2747,21 @@ namespace HTM.Net.Util
             return B;
         }
 
-        /**
-         * Transforms 2D matrix of integers to 1D by concatenation
-         * @param A
-         * @return
-         */
+        /// <summary>
+        /// Transforms a 2D matrix of integers to a 1D array by concatenation.
+        /// </summary>
+        /// <param name="A">The 2D matrix of integers</param>
+        /// <returns>A new 1D array containing the concatenated elements</returns>
         public static int[] To1D(int[][] A)
         {
-
-            int[] B = new int[A.Length * A[0].Length];
+            int rows = A.Length;
+            int cols = A[0].Length;
+            int[] B = new int[rows * cols];
             int index = 0;
 
-            for (int i = 0; i < A.Length; i++)
+            for (int i = 0; i < rows; i++)
             {
-                for (int j = 0; j < A[0].Length; j++)
+                for (int j = 0; j < cols; j++)
                 {
                     B[index++] = A[i][j];
                 }
@@ -2489,11 +2769,11 @@ namespace HTM.Net.Util
             return B;
         }
 
-        /**
-         * Returns the minimum value in the specified array
-         * @param array
-         * @return
-         */
+        /// <summary>
+        /// Returns the minimum value in the specified array of integers.
+        /// </summary>
+        /// <param name="array">The array of integers</param>
+        /// <returns>The minimum value in the array</returns>
         public static int Min(int[] array)
         {
             int min = int.MaxValue;
@@ -2507,11 +2787,11 @@ namespace HTM.Net.Util
             return min;
         }
 
-        /**
-         * Returns the minimum value in the specified array
-         * @param array
-         * @return
-         */
+        /// <summary>
+        /// Returns the minimum value in the specified array of doubles.
+        /// </summary>
+        /// <param name="array">The array of doubles</param>
+        /// <returns>The minimum value in the array</returns>
         public static double Min(double[] array)
         {
             double min = double.MaxValue;
@@ -2525,24 +2805,23 @@ namespace HTM.Net.Util
             return min;
         }
 
-        /**
-         * Returns a copy of the specified integer array in
-         * reverse order
-         *
-         * @param d
-         * @return
-         */
+        /// <summary>
+        /// Returns a new array that is a copy of the specified array of integers in reverse order.
+        /// </summary>
+        /// <param name="d">The original array</param>
+        /// <returns>A new array containing the elements in reverse order</returns>
         public static int[] Reverse(int[] d)
         {
             int[] clone = (int[])d.Clone();
             Array.Reverse(clone);
             return clone;
-            //int[] ret = new int[d.Length];
-            //for (int i = 0, j = d.Length - 1; j >= 0; i++, j--)
-            //{
-            //    ret[i] = d[j];
-            //}
-            //return ret;
+            // Alternative implementation:
+            // int[] ret = new int[d.Length];
+            // for (int i = 0, j = d.Length - 1; j >= 0; i++, j--)
+            // {
+            //     ret[i] = d[j];
+            // }
+            // return ret;
         }
 
         /**
@@ -2580,35 +2859,33 @@ namespace HTM.Net.Util
             return retVal;
         }
 
-        /**
-         * Returns a new int array containing the and'd bits of
-         * both arg1 and arg2.
-         *
-         * @param arg1
-         * @param arg2
-         * @return
-         */
+        /// <summary>
+        /// Returns a new integer array containing the bitwise AND of both arg1 and arg2.
+        /// </summary>
+        /// <param name="arg1">The first array</param>
+        /// <param name="arg2">The second array</param>
+        /// <returns>A new array containing the bitwise AND of the elements</returns>
         public static int[] And(int[] arg1, int[] arg2)
         {
-            int[] retVal = new int[Math.Max(arg1.Length, arg2.Length)];
-            for (int i = 0; i < arg1.Length; i++)
+            int minLength = Math.Min(arg1.Length, arg2.Length);
+            int[] retVal = new int[minLength];
+            for (int i = 0; i < minLength; i++)
             {
-                retVal[i] = arg1[i] > 0 && arg2[i] > 0 ? 1 : 0;
+                retVal[i] = arg1[i] & arg2[i];
             }
             return retVal;
         }
 
-        /**
-         * Copies the passed array <tt>original</tt>  into a new array except first element and returns it
-         *
-         * @param original the array from which a tail is taken
-         * @return a new array containing the tail from the original array
-         */
+        /// <summary>
+        /// Copies the passed array <paramref name="original"/> into a new array, excluding the first element, and returns it.
+        /// </summary>
+        /// <param name="original">The original array</param>
+        /// <returns>A new array containing the tail from the original array</returns>
         public static int[] Tail(int[] original)
         {
             int[] range = new int[original.Length - 1];
             Array.Copy(original, 1, range, 0, range.Length);
-            //return Arrays.CopyOfRange(original, 1, original.Length);
+            // Alternative: return Arrays.CopyOfRange(original, 1, original.Length);
             return range;
         }
 
@@ -2722,12 +2999,11 @@ namespace HTM.Net.Util
             throw new NotImplementedException();
         }
 
-        /**
-         *Assigns the specified int value to each element of the specified any dimensional array
-         * of ints.
-         * @param array
-         * @param value
-         */
+        /// <summary>
+        /// Assigns the specified integer value to each element of the specified multi-dimensional array of integers.
+        /// </summary>
+        /// <param name="array">The array to fill</param>
+        /// <param name="value">The value to assign to each element</param>
         public static void FillArray(Array array, int value)
         {
             if (array.Rank == 1)
@@ -2738,47 +3014,43 @@ namespace HTM.Net.Util
                 }
                 else
                 {
-                    // Jagged
+                    // Jagged array
                     foreach (var item in array)
                     {
                         FillArray((Array)item, value);
                     }
                 }
             }
-            if (array.Rank == 2)
+            else if (array.Rank == 2)
             {
                 int[,] arr = (int[,])array;
-                for (int i = 0; i < array.GetLength(0); i++)
+                int length0 = array.GetLength(0);
+                int length1 = array.GetLength(1);
+                for (int i = 0; i < length0; i++)
                 {
-                    for (int j = 0; j < array.GetLength(1); j++)
+                    for (int j = 0; j < length1; j++)
                     {
                         arr[i, j] = value;
                     }
                 }
             }
-            if (array.Rank == 3)
+            else if (array.Rank == 3)
             {
                 int[,,] arr = (int[,,])array;
-                for (int i = 0; i < array.GetLength(0); i++)
+                int length0 = array.GetLength(0);
+                int length1 = array.GetLength(1);
+                int length2 = array.GetLength(2);
+                for (int i = 0; i < length0; i++)
                 {
-                    for (int j = 0; j < array.GetLength(1); j++)
+                    for (int j = 0; j < length1; j++)
                     {
-                        for (int k = 0; k < array.GetLength(2); k++)
+                        for (int k = 0; k < length2; k++)
                         {
                             arr[i, j, k] = value;
                         }
                     }
                 }
             }
-            //throw new NotImplementedException("Check implementation");
-            //if (array instanceof int[]) {
-            //    Arrays.fill((int[])array, value);
-            //} else {
-            //    for (Object agr : (Object[])array)
-            //    {
-            //        fillArray(agr, value);
-            //    }
-            //}
         }
 
         /**
@@ -2900,75 +3172,82 @@ namespace HTM.Net.Util
             return result.ToString();
         }
 
-        /**
-         * Return True if all elements of the  <tt>values</tt> have evaluated to true with <tt>condition</tt>
-         * @param values
-         * @param condition
-         * @param <T>
-         * @return
-         */
+        /// <summary>
+        /// Checks if all elements in the array satisfy a specified condition.
+        /// </summary>
+        /// <typeparam name="T">The type of the array elements</typeparam>
+        /// <param name="values">The array to check</param>
+        /// <param name="condition">The condition to evaluate for each element</param>
+        /// <returns>True if all elements satisfy the condition, False otherwise</returns>
         public static bool All<T>(T[] values, Func<T, bool> condition)
         {
             return values.All(condition);
-            //for (int element : values)
-            //{
-            //    if (!condition.eval(element))
-            //    {
-            //        return false;
-            //    }
-            //}
-            //return true;
         }
 
-        /**
-         * Concat arrays
-         *
-         * @return The concatenated array
-         *
-         * http://stackoverflow.com/a/784842
-         */
+        /// <summary>
+        /// Concatenates multiple arrays into a single array.
+        /// </summary>
+        /// <typeparam name="T">The type of the array elements</typeparam>
+        /// <param name="first">The first array</param>
+        /// <param name="rest">Additional arrays to concatenate</param>
+        /// <returns>The concatenated array</returns>
         public static T[] ConcatAll<T>(T[] first, params T[][] rest)
         {
             int totalLength = first.Length;
+
+            // Calculate the total length of the concatenated array
             foreach (T[] array in rest)
-            //for (T[] array : rest)
             {
                 totalLength += array.Length;
             }
-            T[] result = Arrays.CopyOf(first, totalLength);
-            int offset = first.Length;
-            //for (T[] array : rest)
+
+            T[] result = new T[totalLength];
+            int offset = 0;
+
+            // Copy elements from the first array
+            Array.Copy(first, 0, result, offset, first.Length);
+            offset += first.Length;
+
+            // Copy elements from the rest of the arrays
             foreach (T[] array in rest)
             {
                 Array.Copy(array, 0, result, offset, array.Length);
                 offset += array.Length;
             }
+
             return result;
         }
 
-        /**
-         * Concat int arrays
-         *
-         * @return The concatenated array
-         *
-         * http://stackoverflow.com/a/784842
-         */
+        /// <summary>
+        /// Concatenates multiple integer arrays into a single array.
+        /// </summary>
+        /// <param name="first">The first array</param>
+        /// <param name="rest">Additional arrays to concatenate</param>
+        /// <returns>The concatenated array</returns>
         public static int[] ConcatAll(int[] first, params int[][] rest)
         {
             int totalLength = first.Length;
-            //for (int[] array : rest)
+
+            // Calculate the total length of the concatenated array
             foreach (int[] array in rest)
             {
                 totalLength += array.Length;
             }
-            int[] result = Arrays.CopyOf(first, totalLength);
-            int offset = first.Length;
-            //for (int[] array : rest)
+
+            int[] result = new int[totalLength];
+            int offset = 0;
+
+            // Copy elements from the first array
+            Array.Copy(first, 0, result, offset, first.Length);
+            offset += first.Length;
+
+            // Copy elements from the rest of the arrays
             foreach (int[] array in rest)
             {
                 Array.Copy(array, 0, result, offset, array.Length);
                 offset += array.Length;
             }
+
             return result;
         }
 
@@ -3173,68 +3452,120 @@ namespace HTM.Net.Util
             return result;
         }
 
-        /**
-         * Returns an array of minimum values collected from the specified axis.
-         * <p>
-         * <pre>
-         * int[] a = min(new int[][] { { 49, 2, 3, 4, 5 }, { 6, 7, 8, 9, 10 } }, 0)
-         * output:
-         * a = { 6, 2, 3, 4, 5 }
-         * 
-         * int[] a = min(new int[][] { { 49, 2, 3, 4, 5 }, { 6, 7, 8, 9, 10 } }, 1)
-         * output:
-         * a = { 6, 2 }
-         * 
-         * @param arr
-         * @param axis
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of minimum values collected from the specified axis.
+        /// </summary>
+        /// <param name="arr">The input array</param>
+        /// <param name="axis">The axis along which to find the minimum values</param>
+        /// <returns>An array of minimum values</returns>
         public static int[] Min(int[][] arr, int axis)
         {
-            switch (axis)
-            {
-                case 0:
-                    return Range(0, arr[0].Length).Select(i => arr.Select(ia => ia[i]).Min()).ToArray();
-                //return IntStream.range(0, arr[0].length).map(i->Arrays.stream(arr).mapToInt(ia->ia[i]).min().getAsInt()).toArray();
-                case 1:
-                    return arr.Select(i => i.Min()).ToArray();
-                //return Arrays.stream(arr).mapToInt(i->Arrays.stream(i).min().getAsInt()).toArray();
+            int numRows = arr.Length;
+            int numCols = arr[0].Length;
 
-                default: throw new ArgumentException("axis must be either '0' or '1'");
+            int[] result;
+
+            if (axis == 0)
+            {
+                result = new int[numCols];
+
+                // Iterate over each column
+                for (int i = 0; i < numCols; i++)
+                {
+                    int min = int.MaxValue;
+
+                    // Find the minimum value in each row for the current column
+                    for (int j = 0; j < numRows; j++)
+                    {
+                        min = Math.Min(min, arr[j][i]);
+                    }
+
+                    result[i] = min;
+                }
             }
+            else if (axis == 1)
+            {
+                result = new int[numRows];
+
+                // Iterate over each row
+                for (int i = 0; i < numRows; i++)
+                {
+                    int min = int.MaxValue;
+                    int[] row = arr[i];
+
+                    // Find the minimum value in the current row
+                    for (int j = 0; j < numCols; j++)
+                    {
+                        min = Math.Min(min, row[j]);
+                    }
+
+                    result[i] = min;
+                }
+            }
+            else
+            {
+                throw new ArgumentException("axis must be either '0' or '1'");
+            }
+
+            return result;
         }
 
-        /**
-         * Returns an array of minimum values collected from the specified axis.
-         * <p>
-         * <pre>
-         * // axis = 0
-         * double[] a = min(new double[][] { { 49, 2, 3, 4, 5 }, { 6, 7, 8, 9, 10 } }, 0)
-         * output:
-         * a = { 6, 2, 3, 4, 5 }
-         * 
-         * // axis = 1
-         * double[] a = min(new double[][] { { 49, 2, 3, 4, 5 }, { 6, 7, 8, 9, 10 } }, 1)
-         * output:
-         * a = { 2, 6 }
-         * </pre>
-         * @param arr
-         * @param axis
-         * @return
-         */
+        /// <summary>
+        /// Returns an array of minimum values collected from the specified axis.
+        /// </summary>
+        /// <param name="arr">The input array</param>
+        /// <param name="axis">The axis along which to find the minimum values</param>
+        /// <returns>An array of minimum values</returns>
         public static double[] Min(double[][] arr, int axis)
         {
-            switch (axis)
-            {
-                case 0:
-                    return Range(0, arr[0].Length).Select(i => arr.Select(ia => ia[i]).AsParallel().Min()).ToArray();
-                //return IntStream.range(0, arr[0].length).mapToDouble(i->Arrays.stream(arr).mapToDouble(ia->ia[i]).min().getAsDouble()).toArray();
-                case 1:
-                    return arr.Select(i => i.AsParallel().Min()).ToArray();
-                //return Arrays.stream(arr).mapToDouble(i->Arrays.stream(i).min().getAsDouble()).toArray();
+            int numRows = arr.Length;
+            int numCols = arr[0].Length;
 
-                default: throw new ArgumentException("axis must be either '0' or '1'");
+            double[] result;
+
+            if (axis == 0)
+            {
+                result = new double[numCols];
+
+                // Iterate over each column
+                for (int i = 0; i < numCols; i++)
+                {
+                    double min = double.MaxValue;
+
+                    // Find the minimum value in each row for the current column
+                    for (int j = 0; j < numRows; j++)
+                    {
+                        min = Math.Min(min, arr[j][i]);
+                    }
+
+                    result[i] = min;
+                }
             }
+            else if (axis == 1)
+            {
+                result = new double[numRows];
+
+                // Iterate over each row
+                for (int i = 0; i < numRows; i++)
+                {
+                    double min = double.MaxValue;
+                    double[] row = arr[i];
+
+                    // Find the minimum value in the current row
+                    for (int j = 0; j < numCols; j++)
+                    {
+                        min = Math.Min(min, row[j]);
+                    }
+
+                    result[i] = min;
+                }
+            }
+            else
+            {
+                throw new ArgumentException("axis must be either '0' or '1'");
+            }
+
+            return result;
         }
 
         /**
@@ -3301,7 +3632,7 @@ namespace HTM.Net.Util
             return Argsort(@in, -1, -1);
         }
 
-        public static int[] Argsort(Vector<double> @in)
+        public static int[] Argsort(MathNet.Numerics.LinearAlgebra.Vector<double> @in)
         {
             return Argsort(@in.ToArray(), -1, -1);
         }
@@ -3345,15 +3676,18 @@ namespace HTM.Net.Util
          * 
          * @see #argsort(int[])
          */
-        public static int[] Argsort(double[] @in, int start, int end)
+        public static int[] Argsort(double[] input, int start, int end)
         {
+            int[] indices = Enumerable.Range(0, input.Length).ToArray();
+            Array.Sort(indices, (a, b) => input[a].CompareTo(input[b]));
+
             if (start == -1 || end == -1)
             {
-                return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).ToArray();
-                //return DoubleStream.of(in).sorted().mapToInt(i->Arrays.stream(in).boxed().collect(Collectors.toList()).indexOf(i)).toArray();
+                return input.OrderBy(d => d).Select(i => input.ToList().IndexOf(i)).ToArray(); 
+                //return indices;
             }
-            return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).Skip(start).Take(end).ToArray();
-            //return DoubleStream.of(in).sorted().mapToInt(i->Arrays.stream(in).boxed().collect(Collectors.toList()).indexOf(i)).skip(start).limit(end).toArray();
+
+            return indices.Skip(start).Take(end - start).ToArray();
         }
 
         /**
@@ -3370,14 +3704,18 @@ namespace HTM.Net.Util
          * 
          * @see #argsort(int[])
          */
-        public static int[] Argsort(Vector<double> @in, int start, int end)
+        public static int[] Argsort(MathNet.Numerics.LinearAlgebra.Vector<double> input, int start, int end)
         {
+            int[] indices = Enumerable.Range(0, input.Count).ToArray();
+
+            Array.Sort(indices, (a, b) => input[a].CompareTo(input[b]));
+
             if (start == -1 || end == -1)
             {
-                return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).ToArray();
+                return indices;
             }
 
-            return @in.OrderBy(d => d).Select(i => @in.ToList().IndexOf(i)).Skip(start).Take(end).ToArray();
+            return indices.Skip(start).Take(end - start).ToArray();
         }
 
         public static T[][] CreateJaggedArray<T>(int rows, int cols)
@@ -3452,11 +3790,11 @@ namespace HTM.Net.Util
             return Range(0, source.Length).ToList().Select(i => l.IndexOf(i) == -1 ? source[i] : substitutes[i]).ToArray();
         }
 
-        public static Vector<double> Subst(Vector<double> source, Vector<double> substitutes, int[] substInds)
+        public static MathNet.Numerics.LinearAlgebra.Vector<double> Subst(MathNet.Numerics.LinearAlgebra.Vector<double> source, MathNet.Numerics.LinearAlgebra.Vector<double> substitutes, int[] substInds)
         {
             List<int> l = substInds.ToList();
 
-            return Vector<double>.Build
+            return MathNet.Numerics.LinearAlgebra.Vector<double>.Build
                 .Sparse(source.Count, i => l.IndexOf(i) == -1 ? source[i] : substitutes[i]);
         }
 
@@ -3549,56 +3887,78 @@ namespace HTM.Net.Util
             return MathNet.Numerics.Statistics.ArrayStatistics.Mean(doubles);
         }
 
-        public static Vector<double> Mean(Matrix<double> doubles, [Range(0, 1)] int axis = 0)
+        public static MathNet.Numerics.LinearAlgebra.Vector<double> Mean(Matrix<double> doubles, int axis = 0)
         {
-            Vector<double> means = Vector<double>.Build.Dense(doubles.RowCount);
+            int rowCount = doubles.RowCount;
+            int colCount = doubles.ColumnCount;
+            MathNet.Numerics.LinearAlgebra.Vector<double> means;
+
             if (axis == 1)
             {
-                // horizontal sum
-                for (int row = 0; row < means.Count; row++)
+                // Calculate means along the horizontal axis
+                means = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.Dense(rowCount);
+                for (int row = 0; row < rowCount; row++)
                 {
-                    means[row] = doubles.Row(row).Mean();
+                    double sum = 0.0;
+                    for (int col = 0; col < colCount; col++)
+                    {
+                        sum += doubles[row, col];
+                    }
+                    means[row] = sum / colCount;
                 }
-
-                return means;
             }
-
-            // Axis 0 (vertical sum) = transposed
-            var transposed = doubles.Transpose();
-            means = Vector<double>.Build.Dense(transposed.RowCount);
-            for (int row = 0; row < means.Count; row++)
+            else
             {
-                means[row] = transposed.Row(row).Mean();
+                // Calculate means along the vertical axis (transposed)
+                means = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.Dense(colCount);
+                for (int col = 0; col < colCount; col++)
+                {
+                    double sum = 0.0;
+                    for (int row = 0; row < rowCount; row++)
+                    {
+                        sum += doubles[row, col];
+                    }
+                    means[col] = sum / rowCount;
+                }
             }
-
             return means;
         }
 
-        public static double[] Mean(double[][] doubles, [Range(0, 1)] int axis = 0)
+        public static double[] Mean(double[][] doubles, int axis = 0)
         {
-            double[] means = new double[doubles.GetLength(0)];
+            int rowCount = doubles.Length;
+            int colCount = doubles[0].Length;
+            double[] means;
             if (axis == 1)
-            {   
-                // horizontal sum
-                for (int row = 0; row < means.Length; row++)
-                {
-                    means[row] = Mean(doubles[row]);
-                }
-
-                return means;
-            }
-
-            // Axis 0 (vertical sum) = transposed
-            var transposed = Transpose(doubles);
-            means = new double[transposed.GetLength(0)];
-            for (int row = 0; row < means.Length; row++)
             {
-                means[row] = Mean(transposed[row]);
+                // Calculate means along the horizontal axis
+                means = new double[rowCount];
+                for (int row = 0; row < rowCount; row++)
+                {
+                    double sum = 0.0;
+                    for (int col = 0; col < colCount; col++)
+                    {
+                        sum += doubles[row][col];
+                    }
+                    means[row] = sum / colCount;
+                }
             }
-
+            else
+            {
+                // Calculate means along the vertical axis (transposed)
+                means = new double[colCount];
+                for (int col = 0; col < colCount; col++)
+                {
+                    double sum = 0.0;
+                    for (int row = 0; row < rowCount; row++)
+                    {
+                        sum += doubles[row][col];
+                    }
+                    means[col] = sum / rowCount;
+                }
+            }
             return means;
         }
-
         public static double[] Power(double[] arr, double pow)
         {
             double[] retVal = new double[arr.Length];

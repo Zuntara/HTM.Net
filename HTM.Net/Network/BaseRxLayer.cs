@@ -79,6 +79,7 @@ namespace HTM.Net.Network
                     {
                         _observers = new List<IObserver<IInference>>();
                     }
+
                     _observers.Add(t1);
                     return () => { }; // why is this?
                 });

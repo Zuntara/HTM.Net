@@ -332,7 +332,7 @@ namespace HTM.Net.Model
             synPermTrimThreshold = synPermActiveInc / 2.0;
             if (potentialRadius == -1)
             {
-                potentialRadius = ArrayUtils.Product(inputDimensions);
+                potentialRadius = ArrayUtils.ProductFast(inputDimensions);
             }
         }
 

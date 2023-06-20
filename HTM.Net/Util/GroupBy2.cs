@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using HTM.Net.Algorithms;
 using MathNet.Numerics.LinearAlgebra.Solvers;
 
 namespace HTM.Net.Util

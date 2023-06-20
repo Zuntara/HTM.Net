@@ -111,7 +111,11 @@ namespace HTM.Net.Util
                 {
                     obsContent.AddLast(item);
                 }
-            }, () => { _streamState.IsTerminated = true; });
+            }, () =>
+            {
+                _streamState.IsTerminated = true;
+                Console.WriteLine("Terminated stream");
+            });
         }
 
         public event Action<bool> TerminalChanged;

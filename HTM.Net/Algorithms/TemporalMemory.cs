@@ -187,15 +187,65 @@ namespace HTM.Net.Algorithms
             Func<DistalDendrite, Column> segToCol = segment => segment.GetParentCell().GetColumn();
 
             //@SuppressWarnings({ "rawtypes" })
-            GroupBy2<Column> grouper = GroupBy2<Column>.Of(
-                new Tuple<List<object>, Func<object, Column>>(activeColumns.Cast<object>().ToList(), x=> identity((Column) x)),
-                new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetActiveSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)),
-                new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetMatchingSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)));
+            //GroupBy2<Column> grouper = GroupBy2<Column>.Of(
+            //    new Tuple<List<object>, Func<object, Column>>(activeColumns.Cast<object>().ToList(), x=> identity((Column) x)),
+            //    new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetActiveSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)),
+            //    new Tuple<List<object>, Func<object, Column>>(new List<DistalDendrite>(conn.GetMatchingSegments()).Cast<object>().ToList(), x => segToCol((DistalDendrite) x)));
+
+            var activeColumns2 = activeColumns.Cast<Column>().ToList();
+            var activeSegments2 = new List<DistalDendrite>(conn.GetActiveSegments());
+            var matchingSegments2 = new List<DistalDendrite>(conn.GetMatchingSegments());
+
+            var grouper = activeColumns
+                .Concat(activeSegments2.Select(segToCol))
+                .Concat(matchingSegments2.Select(segToCol))
+                .GroupBy(column => identity(column))
+                .Select(group => new ColumnDataTuple(
+                    group.Key,
+                    activeColumns2.Where(column => identity(column) == group.Key).ToList(),
+                    activeSegments2.Where(seg => segToCol(seg) == group.Key).ToList(),
+                    matchingSegments2.Where(seg => segToCol(seg) == group.Key).ToList()
+                ));
 
             double permanenceIncrement = conn.GetPermanenceIncrement();
             double permanenceDecrement = conn.GetPermanenceDecrement();
 
-            foreach (Tuple t in grouper)
+            foreach (var t in grouper)
+            {
+                columnData = columnData.Set(t);
+
+                if (columnData.ActiveColumns().Any())
+                {
+                    if (columnData.ActiveSegments().Any())
+                    {
+                        List<Cell> cellsToAdd = ActivatePredictedColumn(conn, columnData.ActiveSegments(),
+                            columnData.MatchingSegments(), prevActiveCells, prevWinnerCells,
+                            permanenceIncrement, permanenceDecrement, learn);
+
+                        cycle.ActiveCells().UnionWith(cellsToAdd);
+                        cycle.WinnerCells().UnionWith(cellsToAdd);
+                    }
+                    else
+                    {
+                        Tuple cellsXwinnerCell = BurstColumn(conn, columnData.Column(), columnData.MatchingSegments(),
+                            prevActiveCells, prevWinnerCells, permanenceIncrement, permanenceDecrement, conn.GetRandom(),
+                            learn);
+
+                        cycle.ActiveCells().UnionWith((IEnumerable<Cell>)cellsXwinnerCell.Get(0));
+                        cycle.WinnerCells().Add((Cell)cellsXwinnerCell.Get(1));
+                    }
+                }
+                else
+                {
+                    if (learn)
+                    {
+                        PunishPredictedColumn(conn, columnData.ActiveSegments(), columnData.MatchingSegments(),
+                            prevActiveCells, prevWinnerCells, conn.GetPredictedSegmentDecrement());
+                    }
+                }
+            }
+
+            /*foreach (Tuple t in grouper)
             {
                 columnData = columnData.Set(t);
 
@@ -228,7 +278,7 @@ namespace HTM.Net.Algorithms
                             prevActiveCells, prevWinnerCells, conn.GetPredictedSegmentDecrement());
                     }
                 }
-            }
+            }*/
         }
 
         /**
@@ -541,28 +591,24 @@ namespace HTM.Net.Algorithms
         public void GrowSynapses(Connections conn, HashSet<Cell> prevWinnerCells, DistalDendrite segment,
             double initialPermanence, int nDesiredNewSynapses, IRandom random)
         {
-
             List<Cell> candidates = new List<Cell>(prevWinnerCells);
             candidates.Sort();
-            //Collections.sort(candidates);
 
-            foreach (Synapse synapse in conn.GetSynapses(segment))
+            List<Synapse> synapses = conn.GetSynapses(segment).ToList();
+            foreach (Synapse synapse in synapses)
             {
                 Cell presynapticCell = synapse.GetPresynapticCell();
-                int index = candidates.IndexOf(presynapticCell);
-                if (index != -1)
-                {
-                    candidates.RemoveAt(index);
-                }
+                candidates.Remove(presynapticCell);
             }
 
             int candidatesLength = candidates.Count;
-            int nActual = nDesiredNewSynapses < candidatesLength ? nDesiredNewSynapses : candidatesLength;
+            int nActual = Math.Min(nDesiredNewSynapses, candidatesLength);
 
             for (int i = 0; i < nActual; i++)
             {
                 int rand = random.NextInt(candidates.Count);
-                conn.CreateSynapse(segment, candidates[rand], initialPermanence);
+                Cell candidate = candidates[rand];
+                conn.CreateSynapse(segment, candidate, initialPermanence);
                 candidates.RemoveAt(rand);
             }
         }
@@ -627,6 +673,22 @@ namespace HTM.Net.Algorithms
             }
         }
 
+        public record ColumnDataTuple(Column Column, List<Column> ActiveColumns, List<DistalDendrite> ActiveSegments,
+            List<DistalDendrite> MatchingSegments)
+        {
+            public object Get(int index)
+            {
+                return index switch
+                {
+                    0 => Column,
+                    1 => ActiveColumns,
+                    2 => ActiveSegments,
+                    3 => MatchingSegments,
+                    _ => throw new IndexOutOfRangeException()
+                };
+            }
+        }
+
         /**
          * Used in the {@link TemporalMemory#compute(Connections, int[], boolean)} method
          * to make pulling values out of the {@link GroupBy2} more readable and named.
@@ -636,37 +698,41 @@ namespace HTM.Net.Algorithms
         {
             /** Default Serial */
             private const long serialVersionUID = 1L;
-            private Tuple t;
+            private ColumnDataTuple t;
 
             public ColumnData() { }
 
-            public ColumnData(Tuple t)
+            public ColumnData(ColumnDataTuple t)
             {
                 this.t = t;
             }
 
             public Column Column() 
-                => (Column)t.Get(0);
+                => t.Column;
 
-            public List<Column> ActiveColumns() => (List<Column>)t.Get(1);
+            public List<Column> ActiveColumns() => t.ActiveColumns;
 
             public List<DistalDendrite> ActiveSegments()
             {
-                var list = (IList) t.Get(2);
-                return list[0].Equals(GroupBy2<Column>.Slot<Tuple<object,Column>>.Empty()) ?
-                     new List<DistalDendrite>() :
-                         list.Cast<DistalDendrite>().ToList();
+                var list = t.ActiveSegments;
+                if (!list.Any())
+                {
+                    return new List<DistalDendrite>();
+                }
+                return list.ToList();
             }
 
             public List<DistalDendrite> MatchingSegments()
             {
-                var list = (IList) t.Get(3);
-                return list[0].Equals(GroupBy2<Column>.Slot<Tuple<object, Column>>.Empty()) ?
-                     new List<DistalDendrite>() :
-                         list.Cast<DistalDendrite>().ToList();
+                var list = t.MatchingSegments;
+                if (!list.Any())
+                {
+                    return new List<DistalDendrite>();
+                }
+                return list.ToList();
             }
 
-            public ColumnData Set(Tuple t) { this.t = t; return this; }
+            public ColumnData Set(ColumnDataTuple t) { this.t = t; return this; }
 
             /**
              * Returns a boolean flag indicating whether the slot contained by the
