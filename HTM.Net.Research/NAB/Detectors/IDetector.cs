@@ -8,6 +8,9 @@ public interface IRxDetector: IDetector
 
     void Run();
 
+    /// <summary>
+    /// Triggered when all the records are processed
+    /// </summary>
     Subject<DataFrame> AllRecordsProcessed { get; }
 }
 

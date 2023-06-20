@@ -8,7 +8,7 @@ namespace HTM.Net.Research.NAB.Detectors.Null;
 /// </summary>
 public class NullDetector : AnomalyDetector
 {
-    public NullDetector(IDataFile dataSet, float probationaryPercent) : base(dataSet, probationaryPercent)
+    public NullDetector(IDataFile dataSet, double probationaryPercent) : base(dataSet, probationaryPercent)
     {
     }
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
+using System.Threading;
 
 namespace HTM.Net.Research.NAB.Detectors;
 
@@ -13,7 +13,7 @@ public static class DetectorBase
         string relativeDir = Path.GetDirectoryName(relativePath);
         string filename = Path.GetFileName(relativePath);
         filename = detectorName + "_" + filename;
-        string outputPath = Path.Combine(outputDir, detectorName, relativeDir, filename);
+        string outputPath = Path.Combine(outputDir, detectorName.ToString(), relativeDir, filename);
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
 
         Console.WriteLine($"{i}: Beginning detection with {detectorName} for {relativePath}");
@@ -23,12 +23,16 @@ public static class DetectorBase
         DataFrame results = null;
         if (detectorInstance is IRxDetector rxDetector)
         {
+            ManualResetEvent waitHandle = new ManualResetEvent(false);
             rxDetector.AllRecordsProcessed.Subscribe(df =>
-            {
-                HandleProcessedRecords(i, outputPath, results, labels);
-            });
+                {
+                    HandleProcessedRecords(i, outputPath, df, labels);
+                },
+                e => waitHandle.Set(),
+                () => waitHandle.Set());
 
             rxDetector.Run();
+            waitHandle.WaitOne();
         }
         else if (detectorInstance is IDirectDetector directDetector)
         {
@@ -43,7 +47,7 @@ public static class DetectorBase
         dataFrame["labels"] = labels;
 
         // Write results to file
-        File.WriteAllText(outputPath, JsonConvert.SerializeObject(dataFrame));
+        dataFrame.ToCsv(outputPath, true);
 
         Console.WriteLine($"{i}: Completed processing {dataFrame.GetShape0()} at {DateTime.Now}");
         Console.WriteLine($"{i}: Results written to {outputPath}");

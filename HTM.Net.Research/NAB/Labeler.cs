@@ -37,7 +37,7 @@ public class CorpusLabel: ICorpusLabel
 
     public CorpusLabel(string path, ICorpus corpus)
     {
-        this.Path = path;
+        this.Path = path.Replace("/", "\\");
         this.Windows = null;
         this.Labels = null;
         this.Corpus = corpus;
@@ -70,18 +70,22 @@ public class CorpusLabel: ICorpusLabel
         {
             string json = windowFile.ReadToEnd();
             windows = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+            windows = windows.ToDictionary(k => k.Key.Replace("/", "\\"), v => v.Value);
         }
 
         this.Windows = new Dictionary<string, List<(DateTime start, DateTime end)>>();
-        foreach (var relativePath in windows.Keys.ToList())
+        foreach (var relativePathRaw in windows.Keys.ToList())
         {
+            var relativePath = relativePathRaw.Replace("/", "\\");
             this.Windows[relativePath] = Utils.TimeMap(DateTime.Parse, windows[relativePath]);
             if (this.Windows[relativePath].Count == 0)
             {
                 continue;
             }
-
+            //artificialWithAnomaly\art_daily_flatmiddle.csv
+            //artificialWithAnomaly/art_daily_flatmiddle.csv
             var data = this.Corpus.DataFiles[relativePath].Data;
+       
             if (this.Path.Contains("raw"))
             {
                 timestamps = ((JArray)windows[relativePath]).Select(i => i.Value<DateTime>().ToString("s")).ToList();

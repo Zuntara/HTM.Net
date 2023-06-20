@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -96,6 +98,23 @@ public class DataFile : IDataFile
     public IDataFile Clone()
     {
         DataFile file = new DataFile(this.SrcPath);
+
+        if (file.Data.ColumnNames.Contains("timestamp"))
+        {
+            file.UpdateColumnType("timestamp", typeof(string), x =>
+            {
+                if (x.Contains("T"))
+                {
+                    return x;
+                }
+                return DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture).ToString("s");
+            });
+        }
+
+        if (file.Data.ColumnNames.Contains("value"))
+        {
+            file.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
+        }
 
         return file;
     }
@@ -230,7 +249,27 @@ public class Corpus : ICorpus
             .Select(path => (IDataFile)new DataFile(path))
             .ToList();
 
-        return dataSets.ToDictionary(d => Path.GetRelativePath(SrcRoot, d.SrcPath));
+        return dataSets.ToDictionary(d => Path.GetRelativePath(SrcRoot, d.SrcPath), v =>
+        {
+            if (v.Data.ColumnNames.Contains("timestamp"))
+            {
+                v.UpdateColumnType("timestamp", typeof(string), x =>
+                {
+                    if (x.Contains("T"))
+                    {
+                        return x;
+                    }
+                    return DateTime.ParseExact(x, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture).ToString("s");
+                });
+            }
+
+            if (v.Data.ColumnNames.Contains("value"))
+            {
+                v.UpdateColumnType("value", typeof(double), x => double.Parse(x, NumberFormatInfo.InvariantInfo));
+            }
+
+            return v;
+        });
     }
 
     public void AddColumn(string columnName, Dictionary<string, List<object>> data, bool write = false)

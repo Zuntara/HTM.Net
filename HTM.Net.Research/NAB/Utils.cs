@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using HTM.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -92,18 +93,18 @@ public class Utils
 
     public static string convertResultsPathToDataPath(string path)
     {
-        var parts = path.Split(Path.PathSeparator);
+        var parts = path.Split(Path.DirectorySeparatorChar);
         string detector = parts[0];
         var pth = parts[Range.StartAt(1)];
-        var fileName = pth[Index.End];
+        var fileName = pth[^1];
         var toRemove = detector + "_";
 
-        var i = fileName.IndexOf(toRemove);
+        var i = fileName.IndexOf(toRemove, StringComparison.InvariantCultureIgnoreCase);
         fileName = fileName.Substring(0, i) + fileName.Substring(i + toRemove.Length);
 
-        parts[parts.Length - 1] = fileName;
+        pth[pth.Length - 1] = fileName;
 
-        return string.Join(Path.PathSeparator, parts);
+        return string.Join(Path.DirectorySeparatorChar, pth);
     }
 
     /// <summary>
@@ -112,13 +113,13 @@ public class Utils
     /// <param name="newResults">[detector][profile][score/threshold]</param>
     /// <param name="resultsFilePath">Path</param>
     /// <returns></returns>
-    public static Dictionary<string, Dictionary<string, Dictionary<string, double>>> UpdateFinalResults(Dictionary<string, Dictionary<string, Dictionary<string, double>>> newResults, string resultsFilePath)
+    public static Dictionary<Detector, Map<string, Map<string, double>>> UpdateFinalResults(Dictionary<Detector, Map<string, Map<string, double>>> newResults, string resultsFilePath)
     {
         var results = GetOldDict(resultsFilePath);
 
         foreach (var pair in newResults)
         {
-            string detector = pair.Key;
+            Detector detector = pair.Key;
             var score = pair.Value;
 
             results[detector] = score;
@@ -129,7 +130,7 @@ public class Utils
         return results;
     }
 
-    public static Dictionary<string, Dictionary<string, Dictionary<string, double>>> UpdateThresholds(Dictionary<string, Dictionary<string, Dictionary<string, double>>> newThresholds, string thresholdsFilePath)
+    public static Dictionary<Detector, Map<string, Map<string, double>>> UpdateThresholds(Dictionary<Detector, Map<string, Map<string, double>>> newThresholds, string thresholdsFilePath)
     {
         // newThresholds [detector][profile][score/threshold]
         var oldThresholds = GetOldDict(thresholdsFilePath);
@@ -160,17 +161,17 @@ public class Utils
         return oldThresholds;
     }
 
-    public static Dictionary<string, Dictionary<string, Dictionary<string, double>>> GetOldDict(string filePath)
+    public static Dictionary<Detector, Map<string, Map<string, double>>> GetOldDict(string filePath)
     {
         if (File.Exists(filePath))
         {
             var json = File.ReadAllText(filePath);
-            var dataDict = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, Dictionary<string, double>>>>(json);
+            var dataDict = JsonConvert.DeserializeObject<Dictionary<Detector, Map<string, Map<string, double>>>>(json);
             return dataDict;
         }
         else
         {
-            return new Dictionary<string, Dictionary<string, Dictionary<string, double>>>();
+            return new Dictionary<Detector, Map<string, Map<string, double>>>();
         }
     }
 

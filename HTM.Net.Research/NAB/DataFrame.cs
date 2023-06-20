@@ -1,14 +1,21 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace HTM.Net.Research.NAB;
 
 public class DataFrame : IEquatable<DataFrame>
 {
+    private static readonly object SyncRoot = new object();
+    private static string _isSaving = null;
+
+    private bool Filtered { get; }
+
     /// <summary>
     /// Collection of present column names.
     /// </summary>
@@ -19,8 +26,9 @@ public class DataFrame : IEquatable<DataFrame>
     /// </summary>
     public Dictionary<string, List<(int origIndex, object value)>> ColumnData { get; set; }
 
-    public DataFrame()
+    public DataFrame(bool filtered = false)
     {
+        Filtered = filtered;
         ColumnNames = new List<string>();
         ColumnData = new Dictionary<string, List<(int origIndex, object value)>>();
     }
@@ -56,7 +64,6 @@ public class DataFrame : IEquatable<DataFrame>
         }
         set
         {
-            Console.WriteLine("Setting column data");
             ColumnData[column] = value.Select((x, i) => (i, x)).ToList();
             if(!ColumnNames.Contains(column))
             {
@@ -108,16 +115,23 @@ public class DataFrame : IEquatable<DataFrame>
         List<(int origIndex, object value)> arr = ColumnData[column];
         var indices = arr
             .Where(x => predicate(x.value))
-            .Select((x, i) => (x.origIndex, i))
+            .Select((x, i) => (OriginalIndex: x.origIndex, DestinationIndex: i))
             .ToArray();
 
-        var df = new DataFrame();
+        var df = new DataFrame(true);
         foreach (KeyValuePair<string, List<(int origIndex, object value)>> pair in this.ColumnData)
         {
             List<(int origIndex, object value)> row = new List<(int origIndex, object value)>();
+
             foreach (var i in indices)
             {
-                row.Add((i.origIndex, pair.Value[i.origIndex].value));
+                int originalIndex = i.OriginalIndex;
+                if (Filtered)
+                {
+                    originalIndex = pair.Value.FindIndex(t => t.origIndex == originalIndex);
+                }
+
+                row.Add((i.OriginalIndex, pair.Value[originalIndex].value));
             }
 
             df.SetColumnData(pair.Key, row);
@@ -192,50 +206,102 @@ public class DataFrame : IEquatable<DataFrame>
 
     public void ToCsv(string path, bool includeHeaders)
     {
-        using StreamWriter sw = new StreamWriter(File.Create(path), Encoding.UTF8);
-        if (includeHeaders)
+        Console.WriteLine($"Entering save (prev: {_isSaving})");
+        lock (SyncRoot)
         {
-            sw.WriteLine(string.Join(",", ColumnNames));
-        }
-
-        foreach (var row in IterateRows())
-        {
-            sw.WriteLine(string.Join(",", row.Select(x =>
+            try
             {
-                if (x.Value is DateTime dt)
+                Console.WriteLine($"\tEntered save (prev: {_isSaving}) -> {path}");
+                if (!string.IsNullOrWhiteSpace(_isSaving))
                 {
-                    return dt.ToString("s");
+                    throw new Exception($"Cannot save to {path} because {_isSaving} is already saving.");
                 }
 
-                return x.Value;
-            })));
-        }
+                FileStream file = null;
+                do
+                {
+                    try
+                    {
+                        file = File.Create(path);
+                        break;
+                    }
+                    catch (Exception)
+                    {
+                        Thread.Sleep(100);
+                    }
+                } while (true);
+                
 
-        sw.Flush();
+                _isSaving = path;
+                using (StreamWriter sw = new StreamWriter(file, Encoding.UTF8))
+                {
+                    if (includeHeaders)
+                    {
+                        sw.WriteLine(string.Join(",", ColumnNames));
+                    }
+
+                    foreach (var row in IterateRows())
+                    {
+                        sw.WriteLine(string.Join(",", row.Select(x =>
+                        {
+                            if (x.Value is DateTime dt)
+                            {
+                                return dt.ToString("s");
+                            }
+
+                            if (x.Value is double dbl)
+                            {
+                                return dbl.ToString("0.0", NumberFormatInfo.InvariantInfo);
+                            }
+
+                            return x.Value;
+                        })));
+                    }
+
+                    sw.Flush();
+                    sw.Close();
+                    sw.Dispose();
+                }
+            }
+            finally
+            {
+                _isSaving = null;
+            }
+        }
     }
 
     public static DataFrame LoadCsv(string path, bool header = true)
     {
-        using StreamReader sr = new StreamReader(path, Encoding.UTF8);
-        var rows = new List<List<object>>();
-        var columns = new List<string>();
-        while (!sr.EndOfStream)
+        lock (SyncRoot)
         {
-            var line = sr.ReadLine();
-            var values = line.Split(',');
-            if (header)
+            Console.WriteLine($"Entered load for {path}");
+            var rows = new List<List<object>>();
+            var columns = new List<string>();
+            using (StreamReader sr = new StreamReader(path, Encoding.UTF8))
             {
-                columns = values.ToList();
-                header = false;
+                while (!sr.EndOfStream)
+                {
+                    var line = sr.ReadLine();
+                    var values = line.Split(',');
+                    if (header)
+                    {
+                        columns = values.ToList();
+                        header = false;
+                    }
+                    else
+                    {
+                        rows.Add(values.Select(x => (object)x).ToList());
+                    }
+                }
+
+                sr.Close();
+                sr.Dispose();
             }
-            else
-            {
-                rows.Add(values.Select(x => (object)x).ToList());
-            }
+
+            var df = new DataFrame();
+            df.Populate(rows, columns);
+            return df;
         }
-        var df = new DataFrame();
-        df.Populate(rows, columns);
-        return df;
     }
 
     public override string ToString()

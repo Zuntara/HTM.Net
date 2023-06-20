@@ -2,8 +2,48 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HTM.Net.Research.NAB;
+
+public class CostMatrix
+{
+    public double TnWeight { get; set; }
+    public double TpWeight { get; set; }
+    public double FpWeight { get; set; }
+    public double FnWeight { get; set; }
+
+    [Obsolete("For serialization only")]
+    public CostMatrix()
+    {
+    }
+
+    public CostMatrix(double tnWeight, double tpWeight, double fpWeight, double fnWeight)
+    {
+        TnWeight = tnWeight;
+        TpWeight = tpWeight;
+        FpWeight = fpWeight;
+        FnWeight = fnWeight;
+    }
+    public CostMatrix(CostMatrix copy)
+    {
+        TnWeight = copy.TnWeight;
+        TpWeight = copy.TpWeight;
+        FpWeight = copy.FpWeight;
+        FnWeight = copy.FnWeight;
+    }
+
+    public static CostMatrix FromDictionary(Dictionary<string, double> costMatrix)
+    {
+        double tnWeight = costMatrix.ContainsKey("tnWeight") ? costMatrix["tnWeight"] : 0;
+        double tpWeight = costMatrix.ContainsKey("tpWeight") ? costMatrix["tpWeight"] : 0;
+        double fpWeight = costMatrix.ContainsKey("fpWeight") ? costMatrix["fpWeight"] : 0;
+        double fnWeight = costMatrix.ContainsKey("fnWeight") ? costMatrix["fnWeight"] : 0;
+
+        return new CostMatrix(tnWeight, tpWeight, fpWeight, fnWeight);
+    }
+}
 
 /// <summary>
 /// Class used to iterate over all anomaly scores in a data set, generating
@@ -16,7 +56,7 @@ public class Sweeper
     public double FpWeight { get; private set; }
     public double FnWeight { get; internal set; }
 
-    public Sweeper(double probationPercent = 0.15, Dictionary<string, double> costMatrix = null)
+    public Sweeper(double probationPercent = 0.15, CostMatrix costMatrix = null)
     {
         this.ProbationPercent = probationPercent;
         TpWeight = 0;
@@ -29,11 +69,11 @@ public class Sweeper
         }
     }
 
-    public void SetCostMatrix(Dictionary<string, double> costMatrix)
+    public void SetCostMatrix(CostMatrix costMatrix)
     {
-        TpWeight = costMatrix["tpWeight"];
-        FpWeight = costMatrix["fpWeight"];
-        FnWeight = costMatrix["fnWeight"];
+        TpWeight = costMatrix.TpWeight;
+        FpWeight = costMatrix.FpWeight;
+        FnWeight = costMatrix.FnWeight;
     }
 
     internal double GetProbationaryLength(int numRows)
@@ -50,6 +90,7 @@ public class Sweeper
     internal List<AnomalyPoint> PrepAnomalyListForScoring(List<AnomalyPoint> anomalyList)
     {
         return anomalyList
+            .AsParallel()
             .Where(x => x.WindowName != "probationary")
             .OrderByDescending(x => x.AnomalyScore)
             .ToList();
@@ -72,19 +113,19 @@ public class Sweeper
         return scoreParts;
     }
 
-    private double Sigmoid(double x)
+    private static double Sigmoid(double x)
     {
         return 1.0 / (1.0 + Math.Exp(-x));
     }
 
-    private double ScaledSigmoid(double relativePositionInWindow)
+    internal static double ScaledSigmoid(double relativePositionInWindow)
     {
         if (relativePositionInWindow > 3.0)
         {
             return -1.0;
         }
 
-        return 2 * Sigmoid(-5 * relativePositionInWindow) - 1.0;
+        return Math.Round(2 * Sigmoid(-5 * relativePositionInWindow) - 1.0, 5);
     }
 
     public List<AnomalyPoint> CalcSweepScore(List<DateTime> timestamps, List<double> anomalyScores, List<(DateTime start, DateTime end)> windowLimits, string dataSetName)
@@ -125,7 +166,7 @@ public class Sweeper
                 curWindowRightIndex = timestamps.IndexOf(curWindowLimits.Value.end);
                 curWindowWidth = curWindowRightIndex - timestamps.IndexOf(curWindowLimits.Value.start) + 1.0;
 
-                Console.WriteLine($"Entering window {curWindowName} ({curWindowLimits}");
+                //Console.WriteLine($"Entering window {curWindowName} ({curWindowLimits}");
             }
 
             // if in a window, score as if true positive
@@ -172,7 +213,7 @@ public class Sweeper
             // this happens after processing the current point and appending it to the list
             if (curWindowLimits != null && curTime == curWindowLimits.Value.end)
             {
-                Console.WriteLine($"Exiting window {curWindowName} ({curWindowLimits}");
+                //Console.WriteLine($"Exiting window {curWindowName} ({curWindowLimits}");
                 prevWindowRightIndex = i;
                 prevWindowWidth = curWindowWidth;
                 curWindowLimits = null;
@@ -192,8 +233,8 @@ public class Sweeper
     /// <returns></returns>
     public List<ThresholdScore> CalcScoreByThreshold(List<AnomalyPoint> anomalyList)
     {
-        var scorableList = PrepAnomalyListForScoring(anomalyList);
-        var scoreParts = PrepareScoreByThresholdParts(scorableList);
+        List<AnomalyPoint> scorableList = PrepAnomalyListForScoring(anomalyList);
+        Dictionary<string, double> scoreParts = PrepareScoreByThresholdParts(scorableList);
         var scoresByThreshold = new List<ThresholdScore>();
 
         // The current threshold above which an anomaly score is considered
@@ -204,8 +245,8 @@ public class Sweeper
         // Initialize counts:
         // * every point in a window is a false negative
         // * every point outside a window is a true negative
-        var tn = scorableList.Sum(x => string.IsNullOrWhiteSpace(x.WindowName) ? 1.0 : 0);
-        var fn = scorableList.Sum(x => !string.IsNullOrWhiteSpace(x.WindowName) ? 1.0 : 0);
+        double tn = scorableList.AsParallel().Sum(x => string.IsNullOrWhiteSpace(x.WindowName) ? 1.0 : 0);
+        double fn = scorableList.AsParallel().Sum(x => !string.IsNullOrWhiteSpace(x.WindowName) ? 1.0 : 0);
         double tp = 0;
         double fp = 0;
 
@@ -242,7 +283,7 @@ public class Sweeper
                 tn -= 1;
             }
 
-            if (dataPoint.WindowName == null)
+            if (string.IsNullOrWhiteSpace(dataPoint.WindowName))
             {
                 scoreParts["fp"] += dataPoint.SweepScore.GetValueOrDefault();
             }
@@ -254,14 +295,42 @@ public class Sweeper
 
         //  Make sure to save the score for the last threshold
         curScore = scoreParts.Sum(kvp => kvp.Value);
-        var totalCnt = tp + tn + fp + fn;
-        var s1 = new ThresholdScore(curThreshold, curScore, tp, tn, fp, fn, totalCnt);
+        double totalCnt = tp + tn + fp + fn;
+        ThresholdScore s1 = new ThresholdScore(curThreshold, curScore, tp, tn, fp, fn, totalCnt);
         scoresByThreshold.Add(s1);
 
         return scoresByThreshold;
     }
 
     public (List<double> rowScores, ThresholdScore thresholdScore) ScoreDataSet(
+        List<DateTime> timestamps, List<double> anomalyScores, List<(DateTime start, DateTime end)> windowLimits, string dataSetName, double threshold)
+    {
+        var anomalyList = CalcSweepScore(timestamps, anomalyScores, windowLimits, dataSetName);
+        var scoresByThreshold = CalcScoreByThreshold(anomalyList);
+
+        ThresholdScore matchingRow = null;
+        ThresholdScore prevRow = null;
+        foreach (var thresholdScore in scoresByThreshold)
+        {
+            if (Math.Abs(thresholdScore.Threshold - threshold) < 0.001d)
+            {
+                matchingRow = thresholdScore;
+                break;
+            }
+            else if (thresholdScore.Threshold < threshold)
+            {
+                matchingRow = prevRow;
+                break;
+            }
+
+            prevRow = thresholdScore;
+        }
+
+        // Return sweepScore for each row, to be added to score file
+        return (anomalyList.Select(x => x.SweepScore.GetValueOrDefault()).ToList(), matchingRow);
+    }
+
+    public (List<double> rowScores, ThresholdScore thresholdScore) ScoreDataSetOld(
         List<DateTime> timestamps, List<double> anomalyScores, List<(DateTime start, DateTime end)> windowLimits, string dataSetName, double threshold)
     {
         var anomalyList = CalcSweepScore(timestamps, anomalyScores, windowLimits, dataSetName);

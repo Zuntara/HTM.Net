@@ -648,7 +648,7 @@ namespace HTM.Net.Tests.Network
                 if (r1.GetHead().GetInference().GetPredictiveCells().Count > 0 &&
                     r2.GetHead().GetInference().GetPredictiveCells().Count > 0)
                 {
-                    Debug.WriteLine("network observe() -> Halt network");
+                    Console.WriteLine("network observe() -> Halt network");
                     network.Halt();
                 }
             }, Console.WriteLine, () => { });
@@ -678,12 +678,12 @@ namespace HTM.Net.Tests.Network
                 Assert.AreEqual(r1Hits, r2Hits);
 
                 Console.WriteLine("Hits R1 = {0}, R2 = {1}", r1Hits, r2Hits);
-                //Console.WriteLine("top ff = " + Arrays.ToString(_topInference.GetFeedForwardSparseActives()));
-                //Console.WriteLine("bot ff = " + Arrays.ToString(_bottomInference.GetFeedForwardSparseActives()));
+                Console.WriteLine("top ff = " + Arrays.ToString(_topInference.GetFeedForwardSparseActives()));
+                Console.WriteLine("bot ff = " + Arrays.ToString(_bottomInference.GetFeedForwardSparseActives()));
                 Console.WriteLine("top pred = " + Arrays.ToString(_topInference.GetPredictiveCells()));
                 Console.WriteLine("bot pred = " + Arrays.ToString(_bottomInference.GetPredictiveCells()));
-                //Console.WriteLine("top active = " + Arrays.ToString(_topInference.GetActiveCells()));
-                //Console.WriteLine("bot active = " + Arrays.ToString(_bottomInference.GetActiveCells()));
+                Console.WriteLine("top active = " + Arrays.ToString(_topInference.GetActiveCells()));
+                Console.WriteLine("bot active = " + Arrays.ToString(_bottomInference.GetActiveCells()));
                 Assert.IsTrue(!_topInference.GetPredictiveCells().SequenceEqual(_bottomInference.GetPredictiveCells()), "PredictiveCells are equal");
                 Assert.IsTrue(_topInference.GetPredictiveCells().Count > 0, "No predictive cells found (top)");
                 Assert.IsTrue(_bottomInference.GetPredictiveCells().Count > 0, "No predictive cells found (bottom)");
@@ -698,7 +698,7 @@ namespace HTM.Net.Tests.Network
         /**
          * Test that a null {@link Assembly.Mode} results in exception
          */
-        [TestMethod]
+        [TestMethod, DeploymentItem("Resources\\rec-center-hourly.Csv")]
         public void TestFluentBuildSemantics()
         {
             Parameters p = NetworkTestHarness.GetParameters();
@@ -753,6 +753,7 @@ namespace HTM.Net.Tests.Network
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                Assert.Fail("Something went wrong here");
             }
 
         }
@@ -1045,6 +1046,7 @@ namespace HTM.Net.Tests.Network
                 Assert.Fail();
             }
 
+            Thread.Sleep(1000);
 
             Assert.IsTrue(_completed);
 

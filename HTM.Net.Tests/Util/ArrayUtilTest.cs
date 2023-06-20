@@ -23,6 +23,26 @@ namespace HTM.Net.Tests.Util
             dim = new[] { 20, 20, 20 };
             result = ArrayUtils.Product(dim);
             Assert.AreEqual(20 * 20 * 20, result);
+
+            dim = new[] { 20, 20, 20, 20, 20, 20, 20 };
+            result = ArrayUtils.Product(dim);
+            Assert.AreEqual(20 * 20 * 20 * 20 * 20 * 20 * 20, result);
+        }
+
+        [TestMethod]
+        public void TestProductFast()
+        {
+            int[] dim = new[] { 20, 20 };
+            int result = ArrayUtils.ProductFast(dim);
+            Assert.AreEqual(20 * 20, result);
+
+            dim = new[] { 20, 20, 20 };
+            result = ArrayUtils.ProductFast(dim);
+            Assert.AreEqual(20 * 20 * 20, result);
+
+            dim = new[] { 20, 20, 20, 20, 20, 20, 20 };
+            result = ArrayUtils.ProductFast(dim);
+            Assert.AreEqual(20 * 20 * 20 * 20 * 20 * 20 * 20, result);
         }
 
         [TestMethod]
@@ -859,7 +879,7 @@ namespace HTM.Net.Tests.Util
             }
             catch (Exception e)
             {
-                Assert.AreEqual("Division by Zero!", e.Message);
+                Assert.AreEqual("Division by zero!", e.Message);
             }
 
             //Example F
@@ -980,7 +1000,7 @@ namespace HTM.Net.Tests.Util
                 new[] { 3.0, 4.0 },
             };
             double[] mean = ArrayUtils.Mean(a, 0);
-
+            
             Assert.AreEqual(2.0, mean[0]);
             Assert.AreEqual(3.0, mean[1]);
         }
@@ -997,6 +1017,89 @@ namespace HTM.Net.Tests.Util
 
             Assert.AreEqual(1.5, mean[0]);
             Assert.AreEqual(3.5, mean[1]);
+        }
+
+        [TestMethod]
+        public void Sample_ReturnsUniqueRandomSample()
+        {
+            // Arrange
+            int[] choices = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            int[] selectedIndices = new int[5];
+            IRandom random = new XorshiftRandom(42);
+
+            // Act
+            int[] result = ArrayUtils.Sample(choices, ref selectedIndices, random);
+
+            // Assert
+
+            // Ensure the result is not null
+            Assert.IsNotNull(result);
+
+            // Ensure the result has the same length as selectedIndices
+            Assert.AreEqual(selectedIndices.Length, result.Length);
+
+            // Ensure all values in the result are within the range of choices
+            foreach (int index in result)
+            {
+                Assert.IsTrue(choices.Contains(index));
+            }
+
+            // Ensure the result array contains unique values
+            Assert.AreEqual(result.Length, result.Distinct().Count());
+
+            // Ensure the selectedIndices array has been modified
+            CollectionAssert.AreEqual(result, selectedIndices);
+        }
+
+        [TestMethod]
+        public void Sample_LargeArray_Performance()
+        {
+            // Arrange
+            int sampleSize = 10000;
+            List<int> choices = new List<int>();
+            for (int i = 0; i < 100000; i++)
+            {
+                choices.Add(i);
+            }
+            IRandom random = new XorshiftRandom(42);
+
+            // Act
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            int[] result = ArrayUtils.Sample(sampleSize, choices, random);
+            watch.Stop();
+
+            // Assert
+            Console.WriteLine($"Elapsed time: {watch.ElapsedMilliseconds} ms");
+            Assert.AreEqual(sampleSize, result.Length);
+
+            // Ensure the result array contains unique values
+            Assert.AreEqual(result.Length, result.Distinct().Count());
+        }
+
+        [TestMethod]
+        public void SampleFast_LargeArray_Performance()
+        {
+            // Arrange
+            int sampleSize = 10000;
+            int[] choices = new int[100000];
+            for (int i = 0; i < choices.Length; i++)
+            {
+                choices[i] = i;
+            }
+            int[] selectedIndices = new int[sampleSize];
+            IRandom random = new XorshiftRandom(42);
+
+            // Act
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            int[] result = ArrayUtils.SampleFast(choices, ref selectedIndices, random);
+            watch.Stop();
+
+            // Assert
+            Console.WriteLine($"Elapsed time: {watch.ElapsedMilliseconds} ms");
+            Assert.AreEqual(sampleSize, result.Length);
+
+            // Ensure the result array contains unique values
+            Assert.AreEqual(result.Length, result.Distinct().Count());
         }
     }
 }

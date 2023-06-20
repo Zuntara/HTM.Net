@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace HTM.Net.Research.NAB.Detectors.Skyline;
 
@@ -13,14 +16,17 @@ namespace HTM.Net.Research.NAB.Detectors.Skyline;
 /// </summary>
 public class SkylineDetector : AnomalyDetector
 {
-    private List<(DateTime timestamp, double value)> timeseries;
-    private List<Func<List<(DateTime timestamp, double value)>, bool>> algorithms;
+    private readonly List<(DateTime timestamp, double value)> _timeseries;
+    private readonly List<Func<List<(DateTime timestamp, double value)>, bool, bool>> _algorithms;
+    private static object _syncRoot = new object();
+
+    public bool EnableTimings { get; set; } = false;
 
     public SkylineDetector(IDataFile dataSet, double probationaryPercent)
         : base(dataSet, probationaryPercent)
     {
-        timeseries = new List<(DateTime timestamp, double value)>();
-        algorithms = new List<Func<List<(DateTime timestamp, double value)>, bool>>()
+        _timeseries = new List<(DateTime timestamp, double value)>();
+        _algorithms = new List<Func<List<(DateTime timestamp, double value)>, bool, bool>>()
         {
             Algorithms.MedianAbsoluteDeviation,
             Algorithms.FirstHourAverage,
@@ -34,17 +40,19 @@ public class SkylineDetector : AnomalyDetector
 
     protected override List<object> HandleRecord(Dictionary<string, object> inputData)
     {
-        double score = 0.0;
-        var inputRow = (timestamp: (DateTime)inputData["timestamp"], value: (double)inputData["value"]);
-        timeseries.Add(inputRow);
+        int score = 0;
+        var inputRow = (timestamp: DateTime.Parse((string)inputData["timestamp"]), value: (double)inputData["value"]);
+        _timeseries.Add(inputRow);
 
-        foreach (var algo in algorithms)
+        Parallel.ForEach(_algorithms, algo =>
         {
-            if (algo(timeseries))
-                score += 1.0;
-        }
+            if (algo(_timeseries, EnableTimings))
+            {
+                Interlocked.Increment(ref score);
+            }
+        });
 
-        double averageScore = score / (algorithms.Count + 1);
+        double averageScore = (double)score / (_algorithms.Count + 1);
         return new List<object> { averageScore };
     }
 }

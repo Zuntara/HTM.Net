@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using HTM.Net.Algorithms;
 using HTM.Net.Model;
@@ -131,7 +133,11 @@ namespace HTM.Net.Tests
             Connections con = new Connections();
             p.Apply(con);
             TemporalMemory tm = new TemporalMemory();
+            Stopwatch sw = Stopwatch.StartNew();
+
             TemporalMemory.Init(con);
+            Console.WriteLine($"Init time: {sw.ElapsedMilliseconds} ms");
+            sw.Restart();
 
             for (int x = 0; x < 602; x++)
             {
@@ -140,9 +146,12 @@ namespace HTM.Net.Tests
                     tm.Compute(con, i.Where(n => n == 1).ToArray(), true);
                 }
             }
+            Console.WriteLine($"Compute time: {sw.ElapsedMilliseconds} ms");
+            sw.Restart();
 
             Assert.IsFalse(!con.GetActiveCells().Any());
             con.Clear();
+            Console.WriteLine($"Clear time: {sw.ElapsedMilliseconds} ms");
             Assert.IsTrue(!con.GetActiveCells().Any());
         }
 

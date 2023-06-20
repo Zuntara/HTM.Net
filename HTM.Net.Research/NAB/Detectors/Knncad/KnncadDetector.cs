@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 
@@ -73,7 +74,7 @@ class KnncadDetector : AnomalyDetector
                     {
                         sigma = DenseMatrix.OfRows(training.ToArray()).TransposeThisAndMultiply(DenseMatrix.OfRows(training.ToArray())).Inverse();
                     }
-                    catch (ArgumentException)
+                    catch (SingularUMatrixException)
                     {
                         Console.WriteLine("Singular Matrix at record " + recordCount);
                     }
